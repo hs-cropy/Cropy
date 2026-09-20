@@ -43,7 +43,9 @@ export function AppBar() {
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={`rounded-full px-4 py-2 text-sm font-bold transition-colors ${
-                    active ? "bg-brand-tint text-ink" : "text-muted hover:bg-khaki-tint hover:text-ink"
+                    active
+                      ? "bg-brand-tint text-ink"
+                      : "text-muted hover:bg-khaki-tint hover:text-ink"
                   }`}
                 >
                   {item.label}

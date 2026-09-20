@@ -57,7 +57,9 @@ export function DiagnoseForm() {
       const data = await diagnoseImage(file, cropType || undefined);
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "진단에 실패했습니다. 잠시 후 다시 시도하세요.");
+      setError(
+        err instanceof Error ? err.message : "진단에 실패했습니다. 잠시 후 다시 시도하세요.",
+      );
     } finally {
       setLoading(false);
     }
@@ -78,7 +80,11 @@ export function DiagnoseForm() {
           {preview ? (
             <span className="relative block h-full w-full">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={preview} alt="촬영한 작물 미리보기" className="h-full w-full object-cover" />
+              <img
+                src={preview}
+                alt="촬영한 작물 미리보기"
+                className="h-full w-full object-cover"
+              />
               <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-ink/75 px-3.5 py-1.5 text-xs font-bold text-white backdrop-blur">
                 다시 촬영하기
               </span>
@@ -89,7 +95,9 @@ export function DiagnoseForm() {
                 <span className="icon-[lucide--camera] h-7 w-7" />
               </span>
               <span className="text-base font-bold text-ink">사진 촬영 또는 업로드</span>
-              <span className="mt-1 text-xs text-khaki">잎·과실이 선명하게 보이도록 찍어주세요</span>
+              <span className="mt-1 text-xs text-khaki">
+                잎·과실이 선명하게 보이도록 찍어주세요
+              </span>
             </span>
           )}
           <input
@@ -107,11 +115,7 @@ export function DiagnoseForm() {
             가로 스와이프 행이면 좁은 화면이나 큰글씨 모드에서 마지막 작물이 잘리는데,
             스크롤바를 숨겨둔 탓에 더 있다는 단서조차 없다. 선택지가 셋뿐이라
             접어두는 이득보다 놓치는 위험이 크다. */}
-        <div
-          role="group"
-          aria-label="작물 선택"
-          className="mt-4 flex flex-wrap items-center gap-2"
-        >
+        <div role="group" aria-label="작물 선택" className="mt-4 flex flex-wrap items-center gap-2">
           <span aria-hidden className="shrink-0 text-sm font-bold text-ink">
             작물
           </span>
@@ -180,7 +184,10 @@ export function DiagnoseForm() {
             <ul className="space-y-2.5">
               {PHOTO_TIPS.map((tip) => (
                 <li key={tip} className="flex gap-2 text-sm text-ink/80">
-                  <span aria-hidden className="icon-[lucide--check] mt-0.5 h-4 w-4 shrink-0 text-brand-ink" />
+                  <span
+                    aria-hidden
+                    className="icon-[lucide--check] mt-0.5 h-4 w-4 shrink-0 text-brand-ink"
+                  />
                   {tip}
                 </li>
               ))}

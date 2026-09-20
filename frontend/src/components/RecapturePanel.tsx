@@ -58,7 +58,10 @@ export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
         <ul className="mt-3 space-y-1.5">
           {guidance.candidates.map((c) => (
             <li key={c.name} className="flex gap-2 text-xs leading-relaxed text-ink/75">
-              <span aria-hidden className="icon-[lucide--corner-down-right] mt-0.5 h-3.5 w-3.5 shrink-0 text-signal-med-ink" />
+              <span
+                aria-hidden
+                className="icon-[lucide--corner-down-right] mt-0.5 h-3.5 w-3.5 shrink-0 text-signal-med-ink"
+              />
               <span>{c.cue}</span>
             </li>
           ))}
