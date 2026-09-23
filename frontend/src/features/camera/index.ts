@@ -1,3 +1,4 @@
+export { CameraCapture } from "./CameraCapture";
 export { CameraViewfinder } from "./CameraViewfinder";
 export { useCamera } from "./hooks/useCamera";
 export { isCameraSupported } from "./lib/cameraSupport";
