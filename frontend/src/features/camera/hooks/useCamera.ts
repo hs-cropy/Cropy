@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isCameraSupported } from "../lib/cameraSupport";
-import type { CameraErrorCode, CameraStatus, FacingMode } from "../types";
+import type { CameraErrorCode, CameraStatus, FacingMode } from "@/types/camera";
 
 interface UseCameraOptions {
   /** 기본 "environment"(후면). iOS에서 exact는 실패가 잦아 ideal로 요청한다 */

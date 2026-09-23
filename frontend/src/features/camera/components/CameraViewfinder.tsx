@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type RefObject } from "react";
-import type { CameraErrorCode, CameraStatus } from "./types";
+import type { CameraErrorCode, CameraStatus } from "@/types/camera";
 
 const ERROR_MESSAGES: Record<CameraErrorCode, string> = {
   "permission-denied": "카메라 권한이 필요해요. 브라우저 설정에서 권한을 허용해 주세요.",

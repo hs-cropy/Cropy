@@ -1,5 +1,5 @@
-export { CameraCapture } from "./CameraCapture";
-export { CameraViewfinder } from "./CameraViewfinder";
+export { CameraCapture } from "./components/CameraCapture";
+export { CameraViewfinder } from "./components/CameraViewfinder";
 export { useCamera } from "./hooks/useCamera";
 export { isCameraSupported } from "./lib/cameraSupport";
 export type {
@@ -8,4 +8,4 @@ export type {
   CameraStatus,
   CaptureMeta,
   FacingMode,
-} from "./types";
+} from "@/types/camera";

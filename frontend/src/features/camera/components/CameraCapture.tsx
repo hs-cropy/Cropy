@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CameraViewfinder } from "./CameraViewfinder";
-import { useCamera } from "./hooks/useCamera";
-import { useCaptureFrame } from "./hooks/useCaptureFrame";
-import type { CameraCaptureProps, FacingMode } from "./types";
+import { useCamera } from "../hooks/useCamera";
+import { useCaptureFrame } from "../hooks/useCaptureFrame";
+import type { CameraCaptureProps, FacingMode } from "@/types/camera";
 
 /**
  * 풀스크린 카메라 오버레이. 마운트되면 카메라가 켜지고 언마운트되면 꺼지므로
