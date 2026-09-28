@@ -1,0 +1,127 @@
+[
+  {
+    "disease_key": "pepper_anthracnose",
+    "pesticide_key": "psis_723",
+    "priority": 1
+  },
+  {
+    "disease_key": "pepper_anthracnose",
+    "pesticide_key": "psis_1932",
+    "priority": 2
+  },
+  {
+    "disease_key": "pepper_anthracnose",
+    "pesticide_key": "psis_340",
+    "priority": 3
+  },
+  {
+    "disease_key": "pepper_anthracnose",
+    "pesticide_key": "psis_189",
+    "priority": 4
+  },
+  {
+    "disease_key": "pepper_anthracnose",
+    "pesticide_key": "psis_7835",
+    "priority": 5
+  },
+  {
+    "disease_key": "pepper_powdery_mildew",
+    "pesticide_key": "psis_2731",
+    "priority": 1
+  },
+  {
+    "disease_key": "pepper_powdery_mildew",
+    "pesticide_key": "psis_1448",
+    "priority": 2
+  },
+  {
+    "disease_key": "pepper_powdery_mildew",
+    "pesticide_key": "psis_5401",
+    "priority": 3
+  },
+  {
+    "disease_key": "pepper_powdery_mildew",
+    "pesticide_key": "psis_2788",
+    "priority": 4
+  },
+  {
+    "disease_key": "pepper_powdery_mildew",
+    "pesticide_key": "psis_612",
+    "priority": 5
+  },
+  {
+    "disease_key": "radish_alternaria",
+    "pesticide_key": "psis_8291",
+    "priority": 1
+  },
+  {
+    "disease_key": "radish_alternaria",
+    "pesticide_key": "psis_986",
+    "priority": 2
+  },
+  {
+    "disease_key": "radish_alternaria",
+    "pesticide_key": "psis_725",
+    "priority": 3
+  },
+  {
+    "disease_key": "radish_alternaria",
+    "pesticide_key": "psis_9125",
+    "priority": 4
+  },
+  {
+    "disease_key": "radish_alternaria",
+    "pesticide_key": "psis_7456",
+    "priority": 5
+  },
+  {
+    "disease_key": "radish_downy_mildew",
+    "pesticide_key": "psis_721",
+    "priority": 1
+  },
+  {
+    "disease_key": "radish_downy_mildew",
+    "pesticide_key": "psis_9377",
+    "priority": 2
+  },
+  {
+    "disease_key": "cabbage_black_rot",
+    "pesticide_key": "psis_721",
+    "priority": 1
+  },
+  {
+    "disease_key": "cabbage_black_rot",
+    "pesticide_key": "psis_9036",
+    "priority": 2
+  },
+  {
+    "disease_key": "cabbage_black_rot",
+    "pesticide_key": "psis_9067",
+    "priority": 3
+  },
+  {
+    "disease_key": "cabbage_black_rot",
+    "pesticide_key": "psis_7955",
+    "priority": 4
+  },
+  {
+    "disease_key": "cabbage_downy_mildew",
+    "pesticide_key": "psis_721",
+    "priority": 1
+  },
+  {
+    "disease_key": "cabbage_downy_mildew",
+    "pesticide_key": "psis_70",
+    "priority": 2
+  },
+  {
+    "disease_key": "cabbage_downy_mildew",
+    "pesticide_key": "psis_8739",
+    "priority": 3
+  },
+  {
+    "disease_key": "cabbage_downy_mildew",
+    "pesticide_key": "psis_9259",
+    "priority": 4
+  }
+]
