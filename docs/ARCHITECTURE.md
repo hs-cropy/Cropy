@@ -16,8 +16,10 @@
 
 ML 엔진은 별도 프로세스가 아니라 백엔드 프로세스 안에서 동작한다.
 `app/services/ml_service.py`가 체크포인트를 `lru_cache`로 한 번만 로드해 상주시키고,
-앱 시작(lifespan) 때 예열한다. 체크포인트가 없으면 고정 분포를 반환하는
-**Mock 모드**로 떨어져 ML 없이도 전 구간 개발·테스트가 가능하다.
+앱 시작(lifespan) 때 예열한다. 개발 환경에서 명시적으로 허용한 경우만 고정 분포의
+Mock 결과를 반환한다. 운영은 실제 모델과 클래스 매핑이 유효해야 진단할 수 있다.
+`/api/v1/ready`로 준비 상태를 확인한다. 이미지 검증·추론·DB 처리는 작업 스레드에서
+실행하고 프로세스별 세마포어로 동시 진단 수를 제한한다.
 
 개발 환경에서 프론트엔드는 `next.config.js`의 rewrite로 `/api/*`와 `/uploads/*`를
 `localhost:8000`으로 프록시한다. 브라우저는 동일 출처로만 통신한다.
@@ -77,7 +79,7 @@ cropy/
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS 3, Iconify(Lucide) |
 | Backend | FastAPI 0.115, SQLAlchemy 2.0, Pydantic v2 |
 | ML | PyTorch, torchvision — ResNet50 fine-tune (9클래스) + ResNet18 혼동쌍 분류기 |
-| Database | SQLite (개발), PostgreSQL (운영 상정) |
+| Database | SQLite (현재 개발·단일 호스트 운영), PostgreSQL은 후속 선택 사항 |
 | Storage | 로컬 파일 시스템 — `backend/uploads/`, `StaticFiles`로 서빙 |
 
 ## 데이터 흐름
@@ -85,9 +87,10 @@ cropy/
 ### 1차 진단
 
 1. Frontend → `POST /api/v1/diagnose` (multipart image)
-2. `uploads/{uuid}.jpg`로 저장
+2. JPEG·PNG 형식·전체 디코딩·픽셀 수를 검증하고 실제 형식에 따라 `uploads/{uuid}.jpg|png`로 저장
 3. ML 추론 → 클래스별 softmax → 상위 3개 `(model_class_id, confidence)`
-4. `model_class_id`로 `diseases` 조인 → 병해 설명·원인·예방·연관 농약 조회
+4. 모델 출력의 ID·점수와 `diseases` 매핑을 검증 → 병해 설명·원인·예방·연관 농약 조회.
+   계약 오류는 임의 병명으로 대체하지 않고 503 처리하며 새 파일을 정리
 5. **유도촬영 판정**: 상위 두 후보가 사전 정의된 혼동쌍이고 마진 < 0.20이면
    판별부위 재촬영 지침(`recapture`)을 응답에 동봉
 6. `diagnoses` 테이블에 이력 저장 → 통합 결과 JSON 반환
@@ -119,7 +122,11 @@ cropy/
   시드 데이터는 매 기동마다 JSON을 목표 상태로 동기화한다
   ([DATABASE.md](DATABASE.md#seed-data) 참고).
 - **업로드 정리 없음.** `uploads/`가 무한히 증가한다. 업로드 크기는
-  `MAX_UPLOAD_MB`(기본 10MB)로 제한되고 2차 촬영 사진도 DB에 기록되지만,
-  오래된 파일을 정리하는 절차는 없다.
+  `MAX_UPLOAD_MB`(기본 10MB), 이미지 픽셀 수는 `MAX_IMAGE_PIXELS`(기본 40,000,000)로
+  제한되고 2차 촬영 사진도 DB에 기록된다. 모델 출력 검증 실패 시 이번 요청 파일은
+  정리하지만, 일반 추론·DB 실패나 오래된 파일·교체된 재촬영 사진의 정리 절차는 없다.
+  파일 크기 제한은 multipart 파싱 이후 검사이므로 요청 수신 자체의 제한은 별도 과제다.
+- **이미지 정적 제공.** `/uploads`는 JPEG·PNG 확장자만 고정 MIME과 `nosniff`로 제공한다.
+  기존 `.html` 등 비허용 확장자 파일은 디스크에 보존되지만 해당 URL은 404가 된다.
 - **단일 프로세스 전제.** 모델을 프로세스 메모리에 상주시키므로 워커를 늘리면
   워커 수만큼 메모리를 쓴다 (ResNet50 기준 체크포인트 94MB).
