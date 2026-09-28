@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,7 +17,8 @@ class Settings(BaseSettings):
     upload_dir: Path = Path("./uploads")
     ml_model_path: Path = Path("../ml/checkpoints/best_model.pth")
     cors_origins: str = "http://localhost:3000"
-    max_upload_mb: int = 10
+    max_upload_mb: int = Field(default=10, gt=0)
+    max_image_pixels: int = Field(default=40_000_000, gt=0)
 
     @property
     def cors_origin_list(self) -> list[str]:
