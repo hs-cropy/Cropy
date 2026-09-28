@@ -19,7 +19,7 @@ def test_fresh_install_restart_keeps_schema_without_backup(tmp_path, monkeypatch
     monkeypatch.setattr(database, "engine", test_engine)
     monkeypatch.setattr(main, "engine", test_engine)
     monkeypatch.setattr(main, "SessionLocal", sessionmaker(bind=test_engine))
-    monkeypatch.setattr(main, "load_model", lambda: None)
+    monkeypatch.setattr(main, "load_model", lambda model_classes: None)
 
     async def start():
         async with main.lifespan(main.app):
@@ -176,3 +176,22 @@ def test_empty_database_needs_no_backup_before_create_all(tmp_path, monkeypatch)
         assert list(tmp_path.glob("*.backup-*")) == []
     finally:
         test_engine.dispose()
+
+
+def test_additive_migration_preserves_history_and_marks_unverifiable_legacy_data(legacy_database):
+    _, test_engine = legacy_database
+    database.ensure_columns()
+    with test_engine.connect() as connection:
+        row = connection.execute(text("SELECT * FROM diagnoses")).mappings().one()
+    assert row["id"] == "old-diagnosis"
+    assert row["disease_id"] == 7
+    assert row["confidence"] == 0.87
+    assert row["image_path"] == r"C:\old-device\uploads\leaf.jpg"
+    assert row["created_at"] == "2026-09-01 01:02:03"
+    assert row["prediction_mode"] == "legacy"
+    assert row["revision"] == 1
+    for name in (
+        "selected_crop", "model_version", "preprocessing_version", "pair_model_version",
+        "original_predictions", "recapture", "updated_at", "refined_image_path",
+    ):
+        assert row[name] is None
