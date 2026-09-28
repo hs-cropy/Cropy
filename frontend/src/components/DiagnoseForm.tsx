@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CameraCapture, isCameraSupported } from "@/features/camera";
+import { CameraCapture, isCameraSupported, validateImage } from "@/features/camera";
 import { diagnoseImage } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { DiagnosisResult } from "./DiagnosisResult";
 import { RecapturePanel } from "./RecapturePanel";
+import { Toast, useToast } from "./Toast";
 
 const CROP_TYPES = [
   { value: "", label: "자동 감지", icon: "✨" },
@@ -33,6 +34,7 @@ export function DiagnoseForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DiagnoseResponse | null>(null);
+  const { toast, showToast } = useToast();
 
   // on phones the result renders below the fold — bring it into view
   useEffect(() => {
@@ -47,11 +49,18 @@ export function DiagnoseForm() {
     return () => URL.revokeObjectURL(preview);
   }, [preview]);
 
+  /** 형식·크기가 맞지 않으면 toast만 띄우고 기존 사진은 그대로 둔다 */
   const selectFile = (next: File) => {
+    const check = validateImage(next);
+    if (!check.ok) {
+      showToast(check.message);
+      return false;
+    }
     setFile(next);
     setPreview(URL.createObjectURL(next));
     setResult(null);
     setError(null);
+    return true;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,8 +82,8 @@ export function DiagnoseForm() {
   };
 
   const handleCapture = (captured: File) => {
-    selectFile(captured);
-    closeCamera();
+    // 통과하지 못하면 카메라를 열어 둔 채 다시 찍게 한다
+    if (selectFile(captured)) closeCamera();
   };
 
   const handleCameraGallery = () => {
@@ -264,6 +273,8 @@ export function DiagnoseForm() {
           </aside>
         )}
       </div>
+
+      <Toast toast={toast} />
     </div>
   );
 }
