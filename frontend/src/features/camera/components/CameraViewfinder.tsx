@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import { Toast, type ToastState } from "@/components/Toast";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import type { CameraErrorCode, CameraStatus } from "@/types/camera";
 
 const ERROR_MESSAGES: Record<CameraErrorCode, string> = {
@@ -47,7 +48,10 @@ export function CameraViewfinder({
   onShutter,
   onGallery,
 }: CameraViewfinderProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  // aria-modal만으로는 Tab이 뒤쪽 폼으로 빠지므로 직접 가둔다
+  useFocusTrap(dialogRef);
 
   // 열리자마자 키보드·스크린리더 포커스를 오버레이 안으로 옮긴다
   useEffect(() => {
@@ -56,6 +60,7 @@ export function CameraViewfinder({
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="카메라 촬영"
