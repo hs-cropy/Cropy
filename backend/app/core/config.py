@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -8,6 +9,9 @@ class Settings(BaseSettings):
 
     app_name: str = "CropCare AI"
     app_version: str = "1.0.0"
+    app_env: Literal["development", "production"] = "development"
+    allow_mock_predictions: bool = True
+    enable_pair_model: bool = False
     database_url: str = "sqlite:///./cropcare.db"
     upload_dir: Path = Path("./uploads")
     ml_model_path: Path = Path("../ml/checkpoints/best_model.pth")

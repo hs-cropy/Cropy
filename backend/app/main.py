@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes import diagnosis, diseases, health
 from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine, ensure_columns
+from app.models.entities import Disease
 from app.services.ml_service import load_model
 from app.services.seed import seed_database
 
@@ -20,9 +21,10 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         seed_database(db)
+        model_classes = {d.model_class_id for d in db.query(Disease).all()}
     finally:
         db.close()
-    load_model()
+    load_model(model_classes)
     yield
 
 
