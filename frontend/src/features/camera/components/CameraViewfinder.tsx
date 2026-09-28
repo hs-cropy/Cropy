@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type RefObject } from "react";
+import { Toast, type ToastState } from "@/components/Toast";
 import type { CameraErrorCode, CameraStatus } from "@/types/camera";
 
 const ERROR_MESSAGES: Record<CameraErrorCode, string> = {
@@ -20,6 +21,11 @@ interface CameraViewfinderProps {
   mirrored?: boolean;
   onClose: () => void;
   onFlip: () => void;
+  /**
+   * 오버레이 위 안내 토스트. aria-modal 밖의 live region은 스크린리더가 무시할 수 있어
+   * dialog 안에 렌더한다
+   */
+  notice?: ToastState | null;
   /** 캡처·파일 선택이 연결되기 전까지는 미지정 → 버튼 비활성 */
   onShutter?: () => void;
   onGallery?: () => void;
@@ -33,6 +39,7 @@ export function CameraViewfinder({
   mirrored = false,
   onClose,
   onFlip,
+  notice = null,
   onShutter,
   onGallery,
 }: CameraViewfinderProps) {
@@ -152,6 +159,8 @@ export function CameraViewfinder({
           </button>
         </div>
       </div>
+
+      <Toast toast={notice} placement="top" />
     </div>
   );
 }

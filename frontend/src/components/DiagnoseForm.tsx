@@ -34,7 +34,7 @@ export function DiagnoseForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DiagnoseResponse | null>(null);
-  const { toast, showToast } = useToast();
+  const { toast, showToast, clearToast } = useToast();
 
   // on phones the result renders below the fold — bring it into view
   useEffect(() => {
@@ -77,6 +77,8 @@ export function DiagnoseForm() {
   };
 
   const closeCamera = () => {
+    // 오버레이 안에 떠 있던 안내가 닫힌 뒤 하단에 다시 뜨지 않게 한다
+    clearToast();
     setCameraOpen(false);
     captureCardRef.current?.focus();
   };
@@ -182,6 +184,8 @@ export function DiagnoseForm() {
             cropLabel={cropType || undefined}
             onCapture={handleCapture}
             onClose={closeCamera}
+            onCaptureError={showToast}
+            notice={toast}
             onGallery={handleCameraGallery}
           />
         )}
@@ -274,7 +278,8 @@ export function DiagnoseForm() {
         )}
       </div>
 
-      <Toast toast={toast} />
+      {/* 카메라가 열려 있으면 오버레이 안에서 띄운다 */}
+      <Toast toast={cameraOpen ? null : toast} />
     </div>
   );
 }

@@ -15,6 +15,10 @@ export interface CameraCaptureProps {
   onCapture: (file: File, meta: CaptureMeta) => void;
   /** 닫기 버튼·Esc */
   onClose: () => void;
+  /** 셔터를 눌렀지만 사진을 만들지 못했을 때 안내 문구. 오버레이는 열린 채로 둔다 */
+  onCaptureError?: (message: string) => void;
+  /** 오버레이 안에 띄울 안내 토스트 (`useToast`의 `toast`) */
+  notice?: { id: number; message: string } | null;
   /** 뷰파인더의 갤러리 버튼. 권한 거부 등으로 카메라를 못 쓸 때의 대체 경로이기도 하다 */
   onGallery?: () => void;
   /** 상단 칩에 "{cropLabel} 잎"으로 표시. 없으면 칩을 숨긴다 */
