@@ -8,6 +8,7 @@ const ERROR_MESSAGES: Record<CameraErrorCode, string> = {
   "permission-denied": "카메라 권한이 필요해요. 브라우저 설정에서 권한을 허용해 주세요.",
   "not-supported": "이 환경에서는 카메라를 쓸 수 없어요. HTTPS로 접속했는지 확인해 주세요.",
   "no-device": "카메라를 찾을 수 없어요.",
+  "play-failed": "카메라 화면을 띄우지 못했어요. 다시 시도해 주세요.",
   unknown: "카메라를 사용할 수 없어요. 다른 앱이 카메라를 쓰고 있는지 확인해 주세요.",
 };
 
@@ -20,6 +21,8 @@ interface CameraViewfinderProps {
   /** 전면 카메라일 때 거울처럼 보이도록 미리보기만 좌우 반전. 캡처 이미지에는 적용하지 않는다 */
   mirrored?: boolean;
   onClose: () => void;
+  /** 에러 화면의 "다시 시도" 버튼. 사용자 제스처로 다시 열어야 자동재생 차단도 풀린다 */
+  onRetry?: () => void;
   onFlip: () => void;
   /**
    * 오버레이 위 안내 토스트. aria-modal 밖의 live region은 스크린리더가 무시할 수 있어
@@ -38,6 +41,7 @@ export function CameraViewfinder({
   cropLabel,
   mirrored = false,
   onClose,
+  onRetry,
   onFlip,
   notice = null,
   onShutter,
@@ -115,12 +119,25 @@ export function CameraViewfinder({
           </p>
 
           {status === "error" && error && (
-            <p
-              role="alert"
-              className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-white"
-            >
-              {ERROR_MESSAGES[error]}
-            </p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
+              <p role="alert" className="text-sm text-white">
+                {ERROR_MESSAGES[error]}
+              </p>
+              {/* 미지원 환경은 다시 해도 같고, 권한 거부는 브라우저가 두 번째 요청을 무시한다 (기획서 7절) */}
+              {onRetry && error !== "not-supported" && error !== "permission-denied" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // 누른 버튼이 사라지면 포커스가 body로 빠지므로 먼저 옮겨 둔다
+                    closeButtonRef.current?.focus();
+                    onRetry();
+                  }}
+                  className="min-h-11 rounded-full border-2 border-white px-5 text-sm font-bold text-white"
+                >
+                  다시 시도
+                </button>
+              )}
+            </div>
           )}
         </div>
 

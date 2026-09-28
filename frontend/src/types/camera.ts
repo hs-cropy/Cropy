@@ -1,6 +1,12 @@
 export type CameraStatus = "idle" | "opening" | "streaming" | "error";
 
-export type CameraErrorCode = "permission-denied" | "not-supported" | "no-device" | "unknown";
+export type CameraErrorCode =
+  | "permission-denied"
+  | "not-supported"
+  | "no-device"
+  // 스트림은 열렸지만 미리보기 재생(video.play())이 거부됨. 자동재생 차단 등
+  | "play-failed"
+  | "unknown";
 
 export type FacingMode = "user" | "environment";
 

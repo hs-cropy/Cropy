@@ -8,7 +8,7 @@ function CameraScreen() {
   const router = useRouter();
   const cropLabel = useSearchParams().get("crop") ?? undefined;
   const [facingMode, setFacingMode] = useState<FacingMode>("environment");
-  const { videoRef, status, error, activeFacingMode } = useCamera({ facingMode });
+  const { videoRef, status, error, activeFacingMode, retry } = useCamera({ facingMode });
 
   const handleClose = () => {
     router.push("/");
@@ -22,6 +22,7 @@ function CameraScreen() {
       cropLabel={cropLabel}
       mirrored={activeFacingMode === "user"}
       onClose={handleClose}
+      onRetry={retry}
       onFlip={() => setFacingMode((mode) => (mode === "environment" ? "user" : "environment"))}
     />
   );

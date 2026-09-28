@@ -91,8 +91,20 @@ export function useCamera({ facingMode = "environment" }: UseCameraOptions = {})
       const video = videoRef.current;
       if (video) {
         video.srcObject = stream;
-        // autoPlay가 막히는 브라우저 대비. 중단(AbortError)은 무시
-        await video.play().catch(() => {});
+        // autoPlay가 막히는 브라우저 대비
+        try {
+          await video.play();
+        } catch {
+          // 새 요청·stop이 srcObject를 바꿔 중단(AbortError)된 경우는 조용히 끝낸다
+          if (requestId !== requestIdRef.current) return;
+          // 오류가 났어도 autoPlay로 이미 재생 중이면 정상이다.
+          // 스트림은 남겨 두어 retry가 클릭 제스처 안에서 바로 play()할 수 있게 한다
+          if (video.paused) {
+            setError("play-failed");
+            setStatus("error");
+            return;
+          }
+        }
         if (requestId !== requestIdRef.current) return;
       }
       setStatus("streaming");
@@ -102,6 +114,31 @@ export function useCamera({ facingMode = "environment" }: UseCameraOptions = {})
       setStatus("error");
     }
   }, [facingMode, releaseStream, setStatus]);
+
+  /**
+   * 에러 화면의 "다시 시도". 재생만 실패한 경우 getUserMedia를 기다리면 클릭 제스처가
+   * 만료될 수 있으므로, 열린 스트림이 있으면 동기적으로 play()부터 다시 부른다
+   */
+  const retry = useCallback(() => {
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream || video.srcObject !== stream) {
+      start();
+      return;
+    }
+    const requestId = requestIdRef.current;
+    video.play().then(
+      () => {
+        if (requestId !== requestIdRef.current) return;
+        setError(null);
+        setStatus("streaming");
+      },
+      () => {
+        // 그래도 안 되면 카메라를 처음부터 다시 연다. 기다리는 사이 숨겨졌다면 열지 않는다
+        if (requestId === requestIdRef.current && !document.hidden) start();
+      },
+    );
+  }, [start, setStatus]);
 
   const stop = useCallback(() => {
     requestIdRef.current++;
@@ -120,6 +157,12 @@ export function useCamera({ facingMode = "environment" }: UseCameraOptions = {})
         const active = statusRef.current === "opening" || statusRef.current === "streaming";
         resumeOnVisibleRef.current = active;
         if (active) stop();
+        else {
+          // play-failed로 남겨 둔 스트림도 백그라운드에서는 끈다. 다시 시도하면 새로 연다.
+          // 진행 중인 retry의 play()가 늦게 끝나도 무시되도록 요청 번호를 올린다
+          requestIdRef.current++;
+          releaseStream();
+        }
       } else if (resumeOnVisibleRef.current) {
         resumeOnVisibleRef.current = false;
         start();
@@ -127,11 +170,22 @@ export function useCamera({ facingMode = "environment" }: UseCameraOptions = {})
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
+    // play-failed 뒤 브라우저가 스스로(autoPlay) 재생을 시작하면 에러 화면을 거둔다
+    const video = videoRef.current;
+    const handlePlaying = () => {
+      const stream = streamRef.current;
+      if (statusRef.current !== "error" || !stream || video?.srcObject !== stream) return;
+      setError(null);
+      setStatus("streaming");
+    };
+    video?.addEventListener("playing", handlePlaying);
+
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      video?.removeEventListener("playing", handlePlaying);
       stop();
     };
-  }, [start, stop]);
+  }, [start, stop, releaseStream, setStatus]);
 
-  return { videoRef, status, error, activeFacingMode, start, stop };
+  return { videoRef, status, error, activeFacingMode, start, retry, stop };
 }

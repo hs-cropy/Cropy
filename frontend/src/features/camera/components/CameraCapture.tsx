@@ -21,7 +21,7 @@ export function CameraCapture({
   notice,
 }: CameraCaptureProps) {
   const [facingMode, setFacingMode] = useState<FacingMode>("environment");
-  const { videoRef, status, error, activeFacingMode } = useCamera({ facingMode });
+  const { videoRef, status, error, activeFacingMode, retry } = useCamera({ facingMode });
   const { capture } = useCaptureFrame();
   // 캡처(toBlob)를 기다리는 사이 닫혔다면 그 사진은 넘기지 않는다
   const mountedRef = useRef(true);
@@ -66,6 +66,7 @@ export function CameraCapture({
       cropLabel={cropLabel}
       mirrored={activeFacingMode === "user"}
       onClose={onClose}
+      onRetry={retry}
       notice={notice}
       onFlip={() => setFacingMode((mode) => (mode === "environment" ? "user" : "environment"))}
       // 캡처 중에도 비활성화하지 않는다(누른 버튼의 포커스가 빠지므로). 연타는 busy 잠금이 무시한다
