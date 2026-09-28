@@ -73,6 +73,116 @@ def write_catalog(directory, data):
     (directory / "pesticide_catalog.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 
 
+@pytest.mark.parametrize("payload", [
+    "<service><errorCode>ERR_101</errorCode></service>",
+    "<service><errorCode>ERR_901</errorCode><totalCount>0</totalCount><list/></service>",
+    "<html><body>maintenance</body></html>",
+    "<service><totalCount>0</totalCount><unexpected/></service>",
+    "<service><list/></service>",
+    "<service><totalCount>broken</totalCount><list/></service>",
+    "<service><errorMsg>temporarily unavailable</errorMsg><totalCount>0</totalCount><list/></service>",
+    "<service><totalCount>0</totalCount><totalCount>12</totalCount><list/></service>",
+    "<service><totalCount>0</totalCount><list/><list/></service>",
+    "<service>",
+])
+def test_error_or_unknown_xml_cannot_be_treated_as_no_registrations(payload):
+    with client_for(payload) as client, pytest.raises(ValueError):
+        sync.fetch_items(client, "fake-test-key", "무", "노균병")
+
+
+def test_explicit_zero_is_a_valid_empty_result():
+    with client_for(xml()) as client:
+        assert sync.fetch_items(client, "fake-test-key", "무", "노균병") == []
+
+
+def test_fetches_later_pages_without_assuming_a_short_page_is_complete():
+    first = item()
+    later = item(sequence="2", phi="수확21일전")
+    def reply(request):
+        assert request.url.params["cropCheck"] == "Y"
+        return xml([first] if request.url.params["startPoint"] == "1" else [later], total=2)
+    with client_for(reply) as client:
+        records = sync.fetch_items(client, "fake-test-key", "무", "노균병")
+    assert [row["useSuittime"] for row in records] == ["수확3일전", "수확21일전"]
+
+
+def test_repeated_or_truncated_pages_fail_closed():
+    with client_for(xml([item()], total=2)) as client, pytest.raises(ValueError):
+        sync.fetch_items(client, "fake-test-key", "무", "노균병")
+
+
+def test_pagination_uses_page_number_not_record_offset():
+    first = [item(sequence=str(index)) for index in range(1, 51)]
+    def reply(request):
+        page = request.url.params["startPoint"]
+        assert page in {"1", "2"}
+        return xml(first if page == "1" else [item(sequence="51")], total=51)
+    with client_for(reply) as client:
+        result = sync.fetch_items(client, "fake-test-key", "무", "노균병")
+    assert len(result) == 51
+    assert result[-1]["diseaseUseSeq"] == "51"
+
+
+@pytest.mark.parametrize("changes", [{"pestiCode": ""}, {"diseaseUseSeq": ""}, {"cropName": "배추"}, {"diseaseWeedName": "탄저병"}])
+def test_missing_identity_or_wrong_query_match_is_rejected(changes):
+    with client_for(xml([item(**changes)])) as client, pytest.raises(ValueError):
+        sync.fetch_items(client, "fake-test-key", "무", "노균병")
+
+
+def test_same_product_preserves_every_crop_and_usage_condition():
+    def reply(request):
+        crop = request.url.params["cropName"]
+        return xml([item(crop=crop, phi="수확3일전" if crop == "무" else "수확21일전", sequence="1" if crop == "무" else "2")])
+    with client_for(reply) as client:
+        result = sync.build_catalog(client, "fake-test-key", queries=QUERIES)
+    assert len(result["products"]) == 1
+    assert [(row["disease_key"], row["phi_days"]) for row in result["usages"]] == [("radish_downy_mildew", 3), ("cabbage_downy_mildew", 21)]
+    assert {row["source_usage_key"] for row in result["usages"]} == {"123:1", "123:2"}
+
+
+def test_multiple_uses_of_selected_product_survive_product_limit():
+    with client_for(xml([item(sequence="1"), item(sequence="2", phi="수확21일전")])) as client:
+        result = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")}, max_per_disease=1)
+    assert [row["phi_days"] for row in result["usages"]] == [3, 21]
+
+
+def test_partial_query_failure_preserves_previous_catalog(tmp_path):
+    target = tmp_path / "pesticide_catalog.json"
+    target.write_text("old complete snapshot", encoding="utf-8")
+    def reply(request):
+        return xml([item()]) if request.url.params["cropName"] == "무" else "<service><errorCode>ERR_901</errorCode></service>"
+    with client_for(reply) as client, pytest.raises(ValueError):
+        sync.sync_catalog(client, "fake-test-key", target, queries=QUERIES)
+    assert target.read_text(encoding="utf-8") == "old complete snapshot"
+
+
+def test_atomic_publish_failure_preserves_previous_catalog(tmp_path, monkeypatch):
+    target = tmp_path / "pesticide_catalog.json"
+    target.write_text("old complete snapshot", encoding="utf-8")
+    def interrupted_replace(source, destination):
+        raise OSError("simulated interruption")
+    monkeypatch.setattr(sync.os, "replace", interrupted_replace)
+    with client_for(xml()) as client, pytest.raises(OSError):
+        sync.sync_catalog(client, "fake-test-key", target, queries=QUERIES)
+    assert target.read_text(encoding="utf-8") == "old complete snapshot"
+    assert list(tmp_path.iterdir()) == [target]
+
+
+def test_all_queries_explicitly_empty_can_publish_one_complete_catalog(tmp_path):
+    target = tmp_path / "pesticide_catalog.json"
+    with client_for(xml()) as client:
+        sync.sync_catalog(client, "fake-test-key", target, queries=QUERIES)
+    result = json.loads(target.read_text(encoding="utf-8"))
+    assert result["products"] == []
+    assert result["usages"] == []
+    assert [row["count"] for row in result["queries"]] == [0, 0]
+
+
+@pytest.mark.parametrize("value,want", [("수확3일전", 3), ("수확 21 일 전", 21), ("수확 3~7일전", None), ("수확3일전 또는 수확21일전", None)])
+def test_phi_does_not_guess_a_number_from_ambiguous_source(value, want):
+    assert sync.parse_phi_days(value) == want
+
+
 def test_catalog_conditions_are_scoped_to_disease_and_idempotent(store):
     db, directory = store
     write_catalog(directory, catalog())
