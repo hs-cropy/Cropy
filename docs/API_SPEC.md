@@ -219,3 +219,10 @@ Base URL: `http://localhost:8000/api/v1`
 - 진단 응답에 selected_crop, predicted_crop, crop_mismatch, prediction_mode, model_version, preprocessing_version, pair_model_version을 기록한다.
 - `/history`의 crop_type 필터와 prediction_mode를 제공한다. 재촬영은 모델·전처리 버전의 호환성을 검사하고 실패 시 기존 이력을 보존한다.
 - 날짜 응답은 UTC 시간대 정보를 포함한다. 모델 출력은 9개 클래스 전체 분포와 유한값을 검증한다.
+
+
+## 기능별 변경: 업로드 및 요청 제한
+
+- 허용 실제 이미지 형식은 JPEG/PNG/WEBP이며 파일 확장자는 디코딩한 형식에 따라 정한다. 픽셀 수 상한을 검사한다.
+- 이미지 크기뿐 아니라 multipart 요청 전체 크기를 제한하고 진단 동시 요청 수를 제한한다. 초과 응답은 413/503이다.
+- 비정상 파일·정적 경로 접근을 차단하며 미참조 파일 정리는 `backend/scripts/cleanup_uploads.py`의 dry-run부터 확인한다.
