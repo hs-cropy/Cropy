@@ -1,15 +1,20 @@
 from io import BytesIO
+import logging
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from PIL import Image, UnidentifiedImageError
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.exc import StaleDataError
+from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
-from app.core.database import get_db
-from app.schemas.diagnosis import DiagnoseResponse, PaginatedHistory
+from app.core.database import get_db, SessionLocal
+from app.schemas.diagnosis import CropType, DiagnoseResponse, PaginatedHistory
 from app.services import diagnosis_service
+from app.services.ml_service import ModelUnavailableError
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # 상한 검사를 위해 조금씩 읽는다 — 큰 파일을 통째로 메모리에 올리지 않기 위함
 _CHUNK_SIZE = 64 * 1024
@@ -50,29 +55,45 @@ async def _read_image_upload(file: UploadFile) -> bytes:
     return content
 
 
+def _with_session(operation, *args):
+    # Create/use/close each ORM session inside the same worker thread.
+    with SessionLocal() as db:
+        return operation(db, *args)
+
+
 @router.post("/diagnose", response_model=DiagnoseResponse)
 async def diagnose(
+    request: Request,
     file: UploadFile = File(...),
-    crop_type: str | None = Query(None),
-    db: Session = Depends(get_db),
+    crop_type: CropType | None = Query(None),
 ):
-    content = await _read_image_upload(file)
-    return diagnosis_service.diagnose_image(db, content, file.filename or "image.jpg", crop_type)
+    try:
+        content = await _read_image_upload(file)
+        return await run_in_threadpool(
+            _with_session, diagnosis_service.diagnose_image, content, file.filename or "image.jpg", crop_type
+        )
+    except (diagnosis_service.PredictionContractError, ModelUnavailableError):
+        logger.exception("Model prediction contract validation failed")
+        raise HTTPException(status_code=503, detail="모델 진단 결과를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.")
 
 
 @router.post("/diagnose/{diagnosis_id}/refine", response_model=DiagnoseResponse)
 async def refine(
     diagnosis_id: str,
+    request: Request,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
 ):
     """혼동쌍 판별부위 2차 촬영으로 진단을 재확정 (구성 E: 다시점 융합)."""
-    content = await _read_image_upload(file)
-
     try:
-        result = diagnosis_service.refine_diagnosis(
-            db, diagnosis_id, content, file.filename or "image.jpg"
+        content = await _read_image_upload(file)
+        result = await run_in_threadpool(
+            _with_session, diagnosis_service.refine_diagnosis, diagnosis_id, content, file.filename or "image.jpg"
         )
+    except (diagnosis_service.PredictionContractError, ModelUnavailableError):
+        logger.exception("Model prediction contract validation failed during refinement")
+        raise HTTPException(status_code=503, detail="모델 진단 결과를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.")
+    except (diagnosis_service.ModelVersionConflict, StaleDataError):
+        raise HTTPException(status_code=409, detail="모델 또는 진단이 변경되었습니다. 새 진단을 시작해 주세요.")
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     if not result:
@@ -84,9 +105,10 @@ async def refine(
 def history(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
+    crop_type: CropType | None = Query(None),
     db: Session = Depends(get_db),
 ):
-    return diagnosis_service.get_history(db, page, size)
+    return diagnosis_service.get_history(db, page, size, crop_type)
 
 
 @router.get("/history/{diagnosis_id}", response_model=DiagnoseResponse)
