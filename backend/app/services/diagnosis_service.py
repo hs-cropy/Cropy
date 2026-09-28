@@ -14,25 +14,10 @@ from app.schemas.diagnosis import (
     DiseaseDetail,
     PaginatedHistory,
     PredictionItem,
-    PesticideInfo,
-    PesticideSafety,
 )
 from app.services.ml_service import predict_all, predict_pair, get_prediction_context
+from app.services.pesticide_service import pesticide_infos
 from app.services.recapture import apply_pair_specialist, check_recapture, fuse_predictions
-
-
-def _pesticide_to_schema(pesticide) -> PesticideInfo:
-    return PesticideInfo(
-        name=pesticide.name,
-        dilution=pesticide.dilution,
-        usage=pesticide.usage_method,
-        active_ingredient=pesticide.active_ingredient,
-        safety_notes=pesticide.safety_notes,
-        safety=PesticideSafety(
-            phi_days=pesticide.phi_days,
-            reentry_hours=pesticide.reentry_hours,
-        ),
-    )
 
 
 class PredictionContractError(RuntimeError):
@@ -120,7 +105,7 @@ def _response(db: Session, diagnosis: Diagnosis) -> DiagnoseResponse:
         category=disease.category, severity=disease.severity, confidence=diagnosis.confidence,
         top_predictions=[PredictionItem(**p) for p in (diagnosis.top_predictions or [])],
         description=disease.description, causes=disease.causes or [],
-        pesticides=[_pesticide_to_schema(p) for p in disease.pesticides], prevention=disease.prevention or [],
+        pesticides=pesticide_infos(db, disease.id), prevention=disease.prevention or [],
         image_url=_image_url(diagnosis.image_path), refined_image_url=_image_url(diagnosis.refined_image_path),
         created_at=diagnosis.created_at, updated_at=diagnosis.updated_at,
         recapture=diagnosis.recapture,
@@ -255,7 +240,7 @@ def list_diseases(db: Session, q: str | None, crop_type: str | None) -> list[Dis
             causes=d.causes or [],
             prevention=d.prevention or [],
             severity=d.severity,
-            pesticides=[_pesticide_to_schema(p) for p in d.pesticides],
+            pesticides=pesticide_infos(db, d.id),
         )
         for d in query.all()
     ]
@@ -276,5 +261,5 @@ def get_disease(db: Session, disease_id: int) -> DiseaseDetail | None:
         causes=disease.causes or [],
         prevention=disease.prevention or [],
         severity=disease.severity,
-        pesticides=[_pesticide_to_schema(p) for p in disease.pesticides],
+        pesticides=pesticide_infos(db, disease.id),
     )
