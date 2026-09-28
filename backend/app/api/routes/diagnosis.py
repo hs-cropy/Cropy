@@ -86,10 +86,11 @@ async def diagnose(
     crop_type: CropType | None = Query(None),
 ):
     try:
-        content, extension = await _read_image_upload(file)
-        return await run_in_threadpool(
-            _with_session, diagnosis_service.diagnose_image, content, f"image{extension}", crop_type
-        )
+        async with request.app.state.diagnosis_limiter:
+            content, extension = await _read_image_upload(file)
+            return await run_in_threadpool(
+                _with_session, diagnosis_service.diagnose_image, content, f"image{extension}", crop_type
+            )
     except (diagnosis_service.PredictionContractError, ModelUnavailableError):
         logger.exception("Model prediction contract validation failed")
         raise HTTPException(status_code=503, detail="모델 진단 결과를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.")
@@ -103,10 +104,11 @@ async def refine(
 ):
     """혼동쌍 판별부위 2차 촬영으로 진단을 재확정 (구성 E: 다시점 융합)."""
     try:
-        content, extension = await _read_image_upload(file)
-        result = await run_in_threadpool(
-            _with_session, diagnosis_service.refine_diagnosis, diagnosis_id, content, f"image{extension}"
-        )
+        async with request.app.state.diagnosis_limiter:
+            content, extension = await _read_image_upload(file)
+            result = await run_in_threadpool(
+                _with_session, diagnosis_service.refine_diagnosis, diagnosis_id, content, f"image{extension}"
+            )
     except (diagnosis_service.PredictionContractError, ModelUnavailableError):
         logger.exception("Model prediction contract validation failed during refinement")
         raise HTTPException(status_code=503, detail="모델 진단 결과를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.")

@@ -1,12 +1,14 @@
 from contextlib import asynccontextmanager
+import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.uploads import ImageStaticFiles
 
 from app.api.routes import diagnosis, diseases, health
 from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine, ensure_columns
+from app.core.uploads import ImageStaticFiles
+from app.core.request_limits import RequestBodyLimitMiddleware
 from app.models.entities import Disease
 from app.services.ml_service import load_model
 from app.services.seed import seed_database
@@ -25,6 +27,7 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
     load_model(model_classes)
+    app.state.diagnosis_limiter = asyncio.Semaphore(settings.max_concurrent_diagnoses)
     yield
 
 
@@ -34,6 +37,8 @@ app = FastAPI(
     description="AI 기반 농작물 병해충 진단 및 스마트 방제 지원 플랫폼",
     lifespan=lifespan,
 )
+
+app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=lambda: settings.max_request_bytes)
 
 app.add_middleware(
     CORSMiddleware,

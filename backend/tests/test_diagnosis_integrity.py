@@ -128,6 +128,34 @@ def test_invalid_selected_crop_is_rejected(client, sample_image):
     assert response.status_code == 422
 
 
+def test_inference_does_not_block_event_loop(client, sample_image, monkeypatch):
+    from app.main import app
+    started = threading.Event()
+    release = threading.Event()
+    finished = threading.Event()
+    def slow(_):
+        started.set()
+        release.wait(2)
+        finished.set()
+        return DIST
+    monkeypatch.setattr(service, 'predict_all', slow)
+    monkeypatch.setattr(service, 'predict', slow, raising=False)
+    async def probe():
+        monkeypatch.setattr(app.state, "diagnosis_limiter", asyncio.Semaphore(1))
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as ac:
+            request = asyncio.create_task(ac.post('/api/v1/diagnose', files={'file': ('x.jpg', sample_image, 'image/jpeg')}))
+            try:
+                assert await asyncio.to_thread(started.wait, 2)
+                health = await ac.get('/api/v1/health')
+                assert health.status_code == 200
+                assert not finished.is_set()
+            finally:
+                release.set()
+                response = await request
+        assert response.status_code == 200
+    asyncio.run(probe())
+
+
 def test_model_conflict_api_returns_409(client, sample_image, monkeypatch):
     monkeypatch.setattr(service, "get_prediction_context", lambda: dict(CONTEXT))
     monkeypatch.setattr(service, "predict_all", lambda _: DIST)
