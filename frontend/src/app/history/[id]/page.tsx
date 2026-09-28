@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fetchDiagnosisDetail } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { DiagnosisResult } from "@/components/DiagnosisResult";
+import { RecapturePanel } from "@/components/RecapturePanel";
 
 export default function HistoryDetailPage() {
   const params = useParams();
@@ -37,7 +38,14 @@ export default function HistoryDetailPage() {
           {error || "해당 기록을 찾을 수 없습니다."}
         </p>
       )}
-      {result && <DiagnosisResult result={result} />}
+      {result && (
+        <div className="space-y-4">
+          {result.recapture && (
+            <RecapturePanel diagnosisId={result.id} guidance={result.recapture} onRefined={setResult} />
+          )}
+          <DiagnosisResult result={result} />
+        </div>
+      )}
     </div>
   );
 }
