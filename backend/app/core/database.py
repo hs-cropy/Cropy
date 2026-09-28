@@ -37,15 +37,7 @@ class Base(DeclarativeBase):
 # 도입하기 전까지, 나중에 생긴 칼럼만 누락 시 덧붙여 기존 DB(진단 이력)를 보존한다.
 _ADDED_COLUMNS: list[tuple[str, str, str]] = [
     ("diagnoses", "refined_image_path", "VARCHAR(500)"),
-    ("diagnoses", "selected_crop", "VARCHAR(100)"),
-    ("diagnoses", "prediction_mode", "VARCHAR(20) DEFAULT 'legacy'"),
-    ("diagnoses", "model_version", "VARCHAR(100)"),
-    ("diagnoses", "preprocessing_version", "VARCHAR(100)"),
-    ("diagnoses", "pair_model_version", "VARCHAR(100)"),
-    ("diagnoses", "original_predictions", "JSON"),
-    ("diagnoses", "recapture", "JSON"),
-    ("diagnoses", "updated_at", "TIMESTAMP"),
-    ("diagnoses", "revision", "INTEGER NOT NULL DEFAULT 1"),
+
 ]
 
 
