@@ -1,0 +1,7 @@
+{
+  "n": 635,
+  "correct": 611,
+  "accuracy": 0.9622047244094488,
+  "source": "existing Colab baseline predictions; no new inference",
+  "limitation": "Exact overlap exclusion only, not an independent evaluation set"
+}
