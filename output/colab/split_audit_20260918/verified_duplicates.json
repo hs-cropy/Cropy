@@ -1,0 +1,134 @@
+[
+  [
+    {
+      "path": "dataset/test/2_무검은무늬병/V006_79_1_03_02_03_12_1_5389e_20201023_10.jpg",
+      "split": "test",
+      "class": "2_무검은무늬병",
+      "sha256": "5d84a4e10124a89d15eae81bc51581e648465e649a1925245379a2cbed6cc5e4",
+      "pixel_sha256": "2a74328bc2095ab9c208a5dd0b2a13c0ba032727e5bf1433fc3a18cb57862db9",
+      "dhash": 8542937333059808846,
+      "filename_group": "V006_79_1_03_02_03_12_1_5389e_20201023",
+      "original_sha256": "730889f55fd5c26b663ccfb9f6c174dc24ab2f3b82410faa9c0512d2aebf7bfb"
+    },
+    {
+      "path": "dataset/train/2_무검은무늬병/V006_79_1_03_02_03_12_1_5389e_20201023_26.jpg",
+      "split": "train",
+      "class": "2_무검은무늬병",
+      "sha256": "5d84a4e10124a89d15eae81bc51581e648465e649a1925245379a2cbed6cc5e4",
+      "pixel_sha256": "2a74328bc2095ab9c208a5dd0b2a13c0ba032727e5bf1433fc3a18cb57862db9",
+      "dhash": 8542937333059808846,
+      "filename_group": "V006_79_1_03_02_03_12_1_5389e_20201023",
+      "original_sha256": "730889f55fd5c26b663ccfb9f6c174dc24ab2f3b82410faa9c0512d2aebf7bfb"
+    }
+  ],
+  [
+    {
+      "path": "dataset/test/2_무검은무늬병/V006_79_1_03_02_03_12_1_5389e_20201023_32.jpg",
+      "split": "test",
+      "class": "2_무검은무늬병",
+      "sha256": "232c331e0942cfc17b6deb5dcfebd228a37f4fb688eea4736a5d7b25c99472af",
+      "pixel_sha256": "61c47d6fbffd3af9083768aa35421e09d62d2213be4c4f6db84f09491594b638",
+      "dhash": 18155118330329724805,
+      "filename_group": "V006_79_1_03_02_03_12_1_5389e_20201023",
+      "original_sha256": "0be1887c26655ccbe391680e3386973d8cdede10b4ede86f39da2de1f96cd0b6"
+    },
+    {
+      "path": "dataset/train/2_무검은무늬병/V006_79_1_03_02_03_12_1_5389e_20201023_16.jpg",
+      "split": "train",
+      "class": "2_무검은무늬병",
+      "sha256": "232c331e0942cfc17b6deb5dcfebd228a37f4fb688eea4736a5d7b25c99472af",
+      "pixel_sha256": "61c47d6fbffd3af9083768aa35421e09d62d2213be4c4f6db84f09491594b638",
+      "dhash": 18155118330329724805,
+      "filename_group": "V006_79_1_03_02_03_12_1_5389e_20201023",
+      "original_sha256": "0be1887c26655ccbe391680e3386973d8cdede10b4ede86f39da2de1f96cd0b6"
+    }
+  ],
+  [
+    {
+      "path": "dataset/test/2_무검은무늬병/V006_79_1_03_02_03_12_2_5389e_20201023_3.jpg",
+      "split": "test",
+      "class": "2_무검은무늬병",
+      "sha256": "f93ce46aa316bdb6a1224a85888b7e6218a96488ca8499239da170c53faf4374",
+      "pixel_sha256": "f0929b1ac51ea982ccecb748876374a1370a3d4e520f49baca9a3c7df3c2a1c8",
+      "dhash": 4489659346317263042,
+      "filename_group": "V006_79_1_03_02_03_12_2_5389e_20201023",
+      "original_sha256": "deff3da8f56fe099719f8c98419386ba7dcfe75cda01a99bd1b30d4039fba73c"
+    },
+    {
+      "path": "dataset/train/2_무검은무늬병/V006_79_1_03_02_03_12_2_5389e_20201023_19.jpg",
+      "split": "train",
+      "class": "2_무검은무늬병",
+      "sha256": "f93ce46aa316bdb6a1224a85888b7e6218a96488ca8499239da170c53faf4374",
+      "pixel_sha256": "f0929b1ac51ea982ccecb748876374a1370a3d4e520f49baca9a3c7df3c2a1c8",
+      "dhash": 4489659346317263042,
+      "filename_group": "V006_79_1_03_02_03_12_2_5389e_20201023",
+      "original_sha256": "deff3da8f56fe099719f8c98419386ba7dcfe75cda01a99bd1b30d4039fba73c"
+    }
+  ],
+  [
+    {
+      "path": "dataset/test/5_배추노균병/V006_79_1_06_03_03_12_1_5576q_20200917_2.jpg",
+      "split": "test",
+      "class": "5_배추노균병",
+      "sha256": "2226ec799b1fd6b3f833b25a6c38006e2df8561edace33c6f7c9deecca9c60b4",
+      "pixel_sha256": "2178b1889e67bba8e48f6569f0f808e458126bee3b8900065cbc0ab6d9c70afb",
+      "dhash": 1378984606197815193,
+      "filename_group": "V006_79_1_06_03_03_12_1_5576q_20200917",
+      "original_sha256": "c9ce18fdba926db2afbc81dd3b1a700f9087fe31fd59c7bcc644f4f1648dbdb3"
+    },
+    {
+      "path": "dataset/train/5_배추노균병/V006_79_1_06_03_03_12_1_5576q_20200924_2.jpg",
+      "split": "train",
+      "class": "5_배추노균병",
+      "sha256": "2226ec799b1fd6b3f833b25a6c38006e2df8561edace33c6f7c9deecca9c60b4",
+      "pixel_sha256": "2178b1889e67bba8e48f6569f0f808e458126bee3b8900065cbc0ab6d9c70afb",
+      "dhash": 1378984606197815193,
+      "filename_group": "V006_79_1_06_03_03_12_1_5576q_20200924",
+      "original_sha256": "c9ce18fdba926db2afbc81dd3b1a700f9087fe31fd59c7bcc644f4f1648dbdb3"
+    }
+  ],
+  [
+    {
+      "path": "dataset/train/1_고추흰가루병/V006_79_1_02_01_03_13_1_0424z_20201012_27.jpg",
+      "split": "train",
+      "class": "1_고추흰가루병",
+      "sha256": "642bdae2df04a567b34247ece4eda683fec38a54ff0fa9d2c60bbb21340e00bd",
+      "pixel_sha256": "c4ed341f1131e0f45cb10830cc6bb9c07058a871cf9c7e2af81ce99fba79cdf8",
+      "dhash": 3546967847247563210,
+      "filename_group": "V006_79_1_02_01_03_13_1_0424z_20201012",
+      "original_sha256": "377fc3babd4203c30ac46610a1062c25d523fcd5fff9b79673249587d4deb3f1"
+    },
+    {
+      "path": "dataset/val/1_고추흰가루병/V006_79_1_02_01_03_13_2_0424z_20201012_27.jpg",
+      "split": "val",
+      "class": "1_고추흰가루병",
+      "sha256": "642bdae2df04a567b34247ece4eda683fec38a54ff0fa9d2c60bbb21340e00bd",
+      "pixel_sha256": "c4ed341f1131e0f45cb10830cc6bb9c07058a871cf9c7e2af81ce99fba79cdf8",
+      "dhash": 3546967847247563210,
+      "filename_group": "V006_79_1_02_01_03_13_2_0424z_20201012",
+      "original_sha256": "377fc3babd4203c30ac46610a1062c25d523fcd5fff9b79673249587d4deb3f1"
+    }
+  ],
+  [
+    {
+      "path": "dataset/train/2_무검은무늬병/V006_79_1_03_02_03_12_1_5389e_20201023_4.jpg",
+      "split": "train",
+      "class": "2_무검은무늬병",
+      "sha256": "7045ceb2546909bf53e14376fa39d6f874f22ec916037eeb624cde7f08e16b77",
+      "pixel_sha256": "268944d9c274af11b8fca6955f68b9e671d45299f4799d458899810581940abf",
+      "dhash": 13706834620937338102,
+      "filename_group": "V006_79_1_03_02_03_12_1_5389e_20201023",
+      "original_sha256": "bfac521a53f69299278c6ccd6cba5fc1114a6e73731b355f46d89bc5be53c288"
+    },
+    {
+      "path": "dataset/val/2_무검은무늬병/V006_79_1_03_02_03_12_1_5389e_20201023_20.jpg",
+      "split": "val",
+      "class": "2_무검은무늬병",
+      "sha256": "7045ceb2546909bf53e14376fa39d6f874f22ec916037eeb624cde7f08e16b77",
+      "pixel_sha256": "268944d9c274af11b8fca6955f68b9e671d45299f4799d458899810581940abf",
+      "dhash": 13706834620937338102,
+      "filename_group": "V006_79_1_03_02_03_12_1_5389e_20201023",
+      "original_sha256": "bfac521a53f69299278c6ccd6cba5fc1114a6e73731b355f46d89bc5be53c288"
+    }
+  ]
+]
