@@ -59,7 +59,7 @@ python train.py --data-dir ../data/dataset --epochs 20 --arch resnet50
 ```
 
 학습된 모델은 `ml/checkpoints/best_model.pth`에 저장됩니다.  
-모델이 없으면 Backend는 **Mock 모드**로 샘플 진단 결과를 반환합니다.
+개발 모드에서 `ALLOW_MOCK_PREDICTIONS=true`이면 모델이 없을 때 예시 진단을 반환합니다. 운영 모드는 실제 모델 없이는 진단을 503으로 차단합니다. [운영·복구 안내](docs/BACKEND_OPERATIONS.md)를 참고하세요.
 
 - `--arch resnet18|resnet50`: 백본 선택 (체크포인트에 기록되어 백엔드/평가 스크립트가 자동 인식)
 - `--resume <checkpoint>`: 기존 체크포인트에서 이어 학습 (현재 val 정확도보다 좋아질 때만 저장)
@@ -118,10 +118,10 @@ rewrite가 backend 컨테이너로 프록시하므로 백엔드 포트를 외부
 CORS를 설정할 필요도 없습니다.
 
 **체크포인트는 별도로 준비해야 합니다.** `ml/checkpoints/`가 `/models`로 마운트되며,
-`best_model.pth`가 없으면 백엔드는 Mock 모드로 뜹니다. 확인:
+Compose는 운영 모드이며 `best_model.pth`가 없으면 준비 상태가 실패합니다. 확인:
 
 ```bash
-curl http://localhost:3000/api/v1/health   # model_loaded 가 true 여야 정상
+curl http://localhost:3000/api/v1/ready   # HTTP 200이어야 실제 진단 준비 완료
 ```
 
 진단 이력(SQLite)과 업로드 이미지는 `cropcare-data` 볼륨에 남아 컨테이너를
