@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     app_env: Literal["development", "production"] = "development"
     allow_mock_predictions: bool = True
     enable_pair_model: bool = False
+    max_concurrent_diagnoses: int = Field(default=1, ge=1, le=4)
     database_url: str = "sqlite:///./cropcare.db"
     upload_dir: Path = Path("./uploads")
     ml_model_path: Path = Path("../ml/checkpoints/best_model.pth")
@@ -27,6 +28,10 @@ class Settings(BaseSettings):
     @property
     def max_upload_bytes(self) -> int:
         return self.max_upload_mb * 1024 * 1024
+
+    @property
+    def max_request_bytes(self) -> int:
+        return self.max_upload_bytes + 64 * 1024
 
 
 settings = Settings()
