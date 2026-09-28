@@ -30,7 +30,7 @@ train↔val 동일 이미지 2쌍, train↔test 4쌍을 발견했고 원본 SHA2
 
 상세 수치·해석·재현 방법: [원본·축소 비교 보고서](../output/colab/val_source_comparison_20260918/report.md). 실행 코드: [compare_val_sources.py](compare_val_sources.py).
 
-모델 구조·클래스 정의는 [모델 명세](../docs/MODEL_SPEC.md), 보드 이전은 [이전 백로그](../docs/ORANGEPI5_MIGRATION_BACKLOG.md)를 따른다.
+모델 구조·클래스 정의는 [모델 명세](../docs/MODEL_SPEC.md), 보드 이전은 [이전 백로그](https://github.com/hs-cropy/Cropy/blob/backend/docs/ORANGEPI5_MIGRATION_BACKLOG.md)를 따른다.
 
 ## 3주차 Colab CNN 실험 — 2026-09-18 결과 확인
 
@@ -136,3 +136,7 @@ train↔val 동일 이미지 2쌍, train↔test 4쌍을 발견했고 원본 SHA2
 - 학습 스크립트에 `--img-size` 224/256 선택 추가(기본 224). test 전처리는 체크포인트 img_size를 사용한다.
 - 같은 ImageNet 초기화/seed/batch/20 epoch에서 256만 변경. 224 기준선 비교표 및 독립 다운로드 셀 포함. test 실행 셀 제외.
 - 안내: `output/colab/group_baseline_20260921/256_실행안내.md`. 256 GPU 학습은 아직 수행하지 않았다.
+
+## 256 입력 비교 결과 확인 (2026-09-24)
+
+앞 절의 준비 상태 이후 Colab 실행 결과를 확보했다. 같은 val 785장에서 224는 721장 정답(91.85%), 256은 726장 정답(92.48%)이다. 개선 17건·악화 12건이며 단일 seed의 val 비교다. test 평가 및 서비스 모델 교체는 하지 않았다. [256 분석 보고서](../output/colab/group256_analysis_20260924/report.md)를 참조한다.
