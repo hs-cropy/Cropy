@@ -1,0 +1,44 @@
+# 개발 모드 오버라이드 — 소스를 바인드 마운트해 코드 변경 시 컨테이너 재빌드 없이
+# 핫리로드된다. `docker-compose.override.yml`은 compose가 기본으로 함께 읽는
+# 파일이라 별도 -f 지정 없이 `docker compose up -d --build`만 하면 자동 적용된다.
+#
+# 운영 배포처럼 이 파일 없이 순수 docker-compose.yml만 쓰고 싶으면:
+#   docker compose -f docker-compose.yml up -d --build
+#
+# S1-15 (docs/xpdocs/08_스프린트_백로그.md)
+
+services:
+  backend:
+    volumes:
+      # 이미지에 COPY된 코드 위에 호스트 소스를 덮어써 --reload가 바로 반영되게 한다.
+      - ./backend/app:/app/app
+      - ./backend/scripts:/app/scripts
+    environment:
+      # Windows/macOS 호스트의 바인드 마운트는 컨테이너 안으로 inotify 이벤트가 전달되지
+      # 않아 --reload가 변경을 놓친다. 폴링으로 감지하게 한다.
+      WATCHFILES_FORCE_POLLING: "true"
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  frontend:
+    build:
+      # deps 스테이지(node_modules만 설치된 상태)까지만 빌드하고 `next dev`로 띄운다.
+      # standalone 프로덕션 빌드(builder/runner)는 개발 모드에 불필요하다.
+      target: deps
+    environment:
+      # next.config.js가 런타임에 읽는 값. next dev는 standalone과 달리 빌드 시점에
+      # 굳지 않으므로 여기서 줘도 된다 (컨테이너 네트워크 안에서는 "backend" 호스트명).
+      BACKEND_ORIGIN: http://backend:8000
+      NEXT_PUBLIC_API_URL: ""
+      # 백엔드와 같은 이유로 next dev(webpack)의 파일 감시를 폴링으로 바꾼다.
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - ./frontend:/app
+      # node_modules는 호스트 바인드 마운트 위에 이 이름 볼륨을 덮어써 컨테이너 안에서
+      # 설치된 리눅스용 바이너리를 유지한다 (호스트가 Windows/macOS여도 깨지지 않음).
+      - frontend-node-modules:/app/node_modules
+      - frontend-next-cache:/app/.next
+    command: ["npm", "run", "dev"]
+
+volumes:
+  frontend-node-modules:
+  frontend-next-cache:
