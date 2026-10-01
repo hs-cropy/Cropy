@@ -3,12 +3,14 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CameraViewfinder, useCamera, type FacingMode } from "@/features/camera";
+import { useCameraVoiceGuide } from "@/features/voice";
 
 function CameraScreen() {
   const router = useRouter();
   const cropLabel = useSearchParams().get("crop") ?? undefined;
   const [facingMode, setFacingMode] = useState<FacingMode>("environment");
   const { videoRef, status, error, activeFacingMode, retry } = useCamera({ facingMode });
+  useCameraVoiceGuide(status === "streaming", cropLabel);
 
   const handleClose = () => {
     router.push("/");
