@@ -1,5 +1,18 @@
-from datetime import datetime
-from pydantic import BaseModel, Field
+from datetime import datetime, timezone
+from typing import Literal
+from pydantic import BaseModel, Field, field_validator
+
+CropType = Literal["고추", "무", "배추"]
+
+
+class TimestampedResponse(BaseModel):
+    @field_validator("created_at", "updated_at", "synced_at", mode="after", check_fields=False)
+    @classmethod
+    def utc_timestamp(cls, value):
+        # SQLite CURRENT_TIMESTAMP is UTC, but its driver returns naive values.
+        if value is not None and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
 
 
 class PredictionItem(BaseModel):
@@ -28,7 +41,7 @@ class PesticideSafety(BaseModel):
     reentry_hours: int | None = None
 
 
-class PesticideInfo(BaseModel):
+class PesticideInfo(TimestampedResponse):
     name: str
     dilution: str | None = None
     usage: str | None = None
@@ -37,10 +50,18 @@ class PesticideInfo(BaseModel):
     safety_notes: str | None = None
 
 
-class DiagnoseResponse(BaseModel):
+
+class DiagnoseResponse(TimestampedResponse):
     id: str
     disease_name: str
     crop_type: str | None = None
+    selected_crop: str | None = None
+    predicted_crop: str | None = None
+    crop_mismatch: bool = False
+    prediction_mode: str = "legacy"
+    model_version: str | None = None
+    preprocessing_version: str | None = None
+    pair_model_version: str | None = None
     category: str = "disease"
     severity: str = "medium"
     confidence: float
@@ -52,16 +73,19 @@ class DiagnoseResponse(BaseModel):
     image_url: str | None = None
     refined_image_url: str | None = None
     created_at: datetime
+    updated_at: datetime | None = None
     recapture: RecaptureGuidance | None = None
 
 
-class DiagnosisSummary(BaseModel):
+class DiagnosisSummary(TimestampedResponse):
     id: str
     disease_name: str
     confidence: float
     crop_type: str | None = None
     image_url: str | None = None
     created_at: datetime
+    refined_image_url: str | None = None
+    prediction_mode: str = "legacy"
 
 
 class PaginatedHistory(BaseModel):
