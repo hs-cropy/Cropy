@@ -7,7 +7,6 @@ import { TextSizeToggle } from "./TextSizeToggle";
 const NAV = [
   { href: "/", label: "진단", match: (p: string) => p === "/" },
   { href: "/history", label: "이력", match: (p: string) => p.startsWith("/history") },
-  { href: "/camera", label: "촬영", match: (p: string) => p.startsWith("/camera") },
 ];
 
 export function AppBar() {
