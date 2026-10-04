@@ -5,7 +5,12 @@ import { usePathname } from "next/navigation";
 
 const TABS = [
   { href: "/", label: "진단", icon: "icon-[lucide--camera]", match: (p: string) => p === "/" },
-  { href: "/history", label: "이력", icon: "icon-[lucide--history]", match: (p: string) => p.startsWith("/history") },
+  {
+    href: "/history",
+    label: "이력",
+    icon: "icon-[lucide--history]",
+    match: (p: string) => p.startsWith("/history"),
+  },
 ];
 
 export function BottomNav() {
