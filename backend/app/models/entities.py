@@ -67,6 +67,17 @@ class Diagnosis(Base):
     # 판별부위 2차 촬영으로 재확정한 경우의 사진 경로 (미재확정 시 NULL)
     refined_image_path = Column(String(500))
     crop_type = Column(String(100))
+    selected_crop = Column(String(100))
+    prediction_mode = Column(String(20), default="legacy", server_default="legacy")
+    model_version = Column(String(100))
+    preprocessing_version = Column(String(100))
+    pair_model_version = Column(String(100))
+    original_predictions = Column(JSON)
+    recapture = Column(JSON)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True))
+    revision = Column(Integer, nullable=False, default=1, server_default="1")
+
+    __mapper_args__ = {"version_id_col": revision}
 
     disease = relationship("Disease", back_populates="diagnoses")
