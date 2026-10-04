@@ -12,9 +12,6 @@ const NAV = [
 export function AppBar() {
   const pathname = usePathname();
 
-  // 카메라 화면은 풀스크린 뷰파인더라 앱 네비게이션을 그리지 않는다
-  if (pathname.startsWith("/camera")) return null;
-
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-paper/85 pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="flex items-center gap-2.5 px-5 py-3.5 md:px-8">
