@@ -1,8 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { validateImage } from "@/features/camera";
 import { refineDiagnosis } from "@/lib/api";
 import type { DiagnoseResponse, RecaptureGuidance } from "@/types/diagnosis";
+import { Toast, useToast } from "./Toast";
 
 interface Props {
   diagnosisId: string;
@@ -22,10 +24,18 @@ export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast, showToast } = useToast();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const check = validateImage(file);
+    if (!check.ok) {
+      showToast(check.message);
+      // 같은 사진을 다시 골라도 onChange가 불리도록 비운다
+      e.target.value = "";
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -101,6 +111,8 @@ export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
           className="hidden"
         />
       </label>
+
+      <Toast toast={toast} />
     </section>
   );
 }

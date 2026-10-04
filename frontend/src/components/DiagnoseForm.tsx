@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { CameraCapture, isCameraSupported, validateImage } from "@/features/camera";
 import { diagnoseImage } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { DiagnosisResult } from "./DiagnosisResult";
 import { RecapturePanel } from "./RecapturePanel";
+import { Toast, useToast } from "./Toast";
 
 const CROP_TYPES = [
   { value: "", label: "자동 감지", icon: "✨" },
@@ -20,13 +22,19 @@ const PHOTO_TIPS = [
 ];
 
 export function DiagnoseForm() {
-  const fileRef = useRef<HTMLInputElement>(null);
+  const captureCardRef = useRef<HTMLButtonElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const fallbackInputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [cropType, setCropType] = useState("");
+  const [cameraOpen, setCameraOpen] = useState(false);
+  // 카메라로 찍은 사진은 <input>에 넣을 수 없어 선택된 파일을 state로 들고 있는다
+  const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DiagnoseResponse | null>(null);
+  const { toast, showToast, clearToast } = useToast();
 
   // on phones the result renders below the fold — bring it into view
   useEffect(() => {
@@ -35,17 +43,58 @@ export function DiagnoseForm() {
     resultRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
   }, [result]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPreview(URL.createObjectURL(file));
+  // 사진이 바뀌거나 화면을 떠날 때 이전 미리보기 URL을 해제한다
+  useEffect(() => {
+    if (!preview) return;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  /** 형식·크기가 맞지 않으면 toast만 띄우고 기존 사진은 그대로 둔다 */
+  const selectFile = (next: File) => {
+    const check = validateImage(next);
+    if (!check.ok) {
+      showToast(check.message);
+      return false;
+    }
+    setFile(next);
+    setPreview(URL.createObjectURL(next));
     setResult(null);
     setError(null);
+    return true;
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.files?.[0];
+    // 같은 사진을 다시 골라도 onChange가 불리도록 비운다
+    e.target.value = "";
+    if (next) selectFile(next);
+  };
+
+  const openCamera = () => {
+    // http 접속·미지원 브라우저는 기기 카메라 앱으로 바로 연결한다 (M01-F2 예외)
+    if (isCameraSupported()) setCameraOpen(true);
+    else fallbackInputRef.current?.click();
+  };
+
+  const closeCamera = () => {
+    // 오버레이 안에 떠 있던 안내가 닫힌 뒤 하단에 다시 뜨지 않게 한다
+    clearToast();
+    setCameraOpen(false);
+    captureCardRef.current?.focus();
+  };
+
+  const handleCapture = (captured: File) => {
+    // 통과하지 못하면 카메라를 열어 둔 채 다시 찍게 한다
+    if (selectFile(captured)) closeCamera();
+  };
+
+  const handleCameraGallery = () => {
+    closeCamera();
+    galleryInputRef.current?.click();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const file = fileRef.current?.files?.[0];
     if (!file) {
       setError("먼저 사진을 촬영하거나 선택하세요.");
       return;
@@ -69,8 +118,10 @@ export function DiagnoseForm() {
     <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-8">
       <form onSubmit={handleSubmit}>
         {/* Capture card — the hero of this screen */}
-        <label
-          htmlFor="photo"
+        <button
+          ref={captureCardRef}
+          type="button"
+          onClick={openCamera}
           className={`group block aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-card transition ${
             preview
               ? "border border-line bg-surface"
@@ -94,22 +145,50 @@ export function DiagnoseForm() {
               <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-brand text-ink shadow-cta transition group-hover:scale-105">
                 <span className="icon-[lucide--camera] h-7 w-7" />
               </span>
-              <span className="text-base font-bold text-ink">사진 촬영 또는 업로드</span>
+              <span className="text-base font-bold text-ink">사진 촬영하기</span>
               <span className="mt-1 text-xs text-khaki">
                 잎·과실이 선명하게 보이도록 찍어주세요
               </span>
             </span>
           )}
-          <input
-            ref={fileRef}
-            id="photo"
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFileChange}
-            className="hidden"
+        </button>
+
+        <button
+          type="button"
+          onClick={() => galleryInputRef.current?.click()}
+          className="mt-1 flex min-h-11 w-full items-center justify-center gap-1 text-sm font-bold text-brown hover:text-ink"
+        >
+          앨범에서 사진 선택
+          <span aria-hidden className="icon-[lucide--chevron-right] h-4 w-4" />
+        </button>
+
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/jpeg,image/png"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        {/* 카메라를 못 쓰는 환경에서 촬영 카드가 여는 기기 카메라 앱 */}
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+
+        {cameraOpen && (
+          <CameraCapture
+            cropLabel={cropType || undefined}
+            onCapture={handleCapture}
+            onClose={closeCamera}
+            onCaptureError={showToast}
+            notice={toast}
+            onGallery={handleCameraGallery}
           />
-        </label>
+        )}
 
         {/* Crop selector — 항상 줄바꿈해 모든 작물이 보이게 한다.
             가로 스와이프 행이면 좁은 화면이나 큰글씨 모드에서 마지막 작물이 잘리는데,
@@ -198,6 +277,9 @@ export function DiagnoseForm() {
           </aside>
         )}
       </div>
+
+      {/* 카메라가 열려 있으면 오버레이 안에서 띄운다 */}
+      <Toast toast={cameraOpen ? null : toast} />
     </div>
   );
 }
