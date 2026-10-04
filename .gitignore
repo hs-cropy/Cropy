@@ -44,3 +44,35 @@ tsconfig.tsbuildinfo
 
 # Claude Code
 .claude/
+
+# Local review checkouts, logs and supplied course materials
+/tmp/
+/*.pdf
+/*.hwp
+/*.xlsx
+*.db.backup-*
+
+# Raw training bundles and third-party datasets stay local
+/output/**/*.zip
+/output/**/*.tar
+/output/**/*.jpg
+/output/**/*.png
+/output/colab/aihub_research_20260921/*.pdf
+/output/colab/aihub_research_20260921/*.html
+/output/colab/aihub_research_20260921/*.txt
+/output/colab/aihub_research_20260921/file_list.json
+/output/colab/full_label_audit_20260921/matched_labels.json
+/output/colab/full_label_audit_20260921/augmentation_examples.json
+/output/colab/full_label_audit_20260921/image_label_mapping.csv
+/output/colab/metadata_audit_20260918/image_metadata.csv
+/output/colab/group_split_candidates_20260921/*candidate.csv
+/output/colab/group_baseline_20260921/manifest.csv
+
+# Application seed fixtures are not the AI Hub training dataset
+!backend/app/data/
+backend/app/data/*
+!backend/app/data/seed/
+backend/app/data/seed/*
+!backend/app/data/seed/diseases.json
+!backend/app/data/seed/pesticides.json
+!backend/app/data/seed/disease_pesticides.json

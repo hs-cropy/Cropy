@@ -15,8 +15,8 @@ settings.upload_dir.mkdir(parents=True, exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
     ensure_columns()
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         seed_database(db)
