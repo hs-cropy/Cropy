@@ -151,9 +151,9 @@ LLM 데이터의 실제 오류율이나 학습 후 성능 향상률은 측정되
 ## 4. 근거 자료
 
 - [LLM 파인튜닝 적용 계획 — 2026.09.17](../docs/LLM_FINETUNING_PLAN.md)
-- [역할별 Orange Pi 이전 백로그](https://github.com/hs-cropy/Cropy/blob/backend/docs/ORANGEPI5_MIGRATION_BACKLOG.md)
+- [역할별 Orange Pi 이전 백로그](../docs/ORANGEPI5_MIGRATION_BACKLOG.md)
 - [프로젝트 전체 작업 보고서 — 2026.09.24](../output/project_work_report_20260924.md)
-- [현재 진단 응답 스키마](https://github.com/hs-cropy/Cropy/blob/backend/backend/app/schemas/diagnosis.py)
-- [백엔드 운영 안내](https://github.com/hs-cropy/Cropy/blob/backend/docs/BACKEND_OPERATIONS.md)
+- [현재 진단 응답 스키마](../backend/app/schemas/diagnosis.py)
+- [백엔드 운영 안내](../docs/BACKEND_OPERATIONS.md)
 
 외부 강의 자료의 원문을 재수록하지 않았으며, 프로젝트 내부 계획과 구현 기록을 요약하였다.

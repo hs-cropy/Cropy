@@ -30,7 +30,7 @@ train↔val 동일 이미지 2쌍, train↔test 4쌍을 발견했고 원본 SHA2
 
 상세 수치·해석·재현 방법: [원본·축소 비교 보고서](../output/colab/val_source_comparison_20260918/report.md). 실행 코드: [compare_val_sources.py](compare_val_sources.py).
 
-모델 구조·클래스 정의는 [모델 명세](../docs/MODEL_SPEC.md), 보드 이전은 [이전 백로그](https://github.com/hs-cropy/Cropy/blob/backend/docs/ORANGEPI5_MIGRATION_BACKLOG.md)를 따른다.
+모델 구조·클래스 정의는 [모델 명세](../docs/MODEL_SPEC.md), 보드 이전은 [이전 백로그](../docs/ORANGEPI5_MIGRATION_BACKLOG.md)를 따른다.
 
 ## 3주차 Colab CNN 실험 — 2026-09-18 결과 확인
 

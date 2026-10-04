@@ -126,7 +126,7 @@
 
 README, API_SPEC, DATABASE, ARCHITECTURE 및 Orange Pi 배포 안내의 관련 내용을 수정했다. 환경변수 예시와 Compose에 개발·운영 모드, pair 모델, 동시 진단 설정을 반영하고 readiness 경로를 healthcheck에 연결했다.
 
-신규 [백엔드 운영 문서](https://github.com/hs-cropy/Cropy/blob/backend/docs/BACKEND_OPERATIONS.md)에 모델 준비 상태, DB 백업·복구, PSIS 카탈로그 갱신, 업로드 정리 및 요청 제한 운영 절차를 기록했다. 후속 기획 문서의 모든 기능을 구현한 것은 아니다.
+신규 [백엔드 운영 문서](../docs/BACKEND_OPERATIONS.md)에 모델 준비 상태, DB 백업·복구, PSIS 카탈로그 갱신, 업로드 정리 및 요청 제한 운영 절차를 기록했다. 후속 기획 문서의 모든 기능을 구현한 것은 아니다.
 
 ## 6. 실행 검증
 
@@ -221,11 +221,11 @@ ZIP CRC, manifest SHA256, 검증 예측 785개의 경로·정답, 혼동행렬, 
 
 | 산출물 | 내용 |
 |---|---|
-| [수정 전 백엔드 검토](https://github.com/hs-cropy/Cropy/blob/backend/output/backend_review_20260923/report.md) | 문제별 근거·재현·권고 사항 |
-| [격리 재현 결과](https://github.com/hs-cropy/Cropy/blob/backend/output/backend_review_20260923/evidence.json) | 수정 전 결함 관찰 기록 |
-| [1차 수정 기록](https://github.com/hs-cropy/Cropy/blob/backend/output/backend_review_20260923/fixes.md) | 업로드·예측 계약 보완과 74개 테스트 결과 |
-| [후속 수정 기록](https://github.com/hs-cropy/Cropy/blob/backend/output/backend_review_20260923/fixes_remaining.md) | 주요 남은 항목 구현과 최종 검증 |
-| [백엔드 운영 안내](https://github.com/hs-cropy/Cropy/blob/backend/docs/BACKEND_OPERATIONS.md) | 모드·readiness·백업·복구·동기화·파일 정리 |
+| [수정 전 백엔드 검토](backend_review_20260923/report.md) | 문제별 근거·재현·권고 사항 |
+| [격리 재현 결과](backend_review_20260923/evidence.json) | 수정 전 결함 관찰 기록 |
+| [1차 수정 기록](backend_review_20260923/fixes.md) | 업로드·예측 계약 보완과 74개 테스트 결과 |
+| [후속 수정 기록](backend_review_20260923/fixes_remaining.md) | 주요 남은 항목 구현과 최종 검증 |
+| [백엔드 운영 안내](../docs/BACKEND_OPERATIONS.md) | 모드·readiness·백업·복구·동기화·파일 정리 |
 | [224 기준선 보고서](colab/group_baseline_analysis_20260922/report.md) | 기존 작업자 분리 실험 결과 |
 | [256 비교 보고서](colab/group256_analysis_20260924/report.md) | 새 실험과 기준선 비교 |
 | [256 검증 데이터](colab/group256_analysis_20260924/verification.json) | 해시·지표·검증 범위 |
