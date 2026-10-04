@@ -4,6 +4,7 @@ Base URL: `http://localhost:8000/api/v1`
 정적 파일: `http://localhost:8000/uploads/{filename}` (진단 이미지)
 
 업로드 이미지는 서버가 확인한 실제 형식으로 `.jpg` 또는 `.png` 확장자를 정한다.
+WEBP 등 JPEG/PNG 외 형식은 지원하지 않으며 업로드 시 400을 반환한다.
 클라이언트 파일명은 저장 형식에 사용하지 않는다. `/uploads`는 `.jpg`·`.jpeg`·`.png`만
 고정된 이미지 MIME과 `X-Content-Type-Options: nosniff`로 제공하며, 과거에 저장된
 `.html` 등 다른 확장자 경로는 404를 반환한다. 기존 파일은 자동 삭제·변환하지 않는다.
