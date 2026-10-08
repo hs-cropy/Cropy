@@ -1,0 +1,12 @@
+{
+  "cpu_resume_matches_uninterrupted": true,
+  "epochs": 2,
+  "samples_per_split": 18,
+  "architecture": "resnet18",
+  "image_size": 64,
+  "model_parameters_identical": true,
+  "history_identical": true,
+  "scheduler_identical": true,
+  "gpu_execution_tested": false,
+  "restart_before_first_epoch_verified": true
+}

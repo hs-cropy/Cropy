@@ -29,11 +29,17 @@ def build_model(num_classes: int, arch: str = "resnet18") -> nn.Module:
     return model
 
 
-def get_transforms(img_size: int):
+def get_transforms(img_size: int, *, train_geometry: str = "random_crop"):
     # 확대 여지를 두고 크롭하도록 리사이즈 기준은 크롭보다 약간 크게
     resize = round(img_size * 1.14)
+    if train_geometry == "random_crop":
+        geometry = transforms.RandomResizedCrop(img_size, scale=(0.7, 1.0))
+    elif train_geometry == "full_resize":
+        geometry = transforms.Resize((img_size, img_size))
+    else:
+        raise ValueError(f"Unknown train_geometry: {train_geometry}")
     train_tf = transforms.Compose([
-        transforms.RandomResizedCrop(img_size, scale=(0.7, 1.0)),
+        geometry,
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(15),
         transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2),

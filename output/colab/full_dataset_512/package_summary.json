@@ -1,0 +1,13 @@
+{
+  "images": 36583,
+  "train": 32513,
+  "val": 4070,
+  "long_edge": 512,
+  "jpeg_quality": 95,
+  "original_images_unchanged": true,
+  "labels": "Original JSON; bounding-box coordinates refer to original dimensions, not resized images",
+  "purpose": "Image classification only",
+  "manifest_sha256": "1d8924f17fa8cc02f69607a14a60e879301e24e2fd74a8a01792b491d8701b34",
+  "zip_sha256": "52dea0080285d76b6cbc09c2659c052a18f20ef620d05bca462203e64e6872ee",
+  "zip_bytes": 3728891015
+}

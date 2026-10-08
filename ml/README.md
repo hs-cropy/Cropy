@@ -136,3 +136,11 @@ train↔val 동일 이미지 2쌍, train↔test 4쌍을 발견했고 원본 SHA2
 - 학습 스크립트에 `--img-size` 224/256 선택 추가(기본 224). test 전처리는 체크포인트 img_size를 사용한다.
 - 같은 ImageNet 초기화/seed/batch/20 epoch에서 256만 변경. 224 기준선 비교표 및 독립 다운로드 셀 포함. test 실행 셀 제외.
 - 안내: `output/colab/group_baseline_20260921/256_실행안내.md`. 256 GPU 학습은 아직 수행하지 않았다.
+
+## 전체 데이터 Colab 학습 (2026-10-02)
+
+- 노트북: [cropy_full_colab.ipynb](cropy_full_colab.ipynb). 실행기: [train_full_colab.py](train_full_colab.py).
+- 업로드 안내: [전체 데이터 묶음](../output/colab/full_dataset_512/README.md).
+- 중복 제거된 공식 Training 32,513장 / Validation 4,070장을 사용한다. 업로드용 이미지는 긴 변 512px 사본이며 원본은 보존한다.
+- ResNet50, 입력 256px, 클래스 균형 샘플링, 검증 Macro F1 기준 선택. 기존 Cropy 모델을 사용하지 않고 ImageNet 초기화로 시작한다.
+- Drive에 epoch별 마지막 상태를 저장해 이어 학습한다. 별도 최종 test 평가 및 서비스 모델 교체는 수행하지 않는다.
