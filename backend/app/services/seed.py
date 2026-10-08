@@ -22,6 +22,7 @@ def _disease_values(item: dict) -> dict:
         "category": item.get("category", "disease"), "description": item.get("description"),
         "causes": item.get("causes", []), "prevention": item.get("prevention", []),
         "severity": item.get("severity", "medium"),
+        "management_actions": item.get("management_actions", []),
     }
 
 

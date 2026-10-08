@@ -10,7 +10,7 @@ from starlette.concurrency import run_in_threadpool
 from app.core.config import settings
 from app.core.database import get_db, SessionLocal
 from app.core.uploads import IMAGE_EXTENSIONS
-from app.schemas.diagnosis import CropType, DiagnoseResponse, PaginatedHistory
+from app.schemas.diagnosis import CropType, Severity, DiagnoseResponse, PaginatedHistory
 from app.services import diagnosis_service
 from app.services.ml_service import ModelUnavailableError
 
@@ -126,9 +126,10 @@ def history(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     crop_type: CropType | None = Query(None),
+    severity: Severity | None = Query(None),
     db: Session = Depends(get_db),
 ):
-    return diagnosis_service.get_history(db, page, size, crop_type)
+    return diagnosis_service.get_history(db, page, size, crop_type, severity)
 
 
 @router.get("/history/{diagnosis_id}", response_model=DiagnoseResponse)

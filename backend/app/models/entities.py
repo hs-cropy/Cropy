@@ -18,6 +18,7 @@ class Disease(Base):
     causes = Column(JSON, default=list)
     prevention = Column(JSON, default=list)
     severity = Column(String(20), default="medium")
+    management_actions = Column(JSON, default=list)
     model_class_id = Column(Integer, unique=True, index=True)
 
     pesticides = relationship(
@@ -77,7 +78,10 @@ class Diagnosis(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True))
     revision = Column(Integer, nullable=False, default=1, server_default="1")
+    content_snapshot = Column(JSON)
+    severity_snapshot = Column(String(20))
 
     __mapper_args__ = {"version_id_col": revision}
 
     disease = relationship("Disease", back_populates="diagnoses")
+

@@ -258,3 +258,9 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 `status`, `model_loaded`, `prediction_mode`(`model`/`mock`/`unavailable`), `version`을 반환한다.
 개발용 Mock은 시연을 허용하더라도 실제 모델 준비 완료로 표시하지 않는다.
 모델 파일·실행 설정 변경은 프로세스 재시작 후 반영된다.
+
+## 진단 피드백 계약 확장
+
+`GET /api/v1/history`는 severity=high|medium|low 필터와 unfiltered_total/crop_total/total 건수를 제공한다. 요약은 category/severity/is_refined/content_status를 제공한다.
+
+신규 결과는 병해 안내·관리 행동·당시 농약 조회를 스냅샷으로 저장한다. content_version/content_status/current_pesticides/initial_predictions와 decision_status/decision_reasons/policy_version을 제공한다. 스냅샷 없는 과거 기록은 current_reference다.
