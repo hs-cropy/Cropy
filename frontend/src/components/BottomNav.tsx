@@ -6,12 +6,6 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/", label: "진단", icon: "icon-[lucide--camera]", match: (p: string) => p === "/" },
   {
-    href: "/camera",
-    label: "촬영",
-    icon: "icon-[lucide--camera]",
-    match: (p: string) => p.startsWith("/camera"),
-  },
-  {
     href: "/history",
     label: "이력",
     icon: "icon-[lucide--history]",
@@ -22,12 +16,9 @@ const TABS = [
 export function BottomNav() {
   const pathname = usePathname();
 
-  // 카메라 화면은 풀스크린 뷰파인더라 앱 네비게이션을 그리지 않는다
-  if (pathname.startsWith("/camera")) return null;
-
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 backdrop-blur md:hidden">
-      <div className="mx-auto grid max-w-app grid-cols-3">
+      <div className="mx-auto grid max-w-app grid-cols-2">
         {TABS.map((tab) => {
           const active = tab.match(pathname);
           return (
