@@ -1,0 +1,17 @@
+{
+  "notebook_code_cells_compile": true,
+  "embedded_sources_match": true,
+  "ml_tests": "29 passed",
+  "cpu_smoke_resume_passed": true,
+  "colab_notebook": "https://colab.research.google.com/drive/1HGqC1kw62DBzLmMGoTrXBxNh_yIkSzMC",
+  "gpu_training_status": "completed on Colab; 20/20 epochs; both runs best epoch 3; full comparison retrieved 2026-10-05",
+  "full_comparison_file": "comparison.json",
+  "paired_radish_review": "../radish_pair_review_20261005/summary.json",
+  "colab_environment": {
+    "gpu": "Tesla T4",
+    "torch": "2.11.0+cu130",
+    "torchvision": "0.26.0+cu130",
+    "matches_baseline_recorded_environment": true
+  },
+  "colab_data_verification": "All 36583 image and label hashes passed; manifest and class/split checks passed"
+}
