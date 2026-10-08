@@ -1,0 +1,5 @@
+﻿review_id,image_file,dataset_class,baseline_predicted,baseline_score,candidate_predicted,candidate_score,label_evidence,visible_diagnostic_features,expert_decision,reviewer,review_date
+C3-01,V006_79_1_04_02_03_12_1_3108e_20201112_4.jpeg,3_무노균병,2_무검은무늬병,0.8777852058410645,2_무검은무늬병,0.8580561876296997,,,pending,,
+C3-03,V006_79_1_04_02_03_12_1_9662e_20201020_9.jpeg,3_무노균병,8_배추정상,0.5547234416007996,2_무검은무늬병,0.7739391922950745,,,pending,,
+C3-05,V006_79_1_04_02_03_12_1_9662e_20201104_1.jpeg,3_무노균병,2_무검은무늬병,0.8845770955085754,2_무검은무늬병,0.9296093583106995,,,pending,,
+C3-06,V006_79_1_04_02_03_12_1_9662e_20201110_12.jpeg,3_무노균병,2_무검은무늬병,0.31027650833129883,2_무검은무늬병,0.8280665278434753,,,pending,,

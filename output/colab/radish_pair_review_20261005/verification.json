@@ -1,0 +1,15 @@
+{
+  "rows": 100,
+  "class_counts": {
+    "2": 76,
+    "3": 24
+  },
+  "copied_images_sha256_verified": 17,
+  "html_local_assets_exist": true,
+  "predictions_match_saved_confusion_rows": true,
+  "fixed_mean_correct": {
+    "2": 71,
+    "3": 19
+  },
+  "expert_review_status": "pending"
+}

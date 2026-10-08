@@ -1,0 +1,318 @@
+{
+  "errors": 59,
+  "new_errors": 12,
+  "changes": {
+    "unchanged": 47,
+    "regressed": 12
+  },
+  "confusions": {
+    "0->6": 7,
+    "0->1": 1,
+    "1->6": 2,
+    "2->3": 19,
+    "2->7": 1,
+    "3->2": 12,
+    "3->6": 1,
+    "4->5": 2,
+    "5->8": 11,
+    "5->4": 2,
+    "6->0": 1
+  },
+  "dimension_mismatch": [
+    "E19",
+    "E20",
+    "E21",
+    "E22",
+    "E23",
+    "E24",
+    "E25",
+    "E26",
+    "E27",
+    "E28",
+    "E29",
+    "E30"
+  ],
+  "invalid_bbox": [],
+  "label_inconsistent": [],
+  "sha256_all_match": true,
+  "high_score_09": [
+    "E01",
+    "E02",
+    "E05",
+    "E11",
+    "E12",
+    "E14",
+    "E18",
+    "E21",
+    "E22",
+    "E29",
+    "E39",
+    "E43",
+    "E45",
+    "E52",
+    "E57"
+  ],
+  "already_reviewed": 32,
+  "controls": 18,
+  "worker_stats": [
+    {
+      "actual": 0,
+      "worker": "9315z",
+      "total": 99,
+      "errors": 8,
+      "error_rate": 0.08080808080808081
+    },
+    {
+      "actual": 1,
+      "worker": "9315z",
+      "total": 101,
+      "errors": 2,
+      "error_rate": 0.019801980198019802
+    },
+    {
+      "actual": 2,
+      "worker": "3025e",
+      "total": 35,
+      "errors": 4,
+      "error_rate": 0.11428571428571428
+    },
+    {
+      "actual": 2,
+      "worker": "3055e",
+      "total": 52,
+      "errors": 16,
+      "error_rate": 0.3076923076923077
+    },
+    {
+      "actual": 3,
+      "worker": "3055e",
+      "total": 49,
+      "errors": 13,
+      "error_rate": 0.2653061224489796
+    },
+    {
+      "actual": 4,
+      "worker": "4902r",
+      "total": 18,
+      "errors": 1,
+      "error_rate": 0.05555555555555555
+    },
+    {
+      "actual": 4,
+      "worker": "5123y",
+      "total": 55,
+      "errors": 1,
+      "error_rate": 0.01818181818181818
+    },
+    {
+      "actual": 5,
+      "worker": "5123y",
+      "total": 68,
+      "errors": 13,
+      "error_rate": 0.19117647058823528
+    },
+    {
+      "actual": 6,
+      "worker": "c27",
+      "total": 103,
+      "errors": 0,
+      "error_rate": 0.0
+    },
+    {
+      "actual": 6,
+      "worker": "c31",
+      "total": 6,
+      "errors": 1,
+      "error_rate": 0.16666666666666666
+    },
+    {
+      "actual": 7,
+      "worker": "c33",
+      "total": 87,
+      "errors": 0,
+      "error_rate": 0.0
+    },
+    {
+      "actual": 8,
+      "worker": "c31",
+      "total": 112,
+      "errors": 0,
+      "error_rate": 0.0
+    }
+  ],
+  "metadata_audit": {
+    "all": {
+      "total": 785,
+      "errors": 59,
+      "error_rate": 0.0751592356687898
+    },
+    "aspect_0.45": {
+      "total": 63,
+      "errors": 0,
+      "error_rate": 0.0
+    },
+    "aspect_0.75": {
+      "total": 105,
+      "errors": 0,
+      "error_rate": 0.0
+    },
+    "aspect_1.00": {
+      "total": 18,
+      "errors": 6,
+      "error_rate": 0.3333333333333333
+    },
+    "aspect_1.33": {
+      "total": 372,
+      "errors": 42,
+      "error_rate": 0.11290322580645161
+    },
+    "aspect_1.50": {
+      "total": 65,
+      "errors": 8,
+      "error_rate": 0.12307692307692308
+    },
+    "aspect_1.78": {
+      "total": 135,
+      "errors": 2,
+      "error_rate": 0.014814814814814815
+    },
+    "aspect_2.00": {
+      "total": 11,
+      "errors": 0,
+      "error_rate": 0.0
+    },
+    "aspect_2.06": {
+      "total": 2,
+      "errors": 1,
+      "error_rate": 0.5
+    },
+    "aspect_2.22": {
+      "total": 14,
+      "errors": 0,
+      "error_rate": 0.0
+    },
+    "class_0": {
+      "total": 99,
+      "errors": 8,
+      "error_rate": 0.08080808080808081
+    },
+    "class_0_dimension_match": {
+      "total": 99,
+      "errors": 8,
+      "error_rate": 0.08080808080808081
+    },
+    "class_1": {
+      "total": 101,
+      "errors": 2,
+      "error_rate": 0.019801980198019802
+    },
+    "class_1_dimension_match": {
+      "total": 101,
+      "errors": 2,
+      "error_rate": 0.019801980198019802
+    },
+    "class_2": {
+      "total": 87,
+      "errors": 20,
+      "error_rate": 0.22988505747126436
+    },
+    "class_2_dimension_match": {
+      "total": 50,
+      "errors": 8,
+      "error_rate": 0.16
+    },
+    "class_2_dimension_mismatch": {
+      "total": 37,
+      "errors": 12,
+      "error_rate": 0.32432432432432434
+    },
+    "class_3": {
+      "total": 49,
+      "errors": 13,
+      "error_rate": 0.2653061224489796
+    },
+    "class_3_dimension_match": {
+      "total": 49,
+      "errors": 13,
+      "error_rate": 0.2653061224489796
+    },
+    "class_4": {
+      "total": 73,
+      "errors": 2,
+      "error_rate": 0.0273972602739726
+    },
+    "class_4_dimension_match": {
+      "total": 73,
+      "errors": 2,
+      "error_rate": 0.0273972602739726
+    },
+    "class_5": {
+      "total": 68,
+      "errors": 13,
+      "error_rate": 0.19117647058823528
+    },
+    "class_5_dimension_match": {
+      "total": 68,
+      "errors": 13,
+      "error_rate": 0.19117647058823528
+    },
+    "class_6": {
+      "total": 109,
+      "errors": 1,
+      "error_rate": 0.009174311926605505
+    },
+    "class_6_dimension_match": {
+      "total": 109,
+      "errors": 1,
+      "error_rate": 0.009174311926605505
+    },
+    "class_7": {
+      "total": 87,
+      "errors": 0,
+      "error_rate": 0.0
+    },
+    "class_7_dimension_match": {
+      "total": 87,
+      "errors": 0,
+      "error_rate": 0.0
+    },
+    "class_8": {
+      "total": 112,
+      "errors": 0,
+      "error_rate": 0.0
+    },
+    "class_8_dimension_match": {
+      "total": 112,
+      "errors": 0,
+      "error_rate": 0.0
+    },
+    "score_ge_09": {
+      "total": 471,
+      "errors": 15,
+      "error_rate": 0.03184713375796178
+    },
+    "score_lt_09": {
+      "total": 314,
+      "errors": 44,
+      "error_rate": 0.14012738853503184
+    }
+  },
+  "val_exif_orientation": {
+    "1": 785
+  },
+  "label_code_errors": [],
+  "regression_by_class": {
+    "0": 1,
+    "2": 7,
+    "3": 2,
+    "5": 1,
+    "6": 1
+  },
+  "reviewed_images": 77,
+  "input_checksums": {
+    "output/colab/group256_analysis_20260924/paired_predictions.csv": "7fd22f0b8583552edefc094d0293026a464f326a7a73cd2d60693d7bbffd7348",
+    "output/colab/group_baseline_20260921/manifest.csv": "d0fda6ef2e51b7ea1a201941e10dadea2f8e6b33eca785735b3d0dec58620e72",
+    "output/colab/error_review_256_20260928/visual_notes.json": "f316e0ed3669ee5b7ddf54d3f773e152a920060b90f104295b71304702399e1a"
+  },
+  "audit_scope": "785 validation metadata; 59 error + 18 correct preview comparisons; four originals displayed larger; no test evaluation or model inference"
+}

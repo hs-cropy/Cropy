@@ -1,0 +1,669 @@
+[
+  {
+    "id": "T01",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "작은 밝은 고리점 여러 개와 위쪽 가장자리 손상이 보임."
+  },
+  {
+    "id": "T02",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "녹색의 넓은 면에 옅은 점이 있고 위쪽 구멍이 눈에 띔."
+  },
+  {
+    "id": "T03",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "넓은 잎에 밝은 고리점이 흩어지고 국소 구멍이 보임."
+  },
+  {
+    "id": "T04",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "오른쪽과 아래쪽의 밝은 고리점 및 구멍이 뚜렷함."
+  },
+  {
+    "id": "T05",
+    "surface": "front",
+    "marks": "subtle",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "녹색 잎 면이 넓게 펼쳐지고 작은 점만 드물게 보임."
+  },
+  {
+    "id": "T06",
+    "surface": "front",
+    "marks": "subtle",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "얕은 잎맥과 미세하게 흩어진 밝은 질감이 보임."
+  },
+  {
+    "id": "T07",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "밝은 고리점과 작은 구멍이 여러 개이며 우상단이 강하게 비침."
+  },
+  {
+    "id": "T08",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": false,
+    "note": "도드라진 잎맥의 옅은 잎이 우하단에 있고 배경 비중이 큼."
+  },
+  {
+    "id": "T09",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "돌출된 잎맥 주변의 밝은 고리점과 아래 작은 구멍이 보임."
+  },
+  {
+    "id": "T10",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "넓게 펼친 연녹색 뒷면과 굵은 밝은 잎맥, 작은 점이 보임."
+  },
+  {
+    "id": "T11",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "옅은 잎 뒷면과 도드라진 망상 잎맥, 작은 밝은 점 하나가 보임."
+  },
+  {
+    "id": "T12",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "굵은 밝은 잎맥과 작은 검은 점 두어 개가 보임."
+  },
+  {
+    "id": "T13",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "도드라진 잎맥이 펼쳐지고 왼쪽 위 구멍과 작은 검은 점이 보임."
+  },
+  {
+    "id": "T14",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "옅은 뒷면과 굵은 잎맥이 보이고 변화는 작은 점 수준임."
+  },
+  {
+    "id": "T15",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "옅은 뒷면 중앙의 작은 흰색 국소 자국과 검은 점이 보임."
+  },
+  {
+    "id": "T16",
+    "surface": "uncertain",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "물방울과 가장자리의 밝은 갈색 자국이 보이며 앞뒷면은 불명확함."
+  },
+  {
+    "id": "T17",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "광택 있는 녹색 면에 밝은 국소 자국과 구멍, 명확한 명암 경계가 보임."
+  },
+  {
+    "id": "T18",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "넓은 옅은 잎 위로 선명한 그림자가 가로지르고 밝게 비친 띠가 있음."
+  },
+  {
+    "id": "T19",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "녹색 면 중앙의 길쭉한 밝은 갈색 자국과 아래쪽 강한 반사가 보임."
+  },
+  {
+    "id": "T20",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "굵은 밝은 잎맥과 잔주름, 희미하고 작은 선 모양 색 변화가 보임."
+  },
+  {
+    "id": "T21",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "넓은 뒷면의 작은 국소 밝은 자국과 잎을 가로지르는 그림자가 보임."
+  },
+  {
+    "id": "T22",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "밝은 뒷면에 여러 구멍이 있고 선명한 그림자 경계가 있음."
+  },
+  {
+    "id": "T23",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "왼쪽 아래의 갈색 가장자리와 잎 위의 짙은 그림자가 보임."
+  },
+  {
+    "id": "T24",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "밝은 굵은 잎맥과 옅은 면에 큰 반점은 없고 아래쪽에 선명한 그림자가 있음."
+  },
+  {
+    "id": "T25",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "왼쪽의 큰 구멍과 아래 갈색 가장자리, 강한 빛과 그림자가 보임."
+  },
+  {
+    "id": "T26",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "위쪽 작은 구멍들이 뚜렷하고 잎 아래 절반에 짙은 그림자가 있음."
+  },
+  {
+    "id": "T27",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "아래쪽 갈색 가장자리와 위쪽을 가로지르는 날카로운 그림자가 보임."
+  },
+  {
+    "id": "T28",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "넓은 뒷면에 작은 밝은 점만 보이고 위쪽에 선명한 그림자가 있음."
+  },
+  {
+    "id": "T29",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": false,
+    "note": "손에 잡힌 비교적 작은 잎의 왼쪽 갈색 가장자리와 그림자가 보임."
+  },
+  {
+    "id": "T30",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "굵고 밝은 잎맥과 작은 점들이 보이며 아래쪽에 강한 빛의 경계가 있음."
+  },
+  {
+    "id": "T31",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": false,
+    "note": "손에 잡힌 작은 잎의 왼쪽 갈색 가장자리와 잎 위 명암 경계가 보임."
+  },
+  {
+    "id": "T32",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "넓은 어두운 뒷면과 밝은 잎맥, 두 개의 국소 구멍이 보임."
+  },
+  {
+    "id": "T33",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "넓은 녹색 면에 갈색 가장자리와 찢어진 부분, 국소 빛과 그림자가 보임."
+  },
+  {
+    "id": "T34",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "옅은 뒷면의 좁은 갈색 자국과 아래 오른쪽을 가로지르는 그림자가 보임."
+  },
+  {
+    "id": "T35",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "주요 잎은 비교적 균일한 청록색 뒷면이며 작은 밝은 점만 보임."
+  },
+  {
+    "id": "T36",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "도드라진 잎맥과 미약한 색 변화가 보이며 잎 위로 선명한 그림자가 교차함."
+  },
+  {
+    "id": "T37",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "어두운 뒷면 중앙에 테두리 있는 구멍이 보이고 왼쪽 일부가 강하게 비침."
+  },
+  {
+    "id": "T38",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "넓은 뒷면에 작은 점 하나가 보이고 하단에는 날카로운 경계의 과도하게 밝은 영역이 있음."
+  },
+  {
+    "id": "T39",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "연녹색 뒷면에 큰 구멍과 작은 굽은 갈색 자국이 뚜렷함."
+  },
+  {
+    "id": "T40",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": false,
+    "note": "접혀서 좁게 보이는 잎에 갈색 가장자리와 여러 구멍이 있음."
+  },
+  {
+    "id": "T41",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": false,
+    "note": "작게 잡힌 주요 잎에 나란한 밝은 국소 자국이 보이고 배경 비중이 큼."
+  },
+  {
+    "id": "T42",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": false,
+    "note": "여러 녹색 잎이 겹치며 위쪽 주요 잎 오른편에 작은 흰색 자국이 보임."
+  },
+  {
+    "id": "T43",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "물방울과 돌출된 잎맥이 넓게 보이고 왼쪽 중앙에 작은 갈색 국소 자국이 있음."
+  },
+  {
+    "id": "T44",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "물방울 많은 옅은 뒷면의 오른쪽에 뚜렷한 갈색 국소 자국이 있음."
+  },
+  {
+    "id": "T45",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": false,
+    "note": "여러 작은 잎 중 둥근 잎에 갈색 자국이 있고 국소 햇빛과 그림자가 보임."
+  },
+  {
+    "id": "T46",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": false,
+    "note": "좁게 들린 뒷면에 갈색 국소 자국과 손 부근의 선명한 그림자가 보임."
+  },
+  {
+    "id": "T47",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "넓은 녹색 면에 밝은 갈색 자국이 있으며 왼쪽에 강한 빛의 띠가 있음."
+  },
+  {
+    "id": "T48",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "물방울 많은 뒷면의 갈색 자국과 위쪽 손 주변의 강한 빛·그림자 경계가 보임."
+  },
+  {
+    "id": "T49",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": false,
+    "note": "작은 중앙 잎에 흰색 국소 자국들이 모여 있고 주변 잎 비중이 큼."
+  },
+  {
+    "id": "T50",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "넓은 뒷면에 뚜렷한 둥근 어두운 자국과 흰색 자국, 위쪽 명암 경계가 보임."
+  },
+  {
+    "id": "T51",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "넓은 녹색 잎에 갈색 및 밝은 국소 자국이 여러 개 흩어져 있음."
+  },
+  {
+    "id": "T52",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "넓은 녹색 잎의 물방울 아래에 밝은 갈색 국소 자국이 보임."
+  },
+  {
+    "id": "T53",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "굵은 밝은 잎맥 주위에 큰 구멍과 작은 검은 점들이 있고 오른쪽이 강하게 밝음."
+  },
+  {
+    "id": "T54",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "여러 밝은 점상 자국과 가장자리 갈색 부분이 보이며 선명한 그림자가 잎을 가로지름."
+  },
+  {
+    "id": "T55",
+    "surface": "front",
+    "marks": "subtle",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "넓은 녹색 면에 드문 작은 갈색 점이 있고 상부에 뚜렷한 그림자 경계가 있음."
+  },
+  {
+    "id": "T56",
+    "surface": "front",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "큰 흰색 국소 자국과 뜯긴 가장자리, 오른쪽의 강한 빛·그림자 경계가 보임."
+  },
+  {
+    "id": "T57",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "넓은 뒷면 위쪽의 작은 갈색 자국과 대각선으로 나뉜 빛·그림자가 보임."
+  },
+  {
+    "id": "T58",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "연녹색 뒷면의 작은 밝은 갈색 자국과 아래 가장자리의 갈변이 보임."
+  },
+  {
+    "id": "T59",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "뒷면 중앙의 옅은 손상 자국과 구멍, 윗부분을 가로지르는 짙은 그림자가 보임."
+  },
+  {
+    "id": "T60",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "뒷면에 크고 작은 구멍이 많이 보이며 위쪽에 손 모양 그림자가 있음."
+  },
+  {
+    "id": "T61",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": false,
+    "note": "여러 잎 중 가까운 잎의 구멍과 선명한 그림자가 보이며 배경 잎 비중이 큼."
+  },
+  {
+    "id": "T62",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": false,
+    "note": "손에 잡힌 잎의 갈색 타원 자국과 강한 그림자 경계가 보이며 다른 잎이 함께 큼."
+  },
+  {
+    "id": "T63",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": false,
+    "note": "가까운 작은 잎에 넓은 갈색 가장자리 자국이 있고 뒤쪽 잎이 크게 보임."
+  },
+  {
+    "id": "T64",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "넓은 뒷면 중앙의 흰색·갈색 국소 자국과 위쪽 구멍이 뚜렷함."
+  },
+  {
+    "id": "T65",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "밝게 도드라진 잎맥 주위의 둥근 갈색 자국과 여러 밝은 점이 보임."
+  },
+  {
+    "id": "T66",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": false,
+    "note": "좁고 접힌 뒷면에 여러 큰 구멍과 가장자리 갈색 자국이 보임."
+  },
+  {
+    "id": "T67",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "넓은 청록색 면과 밝은 잎맥, 오른쪽의 큰 흰색 국소 자국이 보임."
+  },
+  {
+    "id": "T68",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": false,
+    "note": "접혀 작게 보이는 주요 잎의 가장자리에 넓은 흰색·갈색 자국이 있음."
+  },
+  {
+    "id": "T69",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "넓은 뒷면에 여러 구멍과 밝은 국소 자국이 뚜렷함."
+  },
+  {
+    "id": "T70",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": false,
+    "note": "여러 잎이 좁고 말린 상태이며 많은 구멍과 밝은 갈색 가장자리가 보임."
+  },
+  {
+    "id": "3-2",
+    "surface": "front",
+    "marks": "subtle",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "넓은 녹색 앞면에 작은 점만 보이고 위쪽 잎 가장자리에 강한 빛과 선명한 명암 경계가 있음."
+  },
+  {
+    "id": "3-3",
+    "surface": "front",
+    "marks": "subtle",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "넓게 펼친 녹색 앞면에 퍼진 색 차이만 보이며 뚜렷한 국소 자국이나 그림자 경계는 없음."
+  },
+  {
+    "id": "3-4",
+    "surface": "back",
+    "marks": "conspicuous",
+    "hard_shadow": false,
+    "bright_patch": false,
+    "broad_view": true,
+    "note": "옅은 뒷면과 밝은 중심 잎맥이 보이며 잎맥 합류부의 좁고 밝은 흰색 국소 선 자국이 뚜렷함."
+  },
+  {
+    "id": "3-5",
+    "surface": "back",
+    "marks": "subtle",
+    "hard_shadow": true,
+    "bright_patch": true,
+    "broad_view": true,
+    "note": "넓은 뒷면의 굵은 밝은 잎맥과 작은 점이 보이며 아래쪽에 강한 그림자 경계가 있음."
+  }
+]
+

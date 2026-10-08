@@ -1,0 +1,203 @@
+{
+  "expected": 36583,
+  "matched": 36583,
+  "errors": [],
+  "metadata_warnings": [
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0010_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0012_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0014_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0015_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0016_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0017_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0018_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0020_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0021_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0022_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0023_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0024_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0025_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0026_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0027_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0028_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0029_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0030_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0031_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0034_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0040_S01_1.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c15_202011300003_S01_3.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c15_202011300006_S01_3.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c15_202011300010_S01_3.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c15_202011300017_S01_4.jpg",
+      "split": "1.Training",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0009_S01_1.jpg",
+      "split": "2.Validation",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0013_S01_1.jpg",
+      "split": "2.Validation",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c11_202012223_0033_S01_1.jpg",
+      "split": "2.Validation",
+      "issue": "date_mismatch",
+      "label_date": ""
+    },
+    {
+      "image": "V006_79_0_00_02_03_12_0_c15_202011300007_S01_3.jpg",
+      "split": "2.Validation",
+      "issue": "date_mismatch",
+      "label_date": ""
+    }
+  ],
+  "image_bytes": 60028268778,
+  "free_bytes": 123947933696,
+  "classes": {
+    "1.Training/6_고추정상": 8575,
+    "1.Training/0_고추탄저병": 967,
+    "1.Training/1_고추흰가루병": 912,
+    "1.Training/7_무정상": 10797,
+    "1.Training/2_무검은무늬병": 462,
+    "1.Training/3_무노균병": 227,
+    "1.Training/8_배추정상": 9316,
+    "1.Training/4_배추검은썩음병": 801,
+    "1.Training/5_배추노균병": 456,
+    "2.Validation/6_고추정상": 1110,
+    "2.Validation/0_고추탄저병": 117,
+    "2.Validation/1_고추흰가루병": 112,
+    "2.Validation/7_무정상": 1301,
+    "2.Validation/2_무검은무늬병": 76,
+    "2.Validation/3_무노균병": 24,
+    "2.Validation/8_배추정상": 1183,
+    "2.Validation/4_배추검은썩음병": 110,
+    "2.Validation/5_배추노균병": 37
+  }
+}
