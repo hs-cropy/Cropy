@@ -48,7 +48,10 @@ class PesticideInfo(TimestampedResponse):
     safety: PesticideSafety = Field(default_factory=PesticideSafety)
     active_ingredient: str | None = None
     safety_notes: str | None = None
-
+    usage_id: str | None = None
+    source: str | None = None
+    verification_status: str = "legacy_unverified"
+    synced_at: datetime | None = None
 
 
 class DiagnoseResponse(TimestampedResponse):
