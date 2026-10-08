@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fetchDiagnosisDetail } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { DiagnosisResult } from "@/components/DiagnosisResult";
+import { RecapturePanel } from "@/components/RecapturePanel";
 
 export default function HistoryDetailPage() {
   const params = useParams();

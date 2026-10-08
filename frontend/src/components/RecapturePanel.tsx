@@ -115,7 +115,7 @@ export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
           type="file"
           accept="image/*"
           capture="environment"
-          onChange={e => { const file = e.target.files?.[0]; if (file) void analyze(file); }}
+          onChange={handleFileChange}
           disabled={loading}
           className="hidden"
         />
