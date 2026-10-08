@@ -1,4 +1,4 @@
-# CropCare AI
+# Cropy - CropCare AI
 
 **AI 기반 농작물 병해충 진단 및 스마트 방제 지원 플랫폼**
 
