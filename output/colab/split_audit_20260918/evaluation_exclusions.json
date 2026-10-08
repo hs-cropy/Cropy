@@ -1,0 +1,12 @@
+{
+  "reason": "Exact byte duplicate of a training image, original SHA256 verified",
+  "paths": [
+    "dataset/test/2_무검은무늬병/V006_79_1_03_02_03_12_1_5389e_20201023_10.jpg",
+    "dataset/test/2_무검은무늬병/V006_79_1_03_02_03_12_1_5389e_20201023_32.jpg",
+    "dataset/test/2_무검은무늬병/V006_79_1_03_02_03_12_2_5389e_20201023_3.jpg",
+    "dataset/test/5_배추노균병/V006_79_1_06_03_03_12_1_5576q_20200917_2.jpg",
+    "dataset/val/1_고추흰가루병/V006_79_1_02_01_03_13_2_0424z_20201012_27.jpg",
+    "dataset/val/2_무검은무늬병/V006_79_1_03_02_03_12_1_5389e_20201023_20.jpg"
+  ],
+  "applied": false
+}

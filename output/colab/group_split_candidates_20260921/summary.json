@@ -1,0 +1,185 @@
+{
+  "classes": [
+    "0_고추탄저병",
+    "1_고추흰가루병",
+    "2_무검은무늬병",
+    "3_무노균병",
+    "4_배추검은썩음병",
+    "5_배추노균병",
+    "6_고추정상",
+    "7_무정상",
+    "8_배추정상"
+  ],
+  "class_group_stats": [
+    {
+      "class": "0_고추탄저병",
+      "images": 500,
+      "workers": 7,
+      "worker_dates": 69,
+      "invalid_date_images": 0
+    },
+    {
+      "class": "1_고추흰가루병",
+      "images": 500,
+      "workers": 7,
+      "worker_dates": 52,
+      "invalid_date_images": 0
+    },
+    {
+      "class": "2_무검은무늬병",
+      "images": 500,
+      "workers": 9,
+      "worker_dates": 68,
+      "invalid_date_images": 0
+    },
+    {
+      "class": "3_무노균병",
+      "images": 251,
+      "workers": 5,
+      "worker_dates": 34,
+      "invalid_date_images": 0
+    },
+    {
+      "class": "4_배추검은썩음병",
+      "images": 500,
+      "workers": 13,
+      "worker_dates": 138,
+      "invalid_date_images": 0
+    },
+    {
+      "class": "5_배추노균병",
+      "images": 495,
+      "workers": 11,
+      "worker_dates": 103,
+      "invalid_date_images": 0
+    },
+    {
+      "class": "6_고추정상",
+      "images": 500,
+      "workers": 30,
+      "worker_dates": 89,
+      "invalid_date_images": 0
+    },
+    {
+      "class": "7_무정상",
+      "images": 500,
+      "workers": 20,
+      "worker_dates": 79,
+      "invalid_date_images": 2
+    },
+    {
+      "class": "8_배추정상",
+      "images": 500,
+      "workers": 18,
+      "worker_dates": 57,
+      "invalid_date_images": 0
+    }
+  ],
+  "images": 4246,
+  "unique_original_hashes": 4235,
+  "duplicate_groups": 11,
+  "candidate_results": {
+    "worker": {
+      "groups": 72,
+      "seed": 205,
+      "objective": 1.5245010588023995,
+      "class_counts": {
+        "train": [
+          303,
+          292,
+          351,
+          169,
+          350,
+          349,
+          313,
+          338,
+          274
+        ],
+        "val": [
+          99,
+          101,
+          87,
+          49,
+          73,
+          68,
+          109,
+          87,
+          112
+        ],
+        "test": [
+          98,
+          107,
+          62,
+          33,
+          77,
+          78,
+          78,
+          75,
+          114
+        ]
+      },
+      "split_counts": {
+        "train": 2739,
+        "val": 785,
+        "test": 722
+      },
+      "forced_train_groups": 1,
+      "forced_train_images": 15,
+      "moved_from_old_train_to_eval": 1055,
+      "cross_split_exact_hashes": 0,
+      "cross_split_group_ids": 0
+    },
+    "worker_date": {
+      "groups": 604,
+      "seed": 240,
+      "objective": 0.0007876148630318183,
+      "class_counts": {
+        "train": [
+          349,
+          348,
+          350,
+          175,
+          350,
+          347,
+          350,
+          350,
+          350
+        ],
+        "val": [
+          76,
+          76,
+          75,
+          38,
+          75,
+          74,
+          75,
+          75,
+          75
+        ],
+        "test": [
+          75,
+          76,
+          75,
+          38,
+          75,
+          74,
+          75,
+          75,
+          75
+        ]
+      },
+      "split_counts": {
+        "train": 2969,
+        "val": 639,
+        "test": 638
+      },
+      "forced_train_groups": 1,
+      "forced_train_images": 2,
+      "moved_from_old_train_to_eval": 890,
+      "cross_split_exact_hashes": 0,
+      "cross_split_group_ids": 0
+    }
+  },
+  "applied": false,
+  "training_performed": false
+}

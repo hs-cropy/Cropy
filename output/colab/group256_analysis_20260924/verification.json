@@ -1,0 +1,21 @@
+{
+  "zip": "cropy_group256_results_20260923_104105_054987.zip",
+  "zip_crc": true,
+  "manifest_sha256": "d0fda6ef2e51b7ea1a201941e10dadea2f8e6b33eca785735b3d0dec58620e72",
+  "same_split": true,
+  "predictions_checked": 785,
+  "best_epoch": 19,
+  "checkpoint_sha256": "ae4749d71fd7e894aaa21a235a80a13f81459dd0c3111b200c420159eafa82fb",
+  "checkpoint_metadata_valid": true,
+  "finite_weights": true,
+  "accuracy": 0.9248407643312102,
+  "macro_f1": 0.9099014010646171,
+  "previous_accuracy": 0.9184713375796179,
+  "previous_macro_f1": 0.903525385131823,
+  "fixed": 17,
+  "regressed": 12,
+  "disease_to_normal": 22,
+  "previous_disease_to_normal": 29,
+  "test_evaluated": false,
+  "full_local_inference": false
+}

@@ -1,0 +1,56 @@
+{
+  "archives": 18,
+  "labels": 91041,
+  "parse_errors": [],
+  "images": 4246,
+  "matched_unique": 4246,
+  "unmatched": 0,
+  "ambiguous": 0,
+  "field_inconsistencies": 2,
+  "official_sources": {
+    "Training": 2448,
+    "Validation": 1798
+  },
+  "official_kinds": {
+    "1": 2746,
+    "0": 1500
+  },
+  "classes": {
+    "0_고추탄저병": {
+      "images": 500,
+      "matched": 500
+    },
+    "1_고추흰가루병": {
+      "images": 500,
+      "matched": 500
+    },
+    "2_무검은무늬병": {
+      "images": 500,
+      "matched": 500
+    },
+    "3_무노균병": {
+      "images": 251,
+      "matched": 251
+    },
+    "4_배추검은썩음병": {
+      "images": 500,
+      "matched": 500
+    },
+    "5_배추노균병": {
+      "images": 495,
+      "matched": 495
+    },
+    "6_고추정상": {
+      "images": 500,
+      "matched": 500
+    },
+    "7_무정상": {
+      "images": 500,
+      "matched": 500
+    },
+    "8_배추정상": {
+      "images": 500,
+      "matched": 500
+    }
+  }
+}

@@ -1,0 +1,128 @@
+[
+  {
+    "archive": "download (1).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/01.고추/1.질병.zip.part0",
+    "bytes": 862373,
+    "sha256": "dfc0f40c732e183a21e378847dfa76fa03c85fdfbb765bcecd6d9db093b35d4e",
+    "labels": 1888
+  },
+  {
+    "archive": "download (10).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/2.Validation/라벨링데이터/01.고추/1.질병.zip.part0",
+    "bytes": 104655,
+    "sha256": "4f62d88b185e7c64251f463841e684342a95033c501aff40572223436339fe8a",
+    "labels": 229
+  },
+  {
+    "archive": "download (11).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/2.Validation/라벨링데이터/01.고추/9.증강.zip.part0",
+    "bytes": 1353489,
+    "sha256": "7c365fb611ebf4124da47690734d8c70aad33db7050fbcc24b7456a9f86dcd48",
+    "labels": 2290
+  },
+  {
+    "archive": "download (12).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/2.Validation/라벨링데이터/02.무/0.정상.zip.part0",
+    "bytes": 618432,
+    "sha256": "69cf99d9b60b77a5357b297e024f7bace3bb7b28d993557addc7f686c1d2e1cf",
+    "labels": 1303
+  },
+  {
+    "archive": "download (13).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/2.Validation/라벨링데이터/02.무/1.질병.zip.part0",
+    "bytes": 45519,
+    "sha256": "4170063e9f586ddbc6b6282698fb68c1dfc718a7e93590fcc188fa4c7ae28ead",
+    "labels": 100
+  },
+  {
+    "archive": "download (14).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/2.Validation/라벨링데이터/02.무/9.증강.zip.part0",
+    "bytes": 884718,
+    "sha256": "8aeb1aea65a5bd99d5afe48c7f678918d5a5f78ad71a393d6cb27172f78db823",
+    "labels": 1500
+  },
+  {
+    "archive": "download (15).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/2.Validation/라벨링데이터/03.배추/0.정상.zip.part0",
+    "bytes": 560472,
+    "sha256": "9d63850c741c08cddc90c3edc49b44d4dd9e93c04af480ebaff7e0e0294bfabc",
+    "labels": 1183
+  },
+  {
+    "archive": "download (16).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/2.Validation/라벨링데이터/03.배추/1.질병.zip.part0",
+    "bytes": 66967,
+    "sha256": "8386f46747ee518661d18b3f3e0b461f4f5190a177a2d77679de2f4d4f6b3fc2",
+    "labels": 147
+  },
+  {
+    "archive": "download (17).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/2.Validation/라벨링데이터/03.배추/9.증강.zip.part0",
+    "bytes": 1300127,
+    "sha256": "26e847052009f53bf12ebe3a90218081fb32541edfeaeb4bb0031fc3c52b11db",
+    "labels": 2205
+  },
+  {
+    "archive": "download (2).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/01.고추/9.증강.zip.part0",
+    "bytes": 11155849,
+    "sha256": "98d53cf0daefa21dcdc6fc6a26d8abef429911f1432441eaddfa4e9cf462d1eb",
+    "labels": 18880
+  },
+  {
+    "archive": "download (3).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/02.무/0.정상.zip.part0",
+    "bytes": 5221084,
+    "sha256": "d555b188e9dfae97f5542799c23f52c5e586fc61ad0e572465d02bae07fea35c",
+    "labels": 11001
+  },
+  {
+    "archive": "download (4).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/02.무/1.질병.zip.part0",
+    "bytes": 317434,
+    "sha256": "2b2205115a2dc2793b938c2ed51a9ebb30bd55626199977fe9950f4005f39cd9",
+    "labels": 697
+  },
+  {
+    "archive": "download (5).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/02.무/9.증강.zip.part0",
+    "bytes": 6168766,
+    "sha256": "fb88e65bd3bc761588b044046d9b71bc28216916e8bb45ba30de3f139df75a08",
+    "labels": 10455
+  },
+  {
+    "archive": "download (6).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/03.배추/0.정상.zip.part0",
+    "bytes": 4415059,
+    "sha256": "59ccd89b2d7a4c35703654936bbcebfcc5b4832746c2ee4223bd27f3bab78265",
+    "labels": 9318
+  },
+  {
+    "archive": "download (7).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/03.배추/1.질병.zip.part0",
+    "bytes": 574040,
+    "sha256": "891b089a15435f00d23326e38bb43647ce4bf996fbe828c9da91decad050a9d8",
+    "labels": 1260
+  },
+  {
+    "archive": "download (8).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/03.배추/9.증강.zip.part0",
+    "bytes": 11146812,
+    "sha256": "79e5645f95a524be0bd26970549dd2f6a3c155ada206d8d4e4e8736d15f77a18",
+    "labels": 18900
+  },
+  {
+    "archive": "download (9).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/2.Validation/라벨링데이터/01.고추/0.정상.zip.part0",
+    "bytes": 527751,
+    "sha256": "cf08de7541085fd70f6dad342bb40d5c7c6187cb9621a0bdaf54b13eb214d5e1",
+    "labels": 1110
+  },
+  {
+    "archive": "download.tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/01.고추/0.정상.zip.part0",
+    "bytes": 4077725,
+    "sha256": "460e1b903ebf7c638f8da15685b351332e842fc78643402bdb52c7cbe3e4e2b5",
+    "labels": 8575
+  }
+]
