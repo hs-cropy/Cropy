@@ -36,6 +36,9 @@ class Base(DeclarativeBase):
 # create_all()은 이미 존재하는 테이블에 칼럼을 추가하지 못한다. 마이그레이션 도구를
 # 도입하기 전까지, 나중에 생긴 칼럼만 누락 시 덧붙여 기존 DB(진단 이력)를 보존한다.
 _ADDED_COLUMNS: list[tuple[str, str, str]] = [
+    ("diseases", "management_actions", "JSON"),
+    ("diagnoses", "content_snapshot", "JSON"),
+    ("diagnoses", "severity_snapshot", "VARCHAR(20)"),
     ("diagnoses", "refined_image_path", "VARCHAR(500)"),
     ("diagnoses", "selected_crop", "VARCHAR(100)"),
     ("diagnoses", "prediction_mode", "VARCHAR(20) DEFAULT 'legacy'"),

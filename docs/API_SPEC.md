@@ -1,5 +1,7 @@
 # CropCare AI - API Specification
 
+**갱신:** 2026-10-08. 현재 로컬 라우트·Pydantic 응답 스키마 기준.
+
 Base URL: `http://localhost:8000/api/v1`
 정적 파일: `http://localhost:8000/uploads/{filename}` (진단 이미지)
 
@@ -16,16 +18,18 @@ WEBP 등 JPEG/PNG 외 형식은 지원하지 않으며 업로드 시 400을 반�
 
 ## Endpoints
 
-| Method | Path | 설명 |
-|--------|------|------|
-| POST | `/diagnose` | 이미지 진단 |
-| POST | `/diagnose/{id}/refine` | 판별부위 2차 촬영으로 재확정 |
-| GET | `/history` | 진단 이력 목록 |
-| GET | `/history/{id}` | 진단 상세 |
-| GET | `/diseases` | 병해 목록 (검색·필터) |
-| GET | `/diseases/{id}` | 병해 상세 |
-| GET | `/health` | 헬스체크 |
-| GET | `/ready` | 실제 모델·클래스 매핑 준비 확인 |
+| ID | Method | Path | 설명 |
+|---|---|---|---|
+| API-01 | POST | /diagnose | 이미지 진단 |
+| API-02 | POST | /diagnose/{id}/refine | 판별부위 재촬영 결과 갱신 |
+| API-03 | GET | /history | 진단 이력 목록 |
+| API-04 | GET | /history/{id} | 진단 상세 |
+| API-05 | GET | /diseases | 병해 검색·필터 |
+| API-06 | GET | /diseases/{id} | 병해 상세 |
+| API-07 | GET | /health | 프로세스 생존 확인 |
+| API-08 | GET | /ready | 실제 모델·DB 클래스 준비 확인 |
+
+경로는 Base URL에 이어 붙인다. 코드의 경로 변수 `diagnosis_id`·`disease_id`를 표에서는 `id`로 줄여 표시한다. 위 ID는 문서 식별자다.
 
 ---
 
@@ -47,46 +51,87 @@ WEBP 등 JPEG/PNG 외 형식은 지원하지 않으며 업로드 시 400을 반�
 
 **Response:** `200 OK`
 
+이 예시는 스키마 설명용이며 실제 요청의 진단·농약 조회 결과가 아니다.
+
 ```json
 {
   "id": "3f9a1c02-77b1-4e0a-9c31-8a5d2b6e4f10",
   "disease_name": "무 검은무늬병",
   "crop_type": "무",
+  "selected_crop": "무",
+  "predicted_crop": "무",
+  "crop_mismatch": false,
+  "prediction_mode": "model",
+  "model_version": "b0b0b4a24af1430778a2bc15ede5cc068e200539dfeb7fc5ced02574a63d4b8b",
+  "preprocessing_version": "resize-224-imagenet-v1",
+  "pair_model_version": null,
   "category": "disease",
   "severity": "medium",
   "confidence": 0.46,
   "top_predictions": [
-    { "name": "무 검은무늬병", "confidence": 0.46 },
-    { "name": "무 노균병", "confidence": 0.41 },
-    { "name": "배추 노균병", "confidence": 0.08 }
-  ],
-  "description": "잎에 동심원 무늬의 흑갈색 원형 반점이 생기고 병반 주위가 황변합니다. ...",
-  "causes": ["고온다습과 잦은 강우", "연작 토양", "질소 부족으로 약해진 잎", "종자 감염"],
-  "pesticides": [
     {
-      "name": "마스터키 (가스가마이신.티플루자마이드 액상수화제)",
-      "dilution": "2000배 -",
-      "usage": "발병 초부터 경엽처리",
-      "safety": { "phi_days": 14, "reentry_hours": null },
-      "active_ingredient": "가스가마이신.티플루자마이드 액상수화제",
-      "safety_notes": "안전사용기준: 수확14일전 / 사용횟수: 2회 이내"
+      "name": "무 검은무늬병",
+      "confidence": 0.46
+    },
+    {
+      "name": "무 노균병",
+      "confidence": 0.41
+    },
+    {
+      "name": "배추 노균병",
+      "confidence": 0.08
     }
   ],
-  "prevention": ["건전 종자 사용 및 종자 소독", "3년 이상 연작 회피", "균형 시비"],
-  "image_url": "/uploads/3f9a1c02-....jpg",
+  "description": "병해 증상 설명",
+  "causes": [
+    "등록된 원인 정보"
+  ],
+  "pesticides": [],
+  "prevention": [
+    "등록된 예방 정보"
+  ],
+  "image_url": "/uploads/example.jpg",
   "refined_image_url": null,
-  "created_at": "2026-07-02T12:00:00Z",
+  "created_at": "2026-10-08T03:00:00Z",
+  "updated_at": null,
   "recapture": {
     "region": "잎 뒷면",
     "instruction": "잎을 뒤집어 병반이 있는 부위의 뒷면을 근접 촬영하세요.",
     "margin": 0.05,
     "candidates": [
-      { "name": "무 노균병", "cue": "뒷면에 회백색 솜털 같은 곰팡이(포자층)가 보이면 노균병입니다." },
-      { "name": "무 검은무늬병", "cue": "뒷면이 깨끗하고 앞면 병반이 동심원(과녁) 무늬면 검은무늬병입니다." }
+      {
+        "name": "무 노균병",
+        "cue": "판별부위의 시각 단서"
+      },
+      {
+        "name": "무 검은무늬병",
+        "cue": "판별부위의 시각 단서"
+      }
     ]
   }
 }
 ```
+
+**진단 응답 필드**
+
+| 필드 | JSON 타입 | 설명 |
+|---|---|---|
+| id / disease_name | string | 진단 ID / 최상위 후보 병명 |
+| crop_type / selected_crop / predicted_crop | string 또는 null | 표시 작물 / 사용자 선택 / 예측 작물 |
+| crop_mismatch | boolean | 선택 작물과 예측 작물 불일치 |
+| prediction_mode | string | model / mock / legacy |
+| model_version / preprocessing_version / pair_model_version | string 또는 null | 모델 해시·전처리·선택 보조 모델 출처 |
+| category / severity | string | disease 또는 normal / DB 속성 low·medium·high |
+| confidence | number | 모델 분류 점수. 실제 발병 확률 아님 |
+| top_predictions | object[] | 상위 후보의 name:string, confidence:number |
+| description | string 또는 null | 현재 시드의 병해 설명 |
+| causes / prevention | string[] | 원인 / 예방 정보 |
+| pesticides | object[] | 작물·병해별 농약 조회 정보 |
+| image_url / refined_image_url | string 또는 null | 원본 / 재촬영 이미지 URL |
+| created_at / updated_at | ISO 8601 string / string 또는 null | UTC 생성 / 갱신 시각 |
+| recapture | object 또는 null | region:string, instruction:string, margin:number, candidates:{name,cue}[] |
+
+농약 객체: `name`은 string, `dilution/usage/active_ingredient/safety_notes/usage_id/source`는 string 또는 null, `verification_status`는 string, `synced_at`은 ISO 8601 string 또는 null이다. `safety`의 `phi_days/reentry_hours`는 integer 또는 null이다. 누락값을 0이나 임의 사용량으로 바꾸지 않는다.
 
 **필드 참고**
 
@@ -97,8 +142,8 @@ WEBP 등 JPEG/PNG 외 형식은 지원하지 않으며 업로드 시 400을 반�
 - 농약 항목은 `usage_id`, `source`, `verification_status`, `synced_at`을 포함한다.
   `legacy_unverified`의 희석비·사용법·PHI·재입장 시간은 null이다. 원천 재동기화로
   작물·병해별 사용 조건이 확인된 항목만 `verified`로 제공한다. `usage_id`를 목록 키로 사용한다.
-- `category`: `disease` | `normal` — `normal`은 병징이 없는 건전주 예측이며 `pesticides`가 비어 있다.
-- `severity`: `low` | `medium` | `high`
+- `category`: `disease` | `normal` — `normal`은 정상 클래스 분류 결과이며 질병 부재를 보증하지 않고 `pesticides`가 비어 있다.
+- `severity`: `low` | `medium` | `high`. DB 병해 속성이며 사진에서 측정한 진행 정도가 아니다.
 - `refined_image_url`: 판별부위 2차 촬영으로 재확정한 경우 그 사진의 URL.
   재확정 전에는 `null`이다.
 - `recapture`: **혼동쌍 유도촬영 지침.** 상위 두 후보가 사전 정의된 혼동쌍이고 신뢰도 마진이
@@ -185,7 +230,9 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
       "confidence": 0.46,
       "crop_type": "무",
       "image_url": "/uploads/3f9a1c02-....jpg",
-      "created_at": "2026-07-02T12:00:00Z"
+      "created_at": "2026-10-08T03:00:00Z",
+      "refined_image_url": null,
+      "prediction_mode": "model"
     }
   ],
   "total": 42,
@@ -194,7 +241,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 }
 ```
 
-**Errors:** `422` — `page < 1` 또는 `size > 100`
+**Errors:** `422` — page < 1, size가 1~100 범위 밖, 지원하지 않는 crop_type
 
 ---
 
@@ -211,7 +258,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 
 병해 목록 (검색·필터).
 
-**Query:** `q` (병해명 부분일치), `crop_type` (정확일치: `고추` / `무` / `배추`)
+**Query:** `q` (병해명 부분일치), `crop_type` (정확일치: `고추` / `무` / `배추`). 미지원 crop_type은 422.
 
 **Response:** `200 OK` — `DiseaseDetail` 배열
 
@@ -227,7 +274,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
     "causes": ["고온다습과 잦은 강우", "연작 토양"],
     "prevention": ["건전 종자 사용 및 종자 소독", "3년 이상 연작 회피"],
     "severity": "medium",
-    "pesticides": [ { "name": "마스터키 (...)", "dilution": "2000배 -", "...": "..." } ]
+    "pesticides": []
   }
 ]
 ```
@@ -258,8 +305,41 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 `status`, `model_loaded`, `prediction_mode`(`model`/`mock`/`unavailable`), `version`을 반환한다.
 개발용 Mock은 시연을 허용하더라도 실제 모델 준비 완료로 표시하지 않는다.
 모델 파일·실행 설정 변경은 프로세스 재시작 후 반영된다.
-`model_loaded`가 `false`면 체크포인트를 찾지 못해 **Mock 모드**로 동작 중이며,
-`/diagnose`는 고정된 샘플 분포를 반환한다.
+
+## 통신 형식과 인증·보안
+
+REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_type`은 query로 전송한다. 오류는 `detail`을 가진 JSON이며 일반 HTTP 오류는 문자열, FastAPI 입력 검증 422는 오류 항목 배열일 수 있다.
+
+현재 앱에는 로그인·API 인증·사용자별 이력 분리가 없다. CORS는 허용 출처 설정이며 인증이 아니다. 이미지 정적 URL도 사용자별 보호가 없다. HTTPS는 배포 프록시에서 설정하며 Compose 기본 구성 자체는 TLS를 제공하지 않는다. 카메라·마이크를 통합할 때 대상 브라우저의 보안 컨텍스트를 확인한다.
+
+## 내부·예정 인터페이스
+
+현재 CNN↔백엔드는 동일 Python 프로세스의 함수 호출이다. 입력은 검증된 이미지 경로, 출력은 전체/Top-3 `(model_class_id, score)`이며 체크포인트 규격은 [MODEL_SPEC](MODEL_SPEC.md)를 따른다. 프론트는 [api.ts](../frontend/src/lib/api.ts)와 [응답 타입](../frontend/src/types/diagnosis.ts)을 사용한다. nullable 응답과 TypeScript 선택 필드의 정합은 후속 코드 보완 대상이다.
+
+Qwen 기능 토큰/handler, STT/TTS, 단말 촬영 API는 데이터 설계 단계다. 데이터 시트의 get_diagnosis 등 기능명을 현재 REST 엔드포인트로 간주하지 않는다. 실제 호출·인자·오류·시간 제한은 [LLM 계획](LLM_FINETUNING_PLAN.md)에 따라 통합 시 확정한다.
+# Figma 연동 보완 API — 2026-10-08
+
+기존 `detail`과 진단·이력 엔드포인트를 유지하면서 아래 계약을 추가했다.
+
+| 엔드포인트/필드 | 용도 |
+|---|---|
+| `GET /api/v1/history?crop_type=무&severity=high&page=1&size=20` | 작물·등급 필터. `total`은 최종 필터 건수, `crop_total`은 작물 조건 건수, `unfiltered_total`은 전체 건수 |
+| 이력 요약 `category`, `severity`, `is_refined`, `content_status` | 정상/병해·등급·재촬영·과거 안내 상태 표시 |
+| 진단 `management_actions`, `content_version`, `content_status` | 관리 안내와 당시 콘텐츠 버전. 이전 스냅샷 없는 기록은 `current_reference` |
+| `current_pesticides` | 당시 `pesticides`와 구분한 현재 카탈로그. 과거 이력의 최신 조건 확인에 사용 |
+| `decision_status`, `decision_reasons`, `policy_version` | 작물 불일치 → 혼동 → 낮은 신뢰도 우선순위와 모든 해당 이유 |
+| `initial_predictions`, `is_refined` | 최초 상위 후보와 재촬영 여부 |
+| `save_status`, `recovery_token` | `saved` 또는 DB 저장 실패의 `failed`. 실패해도 보관 성공한 경우 결과를 반환 |
+| `POST /api/v1/results/{token}/save` | 서버에 보관된 결과만 재저장. 임의 진단 JSON은 받지 않으며 재추론하지 않음 |
+| `GET /api/v1/capabilities` | 사진 형식·용량·픽셀, 판단 기준, 실행 준비, 복구 보관 시간 |
+| `GET /api/v1/offline/manifest` | 준비된 브라우저 모델·전처리·병해 안내 묶음 메타데이터 |
+| `POST /api/v1/offline/records` | multipart `metadata`, `file`, 선택적 `refined_file`로 기기 기록 동기화 |
+
+진단·재촬영의 선택적 `Idempotency-Key`는 최대 128자다. 같은 작업·키·사진·작물은 동일 응답을 재사용한다. 다른 본문이면 `409 IDEMPOTENCY_CONFLICT`다. 성공 응답은 진단과 같은 DB 트랜잭션에 저장한다. 기존 기록보다 오래된 복구 결과는 `409 DIAGNOSIS_CHANGED`, 만료 초안은 `410 RESULT_EXPIRED`다. 기본 복구 TTL은 24시간이며 `RECOVERY_TTL_HOURS`로 1~168시간 설정한다.
+
+오류 응답은 `detail`, `code`, `retryable`, `request_id`를 제공하며 응답 헤더에도 `X-Request-ID`가 있다. 대표 코드: `INVALID_IMAGE`, `EMPTY_IMAGE`, `UNSUPPORTED_IMAGE_FORMAT`, `IMAGE_TOO_LARGE`, `IMAGE_RESOLUTION_TOO_LARGE`, `REQUEST_TOO_LARGE`, `MODEL_UNAVAILABLE`, `MODEL_VERSION_CONFLICT`, `DIAGNOSIS_NOT_FOUND`, `DATABASE_UNAVAILABLE`, `SAVE_FAILED`, `RECOVERY_STORAGE_UNAVAILABLE`.
+
+오프라인 metadata는 UUID `client_record_id`, 선택적 `selected_crop`, timezone이 있는 `created_at`, `model_version`, `preprocessing_version`, `bundle_version`, 9개 고유 클래스의 합계 1인 `predictions`를 요구한다. `refined_predictions`가 있으면 재촬영 사진도 있어야 한다. 동일 UUID의 동일 본문 재전송은 중복 저장하지 않는다. 기기 확률은 클라이언트 생성값이며 서버 검증을 병해 정확도 검증으로 해석하지 않는다. 상세 준비·배포·검증 범위는 [오프라인 실행 가이드](OFFLINE_WEB.md)를 참조한다.
 
 
 ## 기능별 변경: 모델 준비 상태 및 진단 무결성
