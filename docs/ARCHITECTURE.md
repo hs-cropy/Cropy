@@ -4,7 +4,7 @@
 
 ## 단말 목표와 현재 구현
 
-목표 단말은 **Orange Pi 5 Plus / RK3588 / ARM64 / RAM 16GB**다. 현재 추론은 PyTorch이며 ONNX/RKNN/RKLLM 런타임은 연결되지 않았다. 보드 OS·드라이버·ARM64 의존성·자원 실측은 [배포 가이드](ORANGEPI5_DEPLOY.md)에 따라 확인한다.
+목표 단말은 **Orange Pi 5 Plus / RK3588 / ARM64 / RAM 16GB**다. 서버는 PyTorch, 브라우저 자체 실행은 ONNX Runtime Web/WASM을 사용한다. RKNN/RKLLM은 연결되지 않았다. 보드 OS·드라이버·ARM64 의존성·자원 실측은 [배포 가이드](ORANGEPI5_DEPLOY.md)에 따라 확인한다.
 
 ```text
 현재: 스마트폰/PC 브라우저 → Next.js 프록시 → FastAPI 프로세스
@@ -16,7 +16,7 @@
       검증된 handler/문장 → 화면·TTS → 스피커
 ```
 
-스마트폰은 웹 클라이언트이며 현재 스마트폰 자체에서 모델을 실행하지 않는다. Qwen 기능 토큰·음성·단말 에이전트는 계획이다. SUDA는 SDK와 보드 지원을 확인한 뒤 선택 비교할 대안이다. 인터넷 없는 전체 흐름과 NPU 경합은 실기기에서 검증한다.
+스마트폰은 서버 진단을 이용하거나 별도 `/offline/index.html`에서 모델 준비 후 브라우저 자체 진단·IndexedDB 저장을 수행한다. 실제 Chrome에서 연결 차단과 재접속·기록 동기화를 검증했으며 스마트폰 메모리·처리 시간은 아직 실측하지 않았다. [오프라인 가이드](OFFLINE_WEB.md)를 참조한다. Qwen 기능 토큰·음성 명령·단말 에이전트는 계획이다. SUDA는 SDK와 보드 지원을 확인한 뒤 선택 비교할 대안이다. NPU 경합은 실기기에서 검증한다.
 
 ## 시스템 구성
 

@@ -114,7 +114,7 @@ python train.py --data-dir ../data/dataset --epochs 20 --arch resnet50
 
 최신 별도 256 미세조정 후보의 val 4,070장 결과는 정확도 99.5823% / Macro F1 0.962436입니다. 무노균병 재현율이 저하되어 서비스 교체를 보류했고 독립 test 결과는 없습니다. [최신 보고서](report/AI_모델_개선_보고서_20261006.md)를 참고하세요.
 
-목표 단말은 Orange Pi 5 Plus/RK3588/RAM 16GB입니다. Qwen/RKLLM·STT/TTS·CNN 양자화·보드 실측은 개발·검증 예정이며 현재 스마트폰은 웹 클라이언트입니다.
+목표 단말은 Orange Pi 5 Plus/RK3588/RAM 16GB입니다. 스마트폰은 서버 진단 또는 [브라우저 자체 오프라인 진단](docs/OFFLINE_WEB.md)을 사용합니다. 브라우저 ONNX/WASM 실행·기기 기록·동기화는 구현했으며 실제 휴대폰·보드 속도는 검증 전입니다. Qwen/RKLLM·음성 명령/STT·CNN 양자화는 후속 범위입니다.
 
 ## 배포 (Docker)
 

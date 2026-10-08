@@ -182,6 +182,6 @@ cd frontend && npm run dev   # http://localhost:3000
 
 ## 7. 목표 단말과 추가 기술
 
-목표는 Orange Pi 5 Plus/RK3588/ARM64/RAM 16GB다. 현재 의존성의 ARM64 휠·OS·NPU 드라이버 호환은 별도 검증한다. CNN ONNX/RKNN, Qwen3.5/RKLLM, STT/TTS, 단말 에이전트는 현재 저장소의 실행 런타임으로 구현되어 있지 않다. SUDA는 지원·SDK를 확인할 대안이다.
+목표는 Orange Pi 5 Plus/RK3588/ARM64/RAM 16GB다. 현재 의존성의 ARM64 휠·OS·NPU 드라이버 호환은 별도 검증한다. CNN ONNX 변환과 브라우저 ONNX Runtime Web/WASM 실행, IndexedDB 기록과 서버 동기화는 구현했다. CNN RKNN, Qwen3.5/RKLLM, 음성 명령/STT와 단말 에이전트는 미구현이다. 기기의 한국어 로컬 음성이 있으면 결과 읽기를 제공한다. [오프라인 가이드](OFFLINE_WEB.md)를 참조한다. SUDA는 지원·SDK를 확인할 대안이다.
 
 학습 보고서의 Colab PyTorch 2.11.0+cu130/T4와 백엔드 선언 2.12.1+cpu는 서로 다른 환경이다. 버전 선언을 설치 성공이나 보드 실행 완료로 표시하지 않는다.
