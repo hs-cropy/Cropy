@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { VoiceToggle } from "@/features/voice";
 import { TextSizeToggle } from "./TextSizeToggle";
 
 const NAV = [
@@ -22,7 +23,9 @@ export function AppBar() {
           >
             <span className="icon-[lucide--sprout] h-5 w-5" />
           </span>
-          <span className="leading-none">
+          {/* 큰글씨·음성 토글이 나란히 들어가도록 좁은 화면에서는 로고 글자를 숨긴다
+              (스크린리더용 링크 이름으로는 남긴다) */}
+          <span className="sr-only leading-none sm:not-sr-only">
             <span className="block text-lg font-extrabold tracking-tight text-ink">CropCare</span>
             <span className="mt-0.5 block text-xs font-medium text-khaki">현장 병해충 진단</span>
           </span>
@@ -32,6 +35,7 @@ export function AppBar() {
             네비게이션을 가져가도 이 버튼은 앱바에 남는다) */}
         <div className="ml-auto flex items-center gap-2">
           <TextSizeToggle />
+          <VoiceToggle />
 
           {/* Desktop nav — bottom tabs take over below md */}
           <nav className="hidden items-center gap-1.5 md:flex">

@@ -2,6 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CameraCapture, isCameraSupported, validateImage } from "@/features/camera";
+import {
+  PROMPT_DIAGNOSING,
+  PROMPT_HOME,
+  buildRecapturePrompt,
+  buildResultPrompt,
+  useVoiceGuide,
+} from "@/features/voice";
 import { diagnoseImage } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { DiagnosisResult } from "./DiagnosisResult";
@@ -35,6 +42,12 @@ export function DiagnoseForm() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DiagnoseResponse | null>(null);
   const { toast, showToast, clearToast } = useToast();
+  const { speak, prime: primeSpeech, cancel: cancelSpeech } = useVoiceGuide();
+
+  // M01-F6 화면 진입 안내. 페이지와 상호작용하기 전이면 브라우저가 막을 수 있다
+  useEffect(() => {
+    speak(PROMPT_HOME);
+  }, [speak]);
 
   // on phones the result renders below the fold — bring it into view
   useEffect(() => {
@@ -42,6 +55,13 @@ export function DiagnoseForm() {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     resultRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
   }, [result]);
+
+  // 재촬영이 필요하면 결과 대신 재촬영 안내를 읽는다 (M05-F8 > M04-F9).
+  // 재촬영 뒤 확정된 결과도 setResult로 들어오므로 여기서 함께 읽힌다
+  useEffect(() => {
+    if (!result) return;
+    speak(result.recapture ? buildRecapturePrompt(result.recapture) : buildResultPrompt(result));
+  }, [result, speak]);
 
   // 사진이 바뀌거나 화면을 떠날 때 이전 미리보기 URL을 해제한다
   useEffect(() => {
@@ -58,6 +78,8 @@ export function DiagnoseForm() {
     }
     setFile(next);
     setPreview(URL.createObjectURL(next));
+    // 이전 결과를 지우므로 읽던 결과 문장도 끊는다
+    cancelSpeech();
     setResult(null);
     setError(null);
     return true;
@@ -72,7 +94,11 @@ export function DiagnoseForm() {
 
   const openCamera = () => {
     // http 접속·미지원 브라우저는 기기 카메라 앱으로 바로 연결한다 (M01-F2 예외)
-    if (isCameraSupported()) setCameraOpen(true);
+    if (isCameraSupported()) {
+      // 촬영 안내는 카메라가 켜진 뒤(비동기)에 나오므로 이 탭에서 iOS 발화 제한을 풀어 둔다
+      primeSpeech();
+      setCameraOpen(true);
+    }
     else fallbackInputRef.current?.click();
   };
 
@@ -102,6 +128,8 @@ export function DiagnoseForm() {
 
     setLoading(true);
     setError(null);
+    // M03-F3 — 탭 직후에 말해야 iOS가 이후 결과 낭독까지 허용한다
+    speak(PROMPT_DIAGNOSING);
     try {
       const data = await diagnoseImage(file, cropType || undefined);
       setResult(data);
