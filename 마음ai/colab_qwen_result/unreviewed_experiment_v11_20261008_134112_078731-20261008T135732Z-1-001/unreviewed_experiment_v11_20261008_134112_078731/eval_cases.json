@@ -1,0 +1,338 @@
+[
+  {
+    "conversation_id": "V5_Q_113_3",
+    "expected_function": "clarify_request",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "P_F017",
+    "expected_function": "clarify_request",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_Q_101_1",
+    "expected_function": "clarify_request",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_Q_113_2",
+    "expected_function": "clarify_request",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_C_110_2",
+    "expected_function": "get_care_information",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_C_107_2",
+    "expected_function": "get_care_information",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_C_101_3",
+    "expected_function": "get_care_information",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_C_121_2",
+    "expected_function": "get_care_information",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_D_107_2",
+    "expected_function": "get_diagnosis",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_D_103_3",
+    "expected_function": "get_diagnosis",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_D_127_2",
+    "expected_function": "get_diagnosis",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_D_110_1",
+    "expected_function": "get_diagnosis",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "P400_377",
+    "expected_function": "get_pesticide_information",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "P400_114",
+    "expected_function": "get_pesticide_information",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "P400_184",
+    "expected_function": "get_pesticide_information",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "P400_342",
+    "expected_function": "get_pesticide_information",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_M_129_2",
+    "expected_function": "get_prediction_metrics",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_M_115_3",
+    "expected_function": "get_prediction_metrics",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "STT_038",
+    "expected_function": "get_prediction_metrics",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_M_121_1",
+    "expected_function": "get_prediction_metrics",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_R_122_1",
+    "expected_function": "get_recapture_guidance",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_R_104_2",
+    "expected_function": "get_recapture_guidance",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_R_110_2",
+    "expected_function": "get_recapture_guidance",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_R_117_3",
+    "expected_function": "get_recapture_guidance",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_S_124_1",
+    "expected_function": "handle_scope_limit",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "P_S010",
+    "expected_function": "handle_scope_limit",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "V5_S_111_1",
+    "expected_function": "handle_scope_limit",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  },
+  {
+    "conversation_id": "STT_040",
+    "expected_function": "handle_scope_limit",
+    "output_ids": [
+      248125
+    ],
+    "format_valid": false,
+    "end_valid": true,
+    "function_correct": false,
+    "arguments_correct": false,
+    "exact_correct": false
+  }
+]
