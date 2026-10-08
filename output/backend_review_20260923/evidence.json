@@ -1,0 +1,94 @@
+{
+  "mock": {
+    "health": {
+      "status": "ok",
+      "model_loaded": false,
+      "version": "1.0.0"
+    },
+    "diagnosis": {
+      "disease_name": "고추 탄저병",
+      "confidence": 0.87
+    },
+    "has_mode": false
+  },
+  "crop": {
+    "invalid_accepted": "unsupported",
+    "selected": "무",
+    "disease": "고추 탄저병"
+  },
+  "timestamp": "2026-09-23T12:39:53",
+  "unknown_class": {
+    "status": 200,
+    "name": "고추 탄저병",
+    "score": 0.99
+  },
+  "upload_html": {
+    "post_status": 200,
+    "get_status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "retains_html": true
+  },
+  "failed_upload": {
+    "status": 500,
+    "orphan_files": 1
+  },
+  "truncated_jpeg": {
+    "verify_passed": true,
+    "post_status": 500
+  },
+  "recapture_history": {
+    "initial_has_guidance": true,
+    "history_has_guidance": false
+  },
+  "refine": {
+    "crop": "무",
+    "disease": "배추 정상",
+    "replaced_image_still_served": 200
+  },
+  "sqlite_foreign_keys": 0,
+  "priority": {
+    "expected_first": "스카웃 (디메토모르프.피라클로스트로빈 입상수화제)",
+    "actual_first": "골든벨 (가스가마이신.티오파네이트메틸 액상수화제)"
+  },
+  "event_loop": {
+    "timer_expected_seconds": 0.02,
+    "timer_actual_seconds": 0.325,
+    "injected_sync_inference_seconds": 0.3
+  },
+  "multipart_limit": {
+    "body_bytes": 2097289,
+    "bytes_received_before_limit_check": 2097289,
+    "status": 413
+  },
+  "pixel_limit_error": {
+    "status": 500,
+    "note": "Small image with temporarily lowered Pillow pixel limit"
+  },
+  "pesticide_context_loss": {
+    "input_phi_days": [
+      3,
+      21
+    ],
+    "stored_phi_days": [
+      3
+    ],
+    "mappings": [
+      {
+        "disease_key": "a",
+        "pesticide_key": "psis_shared",
+        "priority": 1
+      },
+      {
+        "disease_key": "b",
+        "pesticide_key": "psis_shared",
+        "priority": 1
+      }
+    ]
+  },
+  "partial_sync": {
+    "remaining_disease_keys": [
+      "a"
+    ]
+  },
+  "business_error_xml": []
+}
