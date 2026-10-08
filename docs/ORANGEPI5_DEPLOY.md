@@ -1,305 +1,158 @@
-# Orange Pi 5 (16GB) 배포 가이드
+# Orange Pi 5 Plus (16GB) 배포 가이드
 
-> CropCare AI 전체 스택(FastAPI 백엔드 + Next.js 프론트 + ResNet50 CPU 추론)을
-> **Orange Pi 5 (Rockchip RK3588S, ARM64, 16GB RAM)** 한 대에 올리는 상세 설명서입니다.
->
-> 결론부터: **16GB 모델이면 여유롭게 돌아갑니다.** 예상 상주 메모리는 백엔드(모델 포함) 1.5~2GB + 프론트 0.3GB 수준.
-> 유일하게 주의할 점은 **ARM64(aarch64) 아키텍처 차이** — 특히 PyTorch 설치 방법이 x86과 다릅니다.
+> 갱신: 2026-09-17. 대상: **Orange Pi 5 Plus / RK3588 / ARM64 / RAM 16GB**.
+> 순서: CNN CPU 풀스택 → Qwen/RKLLM NPU → 오프라인 음성 → 전체 측정 → 선택 최적화.
+> 현재 저장소는 PyTorch CNN·FastAPI·Next.js 구성이다. LLM 서버·음성·RKNN 런타임은 추가 작업이며 이 문서의 계획을 구현 완료로 해석하지 않는다.
+> 담당·선행 조건·완료 기준: [역할별 이전 백로그](ORANGEPI5_MIGRATION_BACKLOG.md).
 
----
+## 1. 장치와 제공 환경 확인 (OP-01/06)
 
-## 0. 사전 준비물
+- 일반 Orange Pi 5/RK3588S용 이미지와 혼용하지 않는다. 5 Plus용 OS와 보드 리비전을 확인한다.
+- 제공 예정 `rkllm-toolkit`의 README, 지원 모델, toolkit/runtime 버전, NPU 드라이버·커널 요구 조건을 기록한다.
+- 강의의 Ubuntu 22.04·드라이버 v0.9.8은 제공 환경 예시다. 수령 이미지와 패키지의 실제 조합으로 확정한다.
+- 제공 이미지가 있으면 먼저 보존하고 부팅·NPU 예제를 검증한다. 검증 전 임의의 OS 교체·전체 업그레이드로 커널을 바꾸지 않는다.
+- 전원·냉각·저장장치, USB 카메라·마이크·스피커를 확인한다. AP 구성은 Linux 드라이버와 AP 모드를 지원하는 무선 장치가 있어야 한다.
 
-| 항목 | 권장 |
+```bash
+uname -m  # aarch64 확인
+uname -r
+cat /etc/os-release
+free -h
+lsblk
+```
+
+보드 이미지·커널·패키지·모델 버전과 재현 명령을 실험 기록에 남긴다. 초기 설치에는 인터넷 또는 사전 준비한 오프라인 설치 파일이 필요하다.
+
+## 2. 코드·모델·데이터 전달 (OP-02)
+
+Git clone 또는 필요한 파일만 복사한다. PC의 `.venv`, `node_modules`, 빌드 캐시는 제외하고 ARM64에서 다시 설치한다.
+
+| 대상 | 용도·검증 |
 |---|---|
-| 보드 | Orange Pi 5 16GB (RK3588S) |
-| 저장장치 | **NVMe SSD 128GB+ 강력 권장** (M.2 슬롯). microSD는 느리고 수명 문제 |
-| 전원 | 5V/4A USB-C (전력 부족 시 부팅 불안정) |
-| OS 이미지 | **Ubuntu 22.04/24.04 Server** (Orange Pi 공식 또는 [Armbian](https://www.armbian.com/orangepi-5/) — Armbian 쪽이 커널 관리가 깔끔해서 권장) |
-| 네트워크 | 유선 이더넷 권장 (초기 설치 시 수 GB 다운로드) |
+| `ml/checkpoints/best_model.pth` | 본 모델. 운영 모드에서 누락/로드 실패 시 진단 503; 해시·전처리·클래스 ID 확인 |
+| `ml/checkpoints/pair_mu.pth` | 선택 보조 ResNet18 분류기. 없어도 기본 재촬영 판정·분포 융합은 유지되고 보조 재분배만 생략 |
+| SQLite와 uploads | 기존 이력을 옮길 경우 함께 백업·복원. 모델 파일과 별도로 관리 |
+| `.rkllm` 및 대응 runtime | OP-08 이후 추가. 파일 전송 전후 체크섬 비교 |
 
-### OS 굽기 & 첫 부팅
+Compose는 `cropcare-data` 볼륨의 `/data/cropcare.db`와 `/data/uploads`를 사용한다. `backend/cropcare.db`를 복사하는 것만으로 Compose DB가 이전되지는 않는다. 서비스 정지 또는 일관성 있는 DB 백업 방식으로 DB와 이미지의 대응 관계를 보존한다.
 
-1. [Armbian Orange Pi 5 이미지](https://www.armbian.com/orangepi-5/) 다운로드 (Ubuntu 기반, Server 버전)
-2. balenaEtcher 등으로 microSD에 굽고 첫 부팅 → 초기 계정 설정
-3. (권장) `armbian-config` → NVMe로 시스템 이전 후 SD 제거
-4. 기본 업데이트:
+## 3. ARM64 의존성 검증 (OP-03)
 
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y git curl build-essential
-```
+현재 `backend/Dockerfile`은 `python:3.13-slim`, 프론트는 `node:22-alpine`을 사용한다. `backend/requirements.txt`는 torch/torchvision의 `+cpu` 버전을 지정한다. **이 조합의 실제 ARM64 휠 설치 성공을 먼저 검증**한다. 접미사만 제거하면 된다고 가정하지 않는다.
 
-아키텍처 확인 — 반드시 `aarch64`가 나와야 합니다:
+1. 선택 Python·OS·ARM64에 맞는 torch/torchvision 호환 조합과 휠을 확인한다.
+2. 깨끗한 환경에서 설치, `import torch, torchvision`, 모델 로드 및 단건 추론을 수행한다.
+3. 성공한 버전·인덱스·설치 명령을 고정한다. 기존 x86 환경을 깨뜨리지 않도록 ARM64 의존성 파일 또는 빌드 설정을 별도로 관리한다.
+4. 별도 requirements 파일을 사용할 때 Dockerfile의 COPY와 pip 설치 대상도 함께 수정한다. 해당 파일·설정은 아직 구현된 것으로 간주하지 않는다.
+5. `npm ci`와 프로덕션 빌드를 실행한다. 빌드 시간·메모리는 환경별로 측정하며 고정 예상값을 합격 조건으로 쓰지 않는다.
 
-```bash
-uname -m   # → aarch64
-```
+## 4. CNN CPU 풀스택 실행 (OP-04)
 
----
+### Docker Compose
 
-## 1. 프로젝트 옮기기
-
-```bash
-# PC에서 보드로 복사 (git 저장소가 있다면 clone이 더 깔끔)
-scp -r C:\cropy user@<orangepi-ip>:~/cropy
-# 또는
-git clone <repo-url> ~/cropy
-```
-
-⚠️ **반드시 함께 옮겨야 하는 것 (저장소에 없는 파일들):**
-
-| 경로 | 내용 | 없으면? |
-|---|---|---|
-| `ml/checkpoints/best_model.pth` | 학습된 ResNet50 체크포인트 | 백엔드가 **Mock 모드**로 뜸 (`/api/v1/health`의 `model_loaded: false`) |
-| `ml/checkpoints/pair_mu.pth` | 혼동쌍 통계 (재촬영 유도용) | 재촬영 유도 기능 비활성 |
-| `backend/cropcare.db` | 병해·농약 시드가 든 SQLite | 첫 기동 시 시드 재생성 로직에 의존 |
-
-`frontend/node_modules`, `backend/.venv`는 **옮기지 마세요** — x86용 바이너리라 ARM에서 못 씁니다. 보드에서 새로 설치합니다.
-
-```bash
-# 복사했다면 정리
-rm -rf ~/cropy/frontend/node_modules ~/cropy/backend/.venv
-```
-
----
-
-## 2. 방법 A — Docker Compose (권장: 가장 간단)
-
-이 프로젝트의 Dockerfile 베이스 이미지(`python:3.13-slim`, `node:22-alpine`)는 모두 **ARM64 공식 이미지가 존재**하므로 compose가 거의 그대로 동작합니다. 단 한 곳만 고치면 됩니다.
-
-### 2-1. Docker 설치
-
-```bash
-curl -fsSL https://get.docker.com | sudo sh
-sudo usermod -aG docker $USER
-# 재로그인 후
-docker run --rm hello-world
-```
-
-### 2-2. ⚠️ 필수 수정: PyTorch 설치 라인 (ARM64 차이점 핵심)
-
-`backend/requirements.txt`의 `+cpu` 휠은 **x86_64 전용**입니다. ARM64에는 `+cpu` 빌드가 없고, **PyPI 기본 `torch`가 이미 CPU 빌드**입니다. ARM64에서는 이렇게 바꿉니다:
-
-```diff
-- --extra-index-url https://download.pytorch.org/whl/cpu
--
-- torch==2.12.1+cpu
-- torchvision==0.27.1+cpu
-+ torch==2.12.1
-+ torchvision==0.27.1
-```
-
-> 원본을 유지하고 싶다면 `requirements.arm64.txt`를 따로 만들고
-> `backend/Dockerfile`의 `COPY requirements.txt .` 라인만 바꿔도 됩니다.
-> `--extra-index-url` 줄을 남겨둬도 무해합니다(단순히 매칭 휠이 없어 PyPI로 폴백) — 하지만 명시적으로 지우는 편이 명확합니다.
-
-### 2-3. 빌드 & 실행
+Docker가 설치되어 있고 3절의 ARM64 빌드 설정을 검증한 뒤 실행한다.
 
 ```bash
 cd ~/cropy
 docker compose up -d --build
+docker compose ps
+curl http://localhost:3000/api/v1/health
+docker compose logs --tail=100 backend
 ```
 
-- 첫 빌드는 **20~40분** 걸립니다 (torch 다운로드 ~100MB + Next.js 빌드가 ARM CPU에서 느림). 정상입니다.
-- Next.js 빌드 중 메모리 사용이 치솟지만 16GB면 문제없습니다.
+`/api/v1/ready`의 HTTP 200을 확인한다. Compose healthcheck도 이 경로를 사용하며 mock은 준비 상태가 아니다. 네이티브 실행도 `APP_ENV=production`, `ALLOW_MOCK_PREDICTIONS=false`를 설정한다. FE→BE 프록시는 `BACKEND_ORIGIN=http://backend:8000`을 빌드 인자로 사용하며 목적지를 바꾸면 프론트를 다시 빌드한다.
 
-### 2-4. 확인
+### 네이티브 실행
 
-```bash
-docker compose ps                          # 두 컨테이너 모두 Up (backend는 healthy까지 최대 1분)
-curl http://localhost:3000/api/v1/health   # {"status":"ok","model_loaded":true,...}
-```
-
-같은 공유기의 스마트폰/PC에서 `http://<orangepi-ip>:3000` 접속 → 사진 업로드 → 진단까지 눌러봐야 진짜 확인입니다.
-
----
-
-## 3. 방법 B — 네이티브 실행 (Docker 없이, 자원 최대 활용)
-
-### 3-1. 백엔드
+검증한 Python으로 `backend/.venv`를 만들고 3절에서 확정한 의존성을 설치한다. 백엔드 실행 예:
 
 ```bash
-# Python 3.11+ (Ubuntu 24.04 기본 3.12로 충분. 3.13 고집할 필요 없음)
-sudo apt install -y python3-venv python3-dev
-
 cd ~/cropy/backend
-python3 -m venv .venv
 source .venv/bin/activate
-
-# ARM64용으로 torch 라인 수정 (2-2 참고) 후:
-pip install -r requirements.txt
-
-# 실행 (0.0.0.0 바인딩해야 외부 접속 가능)
-ML_MODEL_PATH=../ml/checkpoints/best_model.pth \
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+ML_MODEL_PATH=../ml/checkpoints/best_model.pth uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 3-2. 프론트엔드
+프론트는 별도 터미널에서 실행한다.
 
 ```bash
-# Node 22 설치
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
-
 cd ~/cropy/frontend
 npm ci
-npm run build        # 프로덕션 빌드 (dev 모드는 상시 운용에 부적합)
-npm run start        # 포트 3000
+npm run build
+npm run start
 ```
 
-> `next.config.js`가 기본으로 `http://127.0.0.1:8000`에 프록시하므로 같은 보드에서는 환경변수 없이 동작합니다.
+네이티브 프록시는 기본 `127.0.0.1:8000`, Compose는 내부 서비스명 `backend:8000`을 사용한다. CNN은 단일 워커로 시작한다. 워커 수를 늘리면 모델도 프로세스별로 로드될 수 있다.
 
-### 3-3. systemd로 부팅 시 자동 시작
+### 최초 통과 조건
 
-`/etc/systemd/system/cropcare-backend.service`:
+- 실제 이미지로 병해·정상 결과, 농약 정보 없음, 이력 상세를 확인한다.
+- 재촬영 요청과 2차 사진에 대한 결과 갱신을 확인한다.
+- PC와 같은 체크포인트·입력으로 후보·점수를 비교한다.
+- 최초 모델 로드와 예열 이후 처리 시간을 구분한다.
 
-```ini
-[Unit]
-Description=CropCare AI Backend
-After=network.target
+## 5. 스마트폰 접속·카메라·AP (OP-11)
 
-[Service]
-User=orangepi
-WorkingDirectory=/home/orangepi/cropy/backend
-Environment=ML_MODEL_PATH=/home/orangepi/cropy/ml/checkpoints/best_model.pth
-ExecStart=/home/orangepi/cropy/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
-Restart=always
+파일 업로드 확인은 `http://<보드IP>:3000`으로 시작할 수 있지만, 스마트폰의 라이브 카메라·마이크 `getUserMedia()`는 보안 컨텍스트가 필요하다. 보드의 LAN IP는 스마트폰에서 localhost 예외가 아니다. [MDN 근거](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)
 
-[Install]
-WantedBy=multi-user.target
-```
+- INF는 로컬 DNS/호스트명과 대상 스마트폰이 신뢰하는 HTTPS 인증서 구성을 마련한다. 로컬 CA 사용 시 신뢰 설치까지 포함한다.
+- 인증서 경고 무시만으로 완료 처리하지 않는다. CAM이 실제 대상 브라우저에서 권한 허용·촬영·거부 후 복구를 확인한다.
+- 인터넷 없는 AP 시연은 인증서 신뢰·이름 해석도 오프라인에서 동작해야 한다. 인터넷 터널 연결로 대체 검증하지 않는다.
+- 보드 자체 브라우저의 localhost 또는 네이티브 카메라 경로를 선택하면 그 실행 구조를 기록한다.
 
-`/etc/systemd/system/cropcare-frontend.service`:
-
-```ini
-[Unit]
-Description=CropCare AI Frontend
-After=cropcare-backend.service
-
-[Service]
-User=orangepi
-WorkingDirectory=/home/orangepi/cropy/frontend
-ExecStart=/usr/bin/npm run start
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
+NetworkManager와 AP 지원 어댑터를 쓰는 경우의 예시이며 인터페이스 이름·IP는 실제 환경에서 확인한다.
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now cropcare-backend cropcare-frontend
+nmcli device status
+# wlan0은 실제 무선 인터페이스 이름으로 바꾼다.
+sudo nmcli device wifi hotspot ifname wlan0 ssid cropy password '<실제비밀번호>'
+nmcli connection show
 ```
 
----
+자동 연결은 생성된 실제 연결 이름에 설정한다. AP 재부팅 복구와 인터넷 없는 스마트폰 접속까지 검증한다.
 
-## 4. 성능 예상과 튜닝
+## 6. Qwen/RKLLM 및 음성 연결 (OP-06~14)
 
-### RK3588S에서의 추론 속도
+1. 제공 패키지의 기본 예제로 변환→보드 응답을 먼저 검증한다.
+2. 선정 Qwen 기본 모델을 프로젝트 캘리브레이션 데이터로 W8A8 변환한다. 정확한 명령은 패키지 문서에 맞춰 기록한다.
+3. 동일 질문으로 서버 원본과 보드 응답을 비교한다. 모델 파일만 생성되었다고 완료 처리하지 않는다.
+4. runtime·서버를 구성하고 모델 준비 상태, 타임아웃·복구를 확인한다. 서버·음성 예제의 패키지 포함 여부는 수령 후 확인한다.
+5. BE가 진단 JSON과 사용자 질문을 연결한다. LLM 실패 시 기존 진단 결과와 템플릿 안내를 유지한다.
+6. CAM은 제공 VAD/STT/TTS 예제를 우선 검증하고, 자기 음성 재인식 방지와 한국어 낭독을 확인한다.
+7. 검증된 응답을 화면·TTS에 동일하게 전달한다. 숫자 포함 문장은 검증 전에 낭독하지 않는다.
 
-RK3588S는 Cortex-A76 ×4 + A55 ×4 구성입니다. ResNet50 CPU 추론(224×224, 단건)은 대략 **0.3~1초** 수준 — 사진 진단 UX에는 충분합니다.
+[LLM 파인튜닝 계획](LLM_FINETUNING_PLAN.md)은 기본 모델의 반복 실패가 확인된 경우 적용한다. CNN의 RKNN과 LLM의 RKLLM은 별도 도구·산출물이다.
 
-튜닝 포인트:
+## 7. 측정과 선택 최적화 (OP-05/16~20)
 
-```bash
-# torch가 big 코어를 쓰도록 스레드 제한 (A55까지 긁으면 오히려 느려질 수 있음)
-export OMP_NUM_THREADS=4
-export TORCH_NUM_THREADS=4
-```
+현재 보드 실측 결과는 없다. 이전 문서의 CPU 0.3~1초·백엔드 1.5~2GB는 배포 성능을 보장하는 수치로 사용하지 않는다.
 
-- uvicorn은 **단일 워커 유지** (Dockerfile 주석대로 — 워커 수만큼 모델이 RAM에 복제됨)
-- 발열: 진단 요청이 잦으면 방열판+팬 필수. `watch cat /sys/class/thermal/thermal_zone0/temp`로 확인, 85°C 근처면 스로틀링
+- 첫 로드, 예열 후 최초 진단, 원본·새 사진을 다시 처리하는 재촬영의 시간을 각각 측정한다.
+- 단건 CNN 전처리 포함 1초 이내를 초기 목표로 두되 이는 예상치가 아니다. 재촬영·전체 음성 응답 목표는 기준선 뒤 확정한다.
+- 전체 모델을 로드한 상태에서 30회 진단 및 30분 반복 운용의 중앙값/p95, 피크 RAM, 오류, 온도·전력 상태를 기록한다.
+- LLM이 NPU를 사용해도 시스템 RAM을 공유한다. STT/TTS 및 LLM의 CPU 작업과 경합도 측정한다.
+- CPU 스레드 수는 비교 실험한다. `OMP_NUM_THREADS`나 코드의 `torch.set_num_threads()` 설정은 코어 고정을 의미하지 않는다. 현재 앱이 읽지 않는 임의 환경변수로 설정 완료를 주장하지 않는다.
+- 목표를 만족하면 CNN CPU를 유지한다. 미달일 때 CPU 튜닝·ONNX·RKNN INT8을 비교한다. ONNX INT8을 RKNN의 필수 중간 단계로 삼지 않는다.
+- 변환 시 전체·클래스별 정확도, 전체 출력 분포, 재촬영, 선택 보조 모델을 검증한다. CNN도 NPU로 옮기면 Qwen과 순차 실행 및 자원 경합을 확인한다.
 
-### (선택·고급) RK3588 NPU 활용 — RKNN
+## 8. 오프라인·자동 시작·복구 (OP-15)
 
-RK3588S에는 **6 TOPS NPU**가 있습니다. `best_model.pth` → ONNX → RKNN 변환(rknn-toolkit2)하면 추론을 수십 ms로 줄이고 CPU를 비울 수 있습니다. 다만:
+현재 진단의 주요 경로는 로컬 모델·SQLite·파일을 사용하지만, **전체 앱의 완전 오프라인 검증은 별도 작업**이다. 프론트 CSS의 외부 폰트 import를 로컬화하거나 대체하고 브라우저 캐시 없는 상태로 검증한다. 브라우저 음성이 항상 오프라인이라고 가정하지 않는다.
 
-- 변환·양자화 후 **정확도 재검증 필수** (val/test 셋으로 `evaluate.py` 상당의 검증)
-- `ml_service.py`에 RKNN 추론 경로 추가 필요 (현재는 torch 전용)
-- 상세 절차(변환·캘리브레이션·정확도 검증)는 [QUANTIZATION.md](QUANTIZATION.md) 참고
-- 현재 CPU 추론으로도 UX가 충분하므로 **나중에 해도 되는 최적화**입니다. Incubox(임베디드 상시 추론)나 SUDA 온디바이스 음성(→ `SUDA_INTEGRATION.md`)과 병행할 때 진짜 가치가 생깁니다.
+- Compose는 restart 정책과 Docker 부팅 시작을 확인한다. 네이티브 방식은 실제 계정·경로를 반영한 systemd 단위를 INF가 작성한다.
+- 기동 순서만으로 모델 준비를 보장하지 않는다. 의존 API의 준비 확인과 재시도를 검증한다.
+- 모델·음성 파일을 미리 배치한 뒤 인터넷을 차단하고 최초 진단→재촬영→후속 질문→낭독을 확인한다.
+- 재부팅·프로세스 종료 후 자동 복구, DB와 업로드 보존, 백업의 실제 복원을 검증한다.
+- 오프라인 시각 유지 수단과 시간대를 확인한다. 인증서 유효성 및 이력 시각도 함께 점검한다.
 
----
+## 9. 최종 체크리스트
 
-## 5. 완전 오프라인 운용 — 인터넷 없이 돌아가는가?
-
-**네, 서비스 전체가 오프라인에서 동작합니다.** 추론·조회 경로에 외부 API 호출이 하나도 없기 때문입니다.
-
-### 오프라인에서 되는 것 (= 서비스 전부)
-
-| 기능 | 동작 방식 |
-|---|---|
-| 모델 추론 | `best_model.pth`를 로컬 디스크에서 로드해 CPU/NPU로 계산. 체크포인트를 직접 `load_state_dict` 하므로 torchvision 사전학습 가중치 다운로드도 발생하지 않음 |
-| 병해 설명·농약 추천 | 로컬 SQLite(`cropcare.db`) 조회 |
-| 이미지 저장·진단 이력·재촬영 유도 | 로컬 파일시스템 + DB |
-| 프론트 ↔ 백엔드 | 같은 보드 안 `127.0.0.1` 프록시 — 외부망 무관 |
-
-폰과 보드가 **같은 로컬 네트워크**에만 묶여 있으면, 그 네트워크에 인터넷이 없어도 진단부터 농약 추천까지 전부 동작합니다.
-
-### 인터넷이 필요한 순간 (설치·갱신 때 한정)
-
-| 작업 | 시점 |
-|---|---|
-| Docker 빌드 / `pip`·`npm` 설치 | 최초 설치 시 1회 |
-| PSIS 농약 데이터 갱신 (`sync_pesticides.py`) | 갱신할 때만 — 시드가 이미 DB에 있어 평소 불필요 |
-| OS 업데이트·코드 배포 | 유지보수 때만 |
-
-### 밭 한가운데 구성: 보드를 Wi-Fi AP(핫스팟)로
-
-공유기조차 없는 현장에서는 오렌지파이가 직접 SSID를 뿌리는 구성이 실용적입니다:
-
-```
-[스마트폰] ←Wi-Fi→ [오렌지파이 5: AP + CropCare 풀스택]   (인터넷 없음)
-```
-
-```bash
-# NetworkManager 사용 시 가장 간단한 방법
-sudo nmcli device wifi hotspot ifname wlan0 ssid CropCare password <8자리이상>
-# 폰에서 SSID 접속 후 → http://10.42.0.1:3000
-```
-
-- 부팅 시 자동 시작: `nmcli connection modify Hotspot connection.autoconnect yes`
-- 더 세밀한 제어가 필요하면 `hostapd` + `dnsmasq` 조합 사용
-
-⚠️ **시계 주의**: 오프라인이면 NTP 동기화가 안 되므로, RTC 배터리가 없는 보드는 재부팅 후 시각이 틀어져 진단 이력 타임스탬프가 어긋날 수 있습니다. RTC 모듈을 달거나, 접속한 폰의 시간으로 맞추는 동기 스크립트를 두세요.
-
-> 음성 대화(SUDA)까지 온디바이스로 올리는 완전 오프라인 로드맵은 [SUDA_INTEGRATION.md](SUDA_INTEGRATION.md) 참고.
-
----
-
-## 6. 외부 접속·운영 팁
-
-| 목적 | 방법 |
-|---|---|
-| 공유기 내부 접속 | `http://<보드IP>:3000` — 보드 IP는 `ip a`로 확인, 공유기에서 고정 IP 할당 권장 |
-| 밭에서 폰으로 접속 | 보드에 USB LTE 라우터/테더링 + [Tailscale](https://tailscale.com) 설치가 가장 간단하고 안전 (포트포워딩 불필요) |
-| HTTPS 필요 시 | 카메라 API 등은 HTTP 오리진에서 제한될 수 있음 → Tailscale의 `tailscale serve` 또는 Caddy 리버스 프록시로 TLS |
-| 백업 | Docker: `cropcare-data` 볼륨 / 네이티브: `backend/cropcare.db` + `backend/uploads/` 를 주기적으로 복사 |
-| 로그 확인 | `docker compose logs -f backend` / `journalctl -u cropcare-backend -f` |
-
----
-
-## 7. 트러블슈팅
-
-| 증상 | 원인 / 해결 |
-|---|---|
-| `pip install torch==2.12.1+cpu` 실패 (`No matching distribution`) | ARM64에는 `+cpu` 휠이 없음 → **2-2 수정** 적용 |
-| `/api/v1/health`가 `model_loaded: false` | 체크포인트 미복사 또는 `ML_MODEL_PATH` 경로 오류. Docker는 `ml/checkpoints/` 마운트 확인 |
-| 프론트에서 API 호출 실패 (Docker) | `BACKEND_ORIGIN`은 **빌드타임** 인자 — 바꿨다면 `docker compose up -d --build`로 재빌드 |
-| Next.js 빌드 중 멈춘 듯 | ARM에서 원래 느림(수 분). `free -h`로 메모리 확인하며 대기 |
-| 외부 기기에서 접속 안 됨 | 네이티브 실행 시 `--host 0.0.0.0` 누락 여부, 방화벽(`sudo ufw status`) 확인 |
-| 발열로 갑자기 느려짐 | 스로틀링 — 방열판/팬 장착, 케이스 통풍 |
-| SD카드에서 자꾸 뻗음 | SD 수명/속도 문제 — NVMe로 이전 |
-
----
-
-## 8. 체크리스트 요약
-
-- [ ] Armbian/Ubuntu ARM64 설치, NVMe 이전
-- [ ] 프로젝트 복사 + **체크포인트(`*.pth`) 별도 복사**
-- [ ] `requirements.txt`의 torch 라인 ARM64용으로 수정 ← **유일한 코드 변경**
-- [ ] `docker compose up -d --build` (또는 네이티브 + systemd)
-- [ ] `curl http://localhost:3000/api/v1/health` → `model_loaded: true`
-- [ ] 폰에서 실제 사진 업로드 → 진단 결과 확인
-- [ ] (선택) Tailscale로 외부 접속, NPU(RKNN) 최적화는 추후
+- [ ] 5 Plus용 OS·커널·NPU 드라이버·toolkit/runtime 버전 기록
+- [ ] ARM64 의존성 설치·import·모델 로드·프론트 빌드 재현
+- [ ] 모델 해시·전처리·클래스 계약 확인, model_loaded=true
+- [ ] 실제 이미지 진단·재촬영·이력 조회
+- [ ] Qwen 기본 모델 변환·원본 대비 평가·서버 복구
+- [ ] 스마트폰 HTTPS/AP 및 카메라·마이크 권한 확인
+- [ ] 인터넷 차단·캐시 없는 UI·음성 통합 검증
+- [ ] 재부팅·DB/업로드 보존·백업 복원
+- [ ] 전체 RAM·지연·온도·전원 실측 및 선택 최적화 판단
+- [ ] OP Issue에 환경·검증 결과·미해결 제약 기록

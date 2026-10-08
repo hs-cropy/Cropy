@@ -1,0 +1,38 @@
+[
+  {
+    "path": "data/dataset/train/7_무정상/V006_79_0_00_02_03_12_0_c11_202012223_0009_S01_1.jpg",
+    "split": "train",
+    "class": "7_무정상",
+    "matches": 1,
+    "archive": "download (12).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/2.Validation/라벨링데이터/02.무/0.정상.zip.part0",
+    "label": "V006_79_0_00_02_03_12_0_c11_202012223_0009_S01_1.jpg.json",
+    "date": "",
+    "worker": "",
+    "filename_worker": "c11",
+    "region": null,
+    "tail": "0009_S01_1",
+    "source_split": "Validation",
+    "source_kind": "0",
+    "label_consistent": true,
+    "date_consistent": false
+  },
+  {
+    "path": "data/dataset/train/7_무정상/V006_79_0_00_02_03_12_0_c11_202012223_0013_S01_1.jpg",
+    "split": "train",
+    "class": "7_무정상",
+    "matches": 1,
+    "archive": "download (12).tar",
+    "member": "073.노지_작물_질병_진단/01.데이터/2.Validation/라벨링데이터/02.무/0.정상.zip.part0",
+    "label": "V006_79_0_00_02_03_12_0_c11_202012223_0013_S01_1.jpg.json",
+    "date": "",
+    "worker": "",
+    "filename_worker": "c11",
+    "region": null,
+    "tail": "0013_S01_1",
+    "source_split": "Validation",
+    "source_kind": "0",
+    "label_consistent": true,
+    "date_consistent": false
+  }
+]

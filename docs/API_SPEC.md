@@ -340,3 +340,18 @@ Qwen 기능 토큰/handler, STT/TTS, 단말 촬영 API는 데이터 설계 단�
 오류 응답은 `detail`, `code`, `retryable`, `request_id`를 제공하며 응답 헤더에도 `X-Request-ID`가 있다. 대표 코드: `INVALID_IMAGE`, `EMPTY_IMAGE`, `UNSUPPORTED_IMAGE_FORMAT`, `IMAGE_TOO_LARGE`, `IMAGE_RESOLUTION_TOO_LARGE`, `REQUEST_TOO_LARGE`, `MODEL_UNAVAILABLE`, `MODEL_VERSION_CONFLICT`, `DIAGNOSIS_NOT_FOUND`, `DATABASE_UNAVAILABLE`, `SAVE_FAILED`, `RECOVERY_STORAGE_UNAVAILABLE`.
 
 오프라인 metadata는 UUID `client_record_id`, 선택적 `selected_crop`, timezone이 있는 `created_at`, `model_version`, `preprocessing_version`, `bundle_version`, 9개 고유 클래스의 합계 1인 `predictions`를 요구한다. `refined_predictions`가 있으면 재촬영 사진도 있어야 한다. 동일 UUID의 동일 본문 재전송은 중복 저장하지 않는다. 기기 확률은 클라이언트 생성값이며 서버 검증을 병해 정확도 검증으로 해석하지 않는다. 상세 준비·배포·검증 범위는 [오프라인 실행 가이드](OFFLINE_WEB.md)를 참조한다.
+
+
+## 기능별 변경: 모델 준비 상태 및 진단 무결성
+
+- `/api/v1/ready`: 실제 모델 준비 상태를 확인하며 미준비 시 503을 반환한다. 운영 환경에서는 mock 진단을 허용하지 않는다.
+- 진단 응답에 selected_crop, predicted_crop, crop_mismatch, prediction_mode, model_version, preprocessing_version, pair_model_version을 기록한다.
+- `/history`의 crop_type 필터와 prediction_mode를 제공한다. 재촬영은 모델·전처리 버전의 호환성을 검사하고 실패 시 기존 이력을 보존한다.
+- 날짜 응답은 UTC 시간대 정보를 포함한다. 모델 출력은 9개 클래스 전체 분포와 유한값을 검증한다.
+
+
+## 기능별 변경: 업로드 및 요청 제한
+
+- 허용 실제 이미지 형식은 JPEG/PNG이며 파일 확장자는 디코딩한 형식에 따라 정한다. WEBP 등 다른 형식은 지원하지 않으며 400을 반환한다. 픽셀 수 상한을 검사한다.
+- 이미지 크기뿐 아니라 multipart 요청 전체 크기를 제한하고 진단 동시 요청 수를 제한한다. 초과 응답은 413/503이다.
+- 비정상 파일·정적 경로 접근을 차단하며 미참조 파일 정리는 `backend/scripts/cleanup_uploads.py`의 dry-run부터 확인한다.
