@@ -85,3 +85,10 @@ class Diagnosis(Base):
 
     disease = relationship("Disease", back_populates="diagnoses")
 
+
+class DiagnosisRequest(Base):
+    __tablename__ = "diagnosis_requests"
+    key = Column(String(64), primary_key=True)
+    fingerprint = Column(String(64), nullable=False)
+    response = Column(JSON, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -268,3 +268,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 ## 오류와 준비 상태
 
 오류는 detail/code/retryable/request_id와 X-Request-ID를 제공한다. GET /api/v1/capabilities는 사진 형식·크기·픽셀, 판단 정책과 실행 준비 상태를 제공한다.
+
+## 저장 복구와 멱등 재시도
+
+진단·재촬영은 선택적 Idempotency-Key를 받는다. 동일 키와 본문은 응답을 재사용하며 다른 본문은 409다. DB 저장 실패는 save_status=failed/recovery_token을 반환한다. POST /api/v1/results/{token}/save는 보관된 결과만 재저장한다. 만료는 410, 이후 기록 변경은 409다.

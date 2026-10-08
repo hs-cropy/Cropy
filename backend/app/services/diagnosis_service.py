@@ -22,6 +22,7 @@ from app.services.ml_service import predict_all, predict_pair, get_prediction_co
 from app.services.pesticide_service import pesticide_infos
 from app.services.recapture import apply_pair_specialist, check_recapture, fuse_predictions
 from app.services.decision import decision
+from app.services.result_recovery import lookup, commit_result
 
 
 class PredictionContractError(RuntimeError):
@@ -138,6 +139,9 @@ def _content(db, disease):
 
 def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str | None,
                    request_context=None, recover_save_failure=False) -> DiagnoseResponse:
+    cached = lookup(db, request_context)
+    if cached:
+        return cached
     context = get_prediction_context()
     settings.upload_dir.mkdir(parents=True, exist_ok=True)
     saved_path = settings.upload_dir / f"{uuid.uuid4()}{Path(filename).suffix or '.jpg'}"
@@ -161,7 +165,7 @@ def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str
         db.add(diagnosis)
         with db.no_autoflush:
             result = _response(db, diagnosis)
-        db.commit()
+        result = commit_result(db, diagnosis, result, request_context, recover_save_failure)
     except Exception:
         db.rollback()
         _remove_file(saved_path)
@@ -171,6 +175,9 @@ def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str
 
 def refine_diagnosis(db: Session, diagnosis_id: str, file_bytes: bytes, filename: str,
                      request_context=None, recover_save_failure=False) -> DiagnoseResponse | None:
+    cached = lookup(db, request_context)
+    if cached:
+        return cached
     diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id).first()
     if not diagnosis:
         return None
@@ -222,7 +229,7 @@ def refine_diagnosis(db: Session, diagnosis_id: str, file_bytes: bytes, filename
             setattr(diagnosis, key, value)
         with db.no_autoflush:
             result = _response(db, diagnosis)
-        db.commit()
+        result = commit_result(db, diagnosis, result, request_context, recover_save_failure, expected_revision)
     except Exception:
         db.rollback()
         _remove_file(second_path)

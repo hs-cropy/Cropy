@@ -14,6 +14,7 @@ from app.schemas.diagnosis import CropType, Severity, DiagnoseResponse, Paginate
 from app.core.errors import APIError
 from app.services import diagnosis_service
 from app.services.ml_service import ModelUnavailableError
+from app.services.result_recovery import request_context, save_result
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -82,12 +83,14 @@ async def diagnose(
     request: Request,
     file: UploadFile = File(...),
     crop_type: CropType | None = Query(None),
+    idempotency_key: str | None = Header(None, min_length=1, max_length=128),
 ):
     try:
         async with request.app.state.diagnosis_limiter:
             content, extension = await _read_image_upload(file)
             return await run_in_threadpool(
                 _with_session, diagnosis_service.diagnose_image, content, f"image{extension}", crop_type,
+                request_context("diagnose", idempotency_key, content, crop_type), True
             )
     except (diagnosis_service.PredictionContractError, ModelUnavailableError):
         logger.exception("Model prediction contract validation failed")
@@ -99,6 +102,7 @@ async def refine(
     diagnosis_id: str,
     request: Request,
     file: UploadFile = File(...),
+    idempotency_key: str | None = Header(None, min_length=1, max_length=128),
 ):
     """혼동쌍 판별부위 2차 촬영으로 진단을 재확정 (구성 E: 다시점 융합)."""
     try:
@@ -106,6 +110,7 @@ async def refine(
             content, extension = await _read_image_upload(file)
             result = await run_in_threadpool(
                 _with_session, diagnosis_service.refine_diagnosis, diagnosis_id, content, f"image{extension}",
+                request_context(f"refine:{diagnosis_id}", idempotency_key, content), True
             )
     except (diagnosis_service.PredictionContractError, ModelUnavailableError):
         logger.exception("Model prediction contract validation failed during refinement")
@@ -118,6 +123,11 @@ async def refine(
         raise APIError(404, "DIAGNOSIS_NOT_FOUND", "진단 기록을 찾을 수 없습니다.")
     return result
 
+
+@router.post("/results/{token}/save", response_model=DiagnoseResponse)
+async def recover_result(token: str, request: Request):
+    async with request.app.state.diagnosis_limiter:
+        return await run_in_threadpool(_with_session, save_result, token)
 
 
 @router.get("/history", response_model=PaginatedHistory)
