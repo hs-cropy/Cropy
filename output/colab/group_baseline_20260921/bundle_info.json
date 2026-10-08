@@ -1,0 +1,15 @@
+{
+  "images": 4235,
+  "counts": {
+    "train": 2728,
+    "test": 722,
+    "val": 785
+  },
+  "bundle_bytes": 7756184548,
+  "bundle_sha256": "a9c21c21a31c6a7e18d9afd1d6fbb5d952b94df0787e5f6c59bd16acdba70725",
+  "manifest_sha256": "d0fda6ef2e51b7ea1a201941e10dadea2f8e6b33eca785735b3d0dec58620e72",
+  "image_bytes_verified": 4235,
+  "worker_crossovers": 0,
+  "hash_duplicates": 0,
+  "training_completed": false
+}

@@ -1,0 +1,13 @@
+{
+  "zip": "output\\colab\\cropy_group_results_20260921_091628_553828 (1).zip",
+  "epochs": 20,
+  "best_epoch": 20,
+  "val_correct": 721,
+  "val_total": 785,
+  "errors": 64,
+  "val_accuracy": 0.9184713375796179,
+  "macro_f1": 0.903525385131823,
+  "checkpoint_sha256": "d43e635eaa54459f467e3cfffb57e53c772cc2f749a47024c6287ed8096d472b",
+  "test_results_present": false,
+  "checks": "ZIP CRC, predictions/manifest, confusion matrix, macro F1, history, checkpoint metadata verified"
+}
