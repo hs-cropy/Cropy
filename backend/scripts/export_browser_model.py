@@ -3,9 +3,11 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 import sys
 import tempfile
+import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -13,6 +15,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 def bundle_version(manifest):
     return hashlib.sha256(json.dumps(manifest, sort_keys=True, ensure_ascii=False,
                                      separators=(",", ":")).encode()).hexdigest()
+
+
+def _publish_model(source, destination):
+    # Create in the public directory: moving out of TemporaryDirectory retains
+    # its restrictive NTFS ACL, whereas a new file inherits public read access.
+    staging = destination.with_name(f".{destination.name}.{uuid.uuid4().hex}.next")
+    output = staging.open("xb")
+    try:
+        with output, source.open("rb") as incoming:
+            shutil.copyfileobj(incoming, output)
+        os.replace(staging, destination)
+    finally:
+        staging.unlink(missing_ok=True)
 
 
 def export(checkpoint, target):
@@ -49,7 +64,7 @@ def export(checkpoint, target):
         import gc
         gc.collect()
         name = f"cnn-{file_hash[:16]}.onnx"
-        os.replace(model_path, target / name)
+        _publish_model(model_path, target / name)
     seed = Path(__file__).resolve().parents[1] / "app/data/seed/diseases.json"
     diseases = json.loads(seed.read_text(encoding="utf-8"))
     for d in diseases:
