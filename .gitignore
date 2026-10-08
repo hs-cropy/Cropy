@@ -76,3 +76,7 @@ backend/app/data/seed/*
 !backend/app/data/seed/diseases.json
 !backend/app/data/seed/pesticides.json
 !backend/app/data/seed/disease_pesticides.json
+
+# Document reference files remain local after reorganization
+/docs/templates/course/19. 클라우드 프로그램 사용계획서.hwp
+/docs/references/course/
