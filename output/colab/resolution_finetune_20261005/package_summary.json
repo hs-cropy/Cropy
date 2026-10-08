@@ -1,0 +1,20 @@
+{
+  "code_sha256": "012fd7554f2fcee03428ac86688f79c084fa258970ddd64a68c421392fc7ee73",
+  "source_sha256": {
+    "train.py": "0e72b4fad3e98f02df46652fd9094f48bc826582221236f779f890979c16f6ff",
+    "train_full_colab.py": "95214007912dccb3a49791dbe4bdccc9f01c7d4fd2451d27b87e32cafd0de9ae",
+    "train_group_baseline.py": "d10243e4a3ebe256b885bafca95f3cabac24692270d54f4ea0959b39340837fc",
+    "compare_crop_ablation.py": "db1136e5eeec0816939fe2a0193743237b323d35d8cd4ccd29cb477df9e4303f",
+    "compare_resolution_finetune.py": "a68ed1596d7aae611f0501949ea1ab7c7d488b9516aabc898ab9bdf40c89eae3"
+  },
+  "notebook_sha256": "8abc29e2f6ccce04b8e34c9131a584ef80802f5c3017207f7fc4c756a033273d",
+  "initial_checkpoint_sha256": "4ef9988d85259b776eaf8fa5824edd2c28b08371e0c19296221e107b670d0060",
+  "paired_sizes": [
+    256,
+    384
+  ],
+  "epochs": 5,
+  "lr": 1e-05,
+  "batch_size": 16,
+  "status": "GPU training in progress: control256 epochs1..5 started; candidate384 queued automatically after control; final comparison pending"
+}
