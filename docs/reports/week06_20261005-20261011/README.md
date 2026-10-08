@@ -9,7 +9,7 @@
 | 문서 | 형식 |
 | --- | --- |
 | [분야별 브랜치와 기능 단위 커밋 정리](15_%EA%B8%B0%EB%8A%A5%EB%B3%84_%EB%B8%8C%EB%9E%9C%EC%B9%98_%EC%BB%A4%EB%B0%8B_%EC%A0%95%EB%A6%AC_20261008.md) | MD |
-| [분야별 이슈·PR 게시 결과](16_%EC%9D%B4%EC%8A%88_PR_%EA%B2%8C%EC%8B%9C_20261009.md) | MD |
+| [분야별 이슈·PR 게시 결과 및 실제 변경 파일 기준 분류](16_%EC%9D%B4%EC%8A%88_PR_%EA%B2%8C%EC%8B%9C_20261009.md) | MD |
 | [농작물 병해 진단 AI 모델 개선 보고서](AI_%EB%AA%A8%EB%8D%B8_%EA%B0%9C%EC%84%A0_%EB%B3%B4%EA%B3%A0%EC%84%9C_20261006.md) | MD |
 | [AI 모델 개선 작업 보고서](AI_%EB%AA%A8%EB%8D%B8_%EA%B0%9C%EC%84%A0_%EC%9E%91%EC%97%85%EB%B3%B4%EA%B3%A0%EC%84%9C_20261006.md) | MD |
 | [Cropy Figma 디자인 기반 백엔드 검토](Cropy_Figma_%EB%B0%B1%EC%97%94%EB%93%9C_%EA%B2%80%ED%86%A0_20261008.md) | MD |
