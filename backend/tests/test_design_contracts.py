@@ -77,3 +77,15 @@ def test_low_confidence_and_crop_mismatch_are_distinct_reasons(db, sample_image,
     assert created.management_actions
 
 
+def test_shared_upload_policy_and_machine_readable_errors(client, sample_image):
+    policy = client.get("/api/v1/capabilities")
+    assert policy.status_code == 200
+    assert policy.json()["upload"]["formats"] == ["JPEG", "PNG"]
+    bad = client.post("/api/v1/diagnose", files={"file": ("x.txt", b"bad", "text/plain")})
+    assert bad.status_code == 400
+    assert bad.json()["code"] == "UNSUPPORTED_IMAGE_FORMAT"
+    assert bad.json()["detail"] and bad.json()["request_id"]
+    missing = client.get("/api/v1/history/not-found")
+    assert missing.json()["code"] == "DIAGNOSIS_NOT_FOUND"
+    invalid = client.get("/api/v1/history?severity=wrong")
+    assert invalid.status_code == 422 and invalid.json()["code"] == "VALIDATION_ERROR"

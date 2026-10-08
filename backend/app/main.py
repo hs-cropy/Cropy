@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine, ensure_columns
 from app.core.uploads import ImageStaticFiles
 from app.core.request_limits import RequestBodyLimitMiddleware
+from app.core.errors import RequestIdMiddleware, install_error_handlers
 from app.models.entities import Disease
 from app.services.ml_service import load_model
 from app.services.seed import seed_database
@@ -39,6 +40,8 @@ app = FastAPI(
 )
 
 app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=lambda: settings.max_request_bytes)
+app.add_middleware(RequestIdMiddleware)
+install_error_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,

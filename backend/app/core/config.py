@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     max_upload_mb: int = Field(default=10, gt=0)
     max_image_pixels: int = Field(default=40_000_000, gt=0)
     low_confidence_threshold: float = Field(default=0.5, ge=0, le=1)
+    recovery_ttl_hours: int = Field(default=24, ge=1, le=168)
+    offline_bundle_dir: Path = Path("../frontend/public/offline-assets")
 
     @property
     def cors_origin_list(self) -> list[str]:

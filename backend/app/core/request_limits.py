@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from tempfile import SpooledTemporaryFile
+from app.core.errors import error_body
 
 import anyio
 from starlette.concurrency import run_in_threadpool
@@ -21,9 +22,11 @@ class RequestBodyLimitMiddleware:
     write/read; bodies above 1 MiB spill to disk, with file I/O off the event loop.
     """
 
-    def __init__(self, app: ASGIApp, max_body_bytes: int | Callable[[], int]) -> None:
+    def __init__(self, app: ASGIApp, max_body_bytes: int | Callable[[], int],
+                 route_limits: dict[str, Callable[[], int]] | None = None) -> None:
         self.app = app
         self.max_body_bytes = max_body_bytes
+        self.route_limits = route_limits or {}
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -31,8 +34,10 @@ class RequestBodyLimitMiddleware:
             return
 
         limit = self.max_body_bytes() if callable(self.max_body_bytes) else self.max_body_bytes
+        if scope.get("path") in self.route_limits:
+            limit = self.route_limits[scope["path"]]()
         too_large = JSONResponse(
-            {"detail": "요청 크기가 너무 큽니다. 업로드할 파일 크기를 줄여 주세요."},
+            error_body(scope, "REQUEST_TOO_LARGE", "요청 크기가 너무 큽니다. 업로드할 파일 크기를 줄여 주세요."),
             status_code=413,
         )
         for name, value in scope.get("headers", []):
