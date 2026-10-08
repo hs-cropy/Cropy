@@ -20,18 +20,25 @@ export default function HistoryPage() {
   return (
     <div>
       <section className="mb-5">
-        <h1 className="text-[1.4375rem] font-extrabold leading-snug tracking-tight text-ink">진단 이력</h1>
+        <h1 className="text-[1.4375rem] font-extrabold leading-snug tracking-tight text-ink">
+          진단 이력
+        </h1>
       </section>
 
       {loading && <p className="py-10 text-center text-sm text-khaki">불러오는 중…</p>}
 
       {error && !loading && (
-        <p className="rounded-card bg-signal-high-tint px-4 py-3 text-sm font-medium text-signal-high-ink">{error}</p>
+        <p className="rounded-card bg-signal-high-tint px-4 py-3 text-sm font-medium text-signal-high-ink">
+          {error}
+        </p>
       )}
 
       {!loading && !error && items.length === 0 && (
         <div className="rounded-card border border-line bg-surface p-8 text-center shadow-card">
-          <span aria-hidden className="icon-[lucide--wheat] mx-auto mb-3 block h-10 w-10 text-khaki" />
+          <span
+            aria-hidden
+            className="icon-[lucide--wheat] mx-auto mb-3 block h-10 w-10 text-khaki"
+          />
           <p className="text-lg font-bold text-ink">아직 진단 기록이 없어요</p>
           <p className="mt-1 text-sm text-muted">첫 작물을 촬영하면 여기에 이력이 쌓입니다.</p>
           <Link
@@ -53,7 +60,11 @@ export default function HistoryPage() {
               >
                 {item.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.image_url} alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover" />
+                  <img
+                    src={item.image_url}
+                    alt=""
+                    className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                  />
                 ) : (
                   <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brown">
                     <span className="icon-[lucide--leaf] h-7 w-7" />
@@ -72,7 +83,10 @@ export default function HistoryPage() {
                     })}
                   </p>
                 </div>
-                <span aria-hidden className="icon-[lucide--chevron-right] h-5 w-5 shrink-0 text-khaki/60" />
+                <span
+                  aria-hidden
+                  className="icon-[lucide--chevron-right] h-5 w-5 shrink-0 text-khaki/60"
+                />
               </Link>
             </li>
           ))}

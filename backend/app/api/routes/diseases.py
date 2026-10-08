@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.schemas.diagnosis import DiseaseDetail
+from app.schemas.diagnosis import CropType, DiseaseDetail
 from app.services import diagnosis_service
 
 router = APIRouter()
@@ -11,7 +11,7 @@ router = APIRouter()
 @router.get("", response_model=list[DiseaseDetail])
 def list_diseases(
     q: str | None = Query(None),
-    crop_type: str | None = Query(None),
+    crop_type: CropType | None = Query(None),
     db: Session = Depends(get_db),
 ):
     return diagnosis_service.list_diseases(db, q, crop_type)

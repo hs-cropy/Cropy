@@ -28,6 +28,12 @@ module.exports = {
           ink: "#916800", // brand-colored TEXT/icons — 4.5:1 on brand-tint
           tint: "#FDF3D3", // highlight background
         },
+        // Camera viewfinder (dark, full-screen)
+        photo: {
+          deep: "#1E3326", // viewfinder background
+          "leaf-light": "#8DB36A", // gallery thumbnail placeholder
+        },
+        scrim: "#0F1A12", // chips over the camera feed
         // Diagnostic severity signals (warm-tuned).
         // Each has a fill colour (dots, borders) and an -ink colour for text and
         // icons. The fills keep the original hue; the -ink values are darkened to
