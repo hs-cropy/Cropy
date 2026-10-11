@@ -10,7 +10,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:prototype": "node --test tests/mobile-prototype.test.mjs"
   },
   "dependencies": {
     "next": "^15.5.27",
