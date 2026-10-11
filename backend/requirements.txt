@@ -3,7 +3,11 @@
 # +cpu 빌드를 쓴다 (이미지 크기 약 200MB 대 2GB+).
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-fastapi==0.115.6
+fastapi==0.143.0
+# Pin the patched ASGI framework used by FastAPI.
+starlette==1.7.0
+# PyTorch installs setuptools at runtime; enforce the security fix.
+setuptools==83.0.0
 uvicorn[standard]==0.34.0
 sqlalchemy==2.0.36
 pydantic==2.10.3
