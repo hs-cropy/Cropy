@@ -105,3 +105,22 @@ test('new photo from unsaved result requires confirmation and can be cancelled',
   h.handle('new-photo');h.handle('dialog-confirm');
   assert.equal(h.demo.state.screen,'start');assert.equal(h.demo.state.unsaved,false);
 });
+test('late camera permission success after navigation stops tracks without changing screens', async () => {
+  const h=setup();let resolve, stopped=0;
+  h.context.navigator.mediaDevices.getUserMedia=()=>new Promise(r=>resolve=r);
+  const pending=h.enableCamera();h.handle('to:history');
+  resolve({getTracks:()=>[{stop(){stopped++;}}]});await pending;
+  assert.equal(h.demo.state.screen,'history');assert.equal(h.demo.state.stream,null);assert.equal(stopped,1);
+});
+test('late camera denial after reset leaves the reset screen intact', async () => {
+  const h=setup();let reject;
+  h.context.navigator.mediaDevices.getUserMedia=()=>new Promise((_,r)=>reject=r);
+  const pending=h.enableCamera();h.reset();reject(new Error('denied'));await pending;
+  assert.equal(h.demo.state.screen,'start');
+});
+test('current camera permission success still starts the preview and updates the label', async () => {
+  const h=setup(), stream={getTracks:()=>[]};
+  h.context.navigator.mediaDevices.getUserMedia=async()=>stream;
+  await h.enableCamera();assert.equal(h.demo.state.screen,'camera');assert.equal(h.demo.state.stream,stream);
+  assert.equal(h.node('#frame-label').textContent,'작물 촬영');
+});

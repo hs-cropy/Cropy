@@ -21,7 +21,7 @@ const initialRecords = [
 ];
 let records = initialRecords.map(r => ({...r}));
 let diagnosisId = null, diagnosisSequence = 0;
-let photoRequest = 0;
+let photoRequest = 0, cameraRequest = 0;
 try { large = localStorage.getItem('cropy:prototype:large') === 'true'; } catch {}
 const core = [
  ['start','진단 시작','526:5530'],['camera','작물 촬영','526:5444'],['camera-off','카메라 꺼짐','526:5471'],
@@ -36,7 +36,7 @@ const offlineKeys = ['offline-not-ready','model-download','download-paused','off
 const labels = {'discard-photo':'사진 취소 확인','leave-analysis':'분석 중 화면 이탈','cancel-analysis':'분석 취소 확인','unsaved-result':'저장 전 화면 이탈','saved':'이력 저장 완료','save-retry-success':'저장 재시도 완료','analysis-cancelled':'분석 취소 완료','voice-unavailable':'음성 실행 실패','photo-format':'사진 형식 오류','photo-size':'사진 용량 오류','photo-read':'사진 읽기 오류','photo-upload':'사진 업로드 실패','camera-capture':'촬영 실패','camera-runtime':'카메라 연결 끊김','analysis-offline':'네트워크 연결 오류','analysis-delayed':'분석 지연','analysis-timeout':'분석 시간 초과','save-pending':'결과 저장 중','save-failed':'결과 저장 실패','result-photo-unavailable':'결과 사진 조회 실패','history-loading':'이력 로딩','history-failed':'이력 조회 실패','record-unavailable':'기록 없음','record-load-failed':'기록 조회 실패','offline-not-ready':'오프라인 준비 필요','model-download':'진단 파일 다운로드','download-paused':'다운로드 중단','offline-ready':'오프라인 준비 완료','local-analysis-failed':'로컬 분석 실패','local-saved':'기기에 저장 완료','sync-pending':'동기화 대기','sync-failed':'동기화 실패','storage-full':'기기 저장 공간 부족','model-update':'진단 파일 업데이트'};
 const navIcons = {camera:'01064.svg',diagnosis:'5aa40.svg',history:'ffe89.svg'};
 function stopTimer(){if(timer){clearTimeout(timer);clearInterval(timer);timer=null;}}
-function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}}
+function stopCamera(){cameraRequest++;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}}
 function photo(){return selectedPhoto ? '<img class="selected-photo" src="' + escape(photoUrl) + '" alt="선택한 작물 사진">' : image('a4d78.svg','sample-leaf','작물 사진 표시 예시');}
 function header(offline=false){return '<header class="header ' + (offline?'offline-header':'') + '">' + image('7a754.png','logo','Cropy') + '<button class="toggle" data-action="large" aria-pressed="' + large + '">큰 글자' + image(large?'f565e.svg':'33a0c.svg') + '</button><button class="toggle" data-action="voice" aria-pressed="' + voice + '">음성' + image(voice?'f565e.svg':'33a0c.svg') + '</button></header>';}
 function title(main, sub, icon=null){return '<section class="title ' + (icon?'has-mascot':'') + '"><h1 tabindex="-1">' + escape(main) + '</h1><p>' + escape(sub) + '</p>' + (icon?mascot(icon):'') + '</section>';}
@@ -177,8 +177,12 @@ function speak(){
 }
 async function enableCamera(){
  if(!navigator.mediaDevices?.getUserMedia){goto('camera-unavailable');return;}
- try{stopCamera();const cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});stopTimer();screen='camera';stream=cameraStream;render();}
- catch{goto('camera-unavailable');}
+ stopCamera();const request=cameraRequest;
+ try{
+  const cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+  if(request!==cameraRequest){cameraStream.getTracks().forEach(t=>t.stop());return;}
+  stream=cameraStream;goto('camera');
+ }catch{if(request===cameraRequest)goto('camera-unavailable');}
 }
 async function capture(){
  if(screen==='camera-off')return;
