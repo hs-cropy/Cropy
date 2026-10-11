@@ -66,7 +66,10 @@ def _validate_image(content: bytes) -> str:
             image.load()
     except Image.DecompressionBombError:
         raise APIError(413, "IMAGE_RESOLUTION_TOO_LARGE", "이미지 해상도가 너무 큽니다. 크기를 줄여 주세요.")
-    except (UnidentifiedImageError, OSError, ValueError, SyntaxError):
+    except UnidentifiedImageError:
+        # This includes unsupported formats AND damaged JPEG/PNG headers.
+        raise APIError(400, "INVALID_IMAGE", "이미지를 읽을 수 없습니다. JPEG 또는 PNG 형식인지, 파일이 손상되지 않았는지 확인해 주세요.")
+    except (OSError, ValueError, SyntaxError):
         raise APIError(400, "INVALID_IMAGE", "이미지를 읽을 수 없습니다. 다른 사진으로 시도해 주세요.")
 
     return extension
