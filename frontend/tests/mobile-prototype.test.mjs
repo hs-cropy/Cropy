@@ -60,3 +60,34 @@ test('a new save-failure scenario can save after an earlier diagnosis', () => {
   h.showScenario('save-failed');h.handle('save');h.handle('save');
   assert.equal(h.demo.state.records.length,before+2);
 });
+
+for (const end of ['reset', 'navigate']) {
+  test('pending photo decode cannot override ' + end, async () => {
+    const h=setup(), pending=h.select('old.jpg'), url=h.images[0].src;
+    if(end==='reset')h.reset();else h.handle('to:history');
+    h.images[0].onload();await pending;
+    assert.equal(h.demo.state.screen,end==='reset'?'start':'history');
+    assert.equal(h.demo.state.selectedPhoto,null);
+    assert.ok(h.revoked.includes(url));
+  });
+}
+test('newest photo selection wins even if the earlier photo decodes last', async () => {
+  const h=setup(), old=h.select('old.jpg'), latest=h.select('new.jpg');
+  h.images[1].onload();await latest;
+  h.images[0].onload();await old;
+  assert.equal(h.demo.state.selectedPhoto.name,'new.jpg');
+  assert.equal(h.demo.state.photoUrl,h.images[1].src);
+  assert.ok(h.revoked.includes(h.images[0].src));
+  assert.ok(!h.revoked.includes(h.images[1].src));
+});
+test('obsolete decode errors cannot replace the current photo with an error screen', async () => {
+  const h=setup(), old=h.select('old.jpg'), latest=h.select('new.jpg');
+  h.images[1].onload();await latest;
+  h.images[0].onerror();await old;
+  assert.equal(h.demo.state.screen,'photo');
+  assert.equal(h.demo.state.selectedPhoto.name,'new.jpg');
+});
+test('a current valid photo still opens the photo screen', async () => {
+  const h=setup(), pending=h.select('leaf.jpg');h.images[0].onload();await pending;
+  assert.equal(h.demo.state.screen,'photo');assert.equal(h.demo.state.selectedPhoto.name,'leaf.jpg');
+});

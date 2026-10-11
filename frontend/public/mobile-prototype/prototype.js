@@ -21,6 +21,7 @@ const initialRecords = [
 ];
 let records = initialRecords.map(r => ({...r}));
 let diagnosisId = null, diagnosisSequence = 0;
+let photoRequest = 0;
 try { large = localStorage.getItem('cropy:prototype:large') === 'true'; } catch {}
 const core = [
  ['start','진단 시작','526:5530'],['camera','작물 촬영','526:5444'],['camera-off','카메라 꺼짐','526:5471'],
@@ -60,8 +61,9 @@ function dialogFor(key,confirm){
 function closeDialog(){if(dialog.open)dialog.close();if(lastFocus?.isConnected)lastFocus.focus();dialogConfirm=null;}
 dialog.addEventListener('cancel',e=>{e.preventDefault();closeDialog();});
 dialog.addEventListener('keydown',e=>{if(e.key!=='Tab')return;const buttons=[...dialog.querySelectorAll('button')];const first=buttons[0],last=buttons.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
-function clearPhoto(){diagnosisId=null;if(photoUrl)URL.revokeObjectURL(photoUrl);selectedPhoto=null;photoUrl=null;$('#photo-picker').value='';}
+function clearPhoto(){photoRequest++;diagnosisId=null;if(photoUrl)URL.revokeObjectURL(photoUrl);selectedPhoto=null;photoUrl=null;$('#photo-picker').value='';}
 function goto(next,options={}){
+ photoRequest++;
  if(screen==='history')historyScroll=$('.content')?.scrollTop||0;
  stopTimer();if(next!=='camera')stopCamera();
  if(window.speechSynthesis)speechSynthesis.cancel();
@@ -228,11 +230,13 @@ function showScenario(key){
  goto(key,{pinned:true});
 }
 $('#photo-picker').addEventListener('change',async e=>{
+ const request=++photoRequest;
  const file=e.target.files?.[0];if(!file)return;
  if(!['image/jpeg','image/png'].includes(file.type)){goto('photo-format');e.target.value='';return;}
  if(file.size>10*1024*1024){goto('photo-size');e.target.value='';return;}
  const candidate=URL.createObjectURL(file);const img=new Image();
  const valid=await new Promise(resolve=>{img.onload=()=>resolve(img.naturalWidth*img.naturalHeight<=40000000);img.onerror=()=>resolve(false);img.src=candidate;});
+ if(request!==photoRequest){URL.revokeObjectURL(candidate);return;}
  if(!valid){URL.revokeObjectURL(candidate);goto('photo-read');e.target.value='';return;}
  clearPhoto();selectedPhoto=file;photoUrl=candidate;goto('photo');
 });
