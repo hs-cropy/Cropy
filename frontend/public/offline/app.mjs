@@ -103,6 +103,7 @@ async function predict(file) {
   return distribution(softmax(outputs.logits.data),bundle.class_ids);
 }
 function result(record) {
+  if (current?.id !== record.id) $('second').value = '';
   current = record; const r = record.result;
   $('result').innerHTML = `<h2>${escape(r.disease_name)} · ${Math.round(r.confidence*100)}%</h2>
     <p class="status">${record.refined_predictions ? '두 사진으로 결과를 갱신했어요. ' : ''}${record.saved ? '이 기기에 저장했어요.' : '기기 저장에 실패했어요. 화면의 결과는 유지돼요.'}</p>
@@ -127,6 +128,7 @@ async function storeRecord(record) {
 }
 async function diagnose() {
   if (busy || !selected) return;
+  $('second').value = '';
   const photo = selected, crop = $('crop').value;
   setBusy(true); $('state').textContent = '이 기기에서 분석하고 있어요.';
   try {
@@ -163,16 +165,26 @@ async function sync(record, button) {
     record.sync_attempted = true;
     await db('records','put',record);
     if (current?.id === record.id) result(record);
-    let response;
-    if (record.recovery_token) response = await fetch('/api/v1/results/' + record.recovery_token + '/save',{method:'POST'});
-    else {
+    let response, data;
+    if (record.recovery_token) {
+      response = await fetch('/api/v1/results/' + record.recovery_token + '/save',{method:'POST'});
+      data = await response.json();
+      if ((response.status === 410 && data.code === 'RESULT_EXPIRED') ||
+          (response.status === 404 && data.code === 'RESULT_NOT_FOUND')) {
+        // The draft is gone. Keep the original id and payload so a lost
+        // response is still safe to retry through the upload endpoint.
+        record.recovery_token = null;
+        await db('records','put',record);
+      }
+    }
+    if (!record.recovery_token) {
       const metadata = Object.fromEntries(['selected_crop','created_at','model_version','preprocessing_version','bundle_version','predictions','refined_predictions'].filter(k => record[k] !== undefined).map(k => [k,record[k]]));
       metadata.client_record_id = record.id;
       const body = new FormData(); body.append('metadata',JSON.stringify(metadata)); body.append('file',record.file,'original.jpg');
       if (record.refined_file) body.append('refined_file',record.refined_file,'second.jpg');
       response = await fetch('/api/v1/offline/records',{method:'POST',body});
+      data = await response.json();
     }
-    const data = await response.json();
     if (!response.ok) throw new Error(data.detail || '서버에 저장하지 못했어요.');
     record.sync_status = data.save_status === 'saved' ? 'saved' : 'failed';
     record.server_id = data.id; record.recovery_token = data.recovery_token;
@@ -231,6 +243,6 @@ try {
   const cached=await db('assets','get',null,'active');
   if(cached){bundle=cached.manifest;session=await initSession(cached.model);$('ready').textContent='저장한 모델로 이 기기에서 진단할 수 있어요.';$('progress').value=100;}
   else $('ready').textContent='연결된 상태에서 모델을 먼저 준비해 주세요.';
-  await history();
 } catch(error){$('ready').textContent=message(error);}
+await history().catch(error => { $('state').textContent=message(error); });
 setBusy(false);

@@ -99,11 +99,10 @@ export function DiagnosisResult({ result, onSaved, isRecord = false }: Props) {
         >
           {isHealthy ? (
             <>
-              <span
-                aria-hidden
-                className="icon-[lucide--circle-check] h-4 w-4 text-signal-low-ink"
-              />
-              <span className="text-sm font-bold text-signal-low-ink">건강한 상태예요</span>
+              <span aria-hidden className="icon-[lucide--circle-check] h-4 w-4 text-signal-low-ink" />
+              <span className="text-sm font-bold text-signal-low-ink">
+                {isUncertain ? "정상 여부가 확실하지 않아요" : "정상으로 분류됐어요"}
+              </span>
             </>
           ) : (
             <>
@@ -174,7 +173,7 @@ export function DiagnosisResult({ result, onSaved, isRecord = false }: Props) {
           {/* confidence gauge */}
           <div className="mt-4">
             <div className="mb-1.5 flex items-baseline justify-between">
-              <span className="text-xs font-semibold text-muted">진단 신뢰도</span>
+              <span className="text-xs font-semibold text-muted">모델 분류 점수</span>
               <span className="text-2xl font-extrabold tnum text-ink">{pct}%</span>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-khaki-tint">
@@ -183,13 +182,11 @@ export function DiagnosisResult({ result, onSaved, isRecord = false }: Props) {
                 style={{ width: `${pct}%` }}
               />
             </div>
-            {isUncertain && !isHealthy && (
+            {isUncertain && (
               <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-signal-med-ink">
-                <span
-                  aria-hidden
-                  className="icon-[lucide--circle-alert] mt-0.5 h-3.5 w-3.5 shrink-0"
-                />
-                비슷한 병해가 여럿 나왔어요. 방제 전에 가까운 농업기술센터에 확인해 보세요.
+                <span aria-hidden className="icon-[lucide--circle-alert] mt-0.5 h-3.5 w-3.5 shrink-0" />
+                사진만으로는 확실하지 않아요. 병징이 잘 보이는 사진으로 다시 확인하고,
+                방제 전에 가까운 농업기술센터에 문의해 보세요.
               </p>
             )}
           </div>
@@ -254,6 +251,11 @@ export function DiagnosisResult({ result, onSaved, isRecord = false }: Props) {
             {pesticides.map((p) => (
               <div key={p.usage_id ?? p.name} className="rounded-2xl border border-line bg-paper p-4">
                 <p className="text-base font-bold text-ink">{p.name}</p>
+                {p.verification_status !== "verified" && (
+                  <p className="mt-2 text-xs text-signal-med-ink">
+                    이 작물·병해의 사용 조건이 검증되지 않아 희석비와 사용법을 표시하지 않습니다.
+                  </p>
+                )}
                 {p.active_ingredient && (
                   <p className="mt-0.5 text-xs text-khaki">유효성분 · {p.active_ingredient}</p>
                 )}
