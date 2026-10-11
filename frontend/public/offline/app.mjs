@@ -243,6 +243,6 @@ try {
   const cached=await db('assets','get',null,'active');
   if(cached){bundle=cached.manifest;session=await initSession(cached.model);$('ready').textContent='저장한 모델로 이 기기에서 진단할 수 있어요.';$('progress').value=100;}
   else $('ready').textContent='연결된 상태에서 모델을 먼저 준비해 주세요.';
-  await history();
 } catch(error){$('ready').textContent=message(error);}
+await history().catch(error => { $('state').textContent=message(error); });
 setBusy(false);

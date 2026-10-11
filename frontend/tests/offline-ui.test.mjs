@@ -26,3 +26,13 @@ test('starting a diagnosis clears the second photo even if inference fails',asyn
  h.context.predict=async()=>{throw new Error('inference failed');};await h.context.diagnose();
  assert.equal(h.$('second').value,'');
 });
+for(const failure of ['model','asset read']){
+ test('history loads independently after '+failure+' failure',async()=>{
+  let historyCalls=0;const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{});return nodes.get(id);};
+  const context=vm.createContext({$,bundle:null,session:null,
+   async db(){if(failure==='asset read')throw new Error('asset read failed');return {manifest:{},model:[]};},
+   async initSession(){throw new Error('model failed');},async history(){historyCalls++;},message:e=>e.message,setBusy(){}});
+  await vm.runInContext('(async()=>{'+source.slice(source.lastIndexOf('\ntry {'))+'})()',context);
+  assert.equal(historyCalls,1);assert.match($('ready').textContent,/failed/);
+ });
+}
