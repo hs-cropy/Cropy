@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:offline": "node --test tests/offline-core.test.mjs tests/offline-sync.test.mjs"
+    "test:offline": "node --test tests/offline-core.test.mjs tests/offline-sync.test.mjs tests/offline-ui.test.mjs"
   },
   "dependencies": {
     "next": "^15.1.0",

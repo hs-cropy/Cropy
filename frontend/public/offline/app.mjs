@@ -103,6 +103,7 @@ async function predict(file) {
   return distribution(softmax(outputs.logits.data),bundle.class_ids);
 }
 function result(record) {
+  if (current?.id !== record.id) $('second').value = '';
   current = record; const r = record.result;
   $('result').innerHTML = `<h2>${escape(r.disease_name)} · ${Math.round(r.confidence*100)}%</h2>
     <p class="status">${record.refined_predictions ? '두 사진으로 결과를 갱신했어요. ' : ''}${record.saved ? '이 기기에 저장했어요.' : '기기 저장에 실패했어요. 화면의 결과는 유지돼요.'}</p>
@@ -127,6 +128,7 @@ async function storeRecord(record) {
 }
 async function diagnose() {
   if (busy || !selected) return;
+  $('second').value = '';
   const photo = selected, crop = $('crop').value;
   setBusy(true); $('state').textContent = '이 기기에서 분석하고 있어요.';
   try {
