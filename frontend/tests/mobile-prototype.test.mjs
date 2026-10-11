@@ -91,3 +91,17 @@ test('a current valid photo still opens the photo screen', async () => {
   const h=setup(), pending=h.select('leaf.jpg');h.images[0].onload();await pending;
   assert.equal(h.demo.state.screen,'photo');assert.equal(h.demo.state.selectedPhoto.name,'leaf.jpg');
 });
+
+test('clicking the active diagnosis tab preserves the photo without a dialog', async () => {
+  const h=setup(), pending=h.select('leaf.jpg');h.images[0].onload();await pending;
+  h.handle('nav:diagnosis');
+  assert.equal(h.node('#confirm-dialog').open,false);
+  assert.equal(h.demo.state.screen,'photo');assert.equal(h.demo.state.selectedPhoto.name,'leaf.jpg');
+});
+test('new photo from unsaved result requires confirmation and can be cancelled', () => {
+  const h=setup();h.showScenario('save-failed');h.handle('new-photo');
+  assert.equal(h.node('#confirm-dialog').open,true);assert.equal(h.demo.state.screen,'save-failed');
+  h.handle('dialog-stay');assert.equal(h.demo.state.unsaved,true);
+  h.handle('new-photo');h.handle('dialog-confirm');
+  assert.equal(h.demo.state.screen,'start');assert.equal(h.demo.state.unsaved,false);
+});

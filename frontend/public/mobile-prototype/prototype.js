@@ -75,6 +75,7 @@ function goto(next,options={}){
  if(voice)speak();
 }
 function requestNavigation(target){
+ if(target===screen)return;
  if(screen==='photo'||(screen.startsWith('photo-')&&photoUrl)){pendingTarget=target;dialogFor('discard-photo',()=>{clearPhoto();goto(target);});}
  else if(screen==='analysis'){pendingTarget=target;dialogFor('leave-analysis',()=>{goto(target);toast(stateInfo['analysis-cancelled'].message);});}
  else if(unsaved&&['save-failed','result'].includes(screen)){pendingTarget=target;dialogFor('unsaved-result',()=>{unsaved=false;goto(target);});}
@@ -201,7 +202,7 @@ function handle(action){
  case 'continue-analysis':outcome='result';analyze();break;
  case 'cancel':dialogFor('cancel-analysis',()=>{goto('photo');toast(stateInfo['analysis-cancelled'].message);});break;
  case 'discard':dialogFor('discard-photo',()=>{clearPhoto();goto('start');});break;
- case 'new-photo':clearPhoto();goto('start');break;
+ case 'new-photo':{const start=()=>{unsaved=false;clearPhoto();goto('start');};if(unsaved)dialogFor('unsaved-result',start);else start();break;}
  case 'camera-toggle':if(screen==='camera')goto('camera-off');else goto('permission');break;
  case 'enable-camera':enableCamera();break;
  case 'save':saveResult();break;
