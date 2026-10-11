@@ -20,6 +20,7 @@ const initialRecords = [
  {id:'cabbage-1', crop:'배추', disease:'노균병', risk:'위험', time:'9월 24일', confidence:92}
 ];
 let records = initialRecords.map(r => ({...r}));
+let diagnosisId = null, diagnosisSequence = 0;
 try { large = localStorage.getItem('cropy:prototype:large') === 'true'; } catch {}
 const core = [
  ['start','진단 시작','526:5530'],['camera','작물 촬영','526:5444'],['camera-off','카메라 꺼짐','526:5471'],
@@ -59,7 +60,7 @@ function dialogFor(key,confirm){
 function closeDialog(){if(dialog.open)dialog.close();if(lastFocus?.isConnected)lastFocus.focus();dialogConfirm=null;}
 dialog.addEventListener('cancel',e=>{e.preventDefault();closeDialog();});
 dialog.addEventListener('keydown',e=>{if(e.key!=='Tab')return;const buttons=[...dialog.querySelectorAll('button')];const first=buttons[0],last=buttons.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
-function clearPhoto(){if(photoUrl)URL.revokeObjectURL(photoUrl);selectedPhoto=null;photoUrl=null;$('#photo-picker').value='';}
+function clearPhoto(){diagnosisId=null;if(photoUrl)URL.revokeObjectURL(photoUrl);selectedPhoto=null;photoUrl=null;$('#photo-picker').value='';}
 function goto(next,options={}){
  if(screen==='history')historyScroll=$('.content')?.scrollTop||0;
  stopTimer();if(next!=='camera')stopCamera();
@@ -161,10 +162,11 @@ function render(){
 }
 function saveResult(){
  unsaved=false;
- if(!records.some(r=>r.id==='current'))records.unshift({id:'current',crop:'고추',disease:'탄저병',risk:'주의',time:'방금 전',confidence:90});
+ if(!diagnosisId)diagnosisId='diagnosis-'+ ++diagnosisSequence;
+ if(!records.some(r=>r.id===diagnosisId))records.unshift({id:diagnosisId,crop:'고추',disease:'탄저병',risk:'주의',time:'방금 전',confidence:90});
  goto('result');toast(offlinePrepared?stateInfo['local-saved'].message:stateInfo['saved'].message);
 }
-function analyze(){goto('analysis');function finish(){if(screen!=='analysis')return;if(dialog.open){timer=setTimeout(finish,150);return;}timer=null;if(outcome==='result')saveResult();else if(outcome==='save-failed'){unsaved=true;goto('save-failed');}else goto(outcome);}timer=setTimeout(finish,2200);}
+function analyze(){diagnosisId='diagnosis-'+ ++diagnosisSequence;goto('analysis');function finish(){if(screen!=='analysis')return;if(dialog.open){timer=setTimeout(finish,150);return;}timer=null;if(outcome==='result')saveResult();else if(outcome==='save-failed'){unsaved=true;goto('save-failed');}else goto(outcome);}timer=setTimeout(finish,2200);}
 function download(){goto('model-download');progress=45;timer=setInterval(()=>{progress=Math.min(progress+11,100);render();if(progress===100){offlinePrepared=true;goto('offline-ready');}},450);}
 function speak(){
  if(!window.speechSynthesis){voice=false;render();toast(stateInfo['voice-unavailable'].message);return;}
@@ -212,6 +214,7 @@ document.addEventListener('click',e=>{
  const scenario=e.target.closest('[data-scenario]');if(scenario)showScenario(scenario.dataset.scenario);
 });
 function showScenario(key){
+ diagnosisId=null;
  unsaved=false;currentRecord=null;outcome='result';
  if(key==='discard-photo'){goto('photo',{pinned:true});dialogFor(key,()=>{clearPhoto();goto('start');});return;}
  if(key==='leave-analysis'||key==='cancel-analysis'){goto('analysis',{pinned:true});dialogFor(key,()=>{goto(key==='leave-analysis'?'start':'photo');toast(stateInfo['analysis-cancelled'].message);});return;}
