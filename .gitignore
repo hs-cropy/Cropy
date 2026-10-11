@@ -41,6 +41,28 @@ ml/colab_bundle.zip
 # Build/test artifacts
 .pytest_cache/
 tsconfig.tsbuildinfo
+frontend/public/offline-runtime/
+frontend/public/offline-assets/*.onnx
+frontend/public/offline-assets/tmp*/
+frontend/public/offline-assets/manifest*.json
+
+# Models and local working/reference material are not source commits
+*.pth
+*.onnx
+*.rknn
+*.safetensors
+/.design/
+/outputs/
+/output/pdf/
+/output/colab/**/fixture/
+/output/full_image_audit_20261002/*원천데이터.json
+/마음ai/colab_qwen_result/**/adapter/
+/마음ai/*.xlsx
+/마음ai/[[]마음AI]*.pdf
+/마음ai/한성대학교_특강2_통합_LLM학습_양자화_포팅.pdf
+/docs/templates/19. 클라우드 프로그램 사용계획서.hwp
+/report/7주차 - 02.*
+/팀 기록/
 
 # Claude Code
 .claude/
