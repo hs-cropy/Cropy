@@ -117,3 +117,23 @@ def test_png_checksum_error_rejected_before_saving(client, refine):
     response = upload(client, bytes(content), "photo.png", endpoint)
     assert response.status_code == 400
     assert set(settings.upload_dir.iterdir()) == before
+
+
+@pytest.mark.parametrize("refine", [False, True])
+def test_disallowed_image_parser_is_never_called(client, monkeypatch, refine):
+    from PIL import GifImagePlugin
+
+    endpoint = "/api/v1/diagnose"
+    if refine:
+        first = upload(client, encoded_image("JPEG")).json()
+        endpoint += f"/{first['id']}/refine"
+    content = encoded_image("GIF")
+    before = set(settings.upload_dir.iterdir())
+
+    def forbidden_parser(_self):
+        raise AssertionError("Disallowed image parser was invoked")
+
+    monkeypatch.setattr(GifImagePlugin.GifImageFile, "_open", forbidden_parser)
+    response = upload(client, content, "disguised.jpg", endpoint)
+    assert response.status_code == 400
+    assert set(settings.upload_dir.iterdir()) == before

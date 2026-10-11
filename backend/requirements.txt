@@ -8,8 +8,8 @@ uvicorn[standard]==0.34.0
 sqlalchemy==2.0.36
 pydantic==2.10.3
 pydantic-settings==2.7.0
-python-multipart==0.0.20
-pillow==11.0.0
+python-multipart==0.0.32
+pillow==12.3.0
 aiofiles==24.1.0
 
 # 추론 — 없으면 백엔드가 조용히 Mock 모드로 동작한다 (/health의 model_loaded로 확인)
