@@ -40,7 +40,7 @@ export interface DiagnoseResponse {
   selected_crop?: string | null;
   predicted_crop?: string | null;
   crop_mismatch?: boolean;
-  prediction_mode?: "model" | "mock" | "legacy";
+  prediction_mode?: "model" | "mock" | "legacy" | "browser";
   model_version?: string | null;
   preprocessing_version?: string | null;
   pair_model_version?: string | null;
@@ -57,6 +57,17 @@ export interface DiagnoseResponse {
   created_at: string;
   updated_at?: string | null;
   recapture?: RecaptureGuidance | null;
+  management_actions?: string[];
+  content_status?: "snapshot" | "current_reference";
+  content_version?: string | null;
+  current_pesticides?: PesticideInfo[];
+  decision_status?: string;
+  decision_reasons?: string[];
+  policy_version?: string;
+  is_refined?: boolean;
+  initial_predictions?: PredictionItem[];
+  save_status?: "saved" | "failed";
+  recovery_token?: string | null;
 }
 
 export interface DiagnosisSummary {
@@ -66,8 +77,12 @@ export interface DiagnosisSummary {
   crop_type?: string;
   image_url?: string;
   refined_image_url?: string | null;
-  prediction_mode?: "model" | "mock" | "legacy";
+  prediction_mode?: "model" | "mock" | "legacy" | "browser";
   created_at: string;
+  severity?: Severity;
+  category?: "normal" | "disease";
+  is_refined?: boolean;
+  content_status?: string;
 }
 
 export interface PaginatedHistory {
@@ -75,4 +90,6 @@ export interface PaginatedHistory {
   total: number;
   page: number;
   size: number;
+  unfiltered_total: number;
+  crop_total: number;
 }
