@@ -54,9 +54,7 @@ def _validate_image(content: bytes) -> str:
     # 이미지인지 확인해 두지 않으면 추론 단계에서 500으로 터진다.
     try:
         with Image.open(BytesIO(content), formats=list(IMAGE_EXTENSIONS)) as image:
-            extension = IMAGE_EXTENSIONS.get(image.format)
-            if extension is None:
-                raise APIError(400, "UNSUPPORTED_IMAGE_FORMAT", "JPEG 또는 PNG 이미지만 업로드 가능합니다.")
+            extension = IMAGE_EXTENSIONS[image.format]
             if image.width * image.height > settings.max_image_pixels:
                 raise APIError(413, "IMAGE_RESOLUTION_TOO_LARGE", "이미지 해상도가 너무 큽니다. 크기를 줄여 주세요.")
             image.verify()
