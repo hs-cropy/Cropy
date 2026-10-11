@@ -45,7 +45,7 @@ export default function HistoryPage() {
       {counts.unfiltered === 0 ? <Link href="/" className="mt-3 inline-block rounded-xl bg-brand px-5 py-2">진단 시작</Link> :
       <button className="mt-3 rounded-xl bg-brand px-5 py-2" onClick={() => { setCrop(""); setGrade(""); setPage(1); }}>전체 이력 보기</button>}
     </div>}
-    {!loading && <ul className="grid gap-3 md:grid-cols-2">{items.map(item => <li key={item.id}>
+    {!loading && !error && <ul className="grid gap-3 md:grid-cols-2">{items.map(item => <li key={item.id}>
       <Link href={"/history/" + item.id} className="flex items-center gap-3 rounded-card border border-line bg-surface p-3">
         {item.image_url && <img src={item.image_url} alt="" className="h-16 w-16 rounded-xl object-cover" />}
         <div><p className="font-bold">{item.disease_name}</p>
