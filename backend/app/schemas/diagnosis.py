@@ -3,6 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 CropType = Literal["고추", "무", "배추"]
+Severity = Literal["high", "medium", "low"]
 
 
 class TimestampedResponse(BaseModel):
@@ -78,6 +79,17 @@ class DiagnoseResponse(TimestampedResponse):
     created_at: datetime
     updated_at: datetime | None = None
     recapture: RecaptureGuidance | None = None
+    management_actions: list[str] = Field(default_factory=list)
+    content_status: Literal["snapshot", "current_reference"] = "current_reference"
+    content_version: str | None = None
+    current_pesticides: list[PesticideInfo] = Field(default_factory=list)
+    decision_status: str = "disease"
+    decision_reasons: list[str] = Field(default_factory=list)
+    policy_version: str | None = None
+    is_refined: bool = False
+    initial_predictions: list[PredictionItem] = Field(default_factory=list)
+    save_status: Literal["saved", "failed"] = "saved"
+    recovery_token: str | None = None
 
 
 class DiagnosisSummary(TimestampedResponse):
@@ -89,6 +101,10 @@ class DiagnosisSummary(TimestampedResponse):
     created_at: datetime
     refined_image_url: str | None = None
     prediction_mode: str = "legacy"
+    severity: Severity = "medium"
+    category: str = "disease"
+    is_refined: bool = False
+    content_status: str = "current_reference"
 
 
 class PaginatedHistory(BaseModel):
@@ -96,6 +112,8 @@ class PaginatedHistory(BaseModel):
     total: int
     page: int
     size: int
+    unfiltered_total: int = 0
+    crop_total: int = 0
 
 
 class DiseaseDetail(BaseModel):
