@@ -117,3 +117,44 @@ def test_png_checksum_error_rejected_before_saving(client, refine):
     response = upload(client, bytes(content), "photo.png", endpoint)
     assert response.status_code == 400
     assert set(settings.upload_dir.iterdir()) == before
+
+
+@pytest.mark.parametrize("fmt", ["GIF", "WEBP"])
+@pytest.mark.parametrize("refine", [False, True])
+def test_disallowed_image_parser_is_never_called(client, monkeypatch, refine, fmt):
+    from PIL import GifImagePlugin, WebPImagePlugin
+
+    endpoint = "/api/v1/diagnose"
+    if refine:
+        first = upload(client, encoded_image("JPEG")).json()
+        endpoint += f"/{first['id']}/refine"
+    content = encoded_image(fmt)
+    before = set(settings.upload_dir.iterdir())
+
+    def forbidden_parser(_self):
+        raise AssertionError("Disallowed image parser was invoked")
+
+    parser = GifImagePlugin.GifImageFile if fmt == "GIF" else WebPImagePlugin.WebPImageFile
+    monkeypatch.setattr(parser, "_open", forbidden_parser)
+    response = upload(client, content, "disguised.jpg", endpoint)
+    assert response.status_code == 400
+    assert response.json()["code"] == "INVALID_IMAGE"
+    assert "JPEG 또는 PNG" in response.json()["detail"]
+    assert set(settings.upload_dir.iterdir()) == before
+
+
+@pytest.mark.parametrize("content", [b"not an image", b"\xff\xd8\xff\xe0", b"\x89PNG\r\n\x1a\n"])
+@pytest.mark.parametrize("refine", [False, True])
+def test_unidentifiable_image_keeps_invalid_code_and_format_guidance(client, content, refine):
+    endpoint = "/api/v1/diagnose"
+    if refine:
+        first = upload(client, encoded_image("JPEG")).json()
+        endpoint += f"/{first['id']}/refine"
+    before_files = set(settings.upload_dir.iterdir())
+    before_count = client.get("/api/v1/history").json()["total"]
+    response = upload(client, content, endpoint=endpoint)
+    assert response.status_code == 400
+    assert response.json()["code"] == "INVALID_IMAGE"
+    assert "JPEG 또는 PNG" in response.json()["detail"]
+    assert set(settings.upload_dir.iterdir()) == before_files
+    assert client.get("/api/v1/history").json()["total"] == before_count

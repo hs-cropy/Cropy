@@ -5,6 +5,10 @@ export interface PredictionItem {
 
 export interface PesticideInfo {
   name: string;
+  usage_id?: string | null;
+  source?: string | null;
+  verification_status?: string;
+  synced_at?: string | null;
   dilution?: string;
   usage?: string;
   active_ingredient?: string;
@@ -33,6 +37,13 @@ export interface DiagnoseResponse {
   id: string;
   disease_name: string;
   crop_type?: string;
+  selected_crop?: string | null;
+  predicted_crop?: string | null;
+  crop_mismatch?: boolean;
+  prediction_mode?: "model" | "mock" | "legacy";
+  model_version?: string | null;
+  preprocessing_version?: string | null;
+  pair_model_version?: string | null;
   category?: "disease" | "normal";
   severity?: Severity;
   confidence: number;
@@ -44,6 +55,7 @@ export interface DiagnoseResponse {
   image_url?: string;
   refined_image_url?: string | null;
   created_at: string;
+  updated_at?: string | null;
   recapture?: RecaptureGuidance | null;
 }
 
@@ -53,6 +65,8 @@ export interface DiagnosisSummary {
   confidence: number;
   crop_type?: string;
   image_url?: string;
+  refined_image_url?: string | null;
+  prediction_mode?: "model" | "mock" | "legacy";
   created_at: string;
 }
 
