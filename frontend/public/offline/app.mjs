@@ -163,16 +163,26 @@ async function sync(record, button) {
     record.sync_attempted = true;
     await db('records','put',record);
     if (current?.id === record.id) result(record);
-    let response;
-    if (record.recovery_token) response = await fetch('/api/v1/results/' + record.recovery_token + '/save',{method:'POST'});
-    else {
+    let response, data;
+    if (record.recovery_token) {
+      response = await fetch('/api/v1/results/' + record.recovery_token + '/save',{method:'POST'});
+      data = await response.json();
+      if ((response.status === 410 && data.code === 'RESULT_EXPIRED') ||
+          (response.status === 404 && data.code === 'RESULT_NOT_FOUND')) {
+        // The draft is gone. Keep the original id and payload so a lost
+        // response is still safe to retry through the upload endpoint.
+        record.recovery_token = null;
+        await db('records','put',record);
+      }
+    }
+    if (!record.recovery_token) {
       const metadata = Object.fromEntries(['selected_crop','created_at','model_version','preprocessing_version','bundle_version','predictions','refined_predictions'].filter(k => record[k] !== undefined).map(k => [k,record[k]]));
       metadata.client_record_id = record.id;
       const body = new FormData(); body.append('metadata',JSON.stringify(metadata)); body.append('file',record.file,'original.jpg');
       if (record.refined_file) body.append('refined_file',record.refined_file,'second.jpg');
       response = await fetch('/api/v1/offline/records',{method:'POST',body});
+      data = await response.json();
     }
-    const data = await response.json();
     if (!response.ok) throw new Error(data.detail || '서버에 저장하지 못했어요.');
     record.sync_status = data.save_status === 'saved' ? 'saved' : 'failed';
     record.server_id = data.id; record.recovery_token = data.recovery_token;
