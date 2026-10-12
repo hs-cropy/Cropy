@@ -35,6 +35,15 @@ const preview: Preview = {
   },
   parameters: {
     layout: "padded",
+    // 디자인 기준 화면. 창 폭에 따라 모양이 바뀌는 컴포넌트는 스토리에서 이 중 하나를 고른다
+    viewport: {
+      options: {
+        mobile: { name: "모바일 390", styles: { width: "390px", height: "844px" } },
+        tablet: { name: "태블릿 768", styles: { width: "768px", height: "960px" } },
+        smallDesktop: { name: "데스크탑 1024", styles: { width: "1024px", height: "960px" } },
+        desktop: { name: "데스크탑 1440", styles: { width: "1440px", height: "960px" } },
+      },
+    },
     backgrounds: {
       options: {
         canvas: { name: "화면 배경", value: "#f7f7f8" }, // cropy-surface-canvas
