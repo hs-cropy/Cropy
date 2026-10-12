@@ -33,6 +33,7 @@ export function DiagnoseForm() {
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const fallbackInputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
   const [cropType, setCropType] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
   // 카메라로 찍은 사진은 <input>에 넣을 수 없어 선택된 파일을 state로 들고 있는다
@@ -48,6 +49,8 @@ export function DiagnoseForm() {
   useEffect(() => {
     speak(PROMPT_HOME);
   }, [speak]);
+  useEffect(() => () => requestRef.current?.abort(), []);
+  const updateResult = (saved: DiagnoseResponse) => setResult(previous => previous?.id === saved.id ? saved : previous);
 
   // on phones the result renders below the fold — bring it into view
   useEffect(() => {
@@ -71,6 +74,7 @@ export function DiagnoseForm() {
 
   /** 형식·크기가 맞지 않으면 toast만 띄우고 기존 사진은 그대로 둔다 */
   const selectFile = (next: File) => {
+    if (loading) return false;
     const check = validateImage(next);
     if (!check.ok) {
       showToast(check.message);
@@ -93,6 +97,7 @@ export function DiagnoseForm() {
   };
 
   const openCamera = () => {
+    if (loading) return;
     // http 접속·미지원 브라우저는 기기 카메라 앱으로 바로 연결한다 (M01-F2 예외)
     if (isCameraSupported()) {
       // 촬영 안내는 카메라가 켜진 뒤(비동기)에 나오므로 이 탭에서 iOS 발화 제한을 풀어 둔다
@@ -121,24 +126,27 @@ export function DiagnoseForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     if (!file) {
       setError("먼저 사진을 촬영하거나 선택하세요.");
       return;
     }
 
     setLoading(true);
+    const controller = new AbortController();
+    requestRef.current = controller;
     setError(null);
     // M03-F3 — 탭 직후에 말해야 iOS가 이후 결과 낭독까지 허용한다
     speak(PROMPT_DIAGNOSING);
     try {
-      const data = await diagnoseImage(file, cropType || undefined);
+      const data = await diagnoseImage(file, cropType || undefined, {signal: controller.signal});
+      if (controller.signal.aborted) return;
       setResult(data);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "진단에 실패했습니다. 잠시 후 다시 시도하세요.",
-      );
+      if (controller.signal.aborted) return;
+      setError(err instanceof Error ? err.message : "진단에 실패했습니다. 잠시 후 다시 시도하세요.");
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   };
 
@@ -232,6 +240,7 @@ export function DiagnoseForm() {
               <button
                 key={c.value || "auto"}
                 type="button"
+                disabled={loading}
                 onClick={() => setCropType(c.value)}
                 aria-pressed={active}
                 className={`inline-flex min-h-12 shrink-0 items-center gap-1 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
@@ -273,14 +282,15 @@ export function DiagnoseForm() {
       <div ref={resultRef} className={`scroll-mt-20 lg:mt-0 ${result ? "mt-6" : ""}`}>
         {result ? (
           <div className="space-y-4">
-            {result.recapture && (
+            {result.recapture && !loading && result.save_status === "saved" && (
               <RecapturePanel
                 diagnosisId={result.id}
                 guidance={result.recapture}
-                onRefined={setResult}
+                key={result.id}
+                onRefined={updateResult}
               />
             )}
-            <DiagnosisResult result={result} />
+            <DiagnosisResult result={result} onSaved={updateResult} />
           </div>
         ) : (
           <aside className="hidden rounded-card border border-line bg-surface p-5 shadow-card lg:block">

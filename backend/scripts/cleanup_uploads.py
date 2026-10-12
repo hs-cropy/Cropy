@@ -1,6 +1,8 @@
 """Preview or remove old upload files that no diagnosis references."""
 
 import argparse
+import json
+from datetime import datetime, timezone
 import math
 from pathlib import Path
 import stat
@@ -67,6 +69,19 @@ def main(argv: list[str] | None = None) -> int:
             if (key := _file_key(value))
         }
     cutoff = time.time() - args.min_age_hours * 3600
+    # A failed DB save still owns its photos until the recovery draft expires.
+    # Abort cleanup on unreadable metadata rather than guessing that it is orphaned.
+    pending = root / ".pending"
+    if pending.exists():
+        if pending.is_symlink() or pending.resolve().parent != root:
+            raise RuntimeError("Unsafe recovery directory; cleanup aborted")
+        for draft in pending.glob("*.json"):
+            if draft.is_symlink():
+                raise RuntimeError("Unsafe recovery draft; cleanup aborted")
+            data = json.loads(draft.read_text(encoding="utf-8"))
+            if datetime.fromisoformat(data["expires_at"]) >= datetime.now(timezone.utc):
+                referenced.update(key.casefold() for field in ("image_path", "refined_image_path")
+                                  if (key := _file_key(data["fields"].get(field))))
     candidates = [
         path for path in sorted(root.iterdir())
         if path.name.casefold() not in referenced and _old_direct_file(path, root, cutoff)

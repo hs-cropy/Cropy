@@ -2,6 +2,8 @@
 
 import os
 import time
+import json
+from datetime import datetime, timezone, timedelta
 
 import pytest
 from sqlalchemy import create_engine
@@ -86,6 +88,19 @@ def test_age_threshold_is_configurable(cleanup_store):
     assert cleanup.main(["--apply", "--min-age-hours", "2"]) == 0
     assert not old.exists()
     assert young.exists()
+
+
+def test_unexpired_recovery_photos_are_not_orphans(cleanup_store):
+    cleanup, root, _ = cleanup_store
+    pending = _file(root, "pending-result.jpg", age_hours=80)
+    drafts = root / ".pending"
+    drafts.mkdir()
+    (drafts / "result.json").write_text(json.dumps({
+        "expires_at": (datetime.now(timezone.utc) + timedelta(hours=12)).isoformat(),
+        "fields": {"image_path": pending.name, "refined_image_path": None},
+    }), encoding="utf-8")
+    assert cleanup.main(["--apply"]) == 0
+    assert pending.is_file()
 
 
 @pytest.mark.parametrize("age", ["-1", "nan", "inf"])
