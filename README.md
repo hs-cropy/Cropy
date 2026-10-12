@@ -2,7 +2,7 @@
 
 **AI 기반 농작물 병해충 진단 및 스마트 방제 지원 플랫폼**
 
-Version 1.0 · Author: 김헌영
+문서 기준일 2026-10-08 · 앱 선언 버전 1.0.0 · Author: 김헌영
 
 ## 기능
 
@@ -10,7 +10,7 @@ Version 1.0 · Author: 김헌영
 - 📊 신뢰도 및 Top-N 예측 제공
 - 🔍 혼동되는 두 병해가 접전이면 판별부위(예: 잎 뒷면) 재촬영을 유도하고 결과를 재확정
 - 📋 병 설명, 발병 원인, 예방 방법
-- 💊 등록 농약 추천 (희석비, 사용법, 안전사용기준)
+- 💊 농약 정보와 검증 상태 조회 (미검증 사용 조건은 숨김)
 - 📁 진단 이력 저장 및 조회
 
 ## 프로젝트 구조
@@ -58,7 +58,7 @@ pip install -r requirements.txt
 python train.py --data-dir ../data/dataset --epochs 20 --arch resnet50
 ```
 
-학습된 모델은 `ml/checkpoints/best_model.pth`에 저장됩니다.  
+학습된 모델은 `ml/checkpoints/best_model.pth`에 저장됩니다.
 개발 모드에서 `ALLOW_MOCK_PREDICTIONS=true`이면 모델이 없을 때 예시 진단을 반환합니다. 운영 모드는 실제 모델 없이는 진단을 503으로 차단합니다. [운영·복구 안내](docs/BACKEND_OPERATIONS.md)를 참고하세요.
 
 - `--arch resnet18|resnet50`: 백본 선택 (체크포인트에 기록되어 백엔드/평가 스크립트가 자동 인식)
@@ -75,17 +75,23 @@ python train.py --data-dir ../data/dataset --epochs 20 --arch resnet50
 | GET | `/api/v1/history` | 진단 이력 |
 | GET | `/api/v1/history/{id}` | 진단 상세 |
 | GET | `/api/v1/diseases` | 병해충 목록 |
-| GET | `/api/v1/health` | 헬스체크 |
+| GET | `/api/v1/diseases/{id}` | 병해 상세 |
+| GET | `/api/v1/health` | 프로세스 생존 확인 |
+| GET | `/api/v1/ready` | 실제 모델·DB 클래스 준비 확인 |
 
 자세한 스펙은 [docs/API_SPEC.md](docs/API_SPEC.md) 참고.
 
 ## 문서
 
+- [7주차 문서 최신화 현황·제출 준비](docs/DOCUMENT_STATUS.md) - 구현 기준, 관련 이슈, 남은 제출 작업
+
 - [PRD](docs/PRD.md) - 제품 요구사항
 - [Architecture](docs/ARCHITECTURE.md) - 시스템 구조
 - [API Spec](docs/API_SPEC.md) - REST API
 - [Database](docs/DATABASE.md) - DB 스키마
-- [Model Spec](docs/MODEL_SPEC.md) - CNN 모델
+- [Model Spec](docs/MODEL_SPEC.md) - 현재 기본 모델·최신 후보·검증 한계
+- [배포 가이드](docs/ORANGEPI5_DEPLOY.md) · [운영·복구](docs/BACKEND_OPERATIONS.md)
+- [LLM 계획](docs/LLM_FINETUNING_PLAN.md) · [양자화 계획](docs/QUANTIZATION.md)
 
 ### 인큐박스 (잠복감염 검사기, 기획 단계 · 비공개)
 
@@ -104,8 +110,11 @@ python train.py --data-dir ../data/dataset --epochs 20 --arch resnet50
 - **Backend:** FastAPI, SQLAlchemy, SQLite
 - **ML:** PyTorch, ResNet50 (AI Hub 노지 작물 질병 진단 데이터셋)
 
-9개 클래스(고추·무·배추 병해 6종 + 정상 3종) 기준 실측 정확도는
-val 94.7% / test 93.1%입니다. 자세한 내용은 [MODEL_SPEC](docs/MODEL_SPEC.md) 참고.
+고추·무·배추 병해 6종 + 정상 3종의 9클래스를 분류합니다. 기본 경로 체크포인트는 기존 ResNet50/224이며 SHA256은 [MODEL_SPEC](docs/MODEL_SPEC.md)에 기록했습니다. 기존 원본 평가의 val 94.7% / test 93.1%는 분할 중복이 확인된 과거 결과입니다.
+
+최신 별도 256 미세조정 후보의 val 4,070장 결과는 정확도 99.5823% / Macro F1 0.962436입니다. 무노균병 재현율이 저하되어 서비스 교체를 보류했고 독립 test 결과는 없습니다. [최신 보고서](report/AI_모델_개선_보고서_20261006.md)를 참고하세요.
+
+목표 단말은 Orange Pi 5 Plus/RK3588/RAM 16GB입니다. Qwen/RKLLM·STT/TTS·CNN 양자화·보드 실측은 개발·검증 예정이며 현재 스마트폰은 웹 클라이언트입니다.
 
 ## 배포 (Docker)
 
@@ -148,20 +157,22 @@ cd backend
 .venv\Scripts\python -m pytest tests
 ```
 
-학습된 체크포인트는 저장소에 포함되지 않으므로(`.gitignore`), 클린 클론이나 CI에서는
-Mock 모드로 동작합니다. 테스트는 체크포인트 유무와 무관하게 통과합니다.
+체크포인트는 Git에서 제외합니다. 모델 없는 시연은 개발 환경에서 명시적으로 허용해야 하며 운영 모드는 진단 503입니다. 테스트는 개별 fixture로 모델/시연/오류 상태를 검증합니다. 테스트 통과 여부는 해당 실행 결과로 확인하며 보드·실제 모델 정확도 검증과 구분합니다.
 
 ## 농약 데이터 동기화 (PSIS)
 
-농약 추천 데이터는 농촌진흥청 PSIS OpenAPI의 등록 농약 정보를 사용합니다.
+PSIS 동기화 코드는 작물·병해별 카탈로그를 갱신합니다. 현재 데이터가 최신 등록정보인지와 실제 동기화 성공 여부는 별도로 확인해야 합니다. 기존 미검증 시드의 사용 조건은 제공하지 않습니다.
 
 ```bash
 cd backend
-.venv\Scripts\python scripts/sync_pesticides.py --api-key <PSIS_API_KEY>
+.venv\Scripts\python scripts/sync_pesticides.py  # PSIS_API_KEY 환경변수 설정 후 실행
 ```
 
 API 키는 [PSIS OpenAPI 신청](https://psis.rda.go.kr/psis/share/api/apiReqstAddForm.ps?menuId=PS00383)에서 발급받습니다. 실행 후 백엔드를 재시작하면 DB에 반영됩니다.
 
 ## 다음 단계
 
-1. 사용자 인증 및 농장별 이력 관리
+1. 문서의 최신 구현·모델 기준으로 제출용 6종 구성 정리
+2. 테스트 계획·결과 통합, 보드·실제 휴대폰·오프라인 실측 보충
+3. Qwen 기능 데이터 검수·소량 시험과 단말 통합
+4. 사용자 인증 및 농장별 이력 관리

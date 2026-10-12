@@ -1,8 +1,8 @@
 # Orange Pi 5 Plus (16GB) 배포 가이드
 
-> 갱신: 2026-09-17. 대상: **Orange Pi 5 Plus / RK3588 / ARM64 / RAM 16GB**.
+> 갱신: 2026-10-12. 대상: **Orange Pi 5 Plus / RK3588 / ARM64 / RAM 16GB**.
 > 순서: CNN CPU 풀스택 → Qwen/RKLLM NPU → 오프라인 음성 → 전체 측정 → 선택 최적화.
-> 현재 저장소는 PyTorch CNN·FastAPI·Next.js 구성이다. LLM 서버·음성·RKNN 런타임은 추가 작업이며 이 문서의 계획을 구현 완료로 해석하지 않는다.
+> 현재 저장소는 PyTorch CNN·FastAPI·Next.js 구성이다. 브라우저 오프라인 추론·TTS는 구현되었고 LLM 서버·보드 음성·RKNN 런타임은 추가 작업이며 이 문서의 계획을 구현 완료로 해석하지 않는다.
 > 담당·선행 조건·완료 기준: [역할별 이전 백로그](ORANGEPI5_MIGRATION_BACKLOG.md).
 
 ## 1. 장치와 제공 환경 확인 (OP-01/06)
@@ -24,6 +24,8 @@ lsblk
 보드 이미지·커널·패키지·모델 버전과 재현 명령을 실험 기록에 남긴다. 초기 설치에는 인터넷 또는 사전 준비한 오프라인 설치 파일이 필요하다.
 
 ## 2. 코드·모델·데이터 전달 (OP-02)
+
+현재 로컬 기본 파일의 SHA256은 `b0b0b4a24af1430778a2bc15ede5cc068e200539dfeb7fc5ced02574a63d4b8b`, ResNet50/9클래스/약 94.4MB이며 img_size가 없어 224로 폴백한다. 실행 설정이 다른 파일을 가리키면 그 해시·해상도를 별도로 기록한다. 10월 6일 256/384 후보는 서비스 교체 보류이며 기본 파일과 혼동하지 않는다. [MODEL_SPEC](MODEL_SPEC.md) 참조.
 
 Git clone 또는 필요한 파일만 복사한다. PC의 `.venv`, `node_modules`, 빌드 캐시는 제외하고 ARM64에서 다시 설치한다.
 
@@ -69,7 +71,7 @@ docker compose logs --tail=100 backend
 ```bash
 cd ~/cropy/backend
 source .venv/bin/activate
-ML_MODEL_PATH=../ml/checkpoints/best_model.pth uvicorn app.main:app --host 0.0.0.0 --port 8000
+APP_ENV=production ALLOW_MOCK_PREDICTIONS=false ML_MODEL_PATH=../ml/checkpoints/best_model.pth uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 프론트는 별도 터미널에서 실행한다.
@@ -156,3 +158,28 @@ nmcli connection show
 - [ ] 재부팅·DB/업로드 보존·백업 복원
 - [ ] 전체 RAM·지연·온도·전원 실측 및 선택 최적화 판단
 - [ ] OP Issue에 환경·검증 결과·미해결 제약 기록
+
+## 10. 설정값과 모델 업데이트
+
+| 설정 | 기본값/배포값 | 역할 |
+|---|---|---|
+| APP_ENV | 로컬 development / Compose production | 시연과 운영 구분 |
+| ALLOW_MOCK_PREDICTIONS | 로컬 true / Compose false | 개발 환경만 모델 없는 시연 허용 |
+| ML_MODEL_PATH | ../ml/checkpoints/best_model.pth / Compose /models/best_model.pth | 실제 서빙 모델 |
+| ENABLE_PAIR_MODEL | false | 명시적 보조 모델 활성화 |
+| MAX_CONCURRENT_DIAGNOSES | 1 | 프로세스별 동시 진단 제한 |
+| MAX_UPLOAD_MB / MAX_IMAGE_PIXELS | 10 / 40,000,000 | 파일 MiB·픽셀 상한 |
+| DATABASE_URL / UPLOAD_DIR | 네이티브 cropcare.db/uploads / Compose /data 아래 | 데이터 영속 경로 |
+| CORS_ORIGINS | http://localhost:3000 | 브라우저가 API를 직접 호출할 때 허용 출처 |
+| BACKEND_ORIGIN | 네이티브 기본 127.0.0.1:8000 / Compose http://backend:8000 | 프론트 빌드 인자 |
+| PSIS_API_KEY | 기본값 없음 | 농약 동기화 스크립트 전용, 비밀값을 문서·로그에 기록하지 않음 |
+
+운영에선 APP_ENV=production을 명시하고 /ready의 200을 확인한다. 개발 mock은 ready 성공이 아니다. 프론트 프록시·API 선언·모델·OS·의존성 버전을 묶어 배포 기록에 남긴다.
+
+모델 교체는 검증된 후보 선정 → 기존 모델·설정·DB/이미지 백업 → 서비스 정지/일관성 있는 보존 → 새 파일·해시 확인 → 재시작 → ready·단건 진단·재촬영·이력 확인 순서다. 로드 모델은 프로세스 캐시에 있어 파일 덮어쓰기만으로 바뀌지 않는다. 새 모델과 옛 이력 재촬영의 409는 버전 보호 동작이다.
+
+실패하면 보존한 모델·호환 코드·설정으로 되돌려 재시작한다. DB 변경이 있으면 [운영 복구](BACKEND_OPERATIONS.md)의 백업 절차를 따른다. 자동 OTA·모델 다운로드·롤백은 구현되어 있지 않다.
+
+## 11. 미검증 항목의 기록
+
+이 문서의 ARM64 설치·Qwen/RKLLM·보드 음성·보드 오프라인·보드 자원 결과는 아직 실행 증거가 없다. 브라우저 오프라인 구현과 검증 범위는 [별도 가이드](OFFLINE_WEB.md)를 참조한다. 실제 OS·커널·드라이버·toolkit/runtime·모델 revision과 명령·결과를 확인 후 채운다. 과거 PC 회귀·가상 카메라 결과를 실기기 결과로 대체하지 않는다.
