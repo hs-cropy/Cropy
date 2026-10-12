@@ -63,6 +63,7 @@ frontend/src/
 | SQLAlchemy | 2.0.36 | ORM. 진단 이력, 병해, 농약 테이블 관리 |
 | SQLite | - | 파일 기반 DB. 단일 호스트 규모에 충분하고 별도 DB 서버 없이 단일 호스트 운영 |
 | Pydantic (+settings) | 2.10 / 2.7 | 요청·응답 스키마 검증, 환경변수 기반 설정(`core/config.py`) |
+| Starlette | 1.7.0 | FastAPI ASGI 기반, 보안 수정 버전 고정 |
 | Pillow | 12.3.0 | 업로드 이미지 검증·전처리 |
 | python-multipart | 0.0.32 | 이미지 파일 업로드(multipart/form-data) 파싱 |
 | aiofiles | 24.1.0 | 업로드 파일 비동기 저장 |

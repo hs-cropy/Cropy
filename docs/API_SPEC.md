@@ -339,4 +339,4 @@ REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_typ
 
 현재 CNN↔백엔드는 동일 Python 프로세스의 함수 호출이다. 입력은 검증된 이미지 경로, 출력은 전체/Top-3 `(model_class_id, score)`이며 체크포인트 규격은 [MODEL_SPEC](MODEL_SPEC.md)를 따른다. 프론트는 [api.ts](../frontend/src/lib/api.ts)와 [응답 타입](../frontend/src/types/diagnosis.ts)을 사용한다. nullable 응답과 TypeScript 선택 필드의 정합은 후속 코드 보완 대상이다.
 
-Qwen 기능 토큰/handler, STT/TTS, 단말 촬영 API는 데이터 설계 단계다. 데이터 시트의 get_diagnosis 등 기능명을 현재 REST 엔드포인트로 간주하지 않는다. 실제 호출·인자·오류·시간 제한은 [LLM 계획](LLM_FINETUNING_PLAN.md)에 따라 통합 시 확정한다.
+Qwen 기능 토큰/handler와 STT 통합은 계획 단계다. 브라우저 카메라 촬영과 Web Speech API TTS 안내는 구현되어 있으며 보드 음성 통합과 구분한다. 데이터 시트의 get_diagnosis 등 기능명을 현재 REST 엔드포인트로 간주하지 않는다. 실제 호출·인자·오류·시간 제한은 [LLM 계획](LLM_FINETUNING_PLAN.md)에 따라 통합 시 확정한다.
