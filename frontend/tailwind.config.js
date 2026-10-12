@@ -2,9 +2,15 @@ const { addDynamicIconSelectors } = require("@iconify/tailwind");
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  // 화면에 쓰지 않는 클래스가 앱 CSS에 섞이지 않게 테스트 파일과
-  // cn.ts(설정 키 shadow가 클래스로 읽힌다)는 뺀다
-  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}", "!./src/**/*.test.{ts,tsx}", "!./src/lib/cn.ts"],
+  // 화면에 쓰지 않는 클래스가 앱 CSS에 섞이지 않게 테스트·스토리 파일과
+  // cn.ts(설정 키 shadow가 클래스로 읽힌다)는 뺀다.
+  // 스토리는 .storybook/tailwind.config.js 가 따로 스캔한다
+  content: [
+    "./src/**/*.{js,ts,jsx,tsx,mdx}",
+    "!./src/**/*.test.{ts,tsx}",
+    "!./src/**/*.stories.{ts,tsx}",
+    "!./src/lib/cn.ts",
+  ],
   theme: {
     extend: {
       colors: {

@@ -46,6 +46,7 @@ cd frontend
 npm install
 copy .env.local.example .env.local
 npm run dev
+npm run storybook   # (별도 터미널) 공통 컴포넌트 모음 http://localhost:6006
 ```
 
 웹 앱: http://localhost:3000
