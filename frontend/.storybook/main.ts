@@ -13,6 +13,7 @@ const config: StorybookConfig = {
   staticDirs: [
     { from: "../public/brand", to: "/brand" },
     { from: "../public/mascot", to: "/mascot" },
+    { from: "../public/background", to: "/background" },
   ],
   viteFinal: (viteConfig) => ({
     ...viteConfig,
