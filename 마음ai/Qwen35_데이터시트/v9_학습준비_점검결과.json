@@ -1,0 +1,165 @@
+{
+  "checked_at": "2026-10-08",
+  "dataset_sha256": "4bf6be9410513335e30c30df7ab10f49fdd148a0cebb28b958d8b1c375e73763",
+  "training_ready": false,
+  "approved_export_count": 0,
+  "checks": [
+    {
+      "item": "활성 초안 수량 및 8대2",
+      "status": "pass",
+      "evidence": "7기능 각각320/80 활성2800 예비13"
+    },
+    {
+      "item": "수식 참조 토큰 enum 문장부호 중복 분할",
+      "status": "pass",
+      "evidence": "저장된 v9 전수 구조 검사 및 원본 v8 대조 통과"
+    },
+    {
+      "item": "승인된 내보내기 대상",
+      "status": "not_ready",
+      "evidence": "승인된 활성 싱글턴 0개 사람 검수 미완료"
+    },
+    {
+      "item": "복합 요청 정답 계약",
+      "status": "not_ready",
+      "evidence": "P_R015 STT_027 보류 동일 원문 가족 점수와 행동 동시 요청"
+    },
+    {
+      "item": "실제 STT 전사 검증",
+      "status": "not_run",
+      "evidence": "실제 음성 출처 없이 합성 또는 일반 발화 실제 STT 표본 검증 미수행"
+    },
+    {
+      "item": "모델 ID와 revision",
+      "status": "not_confirmed",
+      "evidence": "Qwen3.5 계열 계획만 확정 로컬 파일에 최종 model_id와 commit pin 없음 2B는 점검 후보"
+    },
+    {
+      "item": "49개 실제 토큰 등록",
+      "status": "not_ready",
+      "evidence": "49/49 ID 또는 tokenizer revision 미등록"
+    },
+    {
+      "item": "chat template 및 loss mask",
+      "status": "not_run",
+      "evidence": "7기능 입력 형식 검토 샘플 작성 실제 tokenizer 직렬화 및 label mask 검사 미실행"
+    },
+    {
+      "item": "새 토큰 임베딩 및 LoRA 저장",
+      "status": "not_run",
+      "evidence": "모델 로딩 gradient optimizer 저장 재로딩 실험 미실행"
+    },
+    {
+      "item": "Qwen Colab 학습 코드",
+      "status": "not_found",
+      "evidence": "ml 아래 Qwen용 py ipynb 0개 기존 Colab은 CNN용"
+    },
+    {
+      "item": "7개 기능 handler",
+      "status": "not_found",
+      "evidence": "backend/app AST에서 설계한 7개 함수명 중 구현 0개 기존 진단·농약 serializer는 존재 별도 연결 필요"
+    },
+    {
+      "item": "출력 parser 및 TTS 음성",
+      "status": "not_run",
+      "evidence": "49토큰 문자열과 TTS 초안 설계 존재 실제 생성 ID parser handler TTS 재생 통합 실험 없음"
+    },
+    {
+      "item": "Colab GPU 및 의존성",
+      "status": "not_run",
+      "evidence": "이번 작업에서 Colab 런타임 접속하지 않음 GPU dtype 라이브러리 호환성 확인 필요"
+    },
+    {
+      "item": "양자화 및 보드 token ID 유지",
+      "status": "not_run",
+      "evidence": "확정 tokenizer 병합 모델 변환기 RKLLM 실제 장치 시험 없음"
+    }
+  ],
+  "pending_tokens": [
+    "<hs_get_diagnosis>",
+    "<hs_topic_result>",
+    "<hs_topic_severity>",
+    "<hs_topic_observation>",
+    "<hs_topic_provenance>",
+    "<hs_topic_impact>",
+    "<hs_topic_food_safety>",
+    "<hs_topic_change>",
+    "<hs_get_prediction_metrics>",
+    "<hs_topic_confidence>",
+    "<hs_topic_ranking>",
+    "<hs_topic_distribution>",
+    "<hs_topic_limits>",
+    "<hs_topic_comparison>",
+    "<hs_get_recapture_guidance>",
+    "<hs_topic_where>",
+    "<hs_topic_why>",
+    "<hs_topic_certainty>",
+    "<hs_get_care_information>",
+    "<hs_topic_causes>",
+    "<hs_topic_prevention>",
+    "<hs_topic_priority>",
+    "<hs_get_pesticide_information>",
+    "<hs_topic_list>",
+    "<hs_topic_dilution>",
+    "<hs_topic_usage>",
+    "<hs_topic_phi>",
+    "<hs_topic_reentry>",
+    "<hs_topic_verification>",
+    "<hs_topic_ingredient>",
+    "<hs_topic_summary>",
+    "<hs_topic_checklist>",
+    "<hs_topic_mixing>",
+    "<hs_clarify_request>",
+    "<hs_target_crop>",
+    "<hs_target_disease>",
+    "<hs_target_topic>",
+    "<hs_target_confidence>",
+    "<hs_target_severity>",
+    "<hs_target_record>",
+    "<hs_target_product>",
+    "<hs_target_stt>",
+    "<hs_handle_scope_limit>",
+    "<hs_reason_crop>",
+    "<hs_reason_action>",
+    "<hs_reason_input>",
+    "<hs_product_current>",
+    "<hs_product_all>",
+    "<hs-end>"
+  ],
+  "qwen_training_scripts_found": [],
+  "planned_function_names_found_in_backend": [],
+  "backend_files_scanned": [
+    "backend\\app\\main.py",
+    "backend\\app\\__init__.py",
+    "backend\\app\\api\\__init__.py",
+    "backend\\app\\core\\config.py",
+    "backend\\app\\core\\database.py",
+    "backend\\app\\core\\request_limits.py",
+    "backend\\app\\core\\uploads.py",
+    "backend\\app\\models\\entities.py",
+    "backend\\app\\models\\pesticide_usage.py",
+    "backend\\app\\models\\__init__.py",
+    "backend\\app\\schemas\\diagnosis.py",
+    "backend\\app\\schemas\\__init__.py",
+    "backend\\app\\services\\diagnosis_service.py",
+    "backend\\app\\services\\ml_service.py",
+    "backend\\app\\services\\pesticide_service.py",
+    "backend\\app\\services\\recapture.py",
+    "backend\\app\\services\\seed.py",
+    "backend\\app\\services\\__init__.py",
+    "backend\\app\\api\\routes\\diagnosis.py",
+    "backend\\app\\api\\routes\\diseases.py",
+    "backend\\app\\api\\routes\\health.py",
+    "backend\\app\\api\\routes\\__init__.py"
+  ],
+  "stt_before": {
+    "not_applicable": 1864,
+    "synthetic": 923,
+    "none": 13
+  },
+  "stt_after": {
+    "not_applicable": 1854,
+    "synthetic": 860,
+    "none": 86
+  }
+}
