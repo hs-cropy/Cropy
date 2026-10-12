@@ -9,6 +9,8 @@ const config: StorybookConfig = {
   stories: ["../src/**/*.stories.@(ts|tsx)"],
   addons: ["@storybook/addon-docs", "@storybook/addon-a11y"],
   core: { disableTelemetry: true },
+  // 스토리에 필요한 이미지 폴더만 연결한다 (public 전체는 아래 viteFinal 에서 꺼 둔다)
+  staticDirs: [{ from: "../public/brand", to: "/brand" }],
   viteFinal: (viteConfig) => ({
     ...viteConfig,
     // Vite 는 기본으로 public 을 통째로 복사한다. 오프라인 앱과 dev·build 가 만드는
