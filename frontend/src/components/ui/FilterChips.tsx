@@ -13,6 +13,9 @@ interface FilterChipsProps<T extends string> {
   onChange: (value: T) => void;
   variant?: "crop" | "grade";
   disabled?: boolean;
+
+  // 작물별 전체 진단 기록 건수
+  counts?: Record<string, number | null>;
 }
 
 export function FilterChips<T extends string>({
@@ -22,6 +25,7 @@ export function FilterChips<T extends string>({
   onChange,
   variant = "crop",
   disabled = false,
+  counts,
 }: FilterChipsProps<T>) {
   const isCrop = variant === "crop";
 
@@ -44,6 +48,8 @@ export function FilterChips<T extends string>({
       >
         {options.map((option) => {
           const active = value === option.value;
+
+          const count = counts?.[option.value];
 
           return (
             <button
@@ -70,6 +76,13 @@ export function FilterChips<T extends string>({
               ].join(" ")}
             >
               {option.label}
+
+              {/* 데스크톱 작물 필터에만 건수 표시 */}
+              {isCrop && counts && (
+                <span className="ml-1 hidden lg:inline">
+                  {count ?? "–"}
+                </span>
+              )}
             </button>
           );
         })}

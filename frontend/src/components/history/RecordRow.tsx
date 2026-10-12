@@ -9,6 +9,7 @@ interface RecordRowProps {
   onOpen?: () => void;
 }
 
+// 모바일에서 사용할 짧은 날짜
 function formatHistoryDate(value: string): string {
   const date = new Date(value);
 
@@ -39,57 +40,147 @@ function formatHistoryDate(value: string): string {
   }).format(date);
 }
 
+// 데스크톱에서 사용할 전체 진단 일시
+function formatFullDate(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "날짜 정보 없음";
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
 export function RecordRow({
   item,
   onOpen,
 }: RecordRowProps) {
+  const confidence = Number.isFinite(item.confidence)
+    ? `${Math.round(
+        Math.max(0, Math.min(1, item.confidence)) * 100
+      )}%`
+    : "확인 불가";
+
   return (
     <li className="min-w-0">
       <Link
         href={`/history/${encodeURIComponent(item.id)}`}
         onClick={onOpen}
+        aria-label={`${item.disease_name}, ${item.crop_type || "작물 미확인"}, 진단 상세 보기`}
         className={[
-          "flex min-h-[88px] items-center gap-3",
-          "rounded-2xl border border-[#ECECEF]",
-          "bg-white p-4 transition-colors",
-          "hover:border-[#2E8B57]/40",
+          // 공통
+          "group min-w-0 bg-white",
+          "transition-colors hover:bg-[#F7FAF8]",
           "focus-visible:outline-2",
           "focus-visible:outline-[#2E8B57]",
+
+          // 모바일: 카드
+          "flex min-h-[88px] items-center gap-3",
+          "rounded-2xl border border-[#ECECEF] p-4",
+
+          // 데스크톱: 가로형 행
+          "lg:grid lg:min-h-[88px]",
+          "lg:grid-cols-[minmax(0,2.5fr)_minmax(0,1.3fr)_90px_100px_72px]",
+          "lg:items-center lg:gap-x-4",
+          "lg:rounded-none lg:border-0",
+          "lg:border-b lg:border-[#ECECEF]",
+          "lg:px-5 lg:py-3",
         ].join(" ")}
       >
-        {/* 사진이 없으면 회색 플레이스홀더 */}
-        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#F7F7F8]">
-          {item.image_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.image_url}
-              alt=""
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-          )}
-        </div>
+        {/* =================================
+            1. 진단 내역
+           ================================= */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          {/* 사진 썸네일 */}
+          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[#F7F7F8]">
+            {item.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.image_url}
+                alt=""
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+            )}
+          </div>
 
-        {/* 기록 정보 */}
-        <div className="min-w-0 flex-1">
-          <p className="break-words text-[15px] font-bold leading-6 text-[#191919]">
-            {item.disease_name}
-          </p>
-
-          <p className="mt-1 text-[13px] leading-5 text-[#6B6B6B]">
-            {item.crop_type || "작물 미확인"}
-            {" · "}
-            {formatHistoryDate(item.created_at)}
-          </p>
-
-          {item.is_refined && (
-            <p className="mt-1 text-xs font-semibold text-[#2E8B57]">
-              재촬영으로 갱신됨
+          <div className="min-w-0 flex-1">
+            {/* 병해명 */}
+            <p className="break-words text-[15px] font-bold leading-6 text-[#191919]">
+              {item.disease_name}
             </p>
+
+            {/* 모바일: 작물 + 날짜 */}
+            <p className="mt-1 text-[13px] leading-5 text-[#6B6B6B] lg:hidden">
+              {item.crop_type || "작물 미확인"}
+              {" · "}
+              {formatHistoryDate(item.created_at)}
+            </p>
+
+            {/* 데스크톱: 작물명 */}
+            <p className="mt-1 hidden text-[13px] leading-5 text-[#6B6B6B] lg:block">
+              {item.crop_type || "작물 미확인"}
+            </p>
+
+            {item.is_refined && (
+              <p className="mt-1 text-xs font-semibold text-[#2E8B57]">
+                재촬영으로 갱신됨
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* =================================
+            2. 진단 일시 - 데스크톱
+           ================================= */}
+        <span className="hidden text-sm text-[#6B6B6B] lg:block">
+          {formatFullDate(item.created_at)}
+        </span>
+
+        {/* =================================
+            3. 위험 등급
+           ================================= */}
+        <div className="flex shrink-0 items-center lg:justify-center">
+          {item.severity ? (
+            <StatusBadge severity={item.severity} />
+          ) : (
+            <span className="hidden text-sm text-[#6B6B6B] lg:inline">
+              확인 불가
+            </span>
           )}
         </div>
 
-        <StatusBadge severity={item.severity} />
+        {/* =================================
+            4. AI 신뢰도 - 데스크톱
+           ================================= */}
+        <span className="hidden text-center text-sm font-semibold text-[#191919] lg:block">
+          {confidence}
+        </span>
+
+        {/* =================================
+            5. 상세 보기 - 데스크톱
+           ================================= */}
+        <span
+          aria-hidden="true"
+          className={[
+            "hidden min-h-10 items-center justify-center",
+            "rounded-lg border border-[#ECECEF]",
+            "bg-white px-3 text-sm font-semibold",
+            "text-[#191919]",
+            "group-hover:border-[#2E8B57]",
+            "group-hover:text-[#2E8B57]",
+            "lg:inline-flex",
+          ].join(" ")}
+        >
+          보기
+        </span>
       </Link>
     </li>
   );

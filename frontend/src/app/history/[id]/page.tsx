@@ -75,7 +75,7 @@ export default function HistoryDetailPage() {
           상단: 이력 목록으로 돌아가기
          ==================================== */}
 
-      <nav aria-label="이력 상세 탐색" className="mb-5">
+      {/* <nav aria-label="이력 상세 탐색" className="mb-5">
         <Link
           href="/history"
           className={[
@@ -93,20 +93,32 @@ export default function HistoryDetailPage() {
           />
           이력 목록
         </Link>
-      </nav>
+      </nav> 
+      AppBar.tcx로 기능 이동
+      */}
 
       {/* ====================================
           페이지 제목
          ==================================== */}
 
-      <header className="mb-6">
-        <h1 className="text-[1.375rem] font-extrabold leading-8 tracking-tight text-[#191919] md:text-[2rem]">
-          저장된 진단 상세
+      <header className="relative mb-6 min-h-[100px] pr-20">
+        <h1 className="text-2xl font-bold text-[#191919]">
+          저장된 진단
         </h1>
 
-        <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
-          저장한 진단 결과와 관리 방법을 확인하세요.
+        <p className="mt-2 text-sm leading-[22px] text-[#6B6B6B]">
+          저장 당시의 결과예요.
+          <br />
+          현재 상태는 새 사진으로 확인하세요.
         </p>
+
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/mobile-prototype/assets/46875.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute right-0 top-0 h-[76px] w-[76px] object-contain"
+        />
       </header>
 
       {/* ====================================

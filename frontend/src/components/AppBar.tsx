@@ -15,24 +15,38 @@ const NAV = [
 export function AppBar() {
   const pathname = usePathname();
   const homeTab = useHomeTab();
+  const isHistoryDetail = pathname.startsWith("/history/");
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-paper/85 pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="flex items-center gap-2.5 px-5 py-3.5 md:px-8">
-        <Link href="/" className="flex items-center gap-2.5">
-          <span
-            aria-hidden
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-tint text-brown"
-          >
-            <span className="icon-[lucide--sprout] h-5 w-5" />
-          </span>
-          {/* 큰글씨·음성 토글이 나란히 들어가도록 좁은 화면에서는 로고 글자를 숨긴다
-              (스크린리더용 링크 이름으로는 남긴다) */}
-          <span className="sr-only leading-none sm:not-sr-only">
-            <span className="block text-lg font-extrabold tracking-tight text-ink">CropCare</span>
-            <span className="mt-0.5 block text-xs font-medium text-khaki">현장 병해충 진단</span>
-          </span>
-        </Link>
+
+    {isHistoryDetail ? (
+      <Link
+        href="/history"
+        aria-label="진단 이력으로 돌아가기"
+        className="inline-flex min-h-11 items-center gap-1.5 text-base font-semibold text-[#191919]"
+      >
+        <span
+          aria-hidden="true"
+          className="icon-[lucide--chevron-left] h-5 w-5"
+        />
+        뒤로
+      </Link>
+    ) : (
+      <Link
+        href="/"
+        aria-label="Cropy 홈"
+        className="flex min-h-11 shrink-0 items-center"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/mobile-prototype/assets/7a754.png"
+          alt="Cropy"
+          className="h-10 w-[76px] object-contain"
+        />
+      </Link>
+    )}
 
         {/* 큰글씨 토글은 화면 폭과 무관하게 항상 보여야 한다 (모바일에서 하단 탭이
             네비게이션을 가져가도 이 버튼은 앱바에 남는다) */}

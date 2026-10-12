@@ -40,12 +40,25 @@ export default function HistoryPage() {
 
   const [crop, setCrop] = useState("고추");
   const [grade, setGrade] = useState<Severity | "">("");
+
   const [page, setPage] = useState(1);
 
+  // 현재 선택한 작물·등급의 진단 건수
+  // 전체 이력 존재 여부도 판단하는 데 사용
   const [counts, setCounts] = useState({
     total: 0,
     unfiltered: 0,
   });
+
+  // 데스크톱 작물 필터 옆에 표시할 작물별 전체 건수
+  const [cropCounts, setCropCounts] = useState<
+    Record<string, number | null>
+  >({
+    고추: null,
+    무: null,
+    배추: null,
+  });
+
 
   const [refresh, setRefresh] = useState(0);
   const [restored, setRestored] = useState(false);
@@ -125,87 +138,130 @@ export default function HistoryPage() {
     }
   };
 
-  // ======================================
-  // 진단 이력 API 조회
-  // ======================================
 
+// ======================================
+// 1. 작물별 전체 진단 건수 조회
+// ======================================
 
-  useEffect(() => {
-    if (!restored) return;
+useEffect(() => {
+  if (!restored) return;
 
-    // 개발 환경: 진단 이력 없음(M-07) 화면 미리보기
-    if (
-      process.env.NODE_ENV === "development" &&
-      new URLSearchParams(window.location.search).get("preview") === "empty"
-    ) {
-      setItems([]);
-      setCounts({
-        total: 0,
-        unfiltered: 0,
-      });
-      setError(null);
-      setLoading(false);
-      return;
-    }
+  const controller = new AbortController();
 
-    const controller = new AbortController();
+  async function loadCropCounts() {
+    const totals = await Promise.all(
+      CROP_OPTIONS.map(async (option) => {
+        try {
+          const data = await fetchHistory(
+            1,
+            1,
+            option.value,
+            undefined,
+            controller.signal
+          );
 
+          return data.total;
+        } catch {
+          return null;
+        }
+      })
+    );
 
-    setLoading(true);
+    if (controller.signal.aborted) return;
+
+    setCropCounts({
+      고추: totals[0],
+      무: totals[1],
+      배추: totals[2],
+    });
+  }
+
+  void loadCropCounts();
+
+  return () => controller.abort();
+}, [restored, refresh]);
+
+// ======================================
+// 2. 현재 필터에 따른 진단 이력 조회
+// ======================================
+
+useEffect(() => {
+  if (!restored) return;
+
+  // 개발 환경: 진단 이력 없음 화면 미리보기
+  if (
+    process.env.NODE_ENV === "development" &&
+    new URLSearchParams(window.location.search).get("preview") ===
+      "empty"
+  ) {
+    setItems([]);
+    setCounts({
+      total: 0,
+      unfiltered: 0,
+    });
     setError(null);
+    setLoading(false);
+    return;
+  }
 
-    fetchHistory(
-      page,
-      PAGE_SIZE,
-      crop || undefined,
-      grade || undefined,
-      controller.signal
-    )
-      .then((data) => {
-        if (controller.signal.aborted) return;
+  const controller = new AbortController();
 
-        setCounts({
-          total: data.total,
-          unfiltered: data.unfiltered_total,
-        });
+  setLoading(true);
+  setError(null);
 
-        const lastPage = Math.max(
-          1,
-          Math.ceil(data.total / PAGE_SIZE)
-        );
+  fetchHistory(
+    page,
+    PAGE_SIZE,
+    crop || undefined,
+    grade || undefined,
+    controller.signal
+  )
+    .then((data) => {
+      if (controller.signal.aborted) return;
 
-        if (page > lastPage) {
-          setItems([]);
-          setPage(lastPage);
-          return;
-        }
-
-        // 현재 페이지 기록 최신순 정렬
-        setItems(
-          [...data.items].sort(
-            (a, b) =>
-              new Date(b.created_at).getTime() -
-              new Date(a.created_at).getTime()
-          )
-        );
-      })
-      .catch((err) => {
-        if (controller.signal.aborted) return;
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "이력을 불러오지 못했어요."
-        );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+      setCounts({
+        total: data.total,
+        unfiltered: data.unfiltered_total,
       });
 
-    return () => controller.abort();
-  }, [crop, grade, page, refresh, restored]);
+      const lastPage = Math.max(
+        1,
+        Math.ceil(data.total / PAGE_SIZE)
+      );
+
+      if (page > lastPage) {
+        setItems([]);
+        setPage(lastPage);
+        return;
+      }
+
+      // 현재 페이지 안에서는 최신순 표시
+      setItems(
+        [...data.items].sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() -
+            new Date(a.created_at).getTime()
+        )
+      );
+    })
+    .catch((err) => {
+      if (controller.signal.aborted) return;
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "이력을 불러오지 못했어요."
+      );
+    })
+    .finally(() => {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
+    });
+
+  return () => controller.abort();
+}, [crop, grade, page, refresh, restored]);
+
 
   // ======================================
   // 이력 상세에서 돌아왔을 때 스크롤 복원
@@ -246,6 +302,12 @@ export default function HistoryPage() {
 
   const resetFilters = () => {
     setCrop("");
+    setGrade("");
+    setPage(1);
+    pendingScrollRef.current = null;
+  };
+
+  const resetGradeOnly = () => {
     setGrade("");
     setPage(1);
     pendingScrollRef.current = null;
@@ -348,6 +410,7 @@ export default function HistoryPage() {
             options={CROP_OPTIONS}
             value={crop}
             onChange={changeCrop}
+            counts={cropCounts}
           />
 
           <FilterChips
@@ -383,20 +446,6 @@ export default function HistoryPage() {
                 {" "}
                 {counts.total}건
               </p>
-
-              {(grade !== "" || crop === "") && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCrop("고추");
-                    setGrade("");
-                    setPage(1);
-                  }}
-                  className="min-h-9 text-xs font-semibold text-[#2E8B57]"
-                >
-                  기본 필터로
-                </button>
-              )}
             </div>
           )}
 
@@ -445,36 +494,75 @@ export default function HistoryPage() {
         {isNoHistory && (
           <div className="mx-auto w-full max-w-[420px]">
             <HistoryEmptyState
-              hasAnyRecords={false}
-              onReset={resetFilters}
+              mode="no-history"
+              onResetFilters={resetFilters}
             />
           </div>
         )}
 
-        {/* 이력은 있지만 현재 필터 결과가 없는 상태 */}
-        {isFilteredEmpty && (
-          <div className="w-full max-w-[420px]">
-            <HistoryEmptyState
-              hasAnyRecords={true}
-              onReset={resetFilters}
-            />
-          </div>
-        )}
 
-        {/* 실제 진단 기록 목록 */}
+        {/* ======================================
+            이력 목록 / 필터 결과 없음
+            모바일: 카드
+            데스크톱: 공통 테이블
+        ====================================== */}
+
         {!isPageLoading &&
           !error &&
-          items.length > 0 && (
-            <ul className="grid gap-3 md:grid-cols-2">
-              {items.map((item) => (
-                <RecordRow
-                  key={item.id}
-                  item={item}
-                  onOpen={rememberPosition}
+          (items.length > 0 || isFilteredEmpty) && (
+            <div
+              className={[
+                "w-full",
+                "lg:overflow-hidden",
+                "lg:rounded-2xl",
+                "lg:border lg:border-[#ECECEF]",
+                "lg:bg-white",
+              ].join(" ")}
+            >
+              {/* 데스크톱에서는 결과가 0건이어도
+                  진단 기록 테이블 헤더 유지 */}
+              <div
+                className={[
+                  "hidden lg:grid",
+                  "lg:grid-cols-[minmax(0,2.5fr)_minmax(0,1.3fr)_90px_100px_72px]",
+                  "lg:items-center lg:gap-x-4",
+                  "lg:border-b lg:border-[#ECECEF]",
+                  "lg:bg-[#F7F7F8] lg:px-5 lg:py-4",
+                  "text-sm font-semibold text-[#6B6B6B]",
+                ].join(" ")}
+              >
+                <span>진단 내용</span>
+                <span>진단일</span>
+                <span className="text-center">등급</span>
+                <span className="text-center">AI 신뢰도</span>
+                <span className="text-center">결과</span>
+              </div>
+
+              {isFilteredEmpty ? (
+                /* 필터 결과가 없는 경우 */
+                <HistoryEmptyState
+                  mode="filtered"
+                  cropLabel={crop || "전체 작물"}
+                  gradeLabel={gradeLabel}
+                  onResetFilters={resetFilters}
+                  onResetGrade={resetGradeOnly}
                 />
-              ))}
-            </ul>
+              ) : (
+                /* 실제 진단 기록이 있는 경우 */
+                <ul className="flex flex-col gap-3 lg:gap-0">
+                  {items.map((item) => (
+                    <RecordRow
+                      key={item.id}
+                      item={item}
+                      onOpen={rememberPosition}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
+
+
 
         {/* 페이지네이션 */}
         {!isPageLoading &&
