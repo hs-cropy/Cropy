@@ -1,8 +1,8 @@
 # Orange Pi 5 Plus (16GB) 배포 가이드
 
-> 갱신: 2026-10-08. 대상: **Orange Pi 5 Plus / RK3588 / ARM64 / RAM 16GB**.
+> 갱신: 2026-10-12. 대상: **Orange Pi 5 Plus / RK3588 / ARM64 / RAM 16GB**.
 > 순서: CNN CPU 풀스택 → Qwen/RKLLM NPU → 오프라인 음성 → 전체 측정 → 선택 최적화.
-> 현재 저장소는 PyTorch CNN·FastAPI·Next.js 구성이다. LLM 서버·음성·RKNN 런타임은 추가 작업이며 이 문서의 계획을 구현 완료로 해석하지 않는다.
+> 현재 저장소는 PyTorch CNN·FastAPI·Next.js 구성이다. 브라우저 오프라인 추론·TTS는 구현되었고 LLM 서버·보드 음성·RKNN 런타임은 추가 작업이며 이 문서의 계획을 구현 완료로 해석하지 않는다.
 > 담당·선행 조건·완료 기준: [역할별 이전 백로그](ORANGEPI5_MIGRATION_BACKLOG.md).
 
 ## 1. 장치와 제공 환경 확인 (OP-01/06)
@@ -182,4 +182,4 @@ nmcli connection show
 
 ## 11. 미검증 항목의 기록
 
-이 문서의 ARM64 설치·Qwen/RKLLM·음성·오프라인·보드 자원 결과는 아직 실행 증거가 없다. 실제 OS·커널·드라이버·toolkit/runtime·모델 revision과 명령·결과를 확인 후 채운다. 과거 PC 회귀·가상 카메라 결과를 실기기 결과로 대체하지 않는다.
+이 문서의 ARM64 설치·Qwen/RKLLM·보드 음성·보드 오프라인·보드 자원 결과는 아직 실행 증거가 없다. 브라우저 오프라인 구현과 검증 범위는 [별도 가이드](OFFLINE_WEB.md)를 참조한다. 실제 OS·커널·드라이버·toolkit/runtime·모델 revision과 명령·결과를 확인 후 채운다. 과거 PC 회귀·가상 카메라 결과를 실기기 결과로 대체하지 않는다.

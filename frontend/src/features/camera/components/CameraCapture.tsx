@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CameraViewfinder } from "./CameraViewfinder";
 import { useCamera } from "../hooks/useCamera";
 import { useCaptureFrame } from "../hooks/useCaptureFrame";
+import { useCameraVoiceGuide } from "@/features/voice";
 import type { CameraCaptureProps, FacingMode } from "@/types/camera";
 
 const CAPTURE_ERROR_MESSAGE = "사진을 만들지 못했어요. 다시 찍어 주세요";
@@ -25,6 +26,7 @@ export function CameraCapture({
   const { capture } = useCaptureFrame();
   // 캡처(toBlob)를 기다리는 사이 닫혔다면 그 사진은 넘기지 않는다
   const mountedRef = useRef(true);
+  useCameraVoiceGuide(status === "streaming", cropLabel);
 
   // 오버레이 뒤 페이지가 스크롤되지 않게 한다
   useEffect(() => {

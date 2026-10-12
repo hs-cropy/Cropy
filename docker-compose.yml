@@ -15,21 +15,27 @@ services:
       DATABASE_URL: sqlite:////data/cropcare.db
       UPLOAD_DIR: /data/uploads
       ML_MODEL_PATH: /models/best_model.pth
+      OFFLINE_BUNDLE_DIR: /offline-assets
       MAX_UPLOAD_MB: "10"
+      APP_ENV: production
+      ALLOW_MOCK_PREDICTIONS: "false"
+      ENABLE_PAIR_MODEL: "false"
+      MAX_CONCURRENT_DIAGNOSES: "1"
       # 브라우저가 백엔드를 직접 부르지 않으므로 실제로 쓰이지 않는다.
       # 백엔드를 별도 도메인으로 노출한다면 프론트 도메인으로 바꿀 것.
       CORS_ORIGINS: http://localhost:3000
     volumes:
       # 학습된 체크포인트(best_model.pth, pair_mu.pth)는 저장소에 없다.
-      # 파일이 없으면 백엔드는 Mock 모드로 뜬다 (/api/v1/health 로 확인).
+      # 운영에서는 파일 누락/손상 시 진단503, /api/v1/ready503.
       - ./ml/checkpoints:/models:ro
+      - ./frontend/public/offline-assets:/offline-assets:ro
       # SQLite 파일과 업로드 이미지 — 컨테이너를 다시 만들어도 보존된다
       - cropcare-data:/data
     expose:
       - "8000"
     healthcheck:
       test: ["CMD", "python", "-c",
-             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/ready')"]
       interval: 30s
       timeout: 10s
       start_period: 60s   # 첫 기동에 모델 로드 시간이 필요하다

@@ -1,6 +1,6 @@
 # cropy 기술 스택
 
-> 갱신: 2026-10-08. 현재 로컬 의존성 선언과 구현 기준이며 실제 설치 버전은 환경별로 기록한다.
+> 갱신: 2026-10-12. 현재 로컬 의존성 선언과 구현 기준이며 실제 설치 버전은 환경별로 기록한다.
 > AI 기반 농작물 병해충 진단 및 스마트 방제 지원 플랫폼에서 사용하는 기술을 계층별로 정리한 문서입니다.
 > 버전은 `backend/requirements.txt`, `frontend/package.json`, `ml/requirements.txt` 기준입니다.
 
@@ -10,9 +10,9 @@
 |------|------|------|------|
 | 프론트엔드 | Next.js (React) | 15.x (React 19) | 모바일 퍼스트 웹 앱 |
 | 스타일링 | Tailwind CSS | 3.4.x | 현재 코드의 브라운/카키/옐로 디자인 토큰 |
-| 백엔드 | FastAPI | 0.115.x | REST API 서버 |
+| 백엔드 | FastAPI | 0.143.x | REST API 서버 |
 | DB | SQLite + SQLAlchemy | 2.0.x (ORM) | 진단 이력·병해·농약 데이터 저장 |
-| AI/ML | PyTorch + torchvision | 2.12.x (+cpu) | ResNet50 기반 9클래스 병해 분류 |
+| AI/ML | PyTorch + torchvision | 2.13.x (+cpu) | ResNet50 기반 9클래스 병해 분류 |
 | 배포 | Docker Compose | - | 백엔드 + 프론트 단일 호스트 배포 |
 | 언어 | TypeScript / Python | 5.7 / 3.13 | 프론트 / 백엔드·ML |
 
@@ -24,7 +24,7 @@
 
 | 기술 | 버전 | 왜 쓰는가 |
 |------|------|-----------|
-| [Next.js](https://nextjs.org) | ^15.1 | React 프레임워크. App Router 사용, `output: "standalone"`으로 Docker 이미지를 최소화 |
+| [Next.js](https://nextjs.org) | ^15.5.27 | React 프레임워크. App Router 사용, `output: "standalone"`으로 Docker 이미지를 최소화 |
 | React | ^19.0 | UI 컴포넌트 라이브러리 |
 | TypeScript | ^5.7 | 정적 타입으로 API 응답 타입(`src/types/diagnosis.ts`) 안전하게 관리 |
 | Tailwind CSS | ^3.4 | 유틸리티 클래스 기반 스타일링. 브라운/카키/옐로 토큰으로 서비스 아이덴티티 구현 |
@@ -58,13 +58,13 @@ frontend/src/
 
 | 기술 | 버전 | 왜 쓰는가 |
 |------|------|-----------|
-| [FastAPI](https://fastapi.tiangolo.com) | 0.115.6 | 비동기 REST API 프레임워크. `/docs`에서 Swagger 문서 자동 생성 |
+| [FastAPI](https://fastapi.tiangolo.com) | 0.143.0 | 비동기 REST API 프레임워크. `/docs`에서 Swagger 문서 자동 생성 |
 | Uvicorn | 0.34.0 | ASGI 서버 (프로덕션에서도 단일 워커 — 워커마다 모델이 메모리에 복제되기 때문) |
 | SQLAlchemy | 2.0.36 | ORM. 진단 이력, 병해, 농약 테이블 관리 |
 | SQLite | - | 파일 기반 DB. 단일 호스트 규모에 충분하고 별도 DB 서버 없이 단일 호스트 운영 |
 | Pydantic (+settings) | 2.10 / 2.7 | 요청·응답 스키마 검증, 환경변수 기반 설정(`core/config.py`) |
-| Pillow | 11.0.0 | 업로드 이미지 검증·전처리 |
-| python-multipart | 0.0.20 | 이미지 파일 업로드(multipart/form-data) 파싱 |
+| Pillow | 12.3.0 | 업로드 이미지 검증·전처리 |
+| python-multipart | 0.0.32 | 이미지 파일 업로드(multipart/form-data) 파싱 |
 | aiofiles | 24.1.0 | 업로드 파일 비동기 저장 |
 | httpx | 0.28.1 | PSIS(농약안전정보시스템) API 동기화 스크립트(`scripts/sync_pesticides.py`)에서 사용 |
 | pytest | 9.1.1 | 테스트 (`backend/tests/`) |
@@ -104,8 +104,8 @@ backend/app/
 
 | 기술 | 버전 | 왜 쓰는가 |
 |------|------|-----------|
-| PyTorch | 2.12.1+cpu (서빙) / ≥2.6 (학습) | 딥러닝 프레임워크 |
-| torchvision | 0.27.1+cpu | 사전학습 ResNet 백본, 이미지 변환 |
+| PyTorch | 2.13.0+cpu (서빙) / ≥2.13 (학습) | 딥러닝 프레임워크 |
+| torchvision | 0.28.0+cpu | 사전학습 ResNet 백본, 이미지 변환 |
 | NumPy | ≥2.1 | 수치 연산 |
 
 ### 모델
@@ -182,6 +182,6 @@ cd frontend && npm run dev   # http://localhost:3000
 
 ## 7. 목표 단말과 추가 기술
 
-목표는 Orange Pi 5 Plus/RK3588/ARM64/RAM 16GB다. 현재 의존성의 ARM64 휠·OS·NPU 드라이버 호환은 별도 검증한다. CNN ONNX 변환과 브라우저 ONNX Runtime Web/WASM 실행, IndexedDB 기록과 서버 동기화는 구현했다. CNN RKNN, Qwen3.5/RKLLM, 음성 명령/STT와 단말 에이전트는 미구현이다. 기기의 한국어 로컬 음성이 있으면 결과 읽기를 제공한다. [오프라인 가이드](OFFLINE_WEB.md)를 참조한다. SUDA는 지원·SDK를 확인할 대안이다.
+목표는 Orange Pi 5 Plus/RK3588/ARM64/RAM 16GB다. 현재 의존성의 ARM64 휠·OS·NPU 드라이버 호환은 별도 검증한다. CNN ONNX 변환과 브라우저 ONNX Runtime Web/WASM 실행, IndexedDB 기록과 서버 동기화는 구현했다. CNN RKNN, Qwen3.5/RKLLM, 음성 명령/STT와 단말 에이전트는 미구현이다. 서버 진단 화면의 브라우저 한국어 TTS 안내는 구현되어 있다. 별도 오프라인 화면은 기기의 한국어 로컬 음성이 있을 때 결과 읽기를 제공한다. [오프라인 가이드](OFFLINE_WEB.md)를 참조한다. SUDA는 지원·SDK를 확인할 대안이다.
 
-학습 보고서의 Colab PyTorch 2.11.0+cu130/T4와 백엔드 선언 2.12.1+cpu는 서로 다른 환경이다. 버전 선언을 설치 성공이나 보드 실행 완료로 표시하지 않는다.
+학습 보고서의 Colab PyTorch 2.11.0+cu130/T4와 백엔드 선언 2.13.0+cpu는 서로 다른 환경이다. 버전 선언을 설치 성공이나 보드 실행 완료로 표시하지 않는다.

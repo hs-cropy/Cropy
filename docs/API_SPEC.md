@@ -1,11 +1,12 @@
-# cropy - API Specification
+# Cropy - API Specification
 
-**갱신:** 2026-10-08. 현재 로컬 라우트·Pydantic 응답 스키마 기준.
+**갱신:** 2026-10-12. develop 라우트·Pydantic 응답 스키마 기준.
 
 Base URL: `http://localhost:8000/api/v1`
 정적 파일: `http://localhost:8000/uploads/{filename}` (진단 이미지)
 
 업로드 이미지는 서버가 확인한 실제 형식으로 `.jpg` 또는 `.png` 확장자를 정한다.
+WEBP 등 JPEG/PNG 외 형식은 지원하지 않으며 업로드 시 `400 INVALID_IMAGE`를 반환한다. 손상된 파일도 같은 코드로 거부하며 JPEG/PNG 형식으로 다시 업로드하도록 안내한다.
 클라이언트 파일명은 저장 형식에 사용하지 않는다. `/uploads`는 `.jpg`·`.jpeg`·`.png`만
 고정된 이미지 MIME과 `X-Content-Type-Options: nosniff`로 제공하며, 과거에 저장된
 `.html` 등 다른 확장자 경로는 404를 반환한다. 기존 파일은 자동 삭제·변환하지 않는다.
@@ -297,6 +298,29 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 ```
 
 `/health`는 프로세스 생존 확인이다. 모델 실패여도 200이므로 실제 진단 준비 여부는 `/ready`로 확인한다.
+## Figma 연동 보완 API — 2026-10-08
+
+기존 `detail`과 진단·이력 엔드포인트를 유지하면서 아래 계약을 추가했다.
+
+| 엔드포인트/필드 | 용도 |
+|---|---|
+| `GET /api/v1/history?crop_type=무&severity=high&page=1&size=20` | 작물·등급 필터. `total`은 최종 필터 건수, `crop_total`은 작물 조건 건수, `unfiltered_total`은 전체 건수 |
+| 이력 요약 `category`, `severity`, `is_refined`, `content_status` | 정상/병해·등급·재촬영·과거 안내 상태 표시 |
+| 진단 `management_actions`, `content_version`, `content_status` | 관리 안내와 당시 콘텐츠 버전. 이전 스냅샷 없는 기록은 `current_reference` |
+| `current_pesticides` | 당시 `pesticides`와 구분한 현재 카탈로그. 과거 이력의 최신 조건 확인에 사용 |
+| `decision_status`, `decision_reasons`, `policy_version` | 작물 불일치 → 혼동 → 낮은 신뢰도 우선순위와 모든 해당 이유 |
+| `initial_predictions`, `is_refined` | 최초 상위 후보와 재촬영 여부 |
+| `save_status`, `recovery_token` | `saved` 또는 DB 저장 실패의 `failed`. 실패해도 보관 성공한 경우 결과를 반환 |
+| `POST /api/v1/results/{token}/save` | 서버에 보관된 결과만 재저장. 임의 진단 JSON은 받지 않으며 재추론하지 않음 |
+| `GET /api/v1/capabilities` | 사진 형식·용량·픽셀, 판단 기준, 실행 준비, 복구 보관 시간 |
+| `GET /api/v1/offline/manifest` | 준비된 브라우저 모델·전처리·병해 안내 묶음 메타데이터 |
+| `POST /api/v1/offline/records` | multipart `metadata`, `file`, 선택적 `refined_file`로 기기 기록 동기화 |
+
+진단·재촬영의 선택적 `Idempotency-Key`는 최대 128자다. 같은 작업·키·사진·작물은 동일 응답을 재사용한다. 다른 본문이면 `409 IDEMPOTENCY_CONFLICT`다. 성공 응답은 진단과 같은 DB 트랜잭션에 저장한다. 기존 기록보다 오래된 복구 결과는 `409 DIAGNOSIS_CHANGED`, 만료 초안은 `410 RESULT_EXPIRED`다. 기본 복구 TTL은 24시간이며 `RECOVERY_TTL_HOURS`로 1~168시간 설정한다.
+
+오류 응답은 `detail`, `code`, `retryable`, `request_id`를 제공하며 응답 헤더에도 `X-Request-ID`가 있다. 대표 코드: `UNSUPPORTED_IMAGE_FORMAT`(이미지 외 Content-Type), `INVALID_IMAGE`, `EMPTY_IMAGE`, `IMAGE_TOO_LARGE`, `IMAGE_RESOLUTION_TOO_LARGE`, `REQUEST_TOO_LARGE`, `MODEL_UNAVAILABLE`, `MODEL_VERSION_CONFLICT`, `DIAGNOSIS_NOT_FOUND`, `DATABASE_UNAVAILABLE`, `SAVE_FAILED`, `RECOVERY_STORAGE_UNAVAILABLE`.
+
+오프라인 metadata는 UUID `client_record_id`, 선택적 `selected_crop`, timezone이 있는 `created_at`, `model_version`, `preprocessing_version`, `bundle_version`, 9개 고유 클래스의 합계 1인 `predictions`를 요구한다. `refined_predictions`가 있으면 재촬영 사진도 있어야 한다. 동일 UUID의 동일 본문 재전송은 중복 저장하지 않는다. 기기 확률은 클라이언트 생성값이며 서버 검증을 병해 정확도 검증으로 해석하지 않는다. 상세 준비·배포·검증 범위는 [오프라인 실행 가이드](OFFLINE_WEB.md)를 참조한다.
 
 ### GET /ready
 
