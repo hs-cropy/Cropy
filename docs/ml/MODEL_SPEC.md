@@ -231,7 +231,7 @@ python train.py --data-dir ../data/mu_pair --arch resnet18 --output checkpoints/
 
 전체 데이터 학습은 `train_full_colab.py`와 `cropy_full_colab.ipynb`를 사용한다. 입력 256, 클래스 균형 샘플링, AdamW, weight decay 1e-4, label smoothing 0.1, seed 42이며 검증 Macro F1으로 모델을 선택한다. 256/384 미세조정은 동일 시작 가중치에서 lr 1e-5, batch 16, 추가 5에폭을 비교했다. 일반 `train.py`의 검증 정확도 선택과 구분한다.
 
-CNN ONNX/RKNN 변환·INT8 정확도·보드 지연/메모리/전력은 아직 검증되지 않았다. [양자화 계획](QUANTIZATION.md)의 크기·속도는 목표와 비교 방법으로 관리한다.
+브라우저용 FP32 ONNX 변환과 ONNX Runtime Web/WASM 추론은 구현되어 있다. [오프라인 가이드](../operations/OFFLINE_WEB.md)에 동일 입력 텐서의 PyTorch/ONNX 비교와 Chrome 연결 차단·재접속 검증 기록이 있다. 이는 사진별 전처리 동등성이나 병해 정확도 검증을 뜻하지 않으며 이번 문서 수정에서 재실행하지 않았다. RKNN 변환·INT8 정확도·실제 휴대폰 및 보드 지연/메모리/전력은 미검증이다. [양자화 계획](QUANTIZATION.md)의 크기·속도는 목표와 비교 방법으로 관리한다.
 
 Qwen3.5 기능 선택·한국어 안내는 추가 개발 대상이다. 7기능 싱글턴 초안 2,800개(train 2,240/validation 560)의 v6 AI 검수는 문제 미발견 2,239/보류 397/불합격 164이며 사람 승인 0개다. 자연어 설명만 생성하는 초기 계획과 기능 토큰 데이터 버전을 구분한다. tokenizer 실제 ID·종료·handler·TTS·학습·RKLLM 보드 추론은 미검증이다.
 
