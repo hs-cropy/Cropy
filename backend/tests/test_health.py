@@ -94,8 +94,16 @@ def test_openapi_documents_readiness_failure(client):
 
 
 def test_single_ready_route_and_capabilities(client):
-    from app.main import app
-    assert len([r for r in app.routes if getattr(r, "path", None) == "/api/v1/ready"]) == 1
+    # FastAPI의 include_router 내부 표현과 무관하게 핸들러 등록과 HTTP 경로를 검증한다.
+    ready_routes = [
+        route for route in health.router.routes
+        if getattr(route, "path", None) == "/ready"
+        and "GET" in (getattr(route, "methods", None) or set())
+    ]
+    assert len(ready_routes) == 1
+    ready_response = client.get("/api/v1/ready")
+    assert ready_response.status_code in (200, 503)
+    assert {"database_connected", "prediction_mode", "model_loaded"} <= ready_response.json().keys()
     response = client.get("/api/v1/capabilities")
     assert response.status_code == 200
     assert {"decision", "execution", "upload"} <= response.json().keys()
