@@ -1,0 +1,1406 @@
+{
+  "n_train": 70,
+  "raters": [
+    "AI rater A",
+    "AI rater B"
+  ],
+  "agreement": {
+    "surface": 65,
+    "marks": 63,
+    "hard_shadow": 56,
+    "bright_patch": 57,
+    "broad_view": 62
+  },
+  "counts_by_rater": {
+    "a": {
+      "surface": {
+        "front": 19,
+        "back": 50,
+        "uncertain": 1
+      },
+      "marks": {
+        "conspicuous": 54,
+        "subtle": 16
+      },
+      "hard_shadow": {
+        "False": 39,
+        "True": 31
+      },
+      "bright_patch": {
+        "False": 35,
+        "True": 35
+      },
+      "broad_view": {
+        "True": 55,
+        "False": 15
+      }
+    },
+    "b": {
+      "surface": {
+        "front": 16,
+        "back": 51,
+        "uncertain": 3
+      },
+      "marks": {
+        "conspicuous": 53,
+        "subtle": 17
+      },
+      "hard_shadow": {
+        "False": 25,
+        "True": 45
+      },
+      "bright_patch": {
+        "False": 24,
+        "True": 46
+      },
+      "broad_view": {
+        "True": 55,
+        "False": 15
+      }
+    }
+  },
+  "anchors": {
+    "3-2": {
+      "ratings": {
+        "a": {
+          "id": "3-2",
+          "surface": "front",
+          "marks": "subtle",
+          "hard_shadow": true,
+          "bright_patch": true,
+          "broad_view": true,
+          "note": "넓은 녹색 앞면에 작은 점만 보이고 위쪽 잎 가장자리에 강한 빛과 선명한 명암 경계가 있음."
+        },
+        "b": {
+          "id": "3-2",
+          "surface": "front",
+          "marks": "subtle",
+          "hard_shadow": true,
+          "bright_patch": true,
+          "broad_view": true,
+          "note": "넓은 녹색 잎에 작은 점, 위쪽 강한 빛과 오른쪽 그림자"
+        }
+      },
+      "criteria": {
+        "surface_marks": {
+          "fields": [
+            "surface",
+            "marks"
+          ],
+          "a_n": 3,
+          "b_n": 1,
+          "common_n": 1,
+          "common_ids": [
+            "T05"
+          ],
+          "either_n": 3,
+          "either_ids": [
+            "T05",
+            "T06",
+            "T55"
+          ],
+          "common_dates": {
+            "2020/10/21": 1
+          },
+          "common_risk": {
+            "1": 1
+          }
+        },
+        "surface_marks_frame": {
+          "fields": [
+            "surface",
+            "marks",
+            "broad_view"
+          ],
+          "a_n": 3,
+          "b_n": 1,
+          "common_n": 1,
+          "common_ids": [
+            "T05"
+          ],
+          "either_n": 3,
+          "either_ids": [
+            "T05",
+            "T06",
+            "T55"
+          ],
+          "common_dates": {
+            "2020/10/21": 1
+          },
+          "common_risk": {
+            "1": 1
+          }
+        },
+        "all_five": {
+          "fields": [
+            "surface",
+            "marks",
+            "hard_shadow",
+            "bright_patch",
+            "broad_view"
+          ],
+          "a_n": 1,
+          "b_n": 0,
+          "common_n": 0,
+          "common_ids": [],
+          "either_n": 1,
+          "either_ids": [
+            "T55"
+          ],
+          "common_dates": {},
+          "common_risk": {}
+        }
+      }
+    },
+    "3-3": {
+      "ratings": {
+        "a": {
+          "id": "3-3",
+          "surface": "front",
+          "marks": "subtle",
+          "hard_shadow": false,
+          "bright_patch": false,
+          "broad_view": true,
+          "note": "넓게 펼친 녹색 앞면에 퍼진 색 차이만 보이며 뚜렷한 국소 자국이나 그림자 경계는 없음."
+        },
+        "b": {
+          "id": "3-3",
+          "surface": "front",
+          "marks": "subtle",
+          "hard_shadow": false,
+          "bright_patch": false,
+          "broad_view": true,
+          "note": "넓게 펼쳐진 잎에 퍼진 색조 차이와 미세한 질감"
+        }
+      },
+      "criteria": {
+        "surface_marks": {
+          "fields": [
+            "surface",
+            "marks"
+          ],
+          "a_n": 3,
+          "b_n": 1,
+          "common_n": 1,
+          "common_ids": [
+            "T05"
+          ],
+          "either_n": 3,
+          "either_ids": [
+            "T05",
+            "T06",
+            "T55"
+          ],
+          "common_dates": {
+            "2020/10/21": 1
+          },
+          "common_risk": {
+            "1": 1
+          }
+        },
+        "surface_marks_frame": {
+          "fields": [
+            "surface",
+            "marks",
+            "broad_view"
+          ],
+          "a_n": 3,
+          "b_n": 1,
+          "common_n": 1,
+          "common_ids": [
+            "T05"
+          ],
+          "either_n": 3,
+          "either_ids": [
+            "T05",
+            "T06",
+            "T55"
+          ],
+          "common_dates": {
+            "2020/10/21": 1
+          },
+          "common_risk": {
+            "1": 1
+          }
+        },
+        "all_five": {
+          "fields": [
+            "surface",
+            "marks",
+            "hard_shadow",
+            "bright_patch",
+            "broad_view"
+          ],
+          "a_n": 2,
+          "b_n": 1,
+          "common_n": 1,
+          "common_ids": [
+            "T05"
+          ],
+          "either_n": 2,
+          "either_ids": [
+            "T05",
+            "T06"
+          ],
+          "common_dates": {
+            "2020/10/21": 1
+          },
+          "common_risk": {
+            "1": 1
+          }
+        }
+      }
+    },
+    "3-4": {
+      "ratings": {
+        "a": {
+          "id": "3-4",
+          "surface": "back",
+          "marks": "conspicuous",
+          "hard_shadow": false,
+          "bright_patch": false,
+          "broad_view": true,
+          "note": "옅은 뒷면과 밝은 중심 잎맥이 보이며 잎맥 합류부의 좁고 밝은 흰색 국소 선 자국이 뚜렷함."
+        },
+        "b": {
+          "id": "3-4",
+          "surface": "back",
+          "marks": "conspicuous",
+          "hard_shadow": false,
+          "bright_patch": false,
+          "broad_view": true,
+          "note": "넓은 잎의 밝은 잎맥 옆에 짧은 흰 선 모양 자국"
+        }
+      },
+      "criteria": {
+        "surface_marks": {
+          "fields": [
+            "surface",
+            "marks"
+          ],
+          "a_n": 37,
+          "b_n": 35,
+          "common_n": 32,
+          "common_ids": [
+            "T09",
+            "T13",
+            "T15",
+            "T22",
+            "T23",
+            "T26",
+            "T27",
+            "T31",
+            "T32",
+            "T34",
+            "T39",
+            "T40",
+            "T41",
+            "T43",
+            "T44",
+            "T46",
+            "T48",
+            "T50",
+            "T53",
+            "T57",
+            "T58",
+            "T59",
+            "T60",
+            "T61",
+            "T62",
+            "T63",
+            "T64",
+            "T65",
+            "T66",
+            "T67",
+            "T68",
+            "T69"
+          ],
+          "either_n": 40,
+          "either_ids": [
+            "T09",
+            "T12",
+            "T13",
+            "T15",
+            "T16",
+            "T21",
+            "T22",
+            "T23",
+            "T25",
+            "T26",
+            "T27",
+            "T29",
+            "T31",
+            "T32",
+            "T34",
+            "T35",
+            "T37",
+            "T39",
+            "T40",
+            "T41",
+            "T43",
+            "T44",
+            "T46",
+            "T48",
+            "T50",
+            "T53",
+            "T57",
+            "T58",
+            "T59",
+            "T60",
+            "T61",
+            "T62",
+            "T63",
+            "T64",
+            "T65",
+            "T66",
+            "T67",
+            "T68",
+            "T69",
+            "T70"
+          ],
+          "common_dates": {
+            "2020/10/26": 5,
+            "2020/11/02": 5,
+            "2020/11/04": 1,
+            "2020/11/10": 8,
+            "2020/11/16": 4,
+            "2020/11/24": 9
+          },
+          "common_risk": {
+            "2": 20,
+            "1": 12
+          }
+        },
+        "surface_marks_frame": {
+          "fields": [
+            "surface",
+            "marks",
+            "broad_view"
+          ],
+          "a_n": 26,
+          "b_n": 29,
+          "common_n": 23,
+          "common_ids": [
+            "T09",
+            "T13",
+            "T15",
+            "T22",
+            "T23",
+            "T26",
+            "T27",
+            "T32",
+            "T34",
+            "T39",
+            "T43",
+            "T44",
+            "T48",
+            "T50",
+            "T53",
+            "T57",
+            "T58",
+            "T59",
+            "T60",
+            "T64",
+            "T65",
+            "T67",
+            "T69"
+          ],
+          "either_n": 32,
+          "either_ids": [
+            "T09",
+            "T12",
+            "T13",
+            "T15",
+            "T16",
+            "T21",
+            "T22",
+            "T23",
+            "T25",
+            "T26",
+            "T27",
+            "T32",
+            "T34",
+            "T35",
+            "T37",
+            "T39",
+            "T43",
+            "T44",
+            "T48",
+            "T50",
+            "T53",
+            "T57",
+            "T58",
+            "T59",
+            "T60",
+            "T61",
+            "T62",
+            "T63",
+            "T64",
+            "T65",
+            "T67",
+            "T69"
+          ],
+          "common_dates": {
+            "2020/10/26": 3,
+            "2020/11/02": 5,
+            "2020/11/04": 1,
+            "2020/11/10": 7,
+            "2020/11/16": 2,
+            "2020/11/24": 5
+          },
+          "common_risk": {
+            "2": 13,
+            "1": 10
+          }
+        },
+        "all_five": {
+          "fields": [
+            "surface",
+            "marks",
+            "hard_shadow",
+            "bright_patch",
+            "broad_view"
+          ],
+          "a_n": 11,
+          "b_n": 8,
+          "common_n": 6,
+          "common_ids": [
+            "T39",
+            "T43",
+            "T64",
+            "T65",
+            "T67",
+            "T69"
+          ],
+          "either_n": 13,
+          "either_ids": [
+            "T13",
+            "T15",
+            "T32",
+            "T35",
+            "T39",
+            "T43",
+            "T44",
+            "T58",
+            "T63",
+            "T64",
+            "T65",
+            "T67",
+            "T69"
+          ],
+          "common_dates": {
+            "2020/10/26": 1,
+            "2020/11/24": 5
+          },
+          "common_risk": {
+            "1": 1,
+            "2": 5
+          }
+        }
+      }
+    },
+    "3-5": {
+      "ratings": {
+        "a": {
+          "id": "3-5",
+          "surface": "back",
+          "marks": "subtle",
+          "hard_shadow": true,
+          "bright_patch": true,
+          "broad_view": true,
+          "note": "넓은 뒷면의 굵은 밝은 잎맥과 작은 점이 보이며 아래쪽에 강한 그림자 경계가 있음."
+        },
+        "b": {
+          "id": "3-5",
+          "surface": "back",
+          "marks": "subtle",
+          "hard_shadow": true,
+          "bright_patch": true,
+          "broad_view": true,
+          "note": "넓은 잎과 미세한 점, 아래 둥근 짙은 그림자"
+        }
+      },
+      "criteria": {
+        "surface_marks": {
+          "fields": [
+            "surface",
+            "marks"
+          ],
+          "a_n": 13,
+          "b_n": 16,
+          "common_n": 11,
+          "common_ids": [
+            "T08",
+            "T10",
+            "T11",
+            "T14",
+            "T18",
+            "T20",
+            "T24",
+            "T28",
+            "T30",
+            "T36",
+            "T38"
+          ],
+          "either_n": 18,
+          "either_ids": [
+            "T06",
+            "T08",
+            "T10",
+            "T11",
+            "T12",
+            "T14",
+            "T18",
+            "T20",
+            "T21",
+            "T24",
+            "T25",
+            "T28",
+            "T29",
+            "T30",
+            "T35",
+            "T36",
+            "T37",
+            "T38"
+          ],
+          "common_dates": {
+            "2020/11/02": 4,
+            "2020/11/04": 2,
+            "2020/11/10": 2,
+            "2020/11/16": 3
+          },
+          "common_risk": {
+            "1": 11
+          }
+        },
+        "surface_marks_frame": {
+          "fields": [
+            "surface",
+            "marks",
+            "broad_view"
+          ],
+          "a_n": 12,
+          "b_n": 11,
+          "common_n": 8,
+          "common_ids": [
+            "T10",
+            "T11",
+            "T18",
+            "T24",
+            "T28",
+            "T30",
+            "T36",
+            "T38"
+          ],
+          "either_n": 15,
+          "either_ids": [
+            "T06",
+            "T10",
+            "T11",
+            "T12",
+            "T14",
+            "T18",
+            "T20",
+            "T21",
+            "T24",
+            "T28",
+            "T30",
+            "T35",
+            "T36",
+            "T37",
+            "T38"
+          ],
+          "common_dates": {
+            "2020/11/02": 2,
+            "2020/11/04": 1,
+            "2020/11/10": 2,
+            "2020/11/16": 3
+          },
+          "common_risk": {
+            "1": 8
+          }
+        },
+        "all_five": {
+          "fields": [
+            "surface",
+            "marks",
+            "hard_shadow",
+            "bright_patch",
+            "broad_view"
+          ],
+          "a_n": 6,
+          "b_n": 10,
+          "common_n": 6,
+          "common_ids": [
+            "T18",
+            "T24",
+            "T28",
+            "T30",
+            "T36",
+            "T38"
+          ],
+          "either_n": 10,
+          "either_ids": [
+            "T10",
+            "T11",
+            "T18",
+            "T21",
+            "T24",
+            "T28",
+            "T30",
+            "T36",
+            "T37",
+            "T38"
+          ],
+          "common_dates": {
+            "2020/11/04": 1,
+            "2020/11/10": 2,
+            "2020/11/16": 3
+          },
+          "common_risk": {
+            "1": 6
+          }
+        }
+      }
+    }
+  },
+  "disagreements": [
+    {
+      "id": "T03",
+      "fields": [
+        "bright_patch"
+      ],
+      "a": {
+        "id": "T03",
+        "surface": "front",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "넓은 잎에 밝은 고리점이 흩어지고 국소 구멍이 보임."
+      },
+      "b": {
+        "id": "T03",
+        "surface": "front",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "넓은 잎의 구멍과 옅은 반점, 왼쪽 강한 조명"
+      }
+    },
+    {
+      "id": "T04",
+      "fields": [
+        "bright_patch"
+      ],
+      "a": {
+        "id": "T04",
+        "surface": "front",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "오른쪽과 아래쪽의 밝은 고리점 및 구멍이 뚜렷함."
+      },
+      "b": {
+        "id": "T04",
+        "surface": "front",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "여러 고리 모양 점과 구멍, 위쪽 밝은 영역"
+      }
+    },
+    {
+      "id": "T06",
+      "fields": [
+        "surface"
+      ],
+      "a": {
+        "id": "T06",
+        "surface": "front",
+        "marks": "subtle",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "얕은 잎맥과 미세하게 흩어진 밝은 질감이 보임."
+      },
+      "b": {
+        "id": "T06",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "밝게 솟은 잎맥과 미세한 점, 넓은 잎 일부"
+      }
+    },
+    {
+      "id": "T09",
+      "fields": [
+        "hard_shadow"
+      ],
+      "a": {
+        "id": "T09",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "돌출된 잎맥 주변의 밝은 고리점과 아래 작은 구멍이 보임."
+      },
+      "b": {
+        "id": "T09",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "밝은 잎맥과 다수 옅은 점, 잎을 가로지르는 그림자"
+      }
+    },
+    {
+      "id": "T10",
+      "fields": [
+        "hard_shadow",
+        "bright_patch"
+      ],
+      "a": {
+        "id": "T10",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "넓게 펼친 연녹색 뒷면과 굵은 밝은 잎맥, 작은 점이 보임."
+      },
+      "b": {
+        "id": "T10",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "넓은 옅은 잎과 솟은 잎맥, 손 부근 그림자와 밝은 윗부분"
+      }
+    },
+    {
+      "id": "T11",
+      "fields": [
+        "hard_shadow",
+        "bright_patch"
+      ],
+      "a": {
+        "id": "T11",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "옅은 잎 뒷면과 도드라진 망상 잎맥, 작은 밝은 점 하나가 보임."
+      },
+      "b": {
+        "id": "T11",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "밝게 솟은 잎맥, 오른쪽 경계가 있는 그림자"
+      }
+    },
+    {
+      "id": "T12",
+      "fields": [
+        "marks",
+        "hard_shadow",
+        "bright_patch"
+      ],
+      "a": {
+        "id": "T12",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "굵은 밝은 잎맥과 작은 검은 점 두어 개가 보임."
+      },
+      "b": {
+        "id": "T12",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "솟은 잎맥 주변 짙은 점과 구멍, 윗부분 그림자"
+      }
+    },
+    {
+      "id": "T13",
+      "fields": [
+        "hard_shadow",
+        "bright_patch"
+      ],
+      "a": {
+        "id": "T13",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "도드라진 잎맥이 펼쳐지고 왼쪽 위 구멍과 작은 검은 점이 보임."
+      },
+      "b": {
+        "id": "T13",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "큰 가장자리 구멍과 검은 점, 오른쪽 명암 경계"
+      }
+    },
+    {
+      "id": "T14",
+      "fields": [
+        "hard_shadow",
+        "bright_patch",
+        "broad_view"
+      ],
+      "a": {
+        "id": "T14",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "옅은 뒷면과 굵은 잎맥이 보이고 변화는 작은 점 수준임."
+      },
+      "b": {
+        "id": "T14",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": false,
+        "note": "접혀 좁아진 잎의 솟은 잎맥과 가로 그림자"
+      }
+    },
+    {
+      "id": "T15",
+      "fields": [
+        "hard_shadow",
+        "bright_patch"
+      ],
+      "a": {
+        "id": "T15",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "옅은 뒷면 중앙의 작은 흰색 국소 자국과 검은 점이 보임."
+      },
+      "b": {
+        "id": "T15",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "작은 밝은 구멍과 어두운 점, 오른쪽 그림자"
+      }
+    },
+    {
+      "id": "T16",
+      "fields": [
+        "surface",
+        "hard_shadow",
+        "bright_patch"
+      ],
+      "a": {
+        "id": "T16",
+        "surface": "uncertain",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "물방울과 가장자리의 밝은 갈색 자국이 보이며 앞뒷면은 불명확함."
+      },
+      "b": {
+        "id": "T16",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "여러 둥근 고리 모양 점, 위쪽 그림자와 밝은 띠"
+      }
+    },
+    {
+      "id": "T19",
+      "fields": [
+        "surface",
+        "bright_patch",
+        "broad_view"
+      ],
+      "a": {
+        "id": "T19",
+        "surface": "front",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "녹색 면 중앙의 길쭉한 밝은 갈색 자국과 아래쪽 강한 반사가 보임."
+      },
+      "b": {
+        "id": "T19",
+        "surface": "uncertain",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": false,
+        "note": "접힘으로 면 판단이 어렵고 중앙에 옅은 길쭉한 자국"
+      }
+    },
+    {
+      "id": "T20",
+      "fields": [
+        "broad_view"
+      ],
+      "a": {
+        "id": "T20",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "굵은 밝은 잎맥과 잔주름, 희미하고 작은 선 모양 색 변화가 보임."
+      },
+      "b": {
+        "id": "T20",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": false,
+        "note": "솟은 잎맥의 좁게 꺾인 잎과 작은 갈색 점"
+      }
+    },
+    {
+      "id": "T21",
+      "fields": [
+        "marks"
+      ],
+      "a": {
+        "id": "T21",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "넓은 뒷면의 작은 국소 밝은 자국과 잎을 가로지르는 그림자가 보임."
+      },
+      "b": {
+        "id": "T21",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "솟은 잎맥과 작은 점, 넓은 잎 위 뚜렷한 그림자"
+      }
+    },
+    {
+      "id": "T25",
+      "fields": [
+        "marks",
+        "broad_view"
+      ],
+      "a": {
+        "id": "T25",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "왼쪽의 큰 구멍과 아래 갈색 가장자리, 강한 빛과 그림자가 보임."
+      },
+      "b": {
+        "id": "T25",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": false,
+        "note": "굽은 잎의 제한된 면에 선명한 명암 경계"
+      }
+    },
+    {
+      "id": "T29",
+      "fields": [
+        "marks"
+      ],
+      "a": {
+        "id": "T29",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": false,
+        "note": "손에 잡힌 비교적 작은 잎의 왼쪽 갈색 가장자리와 그림자가 보임."
+      },
+      "b": {
+        "id": "T29",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": false,
+        "note": "작게 잡힌 잎과 손, 잎 일부 밝은 면과 그림자"
+      }
+    },
+    {
+      "id": "T32",
+      "fields": [
+        "hard_shadow"
+      ],
+      "a": {
+        "id": "T32",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "넓은 어두운 뒷면과 밝은 잎맥, 두 개의 국소 구멍이 보임."
+      },
+      "b": {
+        "id": "T32",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "넓은 잎의 구멍과 손 아래 그림자"
+      }
+    },
+    {
+      "id": "T35",
+      "fields": [
+        "marks"
+      ],
+      "a": {
+        "id": "T35",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "주요 잎은 비교적 균일한 청록색 뒷면이며 작은 밝은 점만 보임."
+      },
+      "b": {
+        "id": "T35",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "밝게 솟은 잎맥과 오른쪽 가장자리 갈색 부위"
+      }
+    },
+    {
+      "id": "T37",
+      "fields": [
+        "marks"
+      ],
+      "a": {
+        "id": "T37",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "어두운 뒷면 중앙에 테두리 있는 구멍이 보이고 왼쪽 일부가 강하게 비침."
+      },
+      "b": {
+        "id": "T37",
+        "surface": "back",
+        "marks": "subtle",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "넓은 잎과 작은 점, 위쪽 강한 빛과 큰 그림자"
+      }
+    },
+    {
+      "id": "T42",
+      "fields": [
+        "hard_shadow",
+        "broad_view"
+      ],
+      "a": {
+        "id": "T42",
+        "surface": "front",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": false,
+        "note": "여러 녹색 잎이 겹치며 위쪽 주요 잎 오른편에 작은 흰색 자국이 보임."
+      },
+      "b": {
+        "id": "T42",
+        "surface": "front",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "넓은 잎의 밝은 국소 자국과 위쪽 그늘"
+      }
+    },
+    {
+      "id": "T44",
+      "fields": [
+        "hard_shadow",
+        "bright_patch"
+      ],
+      "a": {
+        "id": "T44",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "물방울 많은 옅은 뒷면의 오른쪽에 뚜렷한 갈색 국소 자국이 있음."
+      },
+      "b": {
+        "id": "T44",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "거친 밝은 잎의 갈색 부위와 오른쪽 그림자"
+      }
+    },
+    {
+      "id": "T45",
+      "fields": [
+        "surface"
+      ],
+      "a": {
+        "id": "T45",
+        "surface": "front",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": false,
+        "note": "여러 작은 잎 중 둥근 잎에 갈색 자국이 있고 국소 햇빛과 그림자가 보임."
+      },
+      "b": {
+        "id": "T45",
+        "surface": "uncertain",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": false,
+        "note": "여러 잎이 겹쳐 면 판단이 어렵고 국소 갈색 자국이 보임"
+      }
+    },
+    {
+      "id": "T51",
+      "fields": [
+        "hard_shadow",
+        "bright_patch"
+      ],
+      "a": {
+        "id": "T51",
+        "surface": "front",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "넓은 녹색 잎에 갈색 및 밝은 국소 자국이 여러 개 흩어져 있음."
+      },
+      "b": {
+        "id": "T51",
+        "surface": "front",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "넓은 잎의 여러 갈색·밝은 점, 위쪽 그림자 띠"
+      }
+    },
+    {
+      "id": "T53",
+      "fields": [
+        "hard_shadow"
+      ],
+      "a": {
+        "id": "T53",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "굵은 밝은 잎맥 주위에 큰 구멍과 작은 검은 점들이 있고 오른쪽이 강하게 밝음."
+      },
+      "b": {
+        "id": "T53",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "잎의 여러 구멍과 말린 가장자리, 강한 명암"
+      }
+    },
+    {
+      "id": "T55",
+      "fields": [
+        "marks"
+      ],
+      "a": {
+        "id": "T55",
+        "surface": "front",
+        "marks": "subtle",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "넓은 녹색 면에 드문 작은 갈색 점이 있고 상부에 뚜렷한 그림자 경계가 있음."
+      },
+      "b": {
+        "id": "T55",
+        "surface": "front",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "분산된 갈색·밝은 점과 위쪽 날카로운 그림자"
+      }
+    },
+    {
+      "id": "T58",
+      "fields": [
+        "hard_shadow",
+        "bright_patch"
+      ],
+      "a": {
+        "id": "T58",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "연녹색 뒷면의 작은 밝은 갈색 자국과 아래 가장자리의 갈변이 보임."
+      },
+      "b": {
+        "id": "T58",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "중앙 옅은 자국과 아래 가장자리 갈색, 국소 그림자"
+      }
+    },
+    {
+      "id": "T61",
+      "fields": [
+        "broad_view"
+      ],
+      "a": {
+        "id": "T61",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": false,
+        "note": "여러 잎 중 가까운 잎의 구멍과 선명한 그림자가 보이며 배경 잎 비중이 큼."
+      },
+      "b": {
+        "id": "T61",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "넓은 앞쪽 잎의 구멍과 작은 점, 강한 잎 그림자"
+      }
+    },
+    {
+      "id": "T62",
+      "fields": [
+        "broad_view"
+      ],
+      "a": {
+        "id": "T62",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": false,
+        "note": "손에 잡힌 잎의 갈색 타원 자국과 강한 그림자 경계가 보이며 다른 잎이 함께 큼."
+      },
+      "b": {
+        "id": "T62",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": true,
+        "bright_patch": true,
+        "broad_view": true,
+        "note": "중앙 갈색 부위와 잎·손이 만드는 그림자"
+      }
+    },
+    {
+      "id": "T63",
+      "fields": [
+        "broad_view"
+      ],
+      "a": {
+        "id": "T63",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": false,
+        "note": "가까운 작은 잎에 넓은 갈색 가장자리 자국이 있고 뒤쪽 잎이 크게 보임."
+      },
+      "b": {
+        "id": "T63",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": true,
+        "note": "앞쪽 잎의 넓은 옅은 갈색 가장자리"
+      }
+    },
+    {
+      "id": "T70",
+      "fields": [
+        "surface"
+      ],
+      "a": {
+        "id": "T70",
+        "surface": "back",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": false,
+        "note": "여러 잎이 좁고 말린 상태이며 많은 구멍과 밝은 갈색 가장자리가 보임."
+      },
+      "b": {
+        "id": "T70",
+        "surface": "uncertain",
+        "marks": "conspicuous",
+        "hard_shadow": false,
+        "bright_patch": false,
+        "broad_view": false,
+        "note": "여러 잎이 겹치며 큰 구멍과 말린 가장자리가 보임"
+      }
+    }
+  ]
+}

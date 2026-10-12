@@ -1,0 +1,33 @@
+{
+  "method": "fixed 0.5 baseline + 0.5 candidate softmax probabilities; no weight tuning",
+  "scope": "100 radish validation images only; no full 4070-image evaluation",
+  "confusion_rows_2_3": [
+    [
+      0,
+      0,
+      71,
+      4,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      4,
+      19,
+      0,
+      0,
+      0,
+      0,
+      1
+    ]
+  ],
+  "correct": {
+    "2": 71,
+    "3": 19
+  },
+  "full_validation_metrics": null
+}

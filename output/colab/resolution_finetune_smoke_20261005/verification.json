@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "scope": "ResNet18 CPU pipeline only: 18 train/18 val at64/96px; not a performance result",
+  "exact_resume": true,
+  "initial_metrics_match_source": true,
+  "source_unchanged": true,
+  "changed_lr_resume_rejected_without_writes": true,
+  "initial_checkpoint_sha256": "4a95f4a537b63db26febe0013a182e729a3fb66ee9e07bf9ca13f5db0afff465",
+  "comparison_exported": true
+}

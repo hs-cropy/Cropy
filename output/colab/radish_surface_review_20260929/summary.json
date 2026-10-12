@@ -1,0 +1,41 @@
+{
+  "images": 513,
+  "newly_reviewed": 448,
+  "previously_reviewed": 65,
+  "hash_matches": 513,
+  "unique_paths": 513,
+  "counts": [
+    {
+      "actual": "2",
+      "surface": "뒷면 추정",
+      "count": 263
+    },
+    {
+      "actual": "2",
+      "surface": "앞면 추정",
+      "count": 53
+    },
+    {
+      "actual": "2",
+      "surface": "판단 불가",
+      "count": 28
+    },
+    {
+      "actual": "3",
+      "surface": "뒷면 추정",
+      "count": 121
+    },
+    {
+      "actual": "3",
+      "surface": "앞면 추정",
+      "count": 44
+    },
+    {
+      "actual": "3",
+      "surface": "판단 불가",
+      "count": 4
+    }
+  ],
+  "expert_status": "pending",
+  "test_images_opened": 0
+}

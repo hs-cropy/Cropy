@@ -1,0 +1,53 @@
+{
+  "purpose": "Pipeline smoke training, not a full-dataset performance estimate",
+  "seed": 42,
+  "architecture": "resnet18",
+  "initialization": "ImageNet default weights; no previous cropy checkpoint",
+  "device": "cpu",
+  "threads": 4,
+  "image_size": 224,
+  "batch_size": 8,
+  "train_images": 180,
+  "validation_images": 90,
+  "epochs": 2,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 1.8469055994697239,
+      "train_accuracy": 36.111111111111114,
+      "validation_accuracy": 68.88888888888889,
+      "class_recall": [
+        100.0,
+        100.0,
+        0.0,
+        80.0,
+        70.0,
+        80.0,
+        50.0,
+        80.0,
+        60.0
+      ]
+    },
+    {
+      "epoch": 2,
+      "loss": 1.0502228659132253,
+      "train_accuracy": 83.33333333333333,
+      "validation_accuracy": 82.22222222222223,
+      "class_recall": [
+        100.0,
+        100.0,
+        20.0,
+        80.0,
+        90.0,
+        80.0,
+        70.0,
+        100.0,
+        100.0
+      ]
+    }
+  ],
+  "classifier_max_weight_change": 0.003042038530111313,
+  "checkpoint_reload_identical": true,
+  "elapsed_seconds": 83.56,
+  "checkpoint": "output/full_trial_20261002_173202/trial_model.pth"
+}

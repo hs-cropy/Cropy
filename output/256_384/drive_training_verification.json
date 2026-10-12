@@ -1,0 +1,407 @@
+{
+  "verified_on": "2026-10-06",
+  "status": "five_epochs_confirmed_from_logs_and_final_comparison",
+  "runs": {
+    "256": {
+      "completed_epochs": 5,
+      "best_epoch": 4,
+      "log_epochs": [
+        {
+          "epoch": 1,
+          "train_loss": 0.4934,
+          "accuracy_percent_rounded": 99.53,
+          "macro_f1_rounded": 0.9575
+        },
+        {
+          "epoch": 2,
+          "train_loss": 0.4894,
+          "accuracy_percent_rounded": 99.46,
+          "macro_f1_rounded": 0.9508
+        },
+        {
+          "epoch": 3,
+          "train_loss": 0.4879,
+          "accuracy_percent_rounded": 99.51,
+          "macro_f1_rounded": 0.9541
+        },
+        {
+          "epoch": 4,
+          "train_loss": 0.4895,
+          "accuracy_percent_rounded": 99.58,
+          "macro_f1_rounded": 0.9624
+        },
+        {
+          "epoch": 5,
+          "train_loss": 0.4899,
+          "accuracy_percent_rounded": 99.51,
+          "macro_f1_rounded": 0.9551
+        }
+      ],
+      "epoch_5": {
+        "confusion_matrix": [
+          [
+            116,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            112,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            70,
+            5,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            6,
+            17,
+            0,
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            109,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            37,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1110,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            1299,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            1,
+            0,
+            1180
+          ]
+        ],
+        "accuracy": 0.995085995085995,
+        "macro_f1": 0.9550912692527204,
+        "support": [
+          117,
+          112,
+          76,
+          24,
+          110,
+          37,
+          1110,
+          1301,
+          1183
+        ],
+        "precision": [
+          1.0,
+          1.0,
+          0.9210526315789473,
+          0.7727272727272727,
+          1.0,
+          0.9024390243902439,
+          0.9964093357271095,
+          0.9992307692307693,
+          1.0
+        ],
+        "recall": [
+          0.9914529914529915,
+          1.0,
+          0.9210526315789473,
+          0.7083333333333334,
+          0.990909090909091,
+          1.0,
+          1.0,
+          0.9984627209838586,
+          0.9974640743871513
+        ],
+        "f1": [
+          0.9957081545064378,
+          1.0,
+          0.9210526315789473,
+          0.7391304347826086,
+          0.9954337899543378,
+          0.9487179487179487,
+          0.9982014388489209,
+          0.9988465974625144,
+          0.9987304274227676
+        ],
+        "correct": 4050
+      }
+    },
+    "384": {
+      "completed_epochs": 5,
+      "best_epoch": 1,
+      "log_epochs": [
+        {
+          "epoch": 1,
+          "train_loss": 0.5121,
+          "accuracy_percent_rounded": 99.56,
+          "macro_f1_rounded": 0.96
+        },
+        {
+          "epoch": 2,
+          "train_loss": 0.4963,
+          "accuracy_percent_rounded": 99.39,
+          "macro_f1_rounded": 0.9437
+        },
+        {
+          "epoch": 3,
+          "train_loss": 0.4929,
+          "accuracy_percent_rounded": 99.48,
+          "macro_f1_rounded": 0.9542
+        },
+        {
+          "epoch": 4,
+          "train_loss": 0.4929,
+          "accuracy_percent_rounded": 99.41,
+          "macro_f1_rounded": 0.9405
+        },
+        {
+          "epoch": 5,
+          "train_loss": 0.4927,
+          "accuracy_percent_rounded": 99.56,
+          "macro_f1_rounded": 0.9518
+        }
+      ],
+      "epoch_5": {
+        "confusion_matrix": [
+          [
+            117,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            112,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            71,
+            3,
+            1,
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            9,
+            15,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            108,
+            2,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            37,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1109,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1301,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            1182
+          ]
+        ],
+        "accuracy": 0.9955773955773956,
+        "macro_f1": 0.9517978169402309,
+        "support": [
+          117,
+          112,
+          76,
+          24,
+          110,
+          37,
+          1110,
+          1301,
+          1183
+        ],
+        "precision": [
+          1.0,
+          0.9911504424778761,
+          0.8875,
+          0.8333333333333334,
+          0.9908256880733946,
+          0.925,
+          1.0,
+          0.999231950844854,
+          1.0
+        ],
+        "recall": [
+          1.0,
+          1.0,
+          0.9342105263157895,
+          0.625,
+          0.9818181818181818,
+          1.0,
+          0.9990990990990991,
+          1.0,
+          0.9991546914623838
+        ],
+        "f1": [
+          1.0,
+          0.9955555555555555,
+          0.9102564102564102,
+          0.7142857142857143,
+          0.9863013698630136,
+          0.961038961038961,
+          0.9995493465525012,
+          0.9996158278908951,
+          0.9995771670190274
+        ],
+        "correct": 4052
+      }
+    }
+  },
+  "recorded_environment": {
+    "control": {
+      "torch": "2.11.0+cu130",
+      "device": "cuda",
+      "gpu": "Tesla T4"
+    },
+    "candidate": {
+      "torch": "2.11.0+cu130",
+      "device": "cuda",
+      "gpu": "Tesla T4"
+    }
+  },
+  "recorded_environment_matches": true,
+  "configuration_matches_local_checkpoints": true,
+  "best_confusion_matrices_match_local_checkpoints": true,
+  "original_reference_matrix_matches": true,
+  "source_md_sha256": "94ed23c0e6cc09d90dc86e70dd0437bf1eaaaeef992a59a732649f6337439183",
+  "source_url": "https://drive.google.com/file/d/19t3nsmWJGFDbHhZzAK5tByfoAbST5po9/view",
+  "scope": "Readable complete Drive comparison Markdown and training logs; raw JSON downloads unavailable. No fresh image inference.",
+  "initial_metrics_from_rounded_table": {
+    "256": {
+      "accuracy_percent": 99.4349,
+      "macro_f1": 0.960803
+    },
+    "384": {
+      "accuracy_percent": 99.1646,
+      "macro_f1": 0.942142
+    }
+  }
+}
