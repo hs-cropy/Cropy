@@ -1,4 +1,4 @@
-﻿
+
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -17,7 +17,6 @@ const PAGE_SIZE = 20;
 const STORAGE_KEY = "cropy:history-view";
 
 const CROP_OPTIONS = [
-  { value: "", label: "전체 작물" },
   { value: "고추", label: "고추" },
   { value: "무", label: "무" },
   { value: "배추", label: "배추" },
@@ -39,7 +38,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [crop, setCrop] = useState("");
+  const [crop, setCrop] = useState("고추");
   const [grade, setGrade] = useState<Severity | "">("");
   const [page, setPage] = useState(1);
 
@@ -53,9 +52,9 @@ export default function HistoryPage() {
 
   const pendingScrollRef = useRef<number | null>(null);
 
-  // ============================
-  // 이전 이력 필터 복원
-  // ============================
+  // ======================================
+  // 이전 필터 및 스크롤 위치 복원
+  // ======================================
 
   useEffect(() => {
     try {
@@ -71,7 +70,8 @@ export default function HistoryPage() {
 
         if (
           typeof state.crop === "string" &&
-          CROP_OPTIONS.some((c) => c.value === state.crop)
+          (state.crop === "" ||
+            CROP_OPTIONS.some((c) => c.value === state.crop))
         ) {
           setCrop(state.crop);
         }
@@ -102,33 +102,54 @@ export default function HistoryPage() {
         sessionStorage.removeItem(STORAGE_KEY);
       }
     } catch {
-      sessionStorage.removeItem(STORAGE_KEY);
+      // 저장된 상태가 잘못된 경우 기본 필터 사용
     }
 
     setRestored(true);
   }, []);
 
-  // 상세 페이지 이동 전 위치 기억
+  // 상세 페이지 이동 전 목록 상태 저장
   const rememberPosition = () => {
-    sessionStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        crop,
-        grade,
-        page,
-        scrollY: window.scrollY,
-      })
-    );
+    try {
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          crop,
+          grade,
+          page,
+          scrollY: window.scrollY,
+        })
+      );
+    } catch {
+      // 저장에 실패해도 상세 페이지 이동은 허용
+    }
   };
 
-  // ============================
-  // 이력 API 조회
-  // ============================
+  // ======================================
+  // 진단 이력 API 조회
+  // ======================================
+
 
   useEffect(() => {
     if (!restored) return;
 
+    // 개발 환경: 진단 이력 없음(M-07) 화면 미리보기
+    if (
+      process.env.NODE_ENV === "development" &&
+      new URLSearchParams(window.location.search).get("preview") === "empty"
+    ) {
+      setItems([]);
+      setCounts({
+        total: 0,
+        unfiltered: 0,
+      });
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
+
 
     setLoading(true);
     setError(null);
@@ -143,21 +164,30 @@ export default function HistoryPage() {
       .then((data) => {
         if (controller.signal.aborted) return;
 
-        setItems(data.items);
         setCounts({
           total: data.total,
           unfiltered: data.unfiltered_total,
         });
 
-        // 이전 마지막 페이지가 삭제 등으로 사라진 경우
         const lastPage = Math.max(
           1,
           Math.ceil(data.total / PAGE_SIZE)
         );
 
         if (page > lastPage) {
+          setItems([]);
           setPage(lastPage);
+          return;
         }
+
+        // 현재 페이지 기록 최신순 정렬
+        setItems(
+          [...data.items].sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime()
+          )
+        );
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
@@ -177,7 +207,10 @@ export default function HistoryPage() {
     return () => controller.abort();
   }, [crop, grade, page, refresh, restored]);
 
-  // 목록 로딩 완료 후 이전 위치 복원
+  // ======================================
+  // 이력 상세에서 돌아왔을 때 스크롤 복원
+  // ======================================
+
   useEffect(() => {
     if (!restored || loading || error) return;
     if (pendingScrollRef.current === null) return;
@@ -195,9 +228,9 @@ export default function HistoryPage() {
     return () => cancelAnimationFrame(frame);
   }, [restored, loading, error, items]);
 
-  // ============================
+  // ======================================
   // 필터 및 페이지 변경
-  // ============================
+  // ======================================
 
   const changeCrop = (value: string) => {
     setCrop(value);
@@ -220,189 +253,260 @@ export default function HistoryPage() {
 
   const changePage = (next: number) => {
     setPage(next);
-    window.scrollTo({ top: 0, behavior: "auto" });
+    window.scrollTo({
+      top: 0,
+      behavior: "auto",
+    });
   };
+
+  // ======================================
+  // 화면 상태 계산
+  // ======================================
+
+  const isPageLoading = !restored || loading;
+
+  // 전체 이력이 아예 없는 상태
+  const isNoHistory =
+    !isPageLoading &&
+    !error &&
+    counts.unfiltered === 0;
+
+  // 이력은 있지만 현재 필터 조건의 기록이 없는 상태
+  const isFilteredEmpty =
+    !isPageLoading &&
+    !error &&
+    counts.unfiltered > 0 &&
+    items.length === 0;
 
   const totalPages = Math.max(
     1,
     Math.ceil(counts.total / PAGE_SIZE)
   );
 
-  return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
+  const gradeLabel =
+    GRADE_OPTIONS.find((g) => g.value === grade)?.label ??
+    "전체";
 
-      {/* ============================
-          화면 제목
-         ============================ */}
-      <header>
-        <h1 className="text-[1.375rem] font-extrabold leading-[1.875rem] tracking-tight text-[#191919] md:text-[2rem]">
+  return (
+    <div
+      className={[
+        "relative isolate mx-auto w-full max-w-5xl",
+        "min-h-[calc(100dvh-190px)] pb-28",
+      ].join(" ")}
+    >
+
+      {/* ======================================
+          상단 제목
+         ====================================== */}
+
+      <header className="relative mb-6 min-h-[112px] pr-20">
+        <h1 className="text-[24px] font-bold leading-8 tracking-tight text-[#191919]">
           진단 이력
         </h1>
 
-        <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
-          저장한 진단을 모아볼 수 있어요.
-          <br />
-          작물을 선택한 뒤 위험 등급별로 확인하세요.
+        <p className="mt-2 text-sm leading-[22px] text-[#6B6B6B]">
+          {isNoHistory ? (
+            "저장한 진단을 모아볼 수 있어요."
+          ) : (
+            <>
+              작물을 선택한 뒤
+              <br />
+              위험 등급별로 확인하세요.
+            </>
+          )}
         </p>
+
+        {/* 이력이 있을 때 상단 마스코트 표시 */}
+        {!isPageLoading &&
+          !error &&
+          !isNoHistory && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/mobile-prototype/assets/46875.png"
+                alt=""
+                aria-hidden="true"
+                className="absolute right-0 top-0 h-[76px] w-[76px] object-contain md:h-20 md:w-20"
+              />
+            </>
+          )}
       </header>
 
-      {/* ============================
-          작물 및 위험 등급 필터
-         ============================ */}
-      <section
-        aria-label="진단 이력 필터"
-        className="space-y-5 rounded-2xl border border-[#ECECEF] bg-white p-5"
-      >
-        <FilterChips
-          title="작물"
-          options={CROP_OPTIONS}
-          value={crop}
-          onChange={changeCrop}
-        />
+      {/* ======================================
+          작물 / 위험 등급 필터
+          전체 이력이 없으면 숨김
+         ====================================== */}
 
-        <div className="border-t border-[#ECECEF] pt-5">
+      {!isNoHistory && (
+        <section
+          aria-label="진단 이력 필터"
+          className="mb-5 max-w-[420px] space-y-5"
+        >
+          <FilterChips
+            title="작물"
+            variant="crop"
+            options={CROP_OPTIONS}
+            value={crop}
+            onChange={changeCrop}
+          />
+
           <FilterChips
             title="위험 등급"
+            variant="grade"
             options={GRADE_OPTIONS}
             value={grade}
             onChange={changeGrade}
           />
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* ============================
-          필터 결과 및 기록 목록
-         ============================ */}
-      <section aria-label="저장된 진단 목록">
+      {/* ======================================
+          이력 목록
+         ====================================== */}
 
-        {/* 필터 결과 개수 */}
-        {!loading && !error && (
-          <div
-            role="status"
-            className="mb-4 flex flex-wrap items-center justify-between gap-2"
-          >
-            <h2 className="text-base font-bold text-[#191919]">
-              {crop || "전체 작물"}
-              {" · "}
-              {GRADE_OPTIONS.find((g) => g.value === grade)?.label}
-              {" "}
-              <span className="text-[#2E8B57]">
+      <section
+        aria-label="저장된 진단 목록"
+        className="relative"
+      >
+        {/* 필터 조건 및 결과 건수 */}
+        {!isPageLoading &&
+          !error &&
+          !isNoHistory && (
+            <div
+              role="status"
+              className="mb-4 flex min-h-5 items-center justify-between gap-3"
+            >
+              <p className="text-[13px] font-semibold text-[#6B6B6B]">
+                {crop || "전체 작물"}
+                {" · "}
+                {gradeLabel}
+                {" "}
                 {counts.total}건
-              </span>
-            </h2>
+              </p>
 
-            {(crop || grade) && (
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="min-h-11 text-sm font-semibold text-[#2E8B57]"
-              >
-                필터 초기화
-              </button>
-            )}
-          </div>
-        )}
+              {(grade !== "" || crop === "") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCrop("고추");
+                    setGrade("");
+                    setPage(1);
+                  }}
+                  className="min-h-9 text-xs font-semibold text-[#2E8B57]"
+                >
+                  기본 필터로
+                </button>
+              )}
+            </div>
+          )}
 
         {/* 로딩 */}
-        {(loading || !restored) && (
+        {isPageLoading && (
           <div
             role="status"
-            className="rounded-2xl border border-[#ECECEF] bg-white px-6 py-12 text-center"
+            className="rounded-2xl border border-[#ECECEF] bg-white p-8 text-center"
           >
             <span
               aria-hidden="true"
-              className="icon-[lucide--loader-circle] mx-auto block h-10 w-10 animate-spin text-[#2E8B57]"
+              className="icon-[lucide--loader-circle] mx-auto block h-8 w-8 animate-spin text-[#2E8B57]"
             />
 
-            <p className="mt-4 text-lg font-bold text-[#191919]">
-              진단 이력을 불러오고 있어요
-            </p>
-
-            <p className="mt-2 text-base text-[#6B6B6B]">
-              저장한 기록을 확인하는 중이에요.
+            <p className="mt-3 text-sm text-[#6B6B6B]">
+              진단 이력을 불러오고 있어요.
             </p>
           </div>
         )}
 
         {/* API 오류 */}
-        {!loading && error && (
+        {!isPageLoading && error && (
           <div
             role="alert"
-            className="rounded-2xl border border-[#ECECEF] bg-white px-6 py-10 text-center"
+            className="rounded-2xl border border-[#ECECEF] bg-white p-6"
           >
-            <span
-              aria-hidden="true"
-              className="icon-[lucide--triangle-alert] mx-auto block h-12 w-12 text-[#D92D20]"
-            />
-
-            <h2 className="mt-4 text-lg font-bold text-[#191919]">
+            <h2 className="text-lg font-bold text-[#191919]">
               이력을 불러오지 못했어요
             </h2>
 
-            <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
+            <p className="mt-2 text-sm leading-6 text-[#6B6B6B]">
               {error}
             </p>
 
             <button
               type="button"
               onClick={() => setRefresh((n) => n + 1)}
-              className="mt-6 min-h-12 rounded-xl bg-[#2E8B57] px-6 py-3 text-base font-bold text-white"
+              className="mt-4 min-h-11 rounded-xl bg-[#2E8B57] px-5 py-2 font-bold text-white"
             >
               다시 불러오기
             </button>
           </div>
         )}
 
-        {/* 빈 상태 */}
-        {!loading && !error && items.length === 0 && (
-          <HistoryEmptyState
-            hasAnyRecords={counts.unfiltered > 0}
-            onReset={resetFilters}
-          />
+        {/* M-07: 진단 이력 자체가 없는 상태 */}
+        {isNoHistory && (
+          <div className="mx-auto w-full max-w-[420px]">
+            <HistoryEmptyState
+              hasAnyRecords={false}
+              onReset={resetFilters}
+            />
+          </div>
         )}
 
-        {/* 진단 기록 목록 */}
-        {!loading && !error && items.length > 0 && (
-          <ul className="grid gap-3 md:grid-cols-2">
-            {items.map((item) => (
-              <RecordRow
-                key={item.id}
-                item={item}
-                onOpen={rememberPosition}
-              />
-            ))}
-          </ul>
+        {/* 이력은 있지만 현재 필터 결과가 없는 상태 */}
+        {isFilteredEmpty && (
+          <div className="w-full max-w-[420px]">
+            <HistoryEmptyState
+              hasAnyRecords={true}
+              onReset={resetFilters}
+            />
+          </div>
         )}
+
+        {/* 실제 진단 기록 목록 */}
+        {!isPageLoading &&
+          !error &&
+          items.length > 0 && (
+            <ul className="grid gap-3 md:grid-cols-2">
+              {items.map((item) => (
+                <RecordRow
+                  key={item.id}
+                  item={item}
+                  onOpen={rememberPosition}
+                />
+              ))}
+            </ul>
+          )}
 
         {/* 페이지네이션 */}
-        {!loading && !error && totalPages > 1 && (
-          <nav
-            aria-label="진단 이력 페이지"
-            className="mt-6 flex items-center justify-center gap-4"
-          >
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => changePage(page - 1)}
-              className="min-h-11 rounded-xl border border-[#ECECEF] bg-white px-4 py-2 text-base font-semibold text-[#191919] disabled:opacity-40"
+        {!isPageLoading &&
+          !error &&
+          totalPages > 1 && (
+            <nav
+              aria-label="진단 이력 페이지"
+              className="mt-6 flex items-center justify-center gap-4"
             >
-              이전
-            </button>
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => changePage(page - 1)}
+                className="min-h-11 rounded-xl border border-[#ECECEF] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-40"
+              >
+                이전
+              </button>
 
-            <span className="text-sm font-semibold text-[#6B6B6B]">
-              {page} / {totalPages}
-            </span>
+              <span className="text-sm font-semibold text-[#6B6B6B]">
+                {page} / {totalPages}
+              </span>
 
-            <button
-              type="button"
-              disabled={page >= totalPages}
-              onClick={() => changePage(page + 1)}
-              className="min-h-11 rounded-xl border border-[#ECECEF] bg-white px-4 py-2 text-base font-semibold text-[#191919] disabled:opacity-40"
-            >
-              다음
-            </button>
-          </nav>
-        )}
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => changePage(page + 1)}
+                className="min-h-11 rounded-xl border border-[#ECECEF] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-40"
+              >
+                다음
+              </button>
+            </nav>
+          )}
       </section>
     </div>
   );

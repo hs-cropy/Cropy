@@ -11,6 +11,7 @@ interface FilterChipsProps<T extends string> {
   options: readonly FilterOption<T>[];
   value: T;
   onChange: (value: T) => void;
+  variant?: "crop" | "grade";
   disabled?: boolean;
 }
 
@@ -19,33 +20,53 @@ export function FilterChips<T extends string>({
   options,
   value,
   onChange,
+  variant = "crop",
   disabled = false,
 }: FilterChipsProps<T>) {
+  const isCrop = variant === "crop";
+
   return (
-    <fieldset disabled={disabled}>
-      <legend className="mb-3 text-base font-bold text-[#191919]">
+    <fieldset disabled={disabled} className="min-w-0">
+      <legend
+        className={
+          isCrop
+            ? "sr-only"
+            : "mb-3 text-[13px] font-bold text-[#191919]"
+        }
+      >
         {title}
       </legend>
 
-      <div className="flex flex-wrap gap-2">
+      <div
+        className={`grid gap-2 ${
+          isCrop ? "grid-cols-3" : "grid-cols-4"
+        }`}
+      >
         {options.map((option) => {
-          const selected = value === option.value;
+          const active = value === option.value;
 
           return (
             <button
               key={option.value || "all"}
               type="button"
-              aria-pressed={selected}
+              aria-pressed={active}
+              disabled={disabled}
               onClick={() => onChange(option.value)}
               className={[
-                "min-h-12 rounded-xl border px-4 py-2",
-                "text-base font-semibold transition-colors",
-                "focus-visible:outline-2 focus-visible:outline-offset-2",
+                "flex w-full items-center justify-center",
+                "border text-center transition-colors",
+                "focus-visible:outline-2",
+                "focus-visible:outline-offset-2",
                 "focus-visible:outline-[#2E8B57]",
                 "disabled:opacity-50",
-                selected
-                  ? "border-[#2E8B57] bg-[#2E8B57] text-white"
-                  : "border-[#ECECEF] bg-white text-[#191919] hover:border-[#2E8B57]",
+                isCrop
+                  ? "min-h-12 rounded-xl px-2 py-2 text-sm"
+                  : "min-h-9 rounded-full px-1 py-2 text-xs",
+                active
+                  ? isCrop
+                    ? "border-[#2E8B57] bg-[#EDF7F1] font-bold text-[#2E8B57]"
+                    : "border-[#191919] bg-[#191919] font-bold text-white"
+                  : "border-[#ECECEF] bg-white font-medium text-[#6B6B6B]",
               ].join(" ")}
             >
               {option.label}
