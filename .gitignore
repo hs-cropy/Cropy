@@ -1,3 +1,7 @@
+# Document reference files remain local after reorganization
+/docs/templates/course/19. 클라우드 프로그램 사용계획서.hwp
+/docs/references/course/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -105,7 +109,3 @@ backend/app/data/seed/*
 
 /ml/test-results/
 /마음ai/test-results/
-
-# Document reference files remain local after reorganization
-/docs/templates/course/19. 클라우드 프로그램 사용계획서.hwp
-/docs/references/course/
