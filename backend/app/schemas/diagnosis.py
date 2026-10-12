@@ -133,3 +133,11 @@ class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
     version: str
+
+
+class ReadinessResponse(BaseModel):
+    status: str
+    database_connected: bool
+    model_loaded: bool
+    prediction_mode: str
+    version: str
