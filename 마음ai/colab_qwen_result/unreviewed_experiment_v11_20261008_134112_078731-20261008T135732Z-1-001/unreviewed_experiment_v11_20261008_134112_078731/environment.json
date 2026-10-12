@@ -1,0 +1,16 @@
+{
+  "torch": "2.11.0+cu130",
+  "transformers": "5.19.0",
+  "peft": "0.21.2",
+  "gpu": "Tesla T4",
+  "dtype": "torch.bfloat16",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "revision": "15852e8c16360a2fea060d615a32b45270f8a8fc",
+  "source_sha256": "d86800d67a3f25e09444f6e79ac1247080ff6bef8e5d7b9a14d4d02dd2c79e97",
+  "review_mode": "unreviewed_experiment",
+  "human_approval_required": false,
+  "labels_human_validated": false,
+  "seed": 10810,
+  "train_count": 112,
+  "eval_count": 28
+}

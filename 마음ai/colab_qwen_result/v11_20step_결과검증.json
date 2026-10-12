@@ -1,0 +1,205 @@
+{
+  "source_sha256_match": true,
+  "system_sha256_match": true,
+  "token_manifest_matches_saved_tokenizer": true,
+  "train_count": 112,
+  "validation_count": 28,
+  "recomputed_metrics": {
+    "format_valid": 0.0,
+    "end_valid": 1.0,
+    "function_correct": 0.0,
+    "arguments_correct": 0.0,
+    "exact_correct": 0.0
+  },
+  "all_outputs_end_only": true,
+  "global_step": 20,
+  "first_step_loss": 17.801753997802734,
+  "last_step_loss": 5.401769638061523,
+  "mean_train_loss": 8.810254335403442,
+  "epoch": 0.7142857142857143,
+  "runtime_seconds": 675.9294,
+  "reload_record": {
+    "token_ids_equal": true,
+    "greedy_outputs_equal": true,
+    "validation_cases": 28,
+    "quantization": "4bit Colab loading only not board export"
+  },
+  "reload_independently_executed_locally": false,
+  "saved_tensor_finite": true,
+  "new_token_tensor_shape": [
+    49,
+    2048
+  ],
+  "lora_B_nonzero": true,
+  "labels_human_validated": false,
+  "decoded_cases": [
+    {
+      "conversation_id": "V5_Q_113_3",
+      "user_text": "농 장에서 질문하고 있어요 가루인지 노인지 잘 모르겠어요",
+      "expected": "<hs_clarify_request><hs_target_stt><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "P_F017",
+      "user_text": "고추 가루 병 설명해주세요",
+      "expected": "<hs_clarify_request><hs_target_stt><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_Q_101_1",
+      "user_text": "화면을 보고 질문할게요 칠삼이라고 들었는데 어느 값을 말하나요",
+      "expected": "<hs_clarify_request><hs_target_confidence><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_Q_113_2",
+      "user_text": "농장에서 질문하고 있어 가루인지 노인지 잘 모르겠어요",
+      "expected": "<hs_clarify_request><hs_target_stt><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_C_110_2",
+      "user_text": "지금 무 결과 화면을 열었어 이 설명에 발생 요인이 기록되어 있나요",
+      "expected": "<hs_get_care_information><hs_topic_causes><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_C_107_2",
+      "user_text": "이번 무 사진 결과를 보고 있어 목록에 적힌 원인 정보를 듣고 싶어",
+      "expected": "<hs_get_care_information><hs_topic_causes><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_C_101_3",
+      "user_text": "이번 무 사진 결과를 보고 있어요 이 설멍에 발생 요인이 기록되어 있나요",
+      "expected": "<hs_get_care_information><hs_topic_causes><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_C_121_2",
+      "user_text": "이번 배추 사진 결과를 보고 있어 지금 관리 순서를 결정할 근거가 있나요",
+      "expected": "<hs_get_care_information><hs_topic_priority><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_D_107_2",
+      "user_text": "이번 무 사진 결과를 보고 있어 잎 뒷면을 실제로 봤다는 기록이 있나요",
+      "expected": "<hs_get_diagnosis><hs_topic_observation><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_D_103_3",
+      "user_text": "방금 배추 사진을 찍었는데요 먹어도 괜찮다는 근거가 기록돼 있나요",
+      "expected": "<hs_get_diagnosis><hs_topic_food_safety><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_D_127_2",
+      "user_text": "배추 진단 정보를 살펴보고 있어 진단 정보의 심각도 값을 알려줘",
+      "expected": "<hs_get_diagnosis><hs_topic_severity><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_D_110_1",
+      "user_text": "이번 무 사진 결과를 보고 있어요 이 결과에 식용 안전 검사도 포함됐나요",
+      "expected": "<hs_get_diagnosis><hs_topic_food_safety><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "P400_377",
+      "user_text": "한 제품씩 쓸 때의 희석량은 묻지 않을게요 현재 두 약을 함께 섞는 조건이 있나예",
+      "expected": "<hs_get_pesticide_information><hs_topic_mixing><hs_product_all><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "P400_114",
+      "user_text": "오늘 비가 온다고 하는데 현재 표시된 재품의 자료에 날씨별 사용 조건이 명시돼 있나요",
+      "expected": "<hs_get_pesticide_information><hs_topic_usage><hs_product_current><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "P400_184",
+      "user_text": "수확까지 기다리는 날이 아니라 약을 뿌린 밭에 다시 들어가 일할 수 있는 시간을 묻고 있어요",
+      "expected": "<hs_get_pesticide_information><hs_topic_reentry><hs_product_current><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "P400_342",
+      "user_text": "이름이 두 개 보이는데 한쪽이 더 좋다는 말을 믿기 전에 제품 간 효과 비교 근거가 있는지 확인해주세요",
+      "expected": "<hs_get_pesticide_information><hs_topic_comparison><hs_product_all><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_M_129_2",
+      "user_text": "이번 배추 사진 결과를 보고 있어 상위 두 후보의 이름을 순서대로 알려줘",
+      "expected": "<hs_get_prediction_metrics><hs_topic_ranking><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_M_115_3",
+      "user_text": "배추 분류 기록을 설멍받고 싶어요 현재 표시된 후보별 값이 궁금해요",
+      "expected": "<hs_get_prediction_metrics><hs_topic_distribution><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "STT_038",
+      "user_text": "무 거믄무늬병 다음 후보랑 점쑤 차이가 얼마예요",
+      "expected": "<hs_get_prediction_metrics><hs_topic_comparison><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_M_121_1",
+      "user_text": "지금 배추 결과 화면을 열었어요 점수만으로 병해 피해량을 계산해도 되나요",
+      "expected": "<hs_get_prediction_metrics><hs_topic_limits><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_R_122_1",
+      "user_text": "이번 배추 사진 결과를 보고 있어요 현재 기록의 촬영 방법을 쉽게 알려주세요",
+      "expected": "<hs_get_recapture_guidance><hs_topic_where><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_R_104_2",
+      "user_text": "배추 결과에서 한 가지 궁금해 안내 부위가 잘 나오면 병명이 결정되나요",
+      "expected": "<hs_get_recapture_guidance><hs_topic_certainty><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_R_110_2",
+      "user_text": "배추 결과에서 한 가지 궁금해 현재 기록의 촬영 방법을 쉽게 알려줘",
+      "expected": "<hs_get_recapture_guidance><hs_topic_where><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_R_117_3",
+      "user_text": "무 사진을 화긴하고 있어요 이 안내가 최신 계산 결과라는 근거가 있나요",
+      "expected": "<hs_get_recapture_guidance><hs_topic_provenance><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_S_124_1",
+      "user_text": "지금 내용을 확인 중이에요 지금 입력은 식물이 아니라 사람의 손인 걸 알아주세요",
+      "expected": "<hs_handle_scope_limit><hs_reason_input><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "P_S010",
+      "user_text": "지금 자동으로 물 주고 기록도 저장해줘",
+      "expected": "<hs_handle_scope_limit><hs_reason_action><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "V5_S_111_1",
+      "user_text": "말로 질문하고 싶어요 요청한 농약을 주문하는 작업을 작업을 지금 완료해주세요",
+      "expected": "<hs_handle_scope_limit><hs_reason_action><hs-end>",
+      "actual": "<hs-end>"
+    },
+    {
+      "conversation_id": "STT_040",
+      "user_text": "물을 자동으로 주고 기로또 저장해주세여",
+      "expected": "<hs_handle_scope_limit><hs_reason_action><hs-end>",
+      "actual": "<hs-end>"
+    }
+  ]
+}

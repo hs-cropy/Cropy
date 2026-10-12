@@ -1,0 +1,40 @@
+{
+  "format_valid": 0.0,
+  "end_valid": 1.0,
+  "function_correct": 0.0,
+  "arguments_correct": 0.0,
+  "exact_correct": 0.0,
+  "per_function": {
+    "get_diagnosis": {
+      "support": 4,
+      "function_accuracy": 0.0
+    },
+    "get_prediction_metrics": {
+      "support": 4,
+      "function_accuracy": 0.0
+    },
+    "get_recapture_guidance": {
+      "support": 4,
+      "function_accuracy": 0.0
+    },
+    "get_care_information": {
+      "support": 4,
+      "function_accuracy": 0.0
+    },
+    "get_pesticide_information": {
+      "support": 4,
+      "function_accuracy": 0.0
+    },
+    "clarify_request": {
+      "support": 4,
+      "function_accuracy": 0.0
+    },
+    "handle_scope_limit": {
+      "support": 4,
+      "function_accuracy": 0.0
+    }
+  },
+  "macro_function_accuracy": 0.0,
+  "review_mode": "unreviewed_experiment",
+  "labels_human_validated": false
+}
