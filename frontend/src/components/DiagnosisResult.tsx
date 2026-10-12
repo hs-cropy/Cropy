@@ -1,5 +1,13 @@
-import type { DiagnoseResponse, Severity } from "@/types/diagnosis";
+
+"use client";
+
+import type {
+  DiagnoseResponse,
+  Severity,
+} from "@/types/diagnosis";
+
 import { SaveRecovery } from "./SaveRecovery";
+import { DiagnosisDetails } from "./diagnosis/DiagnosisDetails";
 
 interface Props {
   result: DiagnoseResponse;
@@ -7,43 +15,37 @@ interface Props {
   isRecord?: boolean;
 }
 
-const SEVERITY: Record<Severity, { label: string; text: string; bg: string; dot: string }> = {
+// 위험 등급과 AI 신뢰도는 별도의 정보로 표시
+const SEVERITY: Record<
+  Severity,
+  { label: string; text: string; bg: string; dot: string }
+> = {
   high: {
-    label: "심각도 높음",
+    label: "위험",
     text: "text-signal-high-ink",
     bg: "bg-signal-high-tint",
     dot: "bg-signal-high",
   },
   medium: {
-    label: "심각도 보통",
+    label: "주의",
     text: "text-signal-med-ink",
     bg: "bg-signal-med-tint",
     dot: "bg-signal-med",
   },
   low: {
-    label: "심각도 낮음",
+    label: "낮음",
     text: "text-signal-low-ink",
     bg: "bg-signal-low-tint",
     dot: "bg-signal-low",
   },
 };
 
-// 9개 클래스 중 top-1이 이 아래면 후보가 갈렸다고 보고 단정적인 표현을 피한다
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h4 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-khaki">
-      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand" />
-      {children}
-    </h4>
-  );
-}
-
+// 촬영 이미지 공통 표시
 function Shot({
   src,
   alt,
   label,
-  accent,
+  accent = false,
 }: {
   src: string;
   alt: string;
@@ -51,11 +53,20 @@ function Shot({
   accent?: boolean;
 }) {
   return (
-    <figure className="overflow-hidden rounded-2xl bg-khaki-tint">
+    <figure className="overflow-hidden rounded-2xl bg-[#EDF7F1]">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} className="h-32 w-full object-cover" />
+      <img
+        src={src}
+        alt={alt}
+        className="h-36 w-full object-cover"
+      />
+
       <figcaption
-        className={`px-2.5 py-1.5 text-xs font-bold ${accent ? "text-brown-deep" : "text-khaki"}`}
+        className={`px-3 py-2 text-sm font-bold ${
+          accent
+            ? "text-[#2E8B57]"
+            : "text-[#6B6B6B]"
+        }`}
       >
         {label}
       </figcaption>
@@ -63,66 +74,151 @@ function Shot({
   );
 }
 
-export function DiagnosisResult({ result, onSaved, isRecord = false }: Props) {
+export function DiagnosisResult({
+  result,
+  onSaved,
+  isRecord = false,
+}: Props) {
   const isHealthy = result.category === "normal";
-  const severity = SEVERITY[result.severity ?? "medium"];
+
+  const severity = SEVERITY[
+    result.severity ?? "medium"
+  ];
+
   const pct = Math.round(result.confidence * 100);
-  // 판별부위를 다시 찍어 재확정한 진단은 사진 두 장이 함께 근거가 된다
-  const isRefined = Boolean(result.image_url && result.refined_image_url);
-  // 확신이 낮을 때까지 "확정했어요"라고 말하면 안 된다 — 문구와 안내를 바꾼다
-  const isUncertain = result.decision_reasons?.includes("low_confidence") ?? false;
-  const pesticides = isRecord ? result.current_pesticides ?? [] : result.pesticides;
+
+  // 재촬영한 사진까지 있는지 확인
+  const isRefined = Boolean(
+    result.image_url && result.refined_image_url
+  );
+
+  // 백엔드 판단 사유를 기준으로 낮은 신뢰도 판정
+  const isUncertain =
+    result.decision_reasons?.includes("low_confidence") ??
+    false;
 
   return (
-    <div className="space-y-4">
-      <SaveRecovery result={result} onSaved={onSaved} />
-      {result.prediction_mode === "browser" && <p className="rounded-xl bg-khaki-tint p-4 text-sm">브라우저에서 생성해 동기화한 결과예요. 서버에서 사진을 다시 분석한 결과가 아닙니다.</p>}
-      {isRecord && <p role="status" className="rounded-xl bg-khaki-tint p-4 text-sm">
-        {result.content_status === "snapshot" ? "저장 당시의 결과와 관리 안내예요. 현재 상태는 새 사진으로 확인하세요."
-          : "이전 기록에는 당시 안내가 없어 현재 참고 안내를 표시해요."}
-      </p>}
-      {result.prediction_mode === "mock" && (
-        <p role="status" className="rounded-xl bg-signal-med-tint p-4 text-sm text-signal-med-ink">
-          시연용 예시 결과입니다. 업로드한 사진의 실제 진단 결과가 아닙니다.
+    <div className="space-y-5">
+
+      {/* ==================================
+          저장 상태 및 재시도
+         ================================== */}
+      <SaveRecovery
+        result={result}
+        onSaved={onSaved}
+      />
+
+      {/* 브라우저 진단 출처 */}
+      {result.prediction_mode === "browser" && (
+        <p
+          role="status"
+          className="rounded-xl bg-[#EDF7F1] p-4 text-base leading-6 text-[#191919]"
+        >
+          브라우저에서 생성해 동기화한 결과예요.
+          서버에서 사진을 다시 분석한 결과는 아닙니다.
         </p>
       )}
+
+      {/* 과거 저장 기록 안내 */}
+      {isRecord && (
+        <p
+          role="status"
+          className="rounded-xl bg-[#EDF7F1] p-4 text-base leading-6 text-[#191919]"
+        >
+          {result.content_status === "snapshot"
+            ? "저장 당시의 결과와 관리 안내예요. 현재 상태는 새 사진으로 확인하세요."
+            : "이전 기록에는 당시 안내가 없어 현재 참고 안내를 표시해요."}
+        </p>
+      )}
+
+      {/* 시연용 모드 */}
+      {result.prediction_mode === "mock" && (
+        <p
+          role="status"
+          className="rounded-xl bg-signal-med-tint p-4 text-base leading-6 text-signal-med-ink"
+        >
+          시연용 예시 결과입니다.
+          업로드한 사진의 실제 진단 결과가 아닙니다.
+        </p>
+      )}
+
+      {/* 작물 불일치 안내 */}
       {result.crop_mismatch && (
-        <p role="status" className="rounded-xl bg-signal-med-tint p-4 text-sm text-signal-med-ink">
-          선택한 작물은 {result.selected_crop}이지만 사진은 {result.predicted_crop}로 분류됐어요.
+        <p
+          role="status"
+          className="rounded-xl bg-signal-med-tint p-4 text-base leading-6 text-signal-med-ink"
+        >
+          선택한 작물은 {result.selected_crop}이지만
+          사진은 {result.predicted_crop}로 분류됐어요.
           작물 선택과 사진을 확인한 뒤 다시 진단해 주세요.
         </p>
       )}
-      {/* Diagnosis card */}
-      <section className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
+
+      {/* ==================================
+          진단 결과 요약 카드
+         ================================== */}
+      <section className="overflow-hidden rounded-2xl border border-[#ECECEF] bg-white shadow-sm">
+
+        {/* 위험 등급 */}
         <div
-          className={`flex items-center gap-2 px-5 py-2.5 ${isHealthy ? "bg-signal-low-tint" : severity.bg}`}
+          className={`flex flex-wrap items-center gap-2 px-5 py-3 ${
+            isHealthy
+              ? "bg-signal-low-tint"
+              : severity.bg
+          }`}
         >
           {isHealthy ? (
             <>
-              <span aria-hidden className="icon-[lucide--circle-check] h-4 w-4 text-signal-low-ink" />
-              <span className="text-sm font-bold text-signal-low-ink">
-                {isUncertain ? "정상 여부가 확실하지 않아요" : "정상으로 분류됐어요"}
+              <span
+                aria-hidden="true"
+                className="icon-[lucide--circle-check] h-5 w-5 text-signal-low-ink"
+              />
+
+              <span className="text-base font-bold text-signal-low-ink">
+                {isUncertain
+                  ? "정상 여부가 확실하지 않아요"
+                  : "정상으로 분류됐어요"}
               </span>
             </>
           ) : (
             <>
-              <span aria-hidden className={`h-2 w-2 rounded-full ${severity.dot}`} />
-              <span className={`text-sm font-bold ${severity.text}`}>{severity.label}</span>
+              <span
+                aria-hidden="true"
+                className={`h-2.5 w-2.5 rounded-full ${severity.dot}`}
+              />
+
+              <span
+                className={`text-base font-bold ${severity.text}`}
+              >
+                {severity.label}
+              </span>
             </>
           )}
+
+          {/* 재촬영한 결과 표시 */}
           {isRefined && (
-            <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-surface/80 px-2 py-0.5 text-xs font-bold text-brown-deep">
-              <span aria-hidden className="icon-[lucide--scan-search] h-3 w-3" />
+            <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-sm font-bold text-[#2E8B57]">
+              <span
+                aria-hidden="true"
+                className="icon-[lucide--scan-search] h-4 w-4"
+              />
               사진 2장 분석
             </span>
           )}
         </div>
 
         <div className="p-5">
+
+          {/* 촬영 이미지 */}
           {isRefined ? (
-            <div className="mb-4">
-              <div className="grid grid-cols-2 gap-2">
-                <Shot src={result.image_url!} alt="처음 촬영한 작물" label="1차 촬영" />
+            <div className="mb-5">
+              <div className="grid grid-cols-2 gap-3">
+                <Shot
+                  src={result.image_url!}
+                  alt="처음 촬영한 작물"
+                  label="1차 촬영"
+                />
+
                 <Shot
                   src={result.refined_image_url!}
                   alt="판별부위를 다시 촬영한 사진"
@@ -130,77 +226,115 @@ export function DiagnosisResult({ result, onSaved, isRecord = false }: Props) {
                   accent
                 />
               </div>
+
+              {/* 재촬영 분석 안내 */}
               <p
-                className={`mt-2 flex items-start gap-1.5 rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                className={`mt-3 flex items-start gap-2 rounded-xl p-3 text-sm leading-6 ${
                   isUncertain
                     ? "bg-signal-med-tint text-signal-med-ink"
-                    : "bg-brand-tint text-brown-deep"
+                    : "bg-[#EDF7F1] text-[#26784B]"
                 }`}
               >
                 <span
-                  aria-hidden
-                  className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${
-                    isUncertain ? "icon-[lucide--circle-alert]" : "icon-[lucide--layers]"
+                  aria-hidden="true"
+                  className={`mt-1 h-4 w-4 shrink-0 ${
+                    isUncertain
+                      ? "icon-[lucide--circle-alert]"
+                      : "icon-[lucide--layers]"
                   }`}
                 />
+
                 {isUncertain
-                  ? "두 장의 결과가 서로 달라 아직 확실하지 않아요. 병징이 뚜렷한 부위를 다시 촬영해 보세요."
+                  ? "두 장의 사진을 함께 분석했지만 아직 결과가 확실하지 않아요. 병징이 뚜렷한 부위를 다시 확인해 주세요."
                   : "판별부위 사진까지 함께 분석한 결과예요."}
               </p>
             </div>
           ) : (
             result.image_url && (
-              <div className="mb-4 overflow-hidden rounded-2xl bg-khaki-tint">
+              <div className="mb-5 overflow-hidden rounded-2xl bg-[#EDF7F1]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={result.image_url}
                   alt="진단한 작물"
-                  className="h-44 w-full object-cover"
+                  className="h-48 w-full object-cover"
                 />
               </div>
             )
           )}
 
+          {/* 작물 */}
           {result.crop_type && (
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-khaki">
+            <p className="text-sm font-semibold text-[#6B6B6B]">
               {result.crop_type}
             </p>
           )}
-          <h3 className="mt-1 text-2xl font-extrabold leading-tight tracking-tight text-ink">
-            {result.disease_name}
-          </h3>
 
-          {/* confidence gauge */}
-          <div className="mt-4">
-            <div className="mb-1.5 flex items-baseline justify-between">
-              <span className="text-xs font-semibold text-muted">모델 분류 점수</span>
-              <span className="text-2xl font-extrabold tnum text-ink">{pct}%</span>
+          {/* 병해 이름 */}
+          <h2 className="mt-2 text-2xl font-extrabold leading-8 tracking-tight text-[#191919]">
+            {result.disease_name}
+          </h2>
+
+          {/* 모델 신뢰도 */}
+          <div className="mt-5">
+            <div className="mb-2 flex items-baseline justify-between gap-3">
+              <span className="text-base font-semibold text-[#6B6B6B]">
+                AI 진단 신뢰도
+              </span>
+
+              <span className="tnum text-2xl font-extrabold text-[#191919]">
+                {pct}%
+              </span>
             </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-khaki-tint">
+
+            <div
+              role="progressbar"
+              aria-label="AI 진단 신뢰도"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={pct}
+              className="h-3 overflow-hidden rounded-full bg-[#EDF7F1]"
+            >
               <div
-                className="h-full rounded-full bg-brand transition-all"
-                style={{ width: `${pct}%` }}
+                className="h-full rounded-full bg-[#2E8B57]"
+                style={{
+                  width: `${Math.max(0, Math.min(100, pct))}%`,
+                }}
               />
             </div>
+
+            {/* 낮은 신뢰도 안내 */}
             {isUncertain && (
-              <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-signal-med-ink">
-                <span aria-hidden className="icon-[lucide--circle-alert] mt-0.5 h-3.5 w-3.5 shrink-0" />
-                사진만으로는 확실하지 않아요. 병징이 잘 보이는 사진으로 다시 확인하고,
-                방제 전에 가까운 농업기술센터에 문의해 보세요.
+              <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-signal-med-ink">
+                <span
+                  aria-hidden="true"
+                  className="icon-[lucide--circle-alert] mt-1 h-4 w-4 shrink-0"
+                />
+
+                <span>
+                  사진만으로는 확실하지 않아요.
+                  병징이 잘 보이는 사진으로 다시 확인하고,
+                  방제 전에 가까운 농업기술센터에 문의해 보세요.
+                </span>
               </p>
             )}
           </div>
 
+          {/* 다른 진단 후보 */}
           {result.top_predictions.length > 1 && (
-            <div className="mt-4">
-              <p className="mb-2 text-xs font-semibold text-muted">그 밖의 가능성</p>
+            <div className="mt-5 border-t border-[#ECECEF] pt-4">
+              <h3 className="mb-3 text-base font-bold text-[#191919]">
+                그 밖의 가능성
+              </h3>
+
               <div className="flex flex-wrap gap-2">
                 {result.top_predictions.slice(1).map((p) => (
                   <span
                     key={p.name}
-                    className="rounded-lg bg-paper px-2.5 py-1 text-xs text-muted tnum"
+                    className="rounded-lg bg-[#F7F7F8] px-3 py-2 text-sm text-[#6B6B6B]"
                   >
-                    {p.name} · {Math.round(p.confidence * 100)}%
+                    {p.name}
+                    {" · "}
+                    {Math.round(p.confidence * 100)}%
                   </span>
                 ))}
               </div>
@@ -209,110 +343,45 @@ export function DiagnosisResult({ result, onSaved, isRecord = false }: Props) {
         </div>
       </section>
 
-      {!!result.management_actions?.length && <section className="rounded-card border border-line bg-surface p-5">
-        <SectionLabel>관리 안내</SectionLabel>
-        <ol className="list-inside list-decimal space-y-2 text-sm">{result.management_actions.map((action, i) => <li key={i}>{action}</li>)}</ol>
-      </section>}
-      {(result.description || result.causes.length > 0) && (
-        <section className="rounded-card border border-line bg-surface p-5 shadow-card">
-          {result.description && (
-            <>
-              <SectionLabel>증상 설명</SectionLabel>
-              <p className="text-sm leading-relaxed text-ink/80">{result.description}</p>
-            </>
-          )}
-          {result.description && result.causes.length > 0 && <hr className="my-4 border-line" />}
-          {result.causes.length > 0 && (
-            <>
-              <SectionLabel>발병 원인</SectionLabel>
-              <ul className="space-y-2">
-                {result.causes.map((c) => (
-                  <li key={c} className="flex gap-2.5 text-sm text-ink/80">
-                    <span
-                      aria-hidden
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-khaki"
-                    />
-                    {c}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+      {/* ==================================
+          현재 또는 저장 당시 관리 안내
+         ================================== */}
+      {!!result.management_actions?.length && (
+        <section className="rounded-2xl border border-[#ECECEF] bg-white p-5">
+          <h2 className="text-xl font-extrabold text-[#191919]">
+            {isRecord
+              ? "진단 당시 관리 안내"
+              : "지금 해야 할 일"}
+          </h2>
+
+          <ol className="mt-4 space-y-4">
+            {result.management_actions.map(
+              (action, index) => (
+                <li
+                  key={index}
+                  className="flex items-start gap-3"
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EDF7F1] text-sm font-bold text-[#2E8B57]">
+                    {index + 1}
+                  </span>
+
+                  <p className="pt-0.5 text-base leading-7 text-[#191919]">
+                    {action}
+                  </p>
+                </li>
+              )
+            )}
+          </ol>
         </section>
       )}
 
-      {isRecord && !!result.pesticides.length && <p className="rounded-xl bg-khaki-tint p-4 text-sm">
-        당시 조회한 제품: {result.pesticides.map(p => p.name).join(", ")}. 아래는 현재 카탈로그 조회 정보예요.
-      </p>}
-      {pesticides.length > 0 && (
-        <section className="rounded-card border border-line bg-surface p-5 shadow-card">
-          <SectionLabel>{isRecord ? "현재 농약 조회 정보 · 최신 등록·라벨 확인 필요" : "농약 정보"}</SectionLabel>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-            {pesticides.map((p) => (
-              <div key={p.usage_id ?? p.name} className="rounded-2xl border border-line bg-paper p-4">
-                <p className="text-base font-bold text-ink">{p.name}</p>
-                {p.verification_status !== "verified" && (
-                  <p className="mt-2 text-xs text-signal-med-ink">
-                    이 작물·병해의 사용 조건이 검증되지 않아 희석비와 사용법을 표시하지 않습니다.
-                  </p>
-                )}
-                {p.active_ingredient && (
-                  <p className="mt-0.5 text-xs text-khaki">유효성분 · {p.active_ingredient}</p>
-                )}
-                {/* 희석비와 안전사용기준은 잘못 읽으면 약해나 잔류농약으로 이어진다.
-                    라벨보다 값을 크고 진하게 둬서 잘못 읽을 여지를 줄인다. */}
-                <dl className="mt-3 space-y-2 text-sm">
-                  {p.dilution && (
-                    <div className="flex gap-3">
-                      <dt className="w-20 shrink-0 pt-0.5 text-khaki">희석비</dt>
-                      <dd className="text-base font-bold text-ink tnum">{p.dilution}</dd>
-                    </div>
-                  )}
-                  {p.usage && (
-                    <div className="flex gap-3">
-                      <dt className="w-20 shrink-0 text-khaki">사용법</dt>
-                      <dd className="text-ink/80">{p.usage}</dd>
-                    </div>
-                  )}
-                  {(p.safety.phi_days != null || p.safety.reentry_hours != null) && (
-                    <div className="flex gap-3">
-                      <dt className="w-20 shrink-0 pt-0.5 text-khaki">안전기준</dt>
-                      <dd className="text-base font-bold text-ink tnum">
-                        수확 {p.safety.phi_days ?? "-"}일 전
-                        {p.safety.reentry_hours != null &&
-                          ` · 재입장 ${p.safety.reentry_hours}시간`}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-                {p.safety_notes && (
-                  <p className="mt-3 flex items-start gap-2 rounded-lg bg-signal-med-tint px-3 py-2.5 text-sm font-semibold text-signal-med-ink">
-                    <span
-                      aria-hidden
-                      className="icon-[lucide--triangle-alert] mt-0.5 h-4 w-4 shrink-0"
-                    />
-                    {p.safety_notes}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {result.prevention.length > 0 && (
-        <section className="rounded-card border border-brand/30 bg-brand-tint p-5">
-          <SectionLabel>{isHealthy ? "건강 관리 팁" : "예방 · 재발 방지"}</SectionLabel>
-          <ul className="space-y-2.5">
-            {result.prevention.map((p) => (
-              <li key={p} className="flex gap-2 text-sm text-brown-deep">
-                <span aria-hidden className="icon-[lucide--check] mt-0.5 h-4 w-4 shrink-0" />
-                {p}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* ==================================
+          06번 피그마 상세 정보 아코디언
+         ================================== */}
+      <DiagnosisDetails
+        result={result}
+        isRecord={isRecord}
+      />
     </div>
   );
 }
