@@ -11,3 +11,4 @@
 | [OFFLINE_WEB](OFFLINE_WEB.pdf) | PDF |
 | [Orange Pi 5 Plus (16GB) 배포 가이드](ORANGEPI5_DEPLOY.md) | MD |
 | [Orange Pi 5 Plus 역할별 이전 백로그](ORANGEPI5_MIGRATION_BACKLOG.md) | MD |
+| [CI 운영 가이드](CI_운영_가이드_20261011.md) | MD |

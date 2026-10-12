@@ -17,6 +17,9 @@
 | [Cropy Figma 기반 백엔드 보완 작업 보고서](Cropy_%EB%B0%B1%EC%97%94%EB%93%9C_%EB%B3%B4%EC%99%84_%EC%9E%91%EC%97%85%EB%B3%B4%EA%B3%A0%EC%84%9C_20261008.md) | MD |
 | [Cropy_백엔드_보완_작업보고서_20261008](Cropy_%EB%B0%B1%EC%97%94%EB%93%9C_%EB%B3%B4%EC%99%84_%EC%9E%91%EC%97%85%EB%B3%B4%EA%B3%A0%EC%84%9C_20261008.pdf) | PDF |
 
+| [CI 구현 계획](CI_구현_계획_20261011.md) | MD |
+| [보안 업데이트 검증](보안_업데이트_검증_20261011.md) | MD |
+
 ## 원본 옆의 실험·검토 근거
 
 - [무 질병 파일별 비교 결과 · 2026-10-05](https://github.com/hs-cropy/Cropy/blob/51cb842b07fedb67622f3691b2d4f7f650008915/output/colab/radish_pair_review_20261005/README.md)
