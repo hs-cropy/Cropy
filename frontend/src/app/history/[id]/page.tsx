@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fetchDiagnosisDetail } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { DiagnosisResult } from "@/components/DiagnosisResult";
+import { RecapturePanel } from "@/components/RecapturePanel";
 
 export default function HistoryDetailPage() {
   const params = useParams();
@@ -13,13 +14,18 @@ export default function HistoryDetailPage() {
   const [result, setResult] = useState<DiagnoseResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
+  const updateResult = (saved: DiagnoseResponse) => setResult(previous => previous?.id === saved.id ? saved : previous);
 
   useEffect(() => {
-    fetchDiagnosisDetail(id)
-      .then(setResult)
-      .catch((err) => setError(err instanceof Error ? err.message : "기록을 불러오지 못했습니다."))
-      .finally(() => setLoading(false));
-  }, [id]);
+    const controller = new AbortController();
+    setResult(null); setLoading(true); setError(null);
+    fetchDiagnosisDetail(id, controller.signal)
+      .then(data => { if (!controller.signal.aborted) setResult(data); })
+      .catch((err) => { if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "기록을 불러오지 못했습니다."); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [id, refresh]);
 
   return (
     <div className="mx-auto w-full max-w-2xl">
@@ -33,11 +39,19 @@ export default function HistoryDetailPage() {
 
       {loading && <p className="py-10 text-center text-sm text-khaki">불러오는 중…</p>}
       {(error || (!loading && !result)) && (
-        <p className="rounded-card bg-signal-high-tint px-4 py-3 text-sm font-medium text-signal-high-ink">
+        <div role="alert" className="rounded-card bg-signal-high-tint px-4 py-3 text-sm font-medium text-signal-high-ink">
           {error || "해당 기록을 찾을 수 없습니다."}
-        </p>
+          <button className="mt-2 block rounded-lg bg-brand px-4 py-2 text-ink" onClick={() => setRefresh(x => x + 1)}>다시 불러오기</button>
+        </div>
       )}
-      {result && <DiagnosisResult result={result} />}
+      {result && (
+        <div className="space-y-4">
+          {result.recapture && result.save_status === "saved" && result.prediction_mode !== "browser" && (
+            <RecapturePanel key={result.id} diagnosisId={result.id} guidance={result.recapture} onRefined={updateResult} />
+          )}
+          <DiagnosisResult result={result} onSaved={updateResult} isRecord />
+        </div>
+      )}
     </div>
   );
 }

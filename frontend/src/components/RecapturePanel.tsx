@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { validateImage } from "@/features/camera";
 import { refineDiagnosis } from "@/lib/api";
 import type { DiagnoseResponse, RecaptureGuidance } from "@/types/diagnosis";
@@ -22,31 +22,39 @@ function objectParticle(word: string): string {
 
 export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
+  const [retryFile, setRetryFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast, showToast } = useToast();
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  useEffect(() => () => requestRef.current?.abort(), [diagnosisId]);
+  const analyze = async (file: File) => {
+    if (loading) return;
     const check = validateImage(file);
-    if (!check.ok) {
-      showToast(check.message);
-      // 같은 사진을 다시 골라도 onChange가 불리도록 비운다
-      e.target.value = "";
-      return;
-    }
+    if (!check.ok) { showToast(check.message); return; }
+    setRetryFile(file);
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
     setError(null);
     try {
-      const refined = await refineDiagnosis(diagnosisId, file);
+      const refined = await refineDiagnosis(diagnosisId, file, {signal: controller.signal});
+      if (controller.signal.aborted) return;
+      setRetryFile(null);
       onRefined(refined);
     } catch (err) {
+      if (controller.signal.aborted) return;
       setError(err instanceof Error ? err.message : "재확정에 실패했어요. 다시 시도해 주세요.");
     } finally {
-      setLoading(false);
-      if (fileRef.current) fileRef.current.value = "";
+      if (!controller.signal.aborted) setLoading(false);
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) void analyze(file);
   };
 
   return (
@@ -79,9 +87,10 @@ export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
       )}
 
       {error && (
-        <p className="mt-3 rounded-xl bg-signal-high-tint px-3.5 py-2.5 text-sm font-medium text-signal-high-ink">
+        <div role="alert" className="mt-3 rounded-xl bg-signal-high-tint px-3.5 py-2.5 text-sm font-medium text-signal-high-ink">
           {error}
-        </p>
+          {retryFile && <button type="button" disabled={loading} onClick={() => analyze(retryFile)} className="mt-2 block rounded-lg bg-brand px-4 py-2 text-ink">같은 사진으로 다시 시도</button>}
+        </div>
       )}
 
       <label
