@@ -41,6 +41,7 @@ jobs:
             backend:
               - 'backend/**'
               - 'ml/**'
+              - '마음ai/**'
               - '.github/**'
               - 'docker-compose*.yml'
               - 'docker-compose*.yaml'
@@ -103,13 +104,18 @@ jobs:
       - run: python -m pip install --upgrade pip==26.2.1
       - run: python -m pip install -r requirements.txt
       - run: python -m pip check
+      - name: Run Qwen review and parser tests
+        working-directory: .
+        run: python -m pytest 마음ai/tests -q -rs --junitxml=마음ai/test-results/pytest-qwen.xml
       - run: python -m pytest -q -rs --junitxml=test-results/pytest.xml
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: backend-test-results
-          path: backend/test-results/
+          path: |
+            마음ai/test-results/
+            backend/test-results/
           retention-days: 14
           if-no-files-found: ignore
 
