@@ -57,8 +57,9 @@ module.exports = {
           "high-ink": "#A94829",
           "high-tint": "#F6E2D8",
         },
-        // Figma 디자인 토큰 (cropy-mobile / cropy-desktop 의 --cropy-color-* 변수).
-        // 키는 Figma 변수 이름을 따른다: --cropy-color-green-600 → cropy-green-600.
+        // Figma 디자인 토큰. 기준은 "V2 최신 · Cropy Design System"(node 281:6722)이다.
+        // 키는 Figma 변수 이름을 따른다: --cropy-color-green-600 → cropy-green-600,
+        // color/action/hover → cropy-action-hover.
         // (-default 만 DEFAULT 키로 접는다: surface-default → cropy-surface)
         // 새 공통 컴포넌트는 이 토큰만 쓰고, 위의 옛 팔레트(brand·ink·khaki 등)는
         // 화면을 모두 옮긴 뒤 지운다. 그때까지는 두 체계가 함께 남는다.
@@ -66,7 +67,7 @@ module.exports = {
         cropy: {
           green: {
             50: "#edf7f1", // 선택된 탭·칩 배경
-            600: "#2e8b57", // 주요 행동 — 흰 글자와 4.25:1 이라 작은 글자색으로는 쓰지 않는다
+            600: "#2e8b57",
           },
           text: {
             primary: "#191919",
@@ -81,11 +82,16 @@ module.exports = {
           border: {
             DEFAULT: "#ececef", // border-default
           },
+          // 행동(버튼·스위치) 색. primary 는 green-600, subtle 은 green-50 과 값이 같다
           action: {
+            primary: "#2e8b57", // 흰 글자와 4.25:1 이라 작은 글자색으로는 쓰지 않는다
+            hover: "#26784b",
+            pressed: "#1f633d",
+            subtle: "#edf7f1",
             disabled: "#ececef",
           },
-          // 등급 색. Figma 변수는 낮음(low)·위험(attention) 두 단계뿐이라 중간 등급
-          // "주의"는 signal-med 를 계속 쓴다. signal-*-ink 같은 글자 전용 값이 없어
+          // 등급 색. 디자인 시스템의 등급 배지는 "위험"과 "주의"에 같은 attention 색을
+          // 쓰고 라벨로 구분한다. signal-*-ink 같은 글자 전용 값이 없어
           // 자기 -surface 위의 작은 글자로는 대비가 모자란다 (low 3.9:1, attention 4.4:1)
           status: {
             low: "#2e8b57",
@@ -104,19 +110,64 @@ module.exports = {
         sm: ["1rem", { lineHeight: "1.625rem" }], // 14 → 16px
         base: ["1.125rem", { lineHeight: "1.75rem" }], // 16 → 18px
         lg: ["1.25rem", { lineHeight: "1.875rem" }], // 18 → 20px
-        // Figma 텍스트 스타일 (Cropy/Feedback/Mobile/*). 굵기까지 한 클래스에 담는다.
-        "cropy-feedback-title": ["1.25rem", { lineHeight: "1.5", fontWeight: "700" }], // 20px
-        "cropy-compact-title": ["1.125rem", { lineHeight: "1.45", fontWeight: "700" }], // 18px
-        "cropy-compact-body": ["0.9375rem", { lineHeight: "1.45", fontWeight: "400" }], // 15px
-        "cropy-compact-button": ["0.9375rem", { lineHeight: "1.45", fontWeight: "700" }], // 15px
+        // 디자인 시스템의 글자 스타일 (Cropy/V2/Type/*). 굵기·자간까지 한 클래스에 담는다.
+        // 자간은 디자인 시스템 페이지의 설명(-1.5%·-1%)을 따랐다. Figma 스타일 정의에는
+        // 0 으로 들어 있어 디자이너 확인이 필요하다. 자간이 없는 스타일도 0em 을 적어
+        // 바깥 제목의 자간을 물려받지 않게 한다.
+        // 위의 xs~lg 는 옛 화면용이고, 새 컴포넌트는 아래 스타일을 쓴다.
+        "cropy-title-desktop": [
+          "2rem", // 32px
+          { lineHeight: "2.75rem", fontWeight: "700", letterSpacing: "-0.015em" },
+        ],
+        "cropy-title-mobile": [
+          "1.375rem", // 22px
+          { lineHeight: "1.875rem", fontWeight: "700", letterSpacing: "-0.015em" },
+        ],
+        "cropy-heading-lg": [
+          "1.5rem", // 24px
+          { lineHeight: "2rem", fontWeight: "700", letterSpacing: "-0.015em" },
+        ],
+        "cropy-heading-md": [
+          "1.25rem", // 20px
+          { lineHeight: "1.75rem", fontWeight: "700", letterSpacing: "-0.01em" },
+        ],
+        "cropy-feedback-title": [
+          "1.125rem", // 18px
+          { lineHeight: "1.625rem", fontWeight: "700", letterSpacing: "-0.01em" },
+        ],
+        "cropy-body-lg": [
+          "1rem", // 16px
+          { lineHeight: "1.5rem", fontWeight: "400", letterSpacing: "0em" },
+        ],
+        "cropy-feedback-body": [
+          "0.9375rem", // 15px
+          { lineHeight: "1.375rem", fontWeight: "400", letterSpacing: "0em" },
+        ],
+        "cropy-helper": [
+          "0.875rem", // 14px
+          { lineHeight: "1.375rem", fontWeight: "400", letterSpacing: "0em" },
+        ],
+        "cropy-caption": [
+          "0.8125rem", // 13px
+          { lineHeight: "1.25rem", fontWeight: "400", letterSpacing: "0em" },
+        ],
+        "cropy-label-xs": [
+          "0.75rem", // 12px
+          { lineHeight: "1.125rem", fontWeight: "700", letterSpacing: "0em" },
+        ],
+        // 피드백 카드 안 44px 버튼의 글자 (Cropy/Feedback/Mobile/Compact/button)
+        "cropy-compact-button": [
+          "0.9375rem", // 15px
+          { lineHeight: "1.45", fontWeight: "700", letterSpacing: "0em" },
+        ],
       },
       fontFamily: {
         sans: ["Pretendard", "system-ui", "sans-serif"],
       },
       borderRadius: {
         card: "1.125rem",
-        // --cropy-radius-*. 8·12·16px·pill 은 기본 rounded-lg·xl·2xl·full 과 값이 같아
-        // 그대로 쓰고(그래서 그 키들은 재정의하지 않는다), 기본 스케일에 없는 값만 둔다.
+        // --cropy-radius-*. 8·12·16·24px·pill 은 기본 rounded-lg·xl·2xl·3xl·full 과 값이
+        // 같아 그대로 쓰고(그래서 그 키들은 재정의하지 않는다), 기본 스케일에 없는 값만 둔다.
         "cropy-14": "0.875rem",
         "cropy-20": "1.25rem",
       },

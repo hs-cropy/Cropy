@@ -16,7 +16,7 @@ function colorOf(className: string) {
 }
 
 function hasInteraction(className: string) {
-  return className.split(" ").some((c) => c.startsWith("hover:") || c.startsWith("active:"));
+  return className.split(" ").some((c) => c.includes("hover:") || c.startsWith("active:"));
 }
 
 describe("Button", () => {
@@ -182,11 +182,17 @@ describe("Button", () => {
 });
 
 describe("buttonClassName", () => {
-  // Figma 사양표. 값이 바뀌면 디자인과 어긋난 것이므로 클래스 이름까지 고정한다
+  // 디자인 시스템(Cropy/V2/Button) 사양표. 값이 바뀌면 디자인과 어긋난 것이므로
+  // 클래스 이름까지 고정한다
   it.each([
-    [{}, "min-h-cropy-button-mobile", "rounded-cropy-14", "bg-cropy-green-600"],
+    [{}, "min-h-cropy-button-mobile", "rounded-cropy-14", "bg-cropy-action-primary"],
     [{ variant: "secondary" }, "min-h-cropy-button-mobile", "rounded-xl", "bg-cropy-surface"],
-    [{ size: "compact" }, "min-h-cropy-control-md", "rounded-[0.625rem]", "bg-cropy-green-600"],
+    [
+      { size: "compact" },
+      "min-h-cropy-control-md",
+      "rounded-[0.625rem]",
+      "bg-cropy-action-primary",
+    ],
     [
       { size: "compact", variant: "secondary" },
       "min-h-cropy-control-md",
@@ -199,12 +205,48 @@ describe("buttonClassName", () => {
       "rounded-cropy-14",
       "bg-cropy-action-disabled",
     ],
+    // 비활성이어도 보조 버튼의 모서리는 12px 그대로다
+    [
+      { variant: "secondary", disabled: true },
+      "min-h-cropy-button-mobile",
+      "rounded-xl",
+      "bg-cropy-action-disabled",
+    ],
   ] as const)("%o → 높이 %s, 모서리 %s, 배경 %s", (options, height, radius, background) => {
     const classes = buttonClassName(options).split(" ");
 
     expect(classes).toContain(height);
     expect(classes).toContain(radius);
     expect(classes).toContain(background);
+  });
+
+  it("md 부터 웹 크기(48px·15px·모서리 12px)가 된다", () => {
+    const primary = buttonClassName().split(" ");
+    expect(primary).toEqual(
+      expect.arrayContaining(["md:min-h-cropy-button-web", "md:text-[0.9375rem]", "md:rounded-xl"]),
+    );
+
+    // 피드백 카드 안 버튼은 화면 폭과 상관없이 44px이다
+    const compact = buttonClassName({ size: "compact" });
+    expect(compact).not.toContain("md:");
+  });
+
+  it("호버·누름 색은 종류마다 디자인 시스템 값을 쓴다", () => {
+    const primary = buttonClassName().split(" ");
+    expect(primary).toEqual(
+      expect.arrayContaining([
+        "[@media(hover:hover)]:[&:hover:not(:active)]:bg-cropy-action-hover",
+        "active:bg-cropy-action-pressed",
+      ]),
+    );
+
+    const secondary = buttonClassName({ variant: "secondary" }).split(" ");
+    expect(secondary).toEqual(
+      expect.arrayContaining([
+        "[@media(hover:hover)]:[&:hover:not(:active)]:bg-cropy-surface-canvas",
+        "active:bg-cropy-surface-canvas",
+      ]),
+    );
   });
 
   it("글자 크기·굵기·행간을 모두 남긴다", () => {
@@ -224,9 +266,9 @@ describe("buttonClassName", () => {
     expect(classes).toEqual(expect.arrayContaining(["break-keep", "[overflow-wrap:break-word]"]));
   });
 
-  it("비활성은 종류와 상관없이 같은 모양이다", () => {
-    expect(buttonClassName({ variant: "secondary", disabled: true })).toBe(
-      buttonClassName({ variant: "primary", disabled: true }),
+  it("비활성은 종류와 상관없이 같은 색이다", () => {
+    expect(colorOf(buttonClassName({ variant: "secondary", disabled: true }))).toBe(
+      colorOf(buttonClassName({ variant: "primary", disabled: true })),
     );
   });
 

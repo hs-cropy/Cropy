@@ -2,7 +2,7 @@ import type { ComponentPropsWithRef, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 type ButtonVariant = "primary" | "secondary";
-// default: 화면 하단 행동 버튼(52px) / compact: 다이얼로그·안내 카드 안 버튼(44px)
+// default: 화면의 행동 버튼(모바일 52px, md 부터 48px) / compact: 다이얼로그·안내 카드 안 버튼(44px)
 type ButtonSize = "default" | "compact";
 
 interface ButtonStyleOptions {
@@ -20,35 +20,39 @@ interface ButtonStyleOptions {
 // 속성으로 직접 쓴다. 버튼이 flex 라서 라벨을 min-w-0 인 span 으로 감싸야 실제로
 // 끊긴다 (Button 은 감싸 준다. buttonClassName 만 쓰는 Link·label 은 직접 감싼다)
 const BASE =
-  "inline-flex items-center justify-center gap-2 break-keep border text-center transition [overflow-wrap:break-word] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cropy-green-600";
+  "inline-flex items-center justify-center gap-2 break-keep border text-center transition [overflow-wrap:break-word] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cropy-action-primary";
 
+// default 는 디자인 시스템의 Device=Mobile(52px·16px)이고 md 부터 Device=Web(48px·15px)이 된다.
 // 세로 여백은 큰글씨 모드에서 라벨이 두 줄이 될 때 글자가 가장자리에 붙지 않게 한다
 const SIZE: Record<ButtonSize, string> = {
-  default: "min-h-cropy-button-mobile px-4 py-2 text-sm font-bold leading-6",
+  default:
+    "min-h-cropy-button-mobile px-4 py-2 text-sm font-bold leading-6 md:min-h-cropy-button-web md:text-[0.9375rem]",
   compact: "min-h-cropy-control-md px-3 py-2 text-cropy-compact-button",
 };
 
-// Figma에서 보조 버튼만 12px이고 주요·비활성은 14px이다
-const RADIUS: Record<ButtonSize, Record<ButtonVariant | "disabled", string>> = {
-  default: { primary: "rounded-cropy-14", secondary: "rounded-xl", disabled: "rounded-cropy-14" },
-  compact: {
-    primary: "rounded-[0.625rem]",
-    secondary: "rounded-[0.625rem]",
-    disabled: "rounded-[0.625rem]",
-  },
+// 모바일 주요 버튼만 14px이고 보조 버튼과 웹 버튼은 12px이다. 비활성이어도 모서리는 그대로다
+const RADIUS: Record<ButtonSize, Record<ButtonVariant, string>> = {
+  default: { primary: "rounded-cropy-14 md:rounded-xl", secondary: "rounded-xl" },
+  compact: { primary: "rounded-[0.625rem]", secondary: "rounded-[0.625rem]" },
 };
 
 // 주요·비활성 버튼에도 투명 테두리를 둬 보조 버튼과 안쪽 크기를 맞춘다
 const COLOR: Record<ButtonVariant | "disabled", string> = {
-  primary: "border-transparent bg-cropy-green-600 text-cropy-text-on-action",
+  primary: "border-transparent bg-cropy-action-primary text-cropy-text-on-action",
   secondary: "border-cropy-border bg-cropy-surface text-cropy-text-primary",
   disabled: "border-transparent bg-cropy-action-disabled text-cropy-text-disabled",
 };
 
-// Figma에 누름·호버 상태가 없어 색을 새로 만들지 않고 밝기와 크기로만 표시한다.
+// 디자인 시스템의 State=Hover·Pressed. 터치 화면에서는 누른 뒤에도 hover 가 남으므로
+// 마우스가 있을 때만 hover 색을 쓴다. 누르는 동안에는 hover 가 누름 색을 덮지 않게 뺀다.
 // 커서도 여기서 정하므로 label·Link 쪽에서 cursor-pointer를 따로 붙이지 않는다
 // (붙이면 비활성일 때도 눌릴 것처럼 보인다)
-const INTERACTIVE = "cursor-pointer hover:brightness-95 active:scale-[0.99]";
+const INTERACTIVE: Record<ButtonVariant, string> = {
+  primary:
+    "cursor-pointer [@media(hover:hover)]:[&:hover:not(:active)]:bg-cropy-action-hover active:bg-cropy-action-pressed",
+  secondary:
+    "cursor-pointer [@media(hover:hover)]:[&:hover:not(:active)]:bg-cropy-surface-canvas active:bg-cropy-surface-canvas",
+};
 
 /**
  * 버튼 모양만 필요한 곳(Link, 파일 선택 label)에 쓴다. 그 밖에는 Button을 쓴다.
@@ -62,13 +66,12 @@ export function buttonClassName({
   disabled = false,
   loading = false,
 }: ButtonStyleOptions = {}) {
-  const look = disabled ? "disabled" : variant;
   return cn(
     BASE,
     SIZE[size],
-    RADIUS[size][look],
-    COLOR[look],
-    disabled ? "cursor-not-allowed" : loading ? "cursor-wait" : INTERACTIVE,
+    RADIUS[size][variant],
+    COLOR[disabled ? "disabled" : variant],
+    disabled ? "cursor-not-allowed" : loading ? "cursor-wait" : INTERACTIVE[variant],
     fullWidth && "w-full",
   );
 }
@@ -96,7 +99,8 @@ export function Button({
   type = "button",
   disabled = false,
   // 배치용(flex-1, 폭, 여백)으로만 쓴다. cn으로 병합되므로 색·크기·초점 표시
-  // 클래스를 넘기면 Figma 사양이 실제로 덮이고, block 을 넘기면 가운데 정렬이 풀린다
+  // 클래스를 넘기면 Figma 사양이 실제로 덮이고, block 을 넘기면 가운데 정렬이 풀린다.
+  // hover 색은 className 으로 바꿀 수 없다
   className,
   children,
   ...rest

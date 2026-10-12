@@ -20,10 +20,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 화면 하단의 주요 행동. Figma `FixedMobile/Button/primary` */
+/** 화면의 주요 행동. Figma `Cropy/V2/Button` Emphasis=Primary. 창 폭 768px 부터 웹 크기(48px)가 된다 */
 export const Primary: Story = {};
 
-/** 주요 행동 옆의 보조 행동. Figma `FixedMobile/Button/secondary` */
+/** 주요 행동 옆의 보조 행동. Figma `Cropy/V2/Button` Emphasis=Secondary */
 export const Secondary: Story = {
   args: { variant: "secondary", children: "갤러리에서 선택" },
 };

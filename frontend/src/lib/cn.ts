@@ -14,9 +14,16 @@ const twMerge = extendTailwindMerge({
       "font-size": [
         {
           text: [
+            "cropy-title-desktop",
+            "cropy-title-mobile",
+            "cropy-heading-lg",
+            "cropy-heading-md",
             "cropy-feedback-title",
-            "cropy-compact-title",
-            "cropy-compact-body",
+            "cropy-body-lg",
+            "cropy-feedback-body",
+            "cropy-helper",
+            "cropy-caption",
+            "cropy-label-xs",
             "cropy-compact-button",
           ],
         },
