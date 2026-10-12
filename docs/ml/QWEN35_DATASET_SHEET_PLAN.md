@@ -8,7 +8,7 @@
 
 v6 전체 AI 검수는 문제 미발견 2,239 / 보류 397 / 불합격 164이며 사람 승인 0개다. 형식·분할 검사와 내용 승인, 모델 학습·실행 검증을 구분한다. 실제 tokenizer ID·종료·exporter·handler·TTS·RKLLM 보드 실행은 미검증이다.
 
-[구축 결과](https://github.com/hs-cropy/Cropy/blob/1c52d5c084fb8aca41b7970acc38ca78e6aa1d7f/%EB%A7%88%EC%9D%8Cai/Qwen35_%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%8B%9C%ED%8A%B8/%EC%A0%84%EC%B2%B4%EA%B8%B0%EB%8A%A5400_%EA%B5%AC%EC%B6%95%EA%B2%B0%EA%B3%BC_v5.md)와 [전체 검수 결과](https://github.com/hs-cropy/Cropy/blob/1c52d5c084fb8aca41b7970acc38ca78e6aa1d7f/%EB%A7%88%EC%9D%8Cai/Qwen35_%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%8B%9C%ED%8A%B8/%EC%A0%84%EC%B2%B42800_%EB%A7%A4%EB%89%B4%EC%96%BC%EA%B8%B0%EB%B0%98_AI%EA%B2%80%EC%88%98_v6.md)가 현재 수량·상태의 기준이다. 불합격 수정 → 반환 경계·한국어 TTS·STT 검수 → 사람 승인 → 소량 실행 → 본학습 순서로 진행한다.
+[구축 결과](../../마음ai/Qwen35_데이터시트/전체기능400_구축결과_v5.md)와 [전체 검수 결과](../../마음ai/Qwen35_데이터시트/전체2800_매뉴얼기반_AI검수_v6.md)가 현재 수량·상태의 기준이다. 불합격 수정 → 반환 경계·한국어 TTS·STT 검수 → 사람 승인 → 소량 실행 → 본학습 순서로 진행한다.
 
 아래 1~9절은 최초 설명 생성 설계의 근거·구성·목표량을 보존한 것이다. 120개 점검과 1,000/200/200 목표는 초기 계획이며 현재 기능 토큰 초안 수량이나 승인 완료 수량이 아니다. 모델 ID·revision·변환 지원은 여전히 확정 전이다.
 
@@ -208,12 +208,12 @@ Qwen3.5-2B 공식 모델카드는 기본 non-thinking 동작을 명시한다. �
 
 ## 9. 근거 자료
 
-- [L1] [마음AI 특강1: 데이터 기획](<../../마음ai/[마음AI] 한성대학교 특강1(데이터 기획) 자료.pdf>), 12쪽. 위 p2~11 근거.
-- [L2] 마음AI 특강2: LLM 학습·양자화·포팅 (로컬 보관: `마음ai/한성대학교_특강2_통합_LLM학습_양자화_포팅.pdf`), 39쪽. 위 p7~15, p22~25, p32 근거.
-- [L3] [마음AI 특강3: 양자화·Agent](<../../마음ai/[마음AI] 한성대학교 특강3(양자화,Agent) 자료.pdf>), 32쪽. QCS6490 환경과 함수 실행 구조.
-- [X1] HomeIoT 데이터 시트 (별도 보관 자료: `../../마음ai/[AI Expo] 2025 AI Expo HomeIoT 데이터 시트.xlsx`), 기능 정의·발화·출력·평가 작성 사례.
-- [X2] Jeju bus 데이터 시트 (별도 보관 자료: `../../마음ai/[SUDA_DATASET] Jeju bus.xlsx`), 기능/인자·다양한 발화·버전 분리 사례.
-- [P1] [기존 LLM 적용 계획](LLM_FINETUNING_PLAN.md), [현재 진단 응답 스키마](../../backend/app/schemas/diagnosis.py), [농약 조건 직렬화 규칙](https://github.com/hs-cropy/Cropy/blob/ecfab66a416f4cfdbd619a04da3aaee275744c24/backend/app/services/pesticide_service.py).
+- [L1] 마음AI 특강1: 데이터 기획 (로컬 자료, 이 PR 미포함: `../마음ai/[마음AI] 한성대학교 특강1(데이터 기획) 자료.pdf`), 12쪽. 위 p2~11 근거.
+- [L2] 마음AI 특강2: LLM 학습·양자화·포팅 (로컬 자료, 이 PR 미포함: `../마음ai/한성대학교_특강2_통합_LLM학습_양자화_포팅.pdf`), 39쪽. 위 p7~15, p22~25, p32 근거.
+- [L3] 마음AI 특강3: 양자화·Agent (로컬 자료, 이 PR 미포함: `../마음ai/[마음AI] 한성대학교 특강3(양자화,Agent) 자료.pdf`), 32쪽. QCS6490 환경과 함수 실행 구조.
+- [X1] HomeIoT 데이터 시트 (로컬 자료, 이 PR 미포함: `../마음ai/[AI Expo] 2025 AI Expo HomeIoT 데이터 시트.xlsx`), 기능 정의·발화·출력·평가 작성 사례.
+- [X2] Jeju bus 데이터 시트 (로컬 자료, 이 PR 미포함: `../마음ai/[SUDA_DATASET] Jeju bus.xlsx`), 기능/인자·다양한 발화·버전 분리 사례.
+- [P1] [기존 LLM 적용 계획](LLM_FINETUNING_PLAN.md), [현재 진단 응답 스키마](../../backend/app/schemas/diagnosis.py), [농약 조건 직렬화 규칙](../../backend/app/services/pesticide_service.py).
 - [Q1] [Qwen3.5-2B 공식 모델카드](https://huggingface.co/Qwen/Qwen3.5-2B), 2026-10-06 확인. 모델 유형·non-thinking 기본값·입력 처리 근거.
 - [Q2] [Qwen3.5-2B 공식 chat template](https://huggingface.co/Qwen/Qwen3.5-2B/blob/main/chat_template.jinja), 2026-10-06 확인. 실제 구축 때 모델과 템플릿 revision 고정 필요.
 
@@ -221,4 +221,8 @@ Qwen3.5-2B 공식 모델카드는 기본 non-thinking 동작을 명시한다. �
 
 ## 2026년 10월 8일 데이터 정답 수정
 
-[v7 수정 이력](https://github.com/hs-cropy/Cropy/blob/1c52d5c084fb8aca41b7970acc38ca78e6aa1d7f/%EB%A7%88%EC%9D%8Cai/Qwen35_%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%8B%9C%ED%8A%B8/%EC%A0%95%EB%8B%B5%EB%B3%80%EA%B2%BD%EB%B3%B8_v7_%EC%88%98%EC%A0%95%EB%82%B4%EC%97%AD.md)에서 v6 불합격 164개의 정답·참고 TTS를 수정했다. 전체 2,800개(train 2,240/validation 560)는 유지하되 기능별 수량은 재분류로 달라졌다. 변경 164개는 draft이고 사람 승인 0개, 기존 보류 397개는 남아 있다. 위 v5/v6 수치는 당시 구축·AI 검수 기록이며 v7의 독립 재검수·실제 학습 완료를 의미하지 않는다.
+[v7 수정 이력](../../마음ai/Qwen35_데이터시트/정답변경본_v7_수정내역.md)에서 v6 불합격 164개의 정답·참고 TTS를 수정했다. 전체 2,800개(train 2,240/validation 560)는 유지하되 기능별 수량은 재분류로 달라졌다. 변경 164개는 draft이고 사람 승인 0개, 기존 보류 397개는 남아 있다. 위 v5/v6 수치는 당시 구축·AI 검수 기록이며 v7의 독립 재검수·실제 학습 완료를 의미하지 않는다.
+
+## 자료 보존 범위
+
+이 PR은 데이터시트와 검수 기록을 보존한다. 생성·수정 스크립트 및 Colab 실행기는 포함하지 않으며, 기록에 적힌 과거 점검 결과를 이번 변경에서 재실행한 것으로 해석하지 않는다. 학습 원본·사람 검수표·검수 대기본은 역할과 해시 연결이 달라 각각 유지한다. 바이트가 동일한 농약 AI 검수 v4 사본만 제거하고 `Cropy_Qwen35_농약400_AI검수_v4.xlsx`를 정본으로 사용한다. 과거 자료의 외부 이관이나 보존 기간 변경은 별도 결정하며, 저장소에 없는 참고·실행 자료는 로컬 자료로 표시한다.

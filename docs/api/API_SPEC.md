@@ -1,12 +1,12 @@
-# cropy - API Specification
+# Cropy - API Specification
 
-**갱신:** 2026-10-08. 현재 로컬 라우트·Pydantic 응답 스키마 기준.
+**갱신:** 2026-10-12. develop 라우트·Pydantic 응답 스키마 기준.
 
 Base URL: `http://localhost:8000/api/v1`
 정적 파일: `http://localhost:8000/uploads/{filename}` (진단 이미지)
 
 업로드 이미지는 서버가 확인한 실제 형식으로 `.jpg` 또는 `.png` 확장자를 정한다.
-WEBP 등 JPEG/PNG 외 형식은 지원하지 않으며 업로드 시 400을 반환한다.
+WEBP 등 JPEG/PNG 외 형식은 지원하지 않으며 업로드 시 `400 INVALID_IMAGE`를 반환한다. 손상된 파일도 같은 코드로 거부하며 JPEG/PNG 형식으로 다시 업로드하도록 안내한다.
 클라이언트 파일명은 저장 형식에 사용하지 않는다. `/uploads`는 `.jpg`·`.jpeg`·`.png`만
 고정된 이미지 MIME과 `X-Content-Type-Options: nosniff`로 제공하며, 과거에 저장된
 `.html` 등 다른 확장자 경로는 404를 반환한다. 기존 파일은 자동 삭제·변환하지 않는다.
@@ -298,26 +298,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 ```
 
 `/health`는 프로세스 생존 확인이다. 모델 실패여도 200이므로 실제 진단 준비 여부는 `/ready`로 확인한다.
-
-### GET /ready
-
-실제 체크포인트와 DB 클래스 매핑이 검증되면 200, 그 외에는 503이다.
-`status`, `model_loaded`, `prediction_mode`(`model`/`mock`/`unavailable`), `version`을 반환한다.
-개발용 Mock은 시연을 허용하더라도 실제 모델 준비 완료로 표시하지 않는다.
-모델 파일·실행 설정 변경은 프로세스 재시작 후 반영된다.
-
-## 통신 형식과 인증·보안
-
-REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_type`은 query로 전송한다. 오류는 `detail`을 가진 JSON이며 일반 HTTP 오류는 문자열, FastAPI 입력 검증 422는 오류 항목 배열일 수 있다.
-
-현재 앱에는 로그인·API 인증·사용자별 이력 분리가 없다. CORS는 허용 출처 설정이며 인증이 아니다. 이미지 정적 URL도 사용자별 보호가 없다. HTTPS는 배포 프록시에서 설정하며 Compose 기본 구성 자체는 TLS를 제공하지 않는다. 카메라·마이크를 통합할 때 대상 브라우저의 보안 컨텍스트를 확인한다.
-
-## 내부·예정 인터페이스
-
-현재 CNN↔백엔드는 동일 Python 프로세스의 함수 호출이다. 입력은 검증된 이미지 경로, 출력은 전체/Top-3 `(model_class_id, score)`이며 체크포인트 규격은 [MODEL_SPEC](../ml/MODEL_SPEC.md)를 따른다. 프론트는 [api.ts](../../frontend/src/lib/api.ts)와 [응답 타입](../../frontend/src/types/diagnosis.ts)을 사용한다. nullable 응답과 TypeScript 선택 필드의 정합은 후속 코드 보완 대상이다.
-
-Qwen 기능 토큰/handler, STT/TTS, 단말 촬영 API는 데이터 설계 단계다. 데이터 시트의 get_diagnosis 등 기능명을 현재 REST 엔드포인트로 간주하지 않는다. 실제 호출·인자·오류·시간 제한은 [LLM 계획](../ml/LLM_FINETUNING_PLAN.md)에 따라 통합 시 확정한다.
-# Figma 연동 보완 API — 2026-10-08
+## Figma 연동 보완 API — 2026-10-08
 
 기존 `detail`과 진단·이력 엔드포인트를 유지하면서 아래 계약을 추가했다.
 
@@ -337,21 +318,25 @@ Qwen 기능 토큰/handler, STT/TTS, 단말 촬영 API는 데이터 설계 단�
 
 진단·재촬영의 선택적 `Idempotency-Key`는 최대 128자다. 같은 작업·키·사진·작물은 동일 응답을 재사용한다. 다른 본문이면 `409 IDEMPOTENCY_CONFLICT`다. 성공 응답은 진단과 같은 DB 트랜잭션에 저장한다. 기존 기록보다 오래된 복구 결과는 `409 DIAGNOSIS_CHANGED`, 만료 초안은 `410 RESULT_EXPIRED`다. 기본 복구 TTL은 24시간이며 `RECOVERY_TTL_HOURS`로 1~168시간 설정한다.
 
-오류 응답은 `detail`, `code`, `retryable`, `request_id`를 제공하며 응답 헤더에도 `X-Request-ID`가 있다. 대표 코드: `INVALID_IMAGE`, `EMPTY_IMAGE`, `UNSUPPORTED_IMAGE_FORMAT`, `IMAGE_TOO_LARGE`, `IMAGE_RESOLUTION_TOO_LARGE`, `REQUEST_TOO_LARGE`, `MODEL_UNAVAILABLE`, `MODEL_VERSION_CONFLICT`, `DIAGNOSIS_NOT_FOUND`, `DATABASE_UNAVAILABLE`, `SAVE_FAILED`, `RECOVERY_STORAGE_UNAVAILABLE`.
+오류 응답은 `detail`, `code`, `retryable`, `request_id`를 제공하며 응답 헤더에도 `X-Request-ID`가 있다. 대표 코드: `UNSUPPORTED_IMAGE_FORMAT`(이미지 외 Content-Type), `INVALID_IMAGE`, `EMPTY_IMAGE`, `IMAGE_TOO_LARGE`, `IMAGE_RESOLUTION_TOO_LARGE`, `REQUEST_TOO_LARGE`, `MODEL_UNAVAILABLE`, `MODEL_VERSION_CONFLICT`, `DIAGNOSIS_NOT_FOUND`, `DATABASE_UNAVAILABLE`, `SAVE_FAILED`, `RECOVERY_STORAGE_UNAVAILABLE`.
 
 오프라인 metadata는 UUID `client_record_id`, 선택적 `selected_crop`, timezone이 있는 `created_at`, `model_version`, `preprocessing_version`, `bundle_version`, 9개 고유 클래스의 합계 1인 `predictions`를 요구한다. `refined_predictions`가 있으면 재촬영 사진도 있어야 한다. 동일 UUID의 동일 본문 재전송은 중복 저장하지 않는다. 기기 확률은 클라이언트 생성값이며 서버 검증을 병해 정확도 검증으로 해석하지 않는다. 상세 준비·배포·검증 범위는 [오프라인 실행 가이드](../operations/OFFLINE_WEB.md)를 참조한다.
 
+### GET /ready
 
-## 기능별 변경: 모델 준비 상태 및 진단 무결성
+실제 체크포인트와 DB 클래스 매핑이 검증되면 200, 그 외에는 503이다.
+`status`, `model_loaded`, `prediction_mode`(`model`/`mock`/`unavailable`), `version`을 반환한다.
+개발용 Mock은 시연을 허용하더라도 실제 모델 준비 완료로 표시하지 않는다.
+모델 파일·실행 설정 변경은 프로세스 재시작 후 반영된다.
 
-- `/api/v1/ready`: 실제 모델 준비 상태를 확인하며 미준비 시 503을 반환한다. 운영 환경에서는 mock 진단을 허용하지 않는다.
-- 진단 응답에 selected_crop, predicted_crop, crop_mismatch, prediction_mode, model_version, preprocessing_version, pair_model_version을 기록한다.
-- `/history`의 crop_type 필터와 prediction_mode를 제공한다. 재촬영은 모델·전처리 버전의 호환성을 검사하고 실패 시 기존 이력을 보존한다.
-- 날짜 응답은 UTC 시간대 정보를 포함한다. 모델 출력은 9개 클래스 전체 분포와 유한값을 검증한다.
+## 통신 형식과 인증·보안
 
+REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_type`은 query로 전송한다. 오류는 `detail`을 가진 JSON이며 일반 HTTP 오류는 문자열, FastAPI 입력 검증 422는 오류 항목 배열일 수 있다.
 
-## 기능별 변경: 업로드 및 요청 제한
+현재 앱에는 로그인·API 인증·사용자별 이력 분리가 없다. CORS는 허용 출처 설정이며 인증이 아니다. 이미지 정적 URL도 사용자별 보호가 없다. HTTPS는 배포 프록시에서 설정하며 Compose 기본 구성 자체는 TLS를 제공하지 않는다. 카메라·마이크를 통합할 때 대상 브라우저의 보안 컨텍스트를 확인한다.
 
-- 허용 실제 이미지 형식은 JPEG/PNG이며 파일 확장자는 디코딩한 형식에 따라 정한다. WEBP 등 다른 형식은 지원하지 않으며 400을 반환한다. 픽셀 수 상한을 검사한다.
-- 이미지 크기뿐 아니라 multipart 요청 전체 크기를 제한하고 진단 동시 요청 수를 제한한다. 초과 응답은 413/503이다.
-- 비정상 파일·정적 경로 접근을 차단하며 미참조 파일 정리는 `backend/scripts/cleanup_uploads.py`의 dry-run부터 확인한다.
+## 내부·예정 인터페이스
+
+현재 CNN↔백엔드는 동일 Python 프로세스의 함수 호출이다. 입력은 검증된 이미지 경로, 출력은 전체/Top-3 `(model_class_id, score)`이며 체크포인트 규격은 [MODEL_SPEC](../ml/MODEL_SPEC.md)를 따른다. 프론트는 [api.ts](../../frontend/src/lib/api.ts)와 [응답 타입](../../frontend/src/types/diagnosis.ts)을 사용한다. nullable 응답과 TypeScript 선택 필드의 정합은 후속 코드 보완 대상이다.
+
+Qwen 기능 토큰/handler와 STT 통합은 계획 단계다. 브라우저 카메라 촬영과 Web Speech API TTS 안내는 구현되어 있으며 보드 음성 통합과 구분한다. 데이터 시트의 get_diagnosis 등 기능명을 현재 REST 엔드포인트로 간주하지 않는다. 실제 호출·인자·오류·시간 제한은 [LLM 계획](../ml/LLM_FINETUNING_PLAN.md)에 따라 통합 시 확정한다.

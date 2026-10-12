@@ -235,8 +235,8 @@ CNN ONNX/RKNN 변환·INT8 정확도·보드 지연/메모리/전력은 아직 �
 
 Qwen3.5 기능 선택·한국어 안내는 추가 개발 대상이다. 7기능 싱글턴 초안 2,800개(train 2,240/validation 560)의 v6 AI 검수는 문제 미발견 2,239/보류 397/불합격 164이며 사람 승인 0개다. 자연어 설명만 생성하는 초기 계획과 기능 토큰 데이터 버전을 구분한다. tokenizer 실제 ID·종료·handler·TTS·학습·RKLLM 보드 추론은 미검증이다.
 
-근거: [LLM 계획](LLM_FINETUNING_PLAN.md), [데이터 구축](https://github.com/hs-cropy/Cropy/blob/1c52d5c084fb8aca41b7970acc38ca78e6aa1d7f/%EB%A7%88%EC%9D%8Cai/Qwen35_%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%8B%9C%ED%8A%B8/%EC%A0%84%EC%B2%B4%EA%B8%B0%EB%8A%A5400_%EA%B5%AC%EC%B6%95%EA%B2%B0%EA%B3%BC_v5.md), [전체 AI 검수](https://github.com/hs-cropy/Cropy/blob/1c52d5c084fb8aca41b7970acc38ca78e6aa1d7f/%EB%A7%88%EC%9D%8Cai/Qwen35_%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%8B%9C%ED%8A%B8/%EC%A0%84%EC%B2%B42800_%EB%A7%A4%EB%89%B4%EC%96%BC%EA%B8%B0%EB%B0%98_AI%EA%B2%80%EC%88%98_v6.md).
+근거: [LLM 계획](LLM_FINETUNING_PLAN.md), [데이터 구축](../../마음ai/Qwen35_데이터시트/전체기능400_구축결과_v5.md), [전체 AI 검수](../../마음ai/Qwen35_데이터시트/전체2800_매뉴얼기반_AI검수_v6.md).
 
 ## 2026년 10월 8일 데이터 정답 수정
 
-[v7 수정 이력](https://github.com/hs-cropy/Cropy/blob/1c52d5c084fb8aca41b7970acc38ca78e6aa1d7f/%EB%A7%88%EC%9D%8Cai/Qwen35_%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%8B%9C%ED%8A%B8/%EC%A0%95%EB%8B%B5%EB%B3%80%EA%B2%BD%EB%B3%B8_v7_%EC%88%98%EC%A0%95%EB%82%B4%EC%97%AD.md)에서 v6 불합격 164개의 정답·참고 TTS를 수정했다. 전체 2,800개(train 2,240/validation 560)는 유지하되 기능별 수량은 재분류로 달라졌다. 변경 164개는 draft이고 사람 승인 0개, 기존 보류 397개는 남아 있다. 위 v5/v6 수치는 당시 구축·AI 검수 기록이며 v7의 독립 재검수·실제 학습 완료를 의미하지 않는다.
+[v7 수정 이력](../../마음ai/Qwen35_데이터시트/정답변경본_v7_수정내역.md)에서 v6 불합격 164개의 정답·참고 TTS를 수정했다. 전체 2,800개(train 2,240/validation 560)는 유지하되 기능별 수량은 재분류로 달라졌다. 변경 164개는 draft이고 사람 승인 0개, 기존 보류 397개는 남아 있다. 위 v5/v6 수치는 당시 구축·AI 검수 기록이며 v7의 독립 재검수·실제 학습 완료를 의미하지 않는다.

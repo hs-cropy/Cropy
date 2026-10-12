@@ -21,7 +21,7 @@
 
 기능 토큰은 데이터 시트의 설계 계약이며 현재 REST API가 아니다. 등록 토큰 여부·호출 인자·허용 기능·실행 오류·근거 없는 출력의 폴백은 실제 코드 통합 때 확정한다. 함수 선택 성공과 근거를 읽는 TTS 성공을 각각 평가한다.
 
-근거: [v5 구축 결과](https://github.com/hs-cropy/Cropy/blob/1c52d5c084fb8aca41b7970acc38ca78e6aa1d7f/%EB%A7%88%EC%9D%8Cai/Qwen35_%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%8B%9C%ED%8A%B8/%EC%A0%84%EC%B2%B4%EA%B8%B0%EB%8A%A5400_%EA%B5%AC%EC%B6%95%EA%B2%B0%EA%B3%BC_v5.md), [v6 전체 AI 검수](https://github.com/hs-cropy/Cropy/blob/1c52d5c084fb8aca41b7970acc38ca78e6aa1d7f/%EB%A7%88%EC%9D%8Cai/Qwen35_%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%8B%9C%ED%8A%B8/%EC%A0%84%EC%B2%B42800_%EB%A7%A4%EB%89%B4%EC%96%BC%EA%B8%B0%EB%B0%98_AI%EA%B2%80%EC%88%98_v6.md), [검수 매뉴얼](https://github.com/hs-cropy/Cropy/blob/1c52d5c084fb8aca41b7970acc38ca78e6aa1d7f/%EB%A7%88%EC%9D%8Cai/Qwen35_%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%8B%9C%ED%8A%B8_%EA%B2%80%EC%88%98_%EB%A7%A4%EB%89%B4%EC%96%BC.md).
+근거: [v5 구축 결과](../../마음ai/Qwen35_데이터시트/전체기능400_구축결과_v5.md), [v6 전체 AI 검수](../../마음ai/Qwen35_데이터시트/전체2800_매뉴얼기반_AI검수_v6.md), [검수 매뉴얼](../../마음ai/Qwen35_데이터시트_검수_매뉴얼.md).
 
 아래 1~10절의 자연어 답변·train 1,000/validation 200/test 200·LoRA 값은 **초기 설명 생성 실험안**으로 보존한다. 현재 기능 토큰 초안의 수량·승인 상태로 해석하지 않는다. 변환·보드 검증과 근거 유지 원칙은 두 경로 모두 적용한다.
 
@@ -92,7 +92,7 @@ CNN 결과를 LLM 입력으로 전달하는 것만으로 파인튜닝이 필수�
 
 강의의 학습 환경은 x86_64 + A100 80GB 예시이며 프로젝트의 필수 최소 사양은 아니다. 서버에서 학습과 RKLLM 변환을 수행하고 Orange Pi에서는 추론한다. Transformers·PEFT·학습 도구 환경과 RKLLM 변환 환경은 분리하여 버전을 기록한다.
 
-[`../operations/ORANGEPI5_DEPLOY.md`](../operations/ORANGEPI5_DEPLOY.md)의 대상은 5 Plus/RK3588이다. CNN CPU 기준선을 먼저 검증하고 LLM·음성을 포함한 메모리·드라이버 조건을 별도로 검증한다.
+[`ORANGEPI5_DEPLOY.md`](../operations/ORANGEPI5_DEPLOY.md)의 대상은 5 Plus/RK3588이다. CNN CPU 기준선을 먼저 검증하고 LLM·음성을 포함한 메모리·드라이버 조건을 별도로 검증한다.
 
 ## 5. 학습 데이터 설계
 
@@ -282,4 +282,4 @@ docs/llm_runs/<run_id>.md   # 데이터/모델 버전, 설정, 품질 및 보드
 
 ## 2026년 10월 8일 데이터 정답 수정
 
-[v7 수정 이력](https://github.com/hs-cropy/Cropy/blob/1c52d5c084fb8aca41b7970acc38ca78e6aa1d7f/%EB%A7%88%EC%9D%8Cai/Qwen35_%EB%8D%B0%EC%9D%B4%ED%84%B0%EC%8B%9C%ED%8A%B8/%EC%A0%95%EB%8B%B5%EB%B3%80%EA%B2%BD%EB%B3%B8_v7_%EC%88%98%EC%A0%95%EB%82%B4%EC%97%AD.md)에서 v6 불합격 164개의 정답·참고 TTS를 수정했다. 전체 2,800개(train 2,240/validation 560)는 유지하되 기능별 수량은 재분류로 달라졌다. 변경 164개는 draft이고 사람 승인 0개, 기존 보류 397개는 남아 있다. 위 v5/v6 수치는 당시 구축·AI 검수 기록이며 v7의 독립 재검수·실제 학습 완료를 의미하지 않는다.
+[v7 수정 이력](../../마음ai/Qwen35_데이터시트/정답변경본_v7_수정내역.md)에서 v6 불합격 164개의 정답·참고 TTS를 수정했다. 전체 2,800개(train 2,240/validation 560)는 유지하되 기능별 수량은 재분류로 달라졌다. 변경 164개는 draft이고 사람 승인 0개, 기존 보류 397개는 남아 있다. 위 v5/v6 수치는 당시 구축·AI 검수 기록이며 v7의 독립 재검수·실제 학습 완료를 의미하지 않는다.

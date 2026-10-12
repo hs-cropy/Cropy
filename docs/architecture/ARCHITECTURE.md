@@ -1,10 +1,10 @@
 # cropy - Architecture
 
-**갱신:** 2026-10-08. 현재 로컬 웹앱 구현과 목표 단말 구성을 구분한다.
+**갱신:** 2026-10-12. 현재 로컬 웹앱 구현과 목표 단말 구성을 구분한다.
 
 ## 단말 목표와 현재 구현
 
-목표 단말은 **Orange Pi 5 Plus / RK3588 / ARM64 / RAM 16GB**다. 서버는 PyTorch, 브라우저 자체 실행은 ONNX Runtime Web/WASM을 사용한다. RKNN/RKLLM은 연결되지 않았다. 보드 OS·드라이버·ARM64 의존성·자원 실측은 [배포 가이드](../operations/ORANGEPI5_DEPLOY.md)에 따라 확인한다.
+목표 단말은 **Orange Pi 5 Plus / RK3588 / ARM64 / RAM 16GB**다. 서버 추론은 PyTorch이며 브라우저 오프라인 경로는 ONNX Runtime WASM을 사용한다. RKNN/RKLLM 보드 런타임은 연결되지 않았다. 보드 OS·드라이버·ARM64 의존성·자원 실측은 [배포 가이드](../operations/ORANGEPI5_DEPLOY.md)에 따라 확인한다.
 
 ```text
 현재: 스마트폰/PC 브라우저 → Next.js 프록시 → FastAPI 프로세스
@@ -16,7 +16,7 @@
       검증된 handler/문장 → 화면·TTS → 스피커
 ```
 
-스마트폰은 서버 진단을 이용하거나 별도 `/offline/index.html`에서 모델 준비 후 브라우저 자체 진단·IndexedDB 저장을 수행한다. 실제 Chrome에서 연결 차단과 재접속·기록 동기화를 검증했으며 스마트폰 메모리·처리 시간은 아직 실측하지 않았다. [오프라인 가이드](../operations/OFFLINE_WEB.md)를 참조한다. Qwen 기능 토큰·음성 명령·단말 에이전트는 계획이다. SUDA는 SDK와 보드 지원을 확인한 뒤 선택 비교할 대안이다. NPU 경합은 실기기에서 검증한다.
+스마트폰은 서버 진단 또는 별도 `/offline/index.html`을 사용한다. 기기 진단은 보안 컨텍스트에서 ONNX 모델과 런타임을 준비한 뒤 WASM 추론·IndexedDB 기록 저장을 수행하며, 연결 후 사용자가 서버 저장을 요청한다. [오프라인 가이드](../operations/OFFLINE_WEB.md)에 기존 Chrome 연결 차단·재접속 검증 기록과 준비 절차가 있다. 실제 기기 성능은 추가 검증 대상이다. 브라우저 TTS 안내는 구현되었으며 Qwen 기능 토큰·STT·보드 단말 에이전트는 계획이다. SUDA는 SDK와 보드 지원을 확인한 뒤 선택 비교할 대안이다. 인터넷 없는 전체 흐름과 NPU 경합은 실기기에서 검증한다.
 
 ## 시스템 구성
 
@@ -40,7 +40,7 @@ Mock 결과를 반환한다. 운영은 실제 모델과 클래스 매핑이 유�
 실행하고 프로세스별 세마포어로 동시 진단 수를 제한한다.
 
 개발 환경에서 프론트엔드는 `next.config.js`의 rewrite로 `/api/*`와 `/uploads/*`를
-`localhost:8000`으로 프록시한다. 브라우저는 동일 출처로만 통신한다.
+`127.0.0.1:8000`으로 프록시한다. 브라우저는 동일 출처로만 통신한다.
 
 ## 디렉터리 구조
 
@@ -95,7 +95,7 @@ cropy/
 | 계층 | 기술 |
 |------|------|
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS 3, Iconify(Lucide) |
-| Backend | FastAPI 0.115, SQLAlchemy 2.0, Pydantic v2 |
+| Backend | FastAPI 0.143.0, SQLAlchemy 2.0, Pydantic v2 |
 | ML | PyTorch, torchvision — ResNet50 fine-tune (9클래스) + ResNet18 혼동쌍 분류기 |
 | Database | SQLite (현재 개발·단일 호스트 운영), PostgreSQL은 후속 선택 사항 |
 | Storage | 로컬 파일 시스템 — `backend/uploads/`, `StaticFiles`로 서빙 |

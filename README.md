@@ -2,22 +2,23 @@
 
 **AI 기반 농작물 병해충 진단 및 스마트 방제 지원 플랫폼**
 
-문서 기준일 2026-10-08 · 앱 선언 버전 1.0.0 · Author: 김헌영
+문서 기준일 2026-10-12 · 앱 선언 버전 1.0.0 · Author: 김헌영
 
 ## 기능
 
-- 📷 사진 업로드 → CNN 기반 병해충 진단
+- 📷 라이브 카메라 촬영·사진 업로드 → CNN 기반 병해충 진단
 - 📊 신뢰도 및 Top-N 예측 제공
 - 🔍 혼동되는 두 병해가 접전이면 판별부위(예: 잎 뒷면) 재촬영을 유도하고 결과를 재확정
 - 📋 병 설명, 발병 원인, 예방 방법
 - 💊 농약 정보와 검증 상태 조회 (미검증 사용 조건은 숨김)
-- 📁 진단 이력 저장 및 조회
+- 📁 진단 이력 저장·실패 시 다시 저장, 작물·등급 필터와 페이지 조회
+- 🔊 브라우저 한국어 음성 안내와 별도 기기 오프라인 진단 (모델 준비 필요)
 
 ## 프로젝트 구조
 
 ```
 cropy/
-├── docs/          # 카테고리별 문서와 월요일 기준 주차별 보고서
+├── docs/          # PRD, Architecture, API, DB, Model 스펙
 ├── backend/       # FastAPI REST API
 ├── frontend/      # Next.js 웹 앱
 ├── ml/            # PyTorch 학습·추론
@@ -58,7 +59,7 @@ pip install -r requirements.txt
 python train.py --data-dir ../data/dataset --epochs 20 --arch resnet50
 ```
 
-학습된 모델은 `ml/checkpoints/best_model.pth`에 저장됩니다.  
+학습된 모델은 `ml/checkpoints/best_model.pth`에 저장됩니다.
 개발 모드에서 `ALLOW_MOCK_PREDICTIONS=true`이면 모델이 없을 때 예시 진단을 반환합니다. 운영 모드는 실제 모델 없이는 진단을 503으로 차단합니다. [운영·복구 안내](docs/operations/BACKEND_OPERATIONS.md)를 참고하세요.
 
 - `--arch resnet18|resnet50`: 백본 선택 (체크포인트에 기록되어 백엔드/평가 스크립트가 자동 인식)
@@ -79,11 +80,13 @@ python train.py --data-dir ../data/dataset --epochs 20 --arch resnet50
 | GET | `/api/v1/health` | 프로세스 생존 확인 |
 | GET | `/api/v1/ready` | 실제 모델·DB 클래스 준비 확인 |
 
-자세한 스펙은 [docs/api/API_SPEC.md](docs/api/API_SPEC.md) 참고.
+자세한 스펙은 [docs/API_SPEC.md](docs/api/API_SPEC.md) 참고.
 
 ## 문서
 
 [전체 문서 목차](docs/README.md) · [주차별 보고서](docs/reports/README.md) · [문서 분류 규칙](docs/ORGANIZATION_GUIDE.md)
+
+- [7주차 문서 최신화 현황·제출 준비](docs/project/DOCUMENT_STATUS.md) - 구현 기준, 관련 이슈, 남은 제출 작업
 
 - [PRD](docs/product/PRD.md) - 제품 요구사항
 - [Architecture](docs/architecture/ARCHITECTURE.md) - 시스템 구조
