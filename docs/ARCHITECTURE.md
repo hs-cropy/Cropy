@@ -95,7 +95,7 @@ cropy/
 | 계층 | 기술 |
 |------|------|
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS 3, Iconify(Lucide) |
-| Backend | FastAPI 0.115, SQLAlchemy 2.0, Pydantic v2 |
+| Backend | FastAPI 0.143, SQLAlchemy 2.0, Pydantic v2 |
 | ML | PyTorch, torchvision — ResNet50 fine-tune (9클래스) + ResNet18 혼동쌍 분류기 |
 | Database | SQLite (현재 개발·단일 호스트 운영), PostgreSQL은 후속 선택 사항 |
 | Storage | 로컬 파일 시스템 — `backend/uploads/`, `StaticFiles`로 서빙 |

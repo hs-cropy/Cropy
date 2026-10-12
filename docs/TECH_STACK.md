@@ -63,6 +63,7 @@ frontend/src/
 | SQLAlchemy | 2.0.36 | ORM. 진단 이력, 병해, 농약 테이블 관리 |
 | SQLite | - | 파일 기반 DB. 단일 호스트 규모에 충분하고 별도 DB 서버 없이 단일 호스트 운영 |
 | Pydantic (+settings) | 2.10 / 2.7 | 요청·응답 스키마 검증, 환경변수 기반 설정(`core/config.py`) |
+| Starlette | 1.7.0 | FastAPI ASGI 기반, 보안 수정 버전 고정 |
 | Pillow | 12.3.0 | 업로드 이미지 검증·전처리 |
 | python-multipart | 0.0.32 | 이미지 파일 업로드(multipart/form-data) 파싱 |
 | aiofiles | 24.1.0 | 업로드 파일 비동기 저장 |
@@ -182,6 +183,6 @@ cd frontend && npm run dev   # http://localhost:3000
 
 ## 7. 목표 단말과 추가 기술
 
-목표는 Orange Pi 5 Plus/RK3588/ARM64/RAM 16GB다. 현재 의존성의 ARM64 휠·OS·NPU 드라이버 호환은 별도 검증한다. CNN ONNX/RKNN, Qwen3.5/RKLLM, STT/TTS, 단말 에이전트는 현재 저장소의 실행 런타임으로 구현되어 있지 않다. SUDA는 지원·SDK를 확인할 대안이다.
+목표는 Orange Pi 5 Plus/RK3588/ARM64/RAM 16GB다. 현재 의존성의 ARM64 휠·OS·NPU 드라이버 호환은 별도 검증한다. 브라우저 ONNX Runtime WASM 추론과 TTS 안내는 구현되어 있다. RKNN, Qwen3.5/RKLLM, STT와 보드 단말 에이전트는 추가 작업이다. SUDA는 지원·SDK를 확인할 대안이다.
 
 학습 보고서의 Colab PyTorch 2.11.0+cu130/T4와 백엔드 선언 2.13.0+cpu는 서로 다른 환경이다. 버전 선언을 설치 성공이나 보드 실행 완료로 표시하지 않는다.
