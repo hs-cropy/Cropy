@@ -11,10 +11,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FAF7F0",
+  themeColor: "#F7F7F8",
   width: "device-width",
   initialScale: 1,
-  // safe-area env() values only resolve with viewport-fit=cover (notch/home-bar devices)
   viewportFit: "cover",
 };
 

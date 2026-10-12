@@ -1,7 +1,14 @@
+
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CameraCapture, isCameraSupported, validateImage } from "@/features/camera";
+
+import {
+  CameraCapture,
+  isCameraSupported,
+  validateImage,
+} from "@/features/camera";
+
 import {
   PROMPT_DIAGNOSING,
   PROMPT_HOME,
@@ -9,12 +16,17 @@ import {
   buildResultPrompt,
   useVoiceGuide,
 } from "@/features/voice";
+
+import { useHomeTab } from "@/hooks/useHomeTab";
 import { diagnoseImage } from "@/lib/api";
+
 import type { DiagnoseResponse } from "@/types/diagnosis";
+
 import { DiagnosisResult } from "./DiagnosisResult";
 import { RecapturePanel } from "./RecapturePanel";
 import { Toast, useToast } from "./Toast";
 
+// 작물 선택 목록
 const CROP_TYPES = [
   { value: "", label: "자동 감지", icon: "✨" },
   { value: "고추", label: "고추", icon: "🌶️" },
@@ -22,101 +34,172 @@ const CROP_TYPES = [
   { value: "배추", label: "배추", icon: "🥬" },
 ];
 
+// 사진 촬영 안내
 const PHOTO_TIPS = [
   "잎이나 과실 전체가 화면에 들어오게 찍어주세요",
   "그늘보다 밝은 자연광 아래가 정확해요",
-  "병반(얼룩·반점)이 또렷하게 초점을 맞춰주세요",
+  "병반(얼룩·반점)에 초점을 맞춰 또렷하게 찍어주세요",
 ];
 
 export function DiagnoseForm() {
+  // 현재 탭: capture / diagnosis
+  const activeTab = useHomeTab();
+
+  // DOM 참조
   const captureCardRef = useRef<HTMLButtonElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const fallbackInputRef = useRef<HTMLInputElement>(null);
-  const resultRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<AbortController | null>(null);
+
+  // 촬영 및 진단 상태
   const [cropType, setCropType] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
-  // 카메라로 찍은 사진은 <input>에 넣을 수 없어 선택된 파일을 state로 들고 있는다
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DiagnoseResponse | null>(null);
-  const { toast, showToast, clearToast } = useToast();
-  const { speak, prime: primeSpeech, cancel: cancelSpeech } = useVoiceGuide();
 
-  // M01-F6 화면 진입 안내. 페이지와 상호작용하기 전이면 브라우저가 막을 수 있다
+  // 토스트 및 음성 안내
+  const { toast, showToast, clearToast } = useToast();
+
+  const {
+    speak,
+    prime: primeSpeech,
+    cancel: cancelSpeech,
+  } = useVoiceGuide();
+
+  // ==============================
+  // 초기 진입 및 종료 처리
+  // ==============================
+
   useEffect(() => {
     speak(PROMPT_HOME);
   }, [speak]);
-  useEffect(() => () => requestRef.current?.abort(), []);
-  const updateResult = (saved: DiagnoseResponse) => setResult(previous => previous?.id === saved.id ? saved : previous);
 
-  // on phones the result renders below the fold — bring it into view
+  // 컴포넌트 종료 시 진행 중인 진단 요청 취소
   useEffect(() => {
-    if (!result) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    resultRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
-  }, [result]);
+    return () => {
+      requestRef.current?.abort();
+    };
+  }, []);
 
-  // 재촬영이 필요하면 결과 대신 재촬영 안내를 읽는다 (M05-F8 > M04-F9).
-  // 재촬영 뒤 확정된 결과도 setResult로 들어오므로 여기서 함께 읽힌다
+  // 저장 상태가 갱신되었을 때 현재 결과 반영
+  const updateResult = (saved: DiagnoseResponse) => {
+    setResult((previous) =>
+      previous?.id === saved.id ? saved : previous
+    );
+  };
+
+  // ==============================
+  // 탭 전환
+  // ==============================
+
   useEffect(() => {
-    if (!result) return;
-    speak(result.recapture ? buildRecapturePrompt(result.recapture) : buildResultPrompt(result));
-  }, [result, speak]);
+    // 진단 탭으로 이동하면 카메라 오버레이 닫기
+    if (activeTab === "diagnosis") {
+      setCameraOpen(false);
+    }
 
-  // 사진이 바뀌거나 화면을 떠날 때 이전 미리보기 URL을 해제한다
+    // 탭 전환 시 화면 맨 위로 이동
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    window.scrollTo({
+      top: 0,
+      behavior: reduced ? "auto" : "smooth",
+    });
+  }, [activeTab]);
+
+  // 진단 결과가 표시되는 탭에서만 결과 낭독
+  useEffect(() => {
+    if (!result || activeTab !== "diagnosis") return;
+
+    if (result.recapture) {
+      speak(buildRecapturePrompt(result.recapture));
+    } else {
+      speak(buildResultPrompt(result));
+    }
+  }, [result, activeTab, speak]);
+
+  // 미리보기 URL 메모리 정리
   useEffect(() => {
     if (!preview) return;
-    return () => URL.revokeObjectURL(preview);
+
+    return () => {
+      URL.revokeObjectURL(preview);
+    };
   }, [preview]);
 
-  /** 형식·크기가 맞지 않으면 toast만 띄우고 기존 사진은 그대로 둔다 */
-  const selectFile = (next: File) => {
+  // ==============================
+  // 사진 선택
+  // ==============================
+
+  const selectFile = (next: File): boolean => {
     if (loading) return false;
+
+    // 기존 이미지 검증 로직 유지
     const check = validateImage(next);
+
     if (!check.ok) {
       showToast(check.message);
       return false;
     }
+
+    // 사진 변경
     setFile(next);
     setPreview(URL.createObjectURL(next));
-    // 이전 결과를 지우므로 읽던 결과 문장도 끊는다
+
+    // 이전 분석 결과 초기화
     cancelSpeech();
     setResult(null);
     setError(null);
+
     return true;
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const next = e.target.files?.[0];
-    // 같은 사진을 다시 골라도 onChange가 불리도록 비운다
+
+    // 동일 파일을 재선택할 수 있도록 초기화
     e.target.value = "";
-    if (next) selectFile(next);
+
+    if (next) {
+      selectFile(next);
+    }
   };
+
+  // ==============================
+  // 카메라 처리
+  // ==============================
 
   const openCamera = () => {
     if (loading) return;
-    // http 접속·미지원 브라우저는 기기 카메라 앱으로 바로 연결한다 (M01-F2 예외)
+
+    // 브라우저 카메라 API 사용 가능
     if (isCameraSupported()) {
-      // 촬영 안내는 카메라가 켜진 뒤(비동기)에 나오므로 이 탭에서 iOS 발화 제한을 풀어 둔다
       primeSpeech();
       setCameraOpen(true);
+    } else {
+      // 카메라 API 미지원 시 기기 기본 촬영 기능
+      fallbackInputRef.current?.click();
     }
-    else fallbackInputRef.current?.click();
   };
 
   const closeCamera = () => {
-    // 오버레이 안에 떠 있던 안내가 닫힌 뒤 하단에 다시 뜨지 않게 한다
     clearToast();
     setCameraOpen(false);
     captureCardRef.current?.focus();
   };
 
   const handleCapture = (captured: File) => {
-    // 통과하지 못하면 카메라를 열어 둔 채 다시 찍게 한다
-    if (selectFile(captured)) closeCamera();
+    // 검증 실패 시 카메라를 유지해서 다시 촬영 가능
+    if (selectFile(captured)) {
+      closeCamera();
+    }
   };
 
   const handleCameraGallery = () => {
@@ -124,199 +207,446 @@ export function DiagnoseForm() {
     galleryInputRef.current?.click();
   };
 
+  // ==============================
+  // AI 진단 API
+  // ==============================
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (loading) return;
+
     if (!file) {
       setError("먼저 사진을 촬영하거나 선택하세요.");
       return;
     }
 
     setLoading(true);
+    setError(null);
+
     const controller = new AbortController();
     requestRef.current = controller;
-    setError(null);
-    // M03-F3 — 탭 직후에 말해야 iOS가 이후 결과 낭독까지 허용한다
+
+    // 기존 음성 안내 유지
     speak(PROMPT_DIAGNOSING);
+
     try {
-      const data = await diagnoseImage(file, cropType || undefined, {signal: controller.signal});
+      const data = await diagnoseImage(
+        file,
+        cropType || undefined,
+        { signal: controller.signal }
+      );
+
       if (controller.signal.aborted) return;
+
+      // 분석 결과 저장
       setResult(data);
+
+      // 성공하면 진단 탭으로 이동
+      window.location.hash = "diagnosis";
     } catch (err) {
       if (controller.signal.aborted) return;
-      setError(err instanceof Error ? err.message : "진단에 실패했습니다. 잠시 후 다시 시도하세요.");
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "진단에 실패했어요. 잠시 후 다시 시도해 주세요."
+      );
     } finally {
-      if (!controller.signal.aborted) setLoading(false);
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+      }
+
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   };
 
+  // ==============================
+  // 화면
+  // ==============================
+
   return (
-    <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-8">
-      <form onSubmit={handleSubmit}>
-        {/* Capture card — the hero of this screen */}
-        <button
-          ref={captureCardRef}
-          type="button"
-          onClick={openCamera}
-          className={`group block aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-card transition ${
-            preview
-              ? "border border-line bg-surface"
-              : "border-2 border-dashed border-khaki/35 bg-surface hover:border-brand/60"
-          }`}
-        >
-          {preview ? (
-            <span className="relative block h-full w-full">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={preview}
-                alt="촬영한 작물 미리보기"
-                className="h-full w-full object-cover"
-              />
-              <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-ink/75 px-3.5 py-1.5 text-xs font-bold text-white backdrop-blur">
-                다시 촬영하기
-              </span>
-            </span>
-          ) : (
-            <span className="flex h-full flex-col items-center justify-center px-6 text-center">
-              <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-brand text-ink shadow-cta transition group-hover:scale-105">
-                <span className="icon-[lucide--camera] h-7 w-7" />
-              </span>
-              <span className="text-base font-bold text-ink">사진 촬영하기</span>
-              <span className="mt-1 text-xs text-khaki">
-                잎·과실이 선명하게 보이도록 찍어주세요
-              </span>
-            </span>
-          )}
-        </button>
+    <div className="w-full">
+      {/* ====================================
+          1. 촬영 탭
+         ==================================== */}
 
-        <button
-          type="button"
-          onClick={() => galleryInputRef.current?.click()}
-          className="mt-1 flex min-h-11 w-full items-center justify-center gap-1 text-sm font-bold text-brown hover:text-ink"
-        >
-          앨범에서 사진 선택
-          <span aria-hidden className="icon-[lucide--chevron-right] h-4 w-4" />
-        </button>
+      <section
+        aria-label="사진 촬영"
+        className={activeTab === "capture" ? "block" : "hidden"}
+      >
+        {/* 화면 제목 */}
+        <div className="mb-6">
+          <h1 className="text-[1.375rem] font-extrabold leading-[1.875rem] tracking-tight text-[#191919] md:text-[2rem] md:leading-tight">
+            사진 한 장이면 충분해요
+          </h1>
 
-        <input
-          ref={galleryInputRef}
-          type="file"
-          accept="image/jpeg,image/png"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-        {/* 카메라를 못 쓰는 환경에서 촬영 카드가 여는 기기 카메라 앱 */}
-        <input
-          ref={fallbackInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-
-        {cameraOpen && (
-          <CameraCapture
-            cropLabel={cropType || undefined}
-            onCapture={handleCapture}
-            onClose={closeCamera}
-            onCaptureError={showToast}
-            notice={toast}
-            onGallery={handleCameraGallery}
-          />
-        )}
-
-        {/* Crop selector — 항상 줄바꿈해 모든 작물이 보이게 한다.
-            가로 스와이프 행이면 좁은 화면이나 큰글씨 모드에서 마지막 작물이 잘리는데,
-            스크롤바를 숨겨둔 탓에 더 있다는 단서조차 없다. 선택지가 셋뿐이라
-            접어두는 이득보다 놓치는 위험이 크다. */}
-        <div role="group" aria-label="작물 선택" className="mt-4 flex flex-wrap items-center gap-2">
-          <span aria-hidden className="shrink-0 text-sm font-bold text-ink">
-            작물
-          </span>
-          {CROP_TYPES.map((c) => {
-            const active = cropType === c.value;
-            return (
-              <button
-                key={c.value || "auto"}
-                type="button"
-                disabled={loading}
-                onClick={() => setCropType(c.value)}
-                aria-pressed={active}
-                className={`inline-flex min-h-12 shrink-0 items-center gap-1 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${
-                  active
-                    ? "border-brand bg-brand text-ink"
-                    : "border-line bg-surface text-muted hover:border-brand/50 hover:text-ink"
-                }`}
-              >
-                <span aria-hidden>{c.icon}</span>
-                {c.label}
-              </button>
-            );
-          })}
+          <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
+            아픈 작물을 촬영하면 AI가 병해를 분석해 드려요.
+          </p>
         </div>
 
-        {error && (
-          <p className="mt-3 rounded-xl bg-signal-high-tint px-3.5 py-2.5 text-sm font-medium text-signal-high-ink">
-            {error}
-          </p>
-        )}
+        {/* 데스크톱: 촬영 폼 / 촬영 안내 2열 */}
+        <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-8">
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-brand py-4 text-base font-bold text-ink shadow-cta transition active:scale-[0.99] hover:bg-brand-deep disabled:opacity-60"
-        >
-          {loading ? (
-            <>
-              <span aria-hidden className="icon-[lucide--loader-circle] h-5 w-5 animate-spin" />
-              진단 중…
-            </>
-          ) : (
-            "AI 진단 시작"
-          )}
-        </button>
-      </form>
+          {/* 기존 촬영 기능 전체 유지 */}
+          <form onSubmit={handleSubmit} aria-busy={loading}>
 
-      {/* Right column on desktop, below the form on phones */}
-      <div ref={resultRef} className={`scroll-mt-20 lg:mt-0 ${result ? "mt-6" : ""}`}>
-        {result ? (
-          <div className="space-y-4">
-            {result.recapture && !loading && result.save_status === "saved" && (
-              <RecapturePanel
-                diagnosisId={result.id}
-                guidance={result.recapture}
-                key={result.id}
-                onRefined={updateResult}
+            {/* 사진 촬영 카드 */}
+            <button
+              ref={captureCardRef}
+              type="button"
+              onClick={openCamera}
+              disabled={loading}
+              className={`group block aspect-[4/3] w-full overflow-hidden rounded-2xl transition-colors ${
+                preview
+                  ? "border border-[#ECECEF] bg-white"
+                  : "border-2 border-dashed border-[#2E8B57]/40 bg-white hover:border-[#2E8B57]"
+              } disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              {preview ? (
+                <span className="relative block h-full w-full">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={preview}
+                    alt="촬영한 작물 미리보기"
+                    className="h-full w-full object-cover"
+                  />
+
+                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/75 px-4 py-2 text-sm font-bold text-white backdrop-blur">
+                    다시 촬영하기
+                  </span>
+                </span>
+              ) : (
+                <span className="flex h-full flex-col items-center justify-center px-5 text-center">
+
+                  {/* 카메라 아이콘 */}
+                  <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#EDF7F1] text-[#2E8B57] transition-transform group-hover:scale-105">
+                    <span
+                      aria-hidden="true"
+                      className="icon-[lucide--camera] h-8 w-8"
+                    />
+                  </span>
+
+                  <span className="text-lg font-bold text-[#191919]">
+                    사진 촬영하기
+                  </span>
+
+                  <span className="mt-2 text-base leading-6 text-[#6B6B6B]">
+                    잎이나 과실이 선명하게
+                    <br />
+                    보이도록 찍어주세요.
+                  </span>
+                </span>
+              )}
+            </button>
+
+            {/* 갤러리 사진 선택 */}
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() =>
+                galleryInputRef.current?.click()
+              }
+              className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 text-base font-semibold text-[#2E8B57] disabled:opacity-50"
+            >
+              <span
+                aria-hidden="true"
+                className="icon-[lucide--image] h-5 w-5"
+              />
+              앨범에서 사진 선택
+            </button>
+
+            {/* 갤러리 파일 입력 */}
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={handleFileChange}
+              disabled={loading}
+              className="hidden"
+              aria-label="갤러리 사진 선택"
+            />
+
+            {/* 카메라 API 미지원 시 기본 카메라 앱 */}
+            <input
+              ref={fallbackInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              capture="environment"
+              onChange={handleFileChange}
+              disabled={loading}
+              className="hidden"
+              aria-label="기기 카메라 촬영"
+            />
+
+            {/* 기존 카메라 오버레이 기능 */}
+            {cameraOpen && (
+              <CameraCapture
+                cropLabel={cropType || undefined}
+                onCapture={handleCapture}
+                onClose={closeCamera}
+                onCaptureError={showToast}
+                notice={toast}
+                onGallery={handleCameraGallery}
               />
             )}
-            <DiagnosisResult result={result} onSaved={updateResult} />
-          </div>
-        ) : (
-          <aside className="hidden rounded-card border border-line bg-surface p-5 shadow-card lg:block">
-            <h4 className="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-khaki">
-              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand" />
-              좋은 사진 촬영 팁
-            </h4>
-            <ul className="space-y-2.5">
-              {PHOTO_TIPS.map((tip) => (
-                <li key={tip} className="flex gap-2 text-sm text-ink/80">
+
+            {/* 작물 선택 */}
+            <fieldset className="mt-6">
+              <legend className="mb-3 text-base font-bold text-[#191919]">
+                작물 선택
+              </legend>
+
+              <div className="flex flex-wrap gap-2">
+                {CROP_TYPES.map((crop) => {
+                  const active = cropType === crop.value;
+
+                  return (
+                    <button
+                      key={crop.value || "auto"}
+                      type="button"
+                      disabled={loading}
+                      onClick={() =>
+                        setCropType(crop.value)
+                      }
+                      aria-pressed={active}
+                      className={`inline-flex min-h-12 items-center gap-1.5 rounded-xl border px-4 py-2 text-base font-semibold transition-colors ${
+                        active
+                          ? "border-[#2E8B57] bg-[#EDF7F1] text-[#2E8B57]"
+                          : "border-[#ECECEF] bg-white text-[#6B6B6B] hover:border-[#2E8B57]/50"
+                      } disabled:opacity-50`}
+                    >
+                      <span aria-hidden="true">
+                        {crop.icon}
+                      </span>
+
+                      {crop.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            {/* 진단 요청 실패 안내 */}
+            {error && (
+              <div
+                role="alert"
+                className="mt-4 rounded-xl bg-[#FFF1F0] p-4 text-base leading-6 text-[#D92D20]"
+              >
+                <div className="flex items-start gap-2">
                   <span
-                    aria-hidden
-                    className="icon-[lucide--check] mt-0.5 h-4 w-4 shrink-0 text-brand-ink"
+                    aria-hidden="true"
+                    className="icon-[lucide--circle-alert] mt-0.5 h-5 w-5 shrink-0"
                   />
-                  {tip}
+
+                  <span>{error}</span>
+                </div>
+              </div>
+            )}
+
+            {/* AI 진단 시작 버튼 */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-6 flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl bg-[#2E8B57] px-5 py-3 text-base font-bold text-white transition-colors hover:bg-[#26784B] active:bg-[#1F633D] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="icon-[lucide--loader-circle] h-5 w-5 animate-spin"
+                  />
+
+                  진단 중…
+                </>
+              ) : (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="icon-[lucide--scan-search] h-5 w-5"
+                  />
+
+                  AI 진단 시작
+                </>
+              )}
+            </button>
+
+          </form>
+
+          {/* 데스크톱 촬영 도움말 */}
+          <aside className="mt-6 hidden rounded-2xl border border-[#ECECEF] bg-white p-6 shadow-sm lg:mt-0 lg:block">
+
+            <h2 className="flex items-center gap-2 text-lg font-bold text-[#191919]">
+              <span
+                aria-hidden="true"
+                className="icon-[lucide--info] h-5 w-5 text-[#2E8B57]"
+              />
+              좋은 사진 촬영 팁
+            </h2>
+
+            <ul className="mt-5 space-y-4">
+              {PHOTO_TIPS.map((tip) => (
+                <li
+                  key={tip}
+                  className="flex items-start gap-3 text-base leading-6 text-[#6B6B6B]"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="icon-[lucide--check] mt-1 h-5 w-5 shrink-0 text-[#2E8B57]"
+                  />
+
+                  <span>{tip}</span>
                 </li>
               ))}
             </ul>
-            <p className="mt-4 rounded-xl bg-brand-tint px-3.5 py-2.5 text-xs leading-relaxed text-brown-deep">
-              사진을 올리고 진단을 시작하면 결과가 이 자리에 표시됩니다.
+
+            <p className="mt-6 rounded-xl bg-[#EDF7F1] p-4 text-sm leading-6 text-[#2E8B57]">
+              사진을 선택하고 진단을 시작하면
+              AI 분석 결과를 확인할 수 있어요.
             </p>
           </aside>
-        )}
-      </div>
+        </div>
+      </section>
 
-      {/* 카메라가 열려 있으면 오버레이 안에서 띄운다 */}
+      {/* ====================================
+          2. 진단 탭
+         ==================================== */}
+
+      <section
+        aria-label="AI 진단 결과"
+        className={
+          activeTab === "diagnosis"
+            ? "mx-auto w-full max-w-3xl space-y-5"
+            : "hidden"
+        }
+      >
+        {/* 화면 제목 */}
+        <div className="mb-6">
+          <h1 className="text-[1.375rem] font-extrabold leading-[1.875rem] text-[#191919] md:text-[2rem]">
+            진단 결과
+          </h1>
+
+          <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
+            AI 분석 결과와 관리 방법을 확인하세요.
+          </p>
+        </div>
+
+        {result ? (
+          <div className="space-y-5">
+
+            {/* 혼동 후보 및 추가 촬영 */}
+            {result.recapture &&
+              !loading &&
+              result.save_status === "saved" && (
+                <RecapturePanel
+                  key={result.id}
+                  diagnosisId={result.id}
+                  guidance={result.recapture}
+                  onRefined={updateResult}
+                />
+              )}
+
+            {/* 저장 전에는 서버 재촬영을 시작하지 않음 */}
+            {result.recapture &&
+              result.save_status !== "saved" && (
+                <div
+                  role="status"
+                  className="rounded-xl border border-[#ECECEF] bg-[#EDF7F1] p-4"
+                >
+                  <p className="text-base font-semibold text-[#191919]">
+                    추가 촬영 안내가 있어요
+                  </p>
+
+                  <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
+                    현재 진단 결과를 저장한 뒤
+                    재촬영을 진행할 수 있어요.
+                  </p>
+                </div>
+              )}
+
+            {/* 기존 진단 결과 컴포넌트 */}
+            <DiagnosisResult
+              result={result}
+              onSaved={updateResult}
+            />
+
+            {/* 다른 사진으로 새 진단 */}
+            <button
+              type="button"
+              onClick={() => {
+                window.location.hash = "capture";
+              }}
+              className="flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl border border-[#2E8B57] bg-white px-5 py-3 text-base font-semibold text-[#2E8B57] transition-colors hover:bg-[#EDF7F1]"
+            >
+              <span
+                aria-hidden="true"
+                className="icon-[lucide--camera] h-5 w-5"
+              />
+
+              새 사진으로 진단하기
+            </button>
+          </div>
+        ) : (
+          /* 진단 결과가 없는 상태 */
+          <div className="rounded-2xl border border-[#ECECEF] bg-white px-6 py-10 text-center shadow-sm">
+
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#EDF7F1]">
+              <span
+                aria-hidden="true"
+                className={`h-8 w-8 text-[#2E8B57] ${
+                  loading
+                    ? "icon-[lucide--loader-circle] animate-spin"
+                    : error
+                      ? "icon-[lucide--circle-alert]"
+                      : "icon-[lucide--scan-search]"
+                }`}
+              />
+            </span>
+
+            <h2 className="mt-5 text-xl font-bold text-[#191919]">
+              {loading
+                ? "사진을 분석하고 있어요"
+                : error
+                  ? "분석을 완료하지 못했어요"
+                  : "아직 진단 결과가 없어요"}
+            </h2>
+
+            <p
+              role={error ? "alert" : "status"}
+              className="mt-3 whitespace-pre-line text-base leading-6 text-[#6B6B6B]"
+            >
+              {loading
+                ? "분석이 완료되면 결과를 보여드릴게요."
+                : error ??
+                  "촬영 탭에서 사진을 선택하고\nAI 진단을 시작해 주세요."}
+            </p>
+
+            {!loading && (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.hash = "capture";
+                }}
+                className="mt-6 flex min-h-[3.25rem] w-full items-center justify-center rounded-xl bg-[#2E8B57] px-5 py-3 text-base font-semibold text-white hover:bg-[#26784B]"
+              >
+                {error
+                  ? "촬영 화면으로 돌아가기"
+                  : "사진 촬영하기"}
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* ====================================
+          공통 토스트
+         ==================================== */}
+
+      {/* 카메라 오버레이가 열려 있으면
+          카메라 내부에서 토스트를 표시 */}
       <Toast toast={cameraOpen ? null : toast} />
     </div>
   );
