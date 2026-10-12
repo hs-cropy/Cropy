@@ -5,6 +5,10 @@ export interface PredictionItem {
 
 export interface PesticideInfo {
   name: string;
+  usage_id?: string | null;
+  source?: string | null;
+  verification_status?: string;
+  synced_at?: string | null;
   dilution?: string;
   usage?: string;
   active_ingredient?: string;
@@ -33,6 +37,13 @@ export interface DiagnoseResponse {
   id: string;
   disease_name: string;
   crop_type?: string;
+  selected_crop?: string | null;
+  predicted_crop?: string | null;
+  crop_mismatch?: boolean;
+  prediction_mode?: "model" | "mock" | "legacy" | "browser";
+  model_version?: string | null;
+  preprocessing_version?: string | null;
+  pair_model_version?: string | null;
   category?: "disease" | "normal";
   severity?: Severity;
   confidence: number;
@@ -44,7 +55,19 @@ export interface DiagnoseResponse {
   image_url?: string;
   refined_image_url?: string | null;
   created_at: string;
+  updated_at?: string | null;
   recapture?: RecaptureGuidance | null;
+  management_actions?: string[];
+  content_status?: "snapshot" | "current_reference";
+  content_version?: string | null;
+  current_pesticides?: PesticideInfo[];
+  decision_status?: string;
+  decision_reasons?: string[];
+  policy_version?: string;
+  is_refined?: boolean;
+  initial_predictions?: PredictionItem[];
+  save_status?: "saved" | "failed";
+  recovery_token?: string | null;
 }
 
 export interface DiagnosisSummary {
@@ -53,7 +76,13 @@ export interface DiagnosisSummary {
   confidence: number;
   crop_type?: string;
   image_url?: string;
+  refined_image_url?: string | null;
+  prediction_mode?: "model" | "mock" | "legacy" | "browser";
   created_at: string;
+  severity?: Severity;
+  category?: "normal" | "disease";
+  is_refined?: boolean;
+  content_status?: string;
 }
 
 export interface PaginatedHistory {
@@ -61,4 +90,6 @@ export interface PaginatedHistory {
   total: number;
   page: number;
   size: number;
+  unfiltered_total: number;
+  crop_total: number;
 }

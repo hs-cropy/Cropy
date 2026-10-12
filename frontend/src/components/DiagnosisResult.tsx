@@ -1,7 +1,10 @@
 import type { DiagnoseResponse, Severity } from "@/types/diagnosis";
+import { SaveRecovery } from "./SaveRecovery";
 
 interface Props {
   result: DiagnoseResponse;
+  onSaved?: (result: DiagnoseResponse) => void;
+  isRecord?: boolean;
 }
 
 const SEVERITY: Record<Severity, { label: string; text: string; bg: string; dot: string }> = {
@@ -26,7 +29,6 @@ const SEVERITY: Record<Severity, { label: string; text: string; bg: string; dot:
 };
 
 // 9개 클래스 중 top-1이 이 아래면 후보가 갈렸다고 보고 단정적인 표현을 피한다
-const LOW_CONFIDENCE = 0.5;
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -61,17 +63,35 @@ function Shot({
   );
 }
 
-export function DiagnosisResult({ result }: Props) {
+export function DiagnosisResult({ result, onSaved, isRecord = false }: Props) {
   const isHealthy = result.category === "normal";
   const severity = SEVERITY[result.severity ?? "medium"];
   const pct = Math.round(result.confidence * 100);
   // 판별부위를 다시 찍어 재확정한 진단은 사진 두 장이 함께 근거가 된다
   const isRefined = Boolean(result.image_url && result.refined_image_url);
   // 확신이 낮을 때까지 "확정했어요"라고 말하면 안 된다 — 문구와 안내를 바꾼다
-  const isUncertain = result.confidence < LOW_CONFIDENCE;
+  const isUncertain = result.decision_reasons?.includes("low_confidence") ?? false;
+  const pesticides = isRecord ? result.current_pesticides ?? [] : result.pesticides;
 
   return (
     <div className="space-y-4">
+      <SaveRecovery result={result} onSaved={onSaved} />
+      {result.prediction_mode === "browser" && <p className="rounded-xl bg-khaki-tint p-4 text-sm">브라우저에서 생성해 동기화한 결과예요. 서버에서 사진을 다시 분석한 결과가 아닙니다.</p>}
+      {isRecord && <p role="status" className="rounded-xl bg-khaki-tint p-4 text-sm">
+        {result.content_status === "snapshot" ? "저장 당시의 결과와 관리 안내예요. 현재 상태는 새 사진으로 확인하세요."
+          : "이전 기록에는 당시 안내가 없어 현재 참고 안내를 표시해요."}
+      </p>}
+      {result.prediction_mode === "mock" && (
+        <p role="status" className="rounded-xl bg-signal-med-tint p-4 text-sm text-signal-med-ink">
+          시연용 예시 결과입니다. 업로드한 사진의 실제 진단 결과가 아닙니다.
+        </p>
+      )}
+      {result.crop_mismatch && (
+        <p role="status" className="rounded-xl bg-signal-med-tint p-4 text-sm text-signal-med-ink">
+          선택한 작물은 {result.selected_crop}이지만 사진은 {result.predicted_crop}로 분류됐어요.
+          작물 선택과 사진을 확인한 뒤 다시 진단해 주세요.
+        </p>
+      )}
       {/* Diagnosis card */}
       <section className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
         <div
@@ -79,11 +99,10 @@ export function DiagnosisResult({ result }: Props) {
         >
           {isHealthy ? (
             <>
-              <span
-                aria-hidden
-                className="icon-[lucide--circle-check] h-4 w-4 text-signal-low-ink"
-              />
-              <span className="text-sm font-bold text-signal-low-ink">건강한 상태예요</span>
+              <span aria-hidden className="icon-[lucide--circle-check] h-4 w-4 text-signal-low-ink" />
+              <span className="text-sm font-bold text-signal-low-ink">
+                {isUncertain ? "정상 여부가 확실하지 않아요" : "정상으로 분류됐어요"}
+              </span>
             </>
           ) : (
             <>
@@ -154,7 +173,7 @@ export function DiagnosisResult({ result }: Props) {
           {/* confidence gauge */}
           <div className="mt-4">
             <div className="mb-1.5 flex items-baseline justify-between">
-              <span className="text-xs font-semibold text-muted">진단 신뢰도</span>
+              <span className="text-xs font-semibold text-muted">모델 분류 점수</span>
               <span className="text-2xl font-extrabold tnum text-ink">{pct}%</span>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-khaki-tint">
@@ -163,13 +182,11 @@ export function DiagnosisResult({ result }: Props) {
                 style={{ width: `${pct}%` }}
               />
             </div>
-            {isUncertain && !isHealthy && (
+            {isUncertain && (
               <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-signal-med-ink">
-                <span
-                  aria-hidden
-                  className="icon-[lucide--circle-alert] mt-0.5 h-3.5 w-3.5 shrink-0"
-                />
-                비슷한 병해가 여럿 나왔어요. 방제 전에 가까운 농업기술센터에 확인해 보세요.
+                <span aria-hidden className="icon-[lucide--circle-alert] mt-0.5 h-3.5 w-3.5 shrink-0" />
+                사진만으로는 확실하지 않아요. 병징이 잘 보이는 사진으로 다시 확인하고,
+                방제 전에 가까운 농업기술센터에 문의해 보세요.
               </p>
             )}
           </div>
@@ -192,6 +209,10 @@ export function DiagnosisResult({ result }: Props) {
         </div>
       </section>
 
+      {!!result.management_actions?.length && <section className="rounded-card border border-line bg-surface p-5">
+        <SectionLabel>관리 안내</SectionLabel>
+        <ol className="list-inside list-decimal space-y-2 text-sm">{result.management_actions.map((action, i) => <li key={i}>{action}</li>)}</ol>
+      </section>}
       {(result.description || result.causes.length > 0) && (
         <section className="rounded-card border border-line bg-surface p-5 shadow-card">
           {result.description && (
@@ -220,13 +241,21 @@ export function DiagnosisResult({ result }: Props) {
         </section>
       )}
 
-      {result.pesticides.length > 0 && (
+      {isRecord && !!result.pesticides.length && <p className="rounded-xl bg-khaki-tint p-4 text-sm">
+        당시 조회한 제품: {result.pesticides.map(p => p.name).join(", ")}. 아래는 현재 카탈로그 조회 정보예요.
+      </p>}
+      {pesticides.length > 0 && (
         <section className="rounded-card border border-line bg-surface p-5 shadow-card">
-          <SectionLabel>등록 농약 추천</SectionLabel>
+          <SectionLabel>{isRecord ? "현재 농약 조회 정보 · 최신 등록·라벨 확인 필요" : "농약 정보"}</SectionLabel>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-            {result.pesticides.map((p) => (
-              <div key={p.name} className="rounded-2xl border border-line bg-paper p-4">
+            {pesticides.map((p) => (
+              <div key={p.usage_id ?? p.name} className="rounded-2xl border border-line bg-paper p-4">
                 <p className="text-base font-bold text-ink">{p.name}</p>
+                {p.verification_status !== "verified" && (
+                  <p className="mt-2 text-xs text-signal-med-ink">
+                    이 작물·병해의 사용 조건이 검증되지 않아 희석비와 사용법을 표시하지 않습니다.
+                  </p>
+                )}
                 {p.active_ingredient && (
                   <p className="mt-0.5 text-xs text-khaki">유효성분 · {p.active_ingredient}</p>
                 )}

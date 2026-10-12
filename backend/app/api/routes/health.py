@@ -9,8 +9,26 @@ from app.services.ml_service import (
     is_model_loaded,
     is_model_ready,
 )
+from app.services.decision import POLICY_VERSION
+from app.services.recapture import DEFAULT_MARGIN, FUSE_WEIGHT_SECOND, CONFUSION_PAIRS
 
 router = APIRouter()
+
+
+@router.get("/capabilities")
+def capabilities():
+    return {
+        "upload": {"formats": ["JPEG", "PNG"], "max_bytes": settings.max_upload_bytes,
+                   "max_pixels": settings.max_image_pixels},
+        "crops": ["고추", "무", "배추"],
+        "decision": {"version": POLICY_VERSION, "low_confidence_threshold": settings.low_confidence_threshold,
+                     "confusion_margin": DEFAULT_MARGIN, "second_photo_weight": FUSE_WEIGHT_SECOND,
+                     "confusion_pairs": [sorted(pair) for pair in CONFUSION_PAIRS]},
+        "execution": {"server_inference": is_model_ready(), "browser_bundle_available": (settings.offline_bundle_dir / "manifest.json").is_file(),
+                      "browser_inference": "device_validation_required",
+                      "voice_commands": False},
+        "recovery_ttl_hours": settings.recovery_ttl_hours,
+    }
 
 
 @router.get("/health", response_model=HealthResponse)
