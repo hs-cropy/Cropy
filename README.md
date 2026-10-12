@@ -1,4 +1,4 @@
-# cropy
+# Cropy
 
 **AI 기반 농작물 병해충 진단 및 스마트 방제 지원 플랫폼**
 
@@ -58,7 +58,7 @@ pip install -r requirements.txt
 python train.py --data-dir ../data/dataset --epochs 20 --arch resnet50
 ```
 
-학습된 모델은 `ml/checkpoints/best_model.pth`에 저장됩니다.<br>
+학습된 모델은 `ml/checkpoints/best_model.pth`에 저장됩니다.
 개발 모드에서 `ALLOW_MOCK_PREDICTIONS=true`이면 모델이 없을 때 예시 진단을 반환합니다. 운영 모드는 실제 모델 없이는 진단을 503으로 차단합니다. [운영·복구 안내](docs/BACKEND_OPERATIONS.md)를 참고하세요.
 
 - `--arch resnet18|resnet50`: 백본 선택 (체크포인트에 기록되어 백엔드/평가 스크립트가 자동 인식)
