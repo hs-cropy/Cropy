@@ -68,10 +68,10 @@ CNN 결과를 LLM 입력으로 전달하는 것만으로 파인튜닝이 필수�
            근거·수치 검증 → 화면 표시 / TTS
 ```
 
-- CNN 학습: [`ml/train.py`](../ml/train.py). LLM 학습은 별도 디렉터리와 환경으로 분리한다.
-- 진단 및 DB 조회: [`diagnosis_service.py`](../backend/app/services/diagnosis_service.py).
-- 입력 계약 근거: [`DiagnoseResponse`](../backend/app/schemas/diagnosis.py).
-- 클래스 정의: [`MODEL_SPEC.md`](MODEL_SPEC.md). 고추·무·배추의 병해 6종과 정상 3종이다.
+- CNN 학습: [`ml/train.py`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/ml/train.py). LLM 학습은 별도 디렉터리와 환경으로 분리한다.
+- 진단 및 DB 조회: [`diagnosis_service.py`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/backend/app/services/diagnosis_service.py).
+- 입력 계약 근거: [`DiagnoseResponse`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/backend/app/schemas/diagnosis.py).
+- 클래스 정의: [`MODEL_SPEC.md`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/docs/MODEL_SPEC.md). 고추·무·배추의 병해 6종과 정상 3종이다.
 
 현재 진단 응답 중 `disease_name`, `crop_type`, `category`, `confidence`, `top_predictions`, `description`, `causes`, `prevention`, `pesticides`, `recapture`를 필요한 범위에서 전달한다. 사진 경로, 내부 식별자, 생성 시각은 질문에 필요하지 않으면 제외한다.
 
@@ -92,7 +92,7 @@ CNN 결과를 LLM 입력으로 전달하는 것만으로 파인튜닝이 필수�
 
 강의의 학습 환경은 x86_64 + A100 80GB 예시이며 프로젝트의 필수 최소 사양은 아니다. 서버에서 학습과 RKLLM 변환을 수행하고 Orange Pi에서는 추론한다. Transformers·PEFT·학습 도구 환경과 RKLLM 변환 환경은 분리하여 버전을 기록한다.
 
-[`ORANGEPI5_DEPLOY.md`](ORANGEPI5_DEPLOY.md)의 대상은 5 Plus/RK3588이다. CNN CPU 기준선을 먼저 검증하고 LLM·음성을 포함한 메모리·드라이버 조건을 별도로 검증한다.
+[`ORANGEPI5_DEPLOY.md`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/docs/ORANGEPI5_DEPLOY.md)의 대상은 5 Plus/RK3588이다. CNN CPU 기준선을 먼저 검증하고 LLM·음성을 포함한 메모리·드라이버 조건을 별도로 검증한다.
 
 ## 5. 학습 데이터 설계
 
@@ -276,10 +276,10 @@ docs/llm_runs/<run_id>.md   # 데이터/모델 버전, 설정, 품질 및 보드
 
 - 팀 제공 PDF: `[마음AI] 한성대학교 특강1(데이터 기획) 자료 (1).pdf` — 기능 정의, 문장 다양화, STT 오류 대응, 평가 데이터와 실패 분석.
 - 팀 제공 PDF: `한성대학교_특강2_통합_LLM학습_양자화_포팅 (1).pdf` — 4~16쪽 모델·데이터·학습·평가, 17~32쪽 양자화·포팅·검증, 33~38쪽 음성 연동.
-- [`팀 프로젝트 규칙`](xpdocs/10_팀_프로젝트_규칙.md), [`모델 명세`](MODEL_SPEC.md), [`음성 연동 아이디어`](SUDA_INTEGRATION.md).
+- [`팀 프로젝트 규칙`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/docs/xpdocs/10_팀_프로젝트_규칙.md), [`모델 명세`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/docs/MODEL_SPEC.md), [`음성 연동 아이디어`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/docs/SUDA_INTEGRATION.md).
 
 강의의 버전·지원 목록·성능 표는 강의 당시 제공 환경의 참고값이다. 이 문서의 데이터 수량, LoRA 설정, 채택 기준은 cropy용 제안이며 강의의 의무 요구사항이나 실측 결과가 아니다.
 
 ## 2026년 10월 8일 데이터 정답 수정
 
-[v7 수정 이력](../마음ai/Qwen35_데이터시트/정답변경본_v7_수정내역.md)에서 v6 불합격 164개의 정답·참고 TTS를 수정했다. 전체 2,800개(train 2,240/validation 560)는 유지하되 기능별 수량은 재분류로 달라졌다. 변경 164개는 draft이고 사람 승인 0개, 기존 보류 397개는 남아 있다. 위 v5/v6 수치는 당시 구축·AI 검수 기록이며 v7의 독립 재검수·실제 학습 완료를 의미하지 않는다.
+[v7 수정 이력](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/마음ai/Qwen35_데이터시트/정답변경본_v7_수정내역.md)에서 v6 불합격 164개의 정답·참고 TTS를 수정했다. 전체 2,800개(train 2,240/validation 560)는 유지하되 기능별 수량은 재분류로 달라졌다. 변경 164개는 draft이고 사람 승인 0개, 기존 보류 397개는 남아 있다. 위 v5/v6 수치는 당시 구축·AI 검수 기록이며 v7의 독립 재검수·실제 학습 완료를 의미하지 않는다.
