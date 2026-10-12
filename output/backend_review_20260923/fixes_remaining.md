@@ -18,4 +18,4 @@
 - frontend `npm.cmd run build`: 컴파일, lint·타입 검사, 정적 페이지 생성 성공.
 - 신규 256 학습 결과: 별도 [분석 보고서](../colab/group256_analysis_20260924/report.md)에 기록. 배포 모델은 교체하지 않음.
 
-실제 DB 마이그레이션·복구, PSIS 실데이터 동기화, Orange Pi 하드웨어 검증은 수행하지 않았다. 테스트는 격리된 임시 데이터를 사용했다. 운영 절차는 [BACKEND_OPERATIONS.md](../../docs/BACKEND_OPERATIONS.md)를 참고한다.
+실제 DB 마이그레이션·복구, PSIS 실데이터 동기화, Orange Pi 하드웨어 검증은 수행하지 않았다. 테스트는 격리된 임시 데이터를 사용했다. 운영 절차는 [BACKEND_OPERATIONS.md](../../docs/operations/BACKEND_OPERATIONS.md)를 참고한다.

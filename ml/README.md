@@ -30,14 +30,14 @@ train↔val 동일 이미지 2쌍, train↔test 4쌍을 발견했고 원본 SHA2
 
 상세 수치·해석·재현 방법: [원본·축소 비교 보고서](../output/colab/val_source_comparison_20260918/report.md). 실행 코드: [compare_val_sources.py](compare_val_sources.py).
 
-모델 구조·클래스 정의는 [모델 명세](../docs/MODEL_SPEC.md), 보드 이전은 [이전 백로그](../docs/ORANGEPI5_MIGRATION_BACKLOG.md)를 따른다.
+모델 구조·클래스 정의는 [모델 명세](../docs/ml/MODEL_SPEC.md), 보드 이전은 [이전 백로그](../docs/operations/ORANGEPI5_MIGRATION_BACKLOG.md)를 따른다.
 
 ## 3주차 Colab CNN 실험 — 2026-09-18 결과 확인
 
 **결론: 일반·균형 샘플링 이어학습 모두 시작 모델의 전체 val 정확도를 넘지 못해 기존 모델을 유지했다.** 새 체크포인트 저장 및 배포 모델 교체는 없다.
 
 - 실행 노트북: [cropy_week3.ipynb](cropy_week3.ipynb)
-- 결과 원본: [cropy_week3_results.zip](../output/colab/cropy_week3_results.zip)
+- 결과 원본: cropy_week3_results.zip (별도 보관 자료: `../output/colab/cropy_week3_results.zip`)
 - 실행 폴더 기록: `cropy_20260917_153350_081310`, 학습 로그: `training_153932_043541/`. 폴더 시각의 시간대는 기록되지 않아 한국 시각의 실행일로 단정하지 않는다.
 - 결과 확인일: 2026-09-18, 담당: 김헌영(PM·모델).
 

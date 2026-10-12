@@ -1,6 +1,6 @@
 # 작업 기록과 로컬 실험 산출물
 
-이 폴더에는 팀이 작성한 분석 보고서, 재현 코드, 평가 지표 및 발표 산출물을 보관한다. 날짜별 보고서의 수행 범위와 미완료 사항을 함께 확인한다.
+이 폴더에는 실험 원본과 함께 읽는 분석 보고서, 재현 코드와 평가 지표를 보관한다. 주간보고·제출본은 [주차별 보고 목차](../docs/reports/README.md), 발표 자료는 [발표 목차](../docs/presentations/README.md)에서 확인한다.
 
 ## 버전 관리 범위
 
@@ -18,8 +18,8 @@
 
 ## 주요 문서
 
-- [전체 작업 보고서](project_work_report_20260924.md)
-- [카메라 통합 검증](camera_integration_20260928.md)
+- [전체 작업 보고서](../docs/reports/week04_20260921-20260927/project_work_report_20260924.md)
+- [카메라 통합 검증](https://github.com/hs-cropy/Cropy/blob/77fafcad5a69a9a094c304a44db61596bfd73207/output/camera_integration_20260928.md)
 - [224 기준선](colab/group_baseline_analysis_20260922/report.md)
 - [256 대조 실험](colab/group256_analysis_20260924/report.md)
-- [제출 보고서](../report/)
+- [제출 보고서](../docs/reports/README.md)
