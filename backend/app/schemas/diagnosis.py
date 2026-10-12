@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Annotated, Literal
 from pydantic import BaseModel, Field, field_validator
 
 CropType = Literal["고추", "무", "배추"]
@@ -38,8 +38,8 @@ class RecaptureGuidance(BaseModel):
 
 
 class PesticideSafety(BaseModel):
-    phi_days: int | None = None
-    reentry_hours: int | None = None
+    phi_days: Annotated[int, Field(ge=0, strict=True)] | None = None
+    reentry_hours: Annotated[int, Field(ge=0, strict=True)] | None = None
 
 
 class PesticideInfo(TimestampedResponse):
