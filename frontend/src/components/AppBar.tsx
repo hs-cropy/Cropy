@@ -34,6 +34,7 @@ export function AppBar() {
         {/* 큰글씨 토글은 화면 폭과 무관하게 항상 보여야 한다 (모바일에서 하단 탭이
             네비게이션을 가져가도 이 버튼은 앱바에 남는다) */}
         <div className="ml-auto flex items-center gap-2">
+          <a href="/offline/index.html" className="rounded-full bg-brand-tint px-3 py-2 text-xs font-bold">기기 진단</a>
           <TextSizeToggle />
           <VoiceToggle />
 
