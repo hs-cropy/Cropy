@@ -17,7 +17,7 @@ def review_accept(row,gold):
  if re.search(r'codex|chatgpt|\bai\b|챗지피티',str(row['reviewer']),re.I):raise ValueError('AI review is not human approval')
  try:
   first,last=_date(row['blind_reviewed_at']),_date(row['reference_checked_at'])
-  if first>last or last>datetime.date.today():raise ValueError('Invalid review date order')
+  if first>last or last>datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).date():raise ValueError('Invalid review date order')
   args=json.loads(row['blind_arguments']);expected=json.loads(gold['arguments_json'])
  except (TypeError,ValueError) as e:raise ValueError('Invalid review date or argument JSON') from e
  if (row['blind_function'],args,row['blind_return_status'])!=(gold['function_name'],expected,gold['expected_return_status']):raise ValueError('Human interpretation differs from current gold: repair and review the source first')
