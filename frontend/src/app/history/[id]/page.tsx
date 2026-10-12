@@ -206,24 +206,23 @@ export default function HistoryDetailPage() {
 
       {!loading && !error && result && (
         <div className="space-y-5">
-          {/* 재촬영 가능한 저장 기록 */}
+          {/* 재촬영 가능한 저장 기록 */}         
           {result.recapture &&
-            result.save_status === "saved" &&
-            result.prediction_mode !== "browser" && (
-              <RecapturePanel
-                key={result.id}
-                diagnosisId={result.id}
-                guidance={result.recapture}
-                onRefined={updateResult}
-              />
-            )}
-
-          {/* 기존 진단 결과 + 06번 상세 아코디언 */}
-          <DiagnosisResult
-            result={result}
-            onSaved={updateResult}
-            isRecord
-          />
+          result.save_status === "saved" &&
+          result.prediction_mode !== "browser" ? (
+            <RecapturePanel
+              key={result.id}
+              diagnosisId={result.id}
+              guidance={result.recapture}
+              onRefined={updateResult}
+            />
+          ) : (
+            <DiagnosisResult
+              result={result}
+              onSaved={updateResult}
+              isRecord
+            />
+          )}
 
           {/* 하단 이력 목록 복귀 */}
           <Link

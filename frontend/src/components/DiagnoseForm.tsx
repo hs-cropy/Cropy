@@ -535,45 +535,54 @@ export function DiagnoseForm() {
         </div>
 
         {result ? (
+          /* 진단 결과가 존재하는 상태 */
           <div className="space-y-5">
 
-            {/* 혼동 후보 및 추가 촬영 */}
             {result.recapture &&
-              !loading &&
-              result.save_status === "saved" && (
-                <RecapturePanel
-                  key={result.id}
-                  diagnosisId={result.id}
-                  guidance={result.recapture}
-                  onRefined={updateResult}
+            result.save_status === "saved" &&
+            result.prediction_mode !== "browser" ? (
+              /*
+                재촬영이 필요한 상태
+                → 일반 진단 결과는 숨기고 재촬영 안내만 표시
+              */
+              <RecapturePanel
+                key={result.id}
+                diagnosisId={result.id}
+                guidance={result.recapture}
+                onRefined={updateResult}
+              />
+            ) : (
+              /*
+                재촬영이 필요하지 않은 상태,
+                또는 결과가 아직 저장되지 않은 상태
+                → 일반 진단 결과 및 저장 복구 표시
+              */
+              <div className="space-y-4">
+                {result.recapture &&
+                  result.save_status !== "saved" && (
+                    <div
+                      role="status"
+                      className="rounded-xl border border-[#ECECEF] bg-[#EDF7F1] p-4"
+                    >
+                      <p className="text-base font-semibold text-[#191919]">
+                        추가 촬영 안내가 있어요
+                      </p>
+
+                      <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
+                        현재 진단 결과를 저장한 뒤
+                        재촬영을 진행할 수 있어요.
+                      </p>
+                    </div>
+                  )}
+
+                <DiagnosisResult
+                  result={result}
+                  onSaved={updateResult}
                 />
-              )}
+              </div>
+            )}
 
-            {/* 저장 전에는 서버 재촬영을 시작하지 않음 */}
-            {result.recapture &&
-              result.save_status !== "saved" && (
-                <div
-                  role="status"
-                  className="rounded-xl border border-[#ECECEF] bg-[#EDF7F1] p-4"
-                >
-                  <p className="text-base font-semibold text-[#191919]">
-                    추가 촬영 안내가 있어요
-                  </p>
-
-                  <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
-                    현재 진단 결과를 저장한 뒤
-                    재촬영을 진행할 수 있어요.
-                  </p>
-                </div>
-              )}
-
-            {/* 기존 진단 결과 컴포넌트 */}
-            <DiagnosisResult
-              result={result}
-              onSaved={updateResult}
-            />
-
-            {/* 다른 사진으로 새 진단 */}
+            {/* 새 진단을 위해 촬영 탭으로 이동 */}
             <button
               type="button"
               onClick={() => {
@@ -585,14 +594,12 @@ export function DiagnoseForm() {
                 aria-hidden="true"
                 className="icon-[lucide--camera] h-5 w-5"
               />
-
-              새 사진으로 진단하기
+              다른 사진으로 새 진단
             </button>
           </div>
         ) : (
           /* 진단 결과가 없는 상태 */
           <div className="rounded-2xl border border-[#ECECEF] bg-white px-6 py-10 text-center shadow-sm">
-
             <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#EDF7F1]">
               <span
                 aria-hidden="true"
@@ -640,6 +647,7 @@ export function DiagnoseForm() {
           </div>
         )}
       </section>
+
 
       {/* ====================================
           공통 토스트
