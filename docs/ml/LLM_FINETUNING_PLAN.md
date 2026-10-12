@@ -21,7 +21,7 @@
 
 기능 토큰은 데이터 시트의 설계 계약이며 현재 REST API가 아니다. 등록 토큰 여부·호출 인자·허용 기능·실행 오류·근거 없는 출력의 폴백은 실제 코드 통합 때 확정한다. 함수 선택 성공과 근거를 읽는 TTS 성공을 각각 평가한다.
 
-근거: [v5 구축 결과](../../마음ai/Qwen35_데이터시트/전체기능400_구축결과_v5.md), [v6 전체 AI 검수](../../마음ai/Qwen35_데이터시트/전체2800_매뉴얼기반_AI검수_v6.md), [검수 매뉴얼](../../마음ai/Qwen35_데이터시트_검수_매뉴얼.md).
+근거: [v5 구축 결과](https://github.com/hs-cropy/Cropy/blob/3a26f14ff1d897c11cb068eba3a76b5ceb00ba60/마음ai/Qwen35_데이터시트/전체기능400_구축결과_v5.md), [v6 전체 AI 검수](https://github.com/hs-cropy/Cropy/blob/3a26f14ff1d897c11cb068eba3a76b5ceb00ba60/마음ai/Qwen35_데이터시트/전체2800_매뉴얼기반_AI검수_v6.md), [검수 매뉴얼](https://github.com/hs-cropy/Cropy/blob/3a26f14ff1d897c11cb068eba3a76b5ceb00ba60/마음ai/Qwen35_데이터시트_검수_매뉴얼.md).
 
 아래 1~10절의 자연어 답변·train 1,000/validation 200/test 200·LoRA 값은 **초기 설명 생성 실험안**으로 보존한다. 현재 기능 토큰 초안의 수량·승인 상태로 해석하지 않는다. 변환·보드 검증과 근거 유지 원칙은 두 경로 모두 적용한다.
 
