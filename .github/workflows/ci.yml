@@ -115,6 +115,7 @@ jobs:
           path: |
             backend/test-results/
             ml/test-results/
+            마음ai/test-results/
           retention-days: 14
           if-no-files-found: ignore
 
