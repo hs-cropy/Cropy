@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="108" height="108" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Illustration/Capture/Leaf" filter="url(#filter0_f_0_88)">
+<path id="Vector" d="M27.9 85.5C7.2 57.6 33.3 21.6 84.6 11.7C93.6 53.1 81 85.5 37.8 94.5L27.9 85.5Z" fill="#A5C581" stroke="#54764A" stroke-width="2.7" stroke-linejoin="round"/>
+<path id="Vector_2" d="M27 101.7L78.3 24.3M36 57.6L41.4 79.2L65.7 73.8M48.6 40.5L53.1 62.1L78.3 53.1M65.7 45L63.9 28.8" stroke="#54764A" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_3" d="M44.1 54C46.5853 54 48.6 51.9853 48.6 49.5C48.6 47.0147 46.5853 45 44.1 45C41.6147 45 39.6 47.0147 39.6 49.5C39.6 51.9853 41.6147 54 44.1 54Z" fill="#8D7054"/>
+<path id="Vector_4" d="M62.1 69.3C64.0882 69.3 65.7 67.6882 65.7 65.7C65.7 63.7118 64.0882 62.1 62.1 62.1C60.1118 62.1 58.5 63.7118 58.5 65.7C58.5 67.6882 60.1118 69.3 62.1 69.3Z" fill="#8D7054"/>
+<path id="Vector_5" d="M65.7 40.5C67.1912 40.5 68.4 39.2912 68.4 37.8C68.4 36.3088 67.1912 35.1 65.7 35.1C64.2088 35.1 63 36.3088 63 37.8C63 39.2912 64.2088 40.5 65.7 40.5Z" fill="#8D7054"/>
+</g>
+<defs>
+<filter id="filter0_f_0_88" x="-4" y="-4" width="116" height="116" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="2" result="effect1_foregroundBlur_0_88"/>
+</filter>
+</defs>
+</svg>
