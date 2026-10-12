@@ -102,3 +102,4 @@ backend/app/data/seed/*
 # Local CI test reports
 /frontend/test-results/
 /backend/test-results/
+/ml/test-results/

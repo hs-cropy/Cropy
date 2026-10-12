@@ -76,6 +76,10 @@ def main():
     p.add_argument('--smoke-per-class', type=int, default=0, help='0 uses all images; nonzero is NOT a full run')
     p.add_argument('--max-epochs-this-run', type=int, default=0, help='Stop cleanly after N additional epochs')
     a = p.parse_args()
+    last_path = a.output_dir / 'last_checkpoint.pth'
+    if a.resume and not last_path.is_file():
+        raise SystemExit(f'--resume requires an existing checkpoint: {last_path}. '
+                         'Restore the checkpoint or start a new run without --resume in a new output directory.')
     assert a.epochs > 0 and a.batch_size > 1 and a.smoke_per_class >= 0
     assert np.isfinite(a.lr) and a.lr > 0
     if a.init_checkpoint and a.output_dir.resolve() == a.init_checkpoint.resolve().parent:
@@ -108,7 +112,6 @@ def main():
                   seed=42, lr=a.lr, balanced_sampler=True, selection='highest validation macro_f1; earliest tie',
                   manifest_sha256=fingerprint, classes=train_ds.classes, smoke_per_class=a.smoke_per_class,
                   train_images=len(train_ds), val_images=len(val_ds), num_workers=a.num_workers)
-    last_path = a.output_dir / 'last_checkpoint.pth'
     state = torch.load(last_path, map_location='cpu', weights_only=True) if a.resume else None
     if not a.resume and last_path.exists():
         candidate = torch.load(last_path, map_location='cpu', weights_only=True)

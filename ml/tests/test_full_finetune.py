@@ -218,3 +218,25 @@ def test_legacy_resume_defaults_keep_existing_runs_usable(experiment, monkeypatc
     assert resumed["epoch"] == 3
     assert resumed["config"]["lr"] == 1e-4
     assert resumed["config"]["train_geometry"] == "random_crop"
+
+
+@pytest.mark.parametrize("existing_output", [False, True])
+def test_resume_missing_checkpoint_exits_before_dataset_access(tmp_path, monkeypatch, existing_output):
+    output = tmp_path / "run"
+    if existing_output:
+        output.mkdir()
+        (output / "history.json").write_text('[{"epoch": 1}]', encoding="utf-8")
+    before = {p.name: p.read_bytes() for p in output.iterdir()} if existing_output else None
+    monkeypatch.setattr(sys, "argv", [
+        "train_full_colab.py", "--data-dir", str(tmp_path / "unmounted_dataset"),
+        "--output-dir", str(output), "--resume", "--allow-cpu",
+    ])
+    with pytest.raises(SystemExit) as error:
+        trainer.main()
+    message = str(error.value)
+    assert "--resume" in message and str(output / "last_checkpoint.pth") in message
+    assert "checkpoint" in message.lower()
+    if existing_output:
+        assert {p.name: p.read_bytes() for p in output.iterdir()} == before
+    else:
+        assert not output.exists()
