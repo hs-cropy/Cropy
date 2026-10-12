@@ -85,6 +85,31 @@ export const TwoLineLabel: Story = {
   ],
 };
 
+/** 띄어쓰기 없는 긴 말은 버튼 밖으로 넘치지 않게 중간에서 끊긴다 */
+export const NoSpaceLabel: Story = {
+  args: { fullWidth: true, children: "잎맥과잎가장자리를다시한번가까이촬영하기" },
+  decorators: TwoLineLabel.decorators,
+};
+
+/** 두 줄이 되어도 아이콘은 찌그러지지 않는다 */
+export const TwoLineWithIcon: Story = {
+  args: { ...TwoLineLabel.args, ...WithIcon.args },
+  decorators: TwoLineLabel.decorators,
+};
+
+/** 긴 문구 옆에서 폭이 줄어들 때도 어절 단위로 나뉜다 */
+export const BesideLongText: Story = {
+  args: { size: "compact", children: "다시 불러오기" },
+  decorators: [
+    (Story) => (
+      <div className="flex w-[18.75rem] items-center gap-3 text-sm text-cropy-text-secondary">
+        <p>이력을 불러오지 못했어요. 연결 상태를 확인하고 다시 시도해주세요.</p>
+        <Story />
+      </div>
+    ),
+  ],
+};
+
 /** 종류 × 크기 × 상태를 한눈에 본다 */
 export const AllStates: Story = {
   render: () => (

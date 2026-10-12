@@ -13,9 +13,14 @@ interface ButtonStyleOptions {
   loading?: boolean;
 }
 
-// Tailwind가 클래스를 찾을 수 있도록 조각을 이어 붙이지 않고 완성된 문자열로 둔다
+// Tailwind가 클래스를 찾을 수 있도록 조각을 이어 붙이지 않고 완성된 문자열로 둔다.
+// break-keep: 라벨이 두 줄이 될 때 "촬영하/기"처럼 글자 하나만 떨어지지 않게 어절 단위로 나눈다.
+// [overflow-wrap:break-word]: 띄어쓰기 없는 긴 말이 버튼 밖으로 넘칠 때만 중간에서 끊는다.
+// Tailwind 의 break-* 유틸로 쓰면 cn 이 break-keep 과 같은 묶음으로 보고 지우므로
+// 속성으로 직접 쓴다. 버튼이 flex 라서 라벨을 min-w-0 인 span 으로 감싸야 실제로
+// 끊긴다 (Button 은 감싸 준다. buttonClassName 만 쓰는 Link·label 은 직접 감싼다)
 const BASE =
-  "inline-flex items-center justify-center gap-2 border text-center transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cropy-green-600";
+  "inline-flex items-center justify-center gap-2 break-keep border text-center transition [overflow-wrap:break-word] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cropy-green-600";
 
 // 세로 여백은 큰글씨 모드에서 라벨이 두 줄이 될 때 글자가 가장자리에 붙지 않게 한다
 const SIZE: Record<ButtonSize, string> = {
@@ -90,8 +95,8 @@ export function Button({
   // form 안에서 뜻하지 않게 제출되지 않도록 기본은 button. 제출 버튼은 submit을 명시한다
   type = "button",
   disabled = false,
-  // 배치용(flex-1, 폭, 여백, block)으로만 쓴다. cn으로 병합되므로 색·크기·초점 표시
-  // 클래스를 넘기면 Figma 사양이 실제로 덮인다
+  // 배치용(flex-1, 폭, 여백)으로만 쓴다. cn으로 병합되므로 색·크기·초점 표시
+  // 클래스를 넘기면 Figma 사양이 실제로 덮이고, block 을 넘기면 가운데 정렬이 풀린다
   className,
   children,
   ...rest
@@ -105,11 +110,12 @@ export function Button({
       {...rest}
     >
       {loading ? (
-        <span aria-hidden className="icon-[lucide--loader-circle] h-5 w-5 animate-spin" />
+        <span aria-hidden className="icon-[lucide--loader-circle] h-5 w-5 shrink-0 animate-spin" />
       ) : (
-        icon
+        // 라벨이 두 줄이 될 때 아이콘이 눌려 찌그러지지 않게 한다
+        icon && <span className="flex shrink-0">{icon}</span>
       )}
-      {children}
+      <span className="min-w-0">{children}</span>
     </button>
   );
 }

@@ -139,7 +139,7 @@ describe("Button", () => {
     const icon = <span aria-hidden data-testid="icon" />;
     const { rerender } = render(<Button icon={icon}>사진 찍기</Button>);
 
-    expect(button("사진 찍기").firstElementChild).toBe(screen.getByTestId("icon"));
+    expect(button("사진 찍기").firstElementChild?.contains(screen.getByTestId("icon"))).toBe(true);
 
     rerender(
       <Button icon={icon} loading>
@@ -216,6 +216,12 @@ describe("buttonClassName", () => {
     expect(compact).toEqual(
       expect.arrayContaining(["text-cropy-compact-button", "text-cropy-text-on-action"]),
     );
+  });
+
+  it("줄바꿈 규칙 두 개를 모두 남긴다", () => {
+    // 어절 단위 줄바꿈과 넘칠 때만 끊기. 같은 묶음의 클래스로 쓰면 cn 이 하나를 지운다
+    const classes = buttonClassName().split(" ");
+    expect(classes).toEqual(expect.arrayContaining(["break-keep", "[overflow-wrap:break-word]"]));
   });
 
   it("비활성은 종류와 상관없이 같은 모양이다", () => {
