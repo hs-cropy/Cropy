@@ -69,8 +69,8 @@ CNN 결과를 LLM 입력으로 전달하는 것만으로 파인튜닝이 필수�
 ```
 
 - CNN 학습: [`ml/train.py`](../ml/train.py). LLM 학습은 별도 디렉터리와 환경으로 분리한다.
-- 진단 및 DB 조회: [`diagnosis_service.py`](https://github.com/hs-cropy/Cropy/blob/backend/backend/app/services/diagnosis_service.py).
-- 입력 계약 근거: [`DiagnoseResponse`](https://github.com/hs-cropy/Cropy/blob/backend/backend/app/schemas/diagnosis.py).
+- 진단 및 DB 조회: [`diagnosis_service.py`](../backend/app/services/diagnosis_service.py).
+- 입력 계약 근거: [`DiagnoseResponse`](../backend/app/schemas/diagnosis.py).
 - 클래스 정의: [`MODEL_SPEC.md`](MODEL_SPEC.md). 고추·무·배추의 병해 6종과 정상 3종이다.
 
 현재 진단 응답 중 `disease_name`, `crop_type`, `category`, `confidence`, `top_predictions`, `description`, `causes`, `prevention`, `pesticides`, `recapture`를 필요한 범위에서 전달한다. 사진 경로, 내부 식별자, 생성 시각은 질문에 필요하지 않으면 제외한다.
