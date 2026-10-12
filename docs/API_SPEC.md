@@ -6,7 +6,7 @@ Base URL: `http://localhost:8000/api/v1`
 정적 파일: `http://localhost:8000/uploads/{filename}` (진단 이미지)
 
 업로드 이미지는 서버가 확인한 실제 형식으로 `.jpg` 또는 `.png` 확장자를 정한다.
-WEBP 등 JPEG/PNG 외 형식은 지원하지 않으며 업로드 시 `400 INVALID_IMAGE`를 반환한다. 손상된 파일도 같은 코드로 거부하며 JPEG/PNG 형식으로 다시 업로드하도록 안내한다.
+Content-Type이 없거나 `image/`로 시작하지 않으면 `400 UNSUPPORTED_IMAGE_FORMAT`으로 거부한다. 이 검사를 통과한 파일은 실제 JPEG/PNG 형식과 디코딩을 검사하며, WEBP 등 비지원 이미지 형식이나 손상 파일이면 `400 INVALID_IMAGE`를 반환한다. JPEG/PNG 형식인지, 파일이 손상되지 않았는지 확인하도록 안내한다.
 클라이언트 파일명은 저장 형식에 사용하지 않는다. `/uploads`는 `.jpg`·`.jpeg`·`.png`만
 고정된 이미지 MIME과 `X-Content-Type-Options: nosniff`로 제공하며, 과거에 저장된
 `.html` 등 다른 확장자 경로는 404를 반환한다. 기존 파일은 자동 삭제·변환하지 않는다.
@@ -318,7 +318,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 
 진단·재촬영의 선택적 `Idempotency-Key`는 최대 128자다. 같은 작업·키·사진·작물은 동일 응답을 재사용한다. 다른 본문이면 `409 IDEMPOTENCY_CONFLICT`다. 성공 응답은 진단과 같은 DB 트랜잭션에 저장한다. 기존 기록보다 오래된 복구 결과는 `409 DIAGNOSIS_CHANGED`, 만료 초안은 `410 RESULT_EXPIRED`다. 기본 복구 TTL은 24시간이며 `RECOVERY_TTL_HOURS`로 1~168시간 설정한다.
 
-오류 응답은 `detail`, `code`, `retryable`, `request_id`를 제공하며 응답 헤더에도 `X-Request-ID`가 있다. 대표 코드: `UNSUPPORTED_IMAGE_FORMAT`(이미지 외 Content-Type), `INVALID_IMAGE`, `EMPTY_IMAGE`, `IMAGE_TOO_LARGE`, `IMAGE_RESOLUTION_TOO_LARGE`, `REQUEST_TOO_LARGE`, `MODEL_UNAVAILABLE`, `MODEL_VERSION_CONFLICT`, `DIAGNOSIS_NOT_FOUND`, `DATABASE_UNAVAILABLE`, `SAVE_FAILED`, `RECOVERY_STORAGE_UNAVAILABLE`.
+오류 응답은 `detail`, `code`, `retryable`, `request_id`를 제공하며 응답 헤더에도 `X-Request-ID`가 있다. 대표 코드: `UNSUPPORTED_IMAGE_FORMAT`(Content-Type 누락 또는 이미지 외 형식), `INVALID_IMAGE`, `EMPTY_IMAGE`, `IMAGE_TOO_LARGE`, `IMAGE_RESOLUTION_TOO_LARGE`, `REQUEST_TOO_LARGE`, `MODEL_UNAVAILABLE`, `MODEL_VERSION_CONFLICT`, `DIAGNOSIS_NOT_FOUND`, `DATABASE_UNAVAILABLE`, `SAVE_FAILED`, `RECOVERY_STORAGE_UNAVAILABLE`.
 
 오프라인 metadata는 UUID `client_record_id`, 선택적 `selected_crop`, timezone이 있는 `created_at`, `model_version`, `preprocessing_version`, `bundle_version`, 9개 고유 클래스의 합계 1인 `predictions`를 요구한다. `refined_predictions`가 있으면 재촬영 사진도 있어야 한다. 동일 UUID의 동일 본문 재전송은 중복 저장하지 않는다. 기기 확률은 클라이언트 생성값이며 서버 검증을 병해 정확도 검증으로 해석하지 않는다. 상세 준비·배포·검증 범위는 [오프라인 실행 가이드](OFFLINE_WEB.md)를 참조한다.
 
