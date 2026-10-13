@@ -130,14 +130,22 @@ describe("Header", () => {
 // 디자인 시스템(Cropy/V2/Mobile/Header, Cropy/V2/Desktop/Header) 사양표.
 // 값이 바뀌면 디자인과 어긋난 것이므로 클래스 이름까지 고정한다
 describe("Header — 디자인 시스템 사양", () => {
-  it("좁은 화면은 회색 배경, lg 부터 흰 배경에 아래 테두리다", () => {
+  it("배경이 없어 틀의 배경이 비친다 (화면이 디자인 시스템보다 우선). 필요하면 className 으로 준다", () => {
+    const ref = createRef<HTMLElement>();
+    const { rerender } = render(<Header ref={ref} />);
+
+    expect(Array.from(ref.current!.classList).filter((name) => /(^|:)bg-/.test(name))).toEqual([]);
+
+    rerender(<Header ref={ref} className="bg-cropy-surface" />);
+    expect(Array.from(ref.current!.classList)).toContain("bg-cropy-surface");
+  });
+
+  it("lg 부터 아래 테두리가 있고 노치만큼 위를 띄운다", () => {
     const ref = createRef<HTMLElement>();
     render(<Header ref={ref} />);
 
     expect(Array.from(ref.current!.classList)).toEqual(
       expect.arrayContaining([
-        "bg-cropy-surface-canvas",
-        "lg:bg-cropy-surface",
         "lg:border-b",
         "lg:border-cropy-border",
         "pt-[env(safe-area-inset-top)]",

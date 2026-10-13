@@ -7,8 +7,10 @@ import type { NavItem } from "./navItem";
 const FOCUS =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cropy-action-primary";
 
-// 모바일(Cropy/V2/Mobile/Header): 76px, 회색 배경, 좌우 24px.
-// lg 부터 데스크탑(Cropy/V2/Desktop/Header): 80px(아래 테두리 1px 포함), 흰 배경, 본문 폭 최대 1200px.
+// 모바일(Cropy/V2/Mobile/Header): 76px, 좌우 24px.
+// lg 부터 데스크탑(Cropy/V2/Desktop/Header): 80px(아래 테두리 1px 포함), 본문 폭 최대 1200px.
+// 배경은 없다. 디자인 시스템의 헤더는 배경색(모바일 회색·데스크탑 흰색)이 있지만 실제 화면에서는
+// 틀의 농장 배경이 비치고, 화면이 우선이다. 배경이 필요한 곳은 className 으로 준다.
 // Figma 는 390px 과 1440px 만 정의한다.
 // - 1024px 미만은 내비 세 개가 들어갈 자리가 없어 모바일 모양을 쓴다 (큰글씨를 켜면 더 모자란다)
 // - 1024~1279px 은 Figma 값(좌우 64px·간격 40px·항목 폭 112px)으로는 큰글씨에서 넘쳐서
@@ -56,7 +58,7 @@ export function Header({
       {...rest}
       // 노치가 있는 기기에서는 그만큼 위를 띄운다
       className={cn(
-        "shrink-0 bg-cropy-surface-canvas pt-[env(safe-area-inset-top)] lg:border-b lg:border-cropy-border lg:bg-cropy-surface lg:px-6 xl:px-16",
+        "shrink-0 pt-[env(safe-area-inset-top)] lg:border-b lg:border-cropy-border lg:px-6 xl:px-16",
         className,
       )}
     >
