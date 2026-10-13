@@ -29,9 +29,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
               {/* 기기 안에서 진단하는 정적 페이지. 앱에서 그 페이지로 가는 길은 여기뿐이다 */}
               <a
                 href="/offline/index.html"
-                className="shrink-0 whitespace-nowrap rounded-full bg-brand-tint px-3 py-2 text-xs font-bold"
+                className="inline-flex min-h-12 shrink-0 items-center whitespace-nowrap rounded-full bg-brand-tint px-3 text-xs font-bold"
               >
-                기기 진단
+                {/* 좁은 화면에서는 로고가 밀려 사라지지 않게 아이콘만 보인다 (이름은 스크린리더에 남는다) */}
+                <span aria-hidden className="icon-[lucide--smartphone] h-5 w-5 sm:hidden" />
+                <span className="sr-only sm:not-sr-only">기기 진단</span>
               </a>
               <TextSizeToggle />
               <VoiceToggle />
