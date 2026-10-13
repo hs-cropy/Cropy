@@ -34,8 +34,8 @@ export function useToast(duration = 3000) {
 }
 
 const PLACEMENT = {
-  // 하단 탭(모바일) 위
-  bottom: "bottom-[calc(5.5rem+env(safe-area-inset-bottom))] md:bottom-8",
+  // 하단 내비(72px) 위 16px. 내비가 사라지는 lg 부터는 푸터(64px) 위 16px
+  bottom: "bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-20",
   // 카메라 오버레이의 닫기 버튼 줄 아래. 하단 셔터를 가리지 않는다
   top: "top-[calc(4rem+env(safe-area-inset-top))]",
 };

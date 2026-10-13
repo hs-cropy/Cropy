@@ -279,7 +279,7 @@ export function DiagnoseForm() {
       </form>
 
       {/* Right column on desktop, below the form on phones */}
-      <div ref={resultRef} className={`scroll-mt-20 lg:mt-0 ${result ? "mt-6" : ""}`}>
+      <div ref={resultRef} className={`scroll-mt-4 lg:mt-0 ${result ? "mt-6" : ""}`}>
         {result ? (
           <div className="space-y-4">
             {result.recapture && !loading && result.save_status === "saved" && (
