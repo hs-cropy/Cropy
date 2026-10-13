@@ -4,8 +4,8 @@ import { installFakeSpeech } from "@/features/voice/testing/fakeSpeech";
 import HistoryPage from "@/app/history/page";
 import { fetchHistory } from "@/lib/api";
 import { AppFrame } from "./AppFrame";
+import { AppShellPage } from "./AppShell";
 import { APP_NAV_ITEMS, currentNavKey } from "./appNav";
-import { LegacyPage } from "./LegacyPage";
 
 const navigation = vi.hoisted(() => ({ pathname: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname }));
@@ -169,7 +169,7 @@ describe("AppFrame", () => {
   it("화면을 옮기면 초점을 그 화면의 본문으로 보낸다. 처음 열 때는 옮기지 않는다", () => {
     const { rerender } = render(
       <AppFrame>
-        <LegacyPage scrollLabel="진단하기">홈</LegacyPage>
+        <AppShellPage scrollLabel="진단하기">홈</AppShellPage>
       </AppFrame>,
     );
     expect(document.activeElement).toBe(document.body);
@@ -178,7 +178,7 @@ describe("AppFrame", () => {
     navigation.pathname = "/history";
     rerender(
       <AppFrame>
-        <LegacyPage scrollLabel="진단 이력">이력</LegacyPage>
+        <AppShellPage scrollLabel="진단 이력">이력</AppShellPage>
       </AppFrame>,
     );
 
@@ -188,14 +188,14 @@ describe("AppFrame", () => {
   it("경로가 그대로면 다시 그려도 초점을 건드리지 않는다", () => {
     const { rerender } = render(
       <AppFrame>
-        <LegacyPage scrollLabel="진단하기">홈</LegacyPage>
+        <AppShellPage scrollLabel="진단하기">홈</AppShellPage>
       </AppFrame>,
     );
     const voice = screen.getByRole("switch", { name: "음성 안내" });
     voice.focus();
     rerender(
       <AppFrame>
-        <LegacyPage scrollLabel="진단하기">홈</LegacyPage>
+        <AppShellPage scrollLabel="진단하기">홈</AppShellPage>
       </AppFrame>,
     );
 
