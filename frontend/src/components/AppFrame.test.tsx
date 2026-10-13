@@ -1,11 +1,15 @@
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { installFakeSpeech } from "@/features/voice/testing/fakeSpeech";
+import HistoryPage from "@/app/history/page";
+import { fetchHistory } from "@/lib/api";
 import { AppFrame } from "./AppFrame";
 import { APP_NAV_ITEMS, currentNavKey } from "./appNav";
+import { LegacyPage } from "./LegacyPage";
 
 const navigation = vi.hoisted(() => ({ pathname: "/" }));
 vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname }));
+vi.mock("@/lib/api", () => ({ fetchHistory: vi.fn() }));
 
 beforeEach(() => {
   installFakeSpeech();
@@ -14,11 +18,14 @@ beforeEach(() => {
   navigation.pathname = "/";
 });
 
+// 헤더 내비와 하단 내비에서 현재 화면으로 표시된 항목
 function currentLinks() {
-  return screen
-    .getAllByRole("link")
-    .filter((link) => link.getAttribute("aria-current") === "page")
-    .map((link) => link.textContent);
+  return ["주요 메뉴", "하단 메뉴"].map((name) =>
+    within(screen.getByRole("navigation", { name }))
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("aria-current") === "page")
+      .map((link) => link.textContent),
+  );
 }
 
 describe("currentNavKey", () => {
@@ -63,25 +70,25 @@ describe("AppFrame", () => {
   it("홈에서는 헤더 내비와 하단 내비의 진단 항목이 현재 화면이다", () => {
     render(<AppFrame>화면</AppFrame>);
 
-    expect(currentLinks()).toEqual(["새 진단", "진단"]);
+    expect(currentLinks()).toEqual([["새 진단"], ["진단"]]);
   });
 
   it("이력 목록과 이력 상세에서는 이력 항목이 현재 화면이다", () => {
     navigation.pathname = "/history";
     const { unmount } = render(<AppFrame>화면</AppFrame>);
-    expect(currentLinks()).toEqual(["진단 이력", "이력"]);
+    expect(currentLinks()).toEqual([["진단 이력"], ["이력"]]);
     unmount();
 
     navigation.pathname = "/history/abc";
     render(<AppFrame>화면</AppFrame>);
-    expect(currentLinks()).toEqual(["진단 이력", "이력"]);
+    expect(currentLinks()).toEqual([["진단 이력"], ["이력"]]);
   });
 
   it("내비에 없는 경로에서는 현재 화면 표시가 없다", () => {
     navigation.pathname = "/unknown";
     render(<AppFrame>화면</AppFrame>);
 
-    expect(currentLinks()).toEqual([]);
+    expect(currentLinks()).toEqual([[], []]);
   });
 
   it("두 내비의 항목은 같은 곳으로 간다", () => {
@@ -108,5 +115,61 @@ describe("AppFrame", () => {
     );
     expect(header.getByRole("button", { name: /큰글씨/ })).toBeTruthy();
     expect(header.getByRole("button", { name: /음성/ })).toBeTruthy();
+  });
+
+  it("실제 화면을 넣어도 main 은 하나다", async () => {
+    vi.mocked(fetchHistory).mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      size: 20,
+      unfiltered_total: 0,
+      crop_total: 0,
+    });
+    navigation.pathname = "/history";
+    render(
+      <AppFrame>
+        <HistoryPage />
+      </AppFrame>,
+    );
+    await screen.findByText("아직 진단 기록이 없어요");
+
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+  });
+
+  it("화면을 옮기면 초점을 그 화면의 본문으로 보낸다. 처음 열 때는 옮기지 않는다", () => {
+    const { rerender } = render(
+      <AppFrame>
+        <LegacyPage scrollLabel="진단하기">홈</LegacyPage>
+      </AppFrame>,
+    );
+    expect(document.activeElement).toBe(document.body);
+
+    screen.getByRole("link", { name: "이력" }).focus();
+    navigation.pathname = "/history";
+    rerender(
+      <AppFrame>
+        <LegacyPage scrollLabel="진단 이력">이력</LegacyPage>
+      </AppFrame>,
+    );
+
+    expect(document.activeElement).toBe(screen.getByRole("region", { name: "진단 이력" }));
+  });
+
+  it("경로가 그대로면 다시 그려도 초점을 건드리지 않는다", () => {
+    const { rerender } = render(
+      <AppFrame>
+        <LegacyPage scrollLabel="진단하기">홈</LegacyPage>
+      </AppFrame>,
+    );
+    const voice = screen.getByRole("button", { name: /음성/ });
+    voice.focus();
+    rerender(
+      <AppFrame>
+        <LegacyPage scrollLabel="진단하기">홈</LegacyPage>
+      </AppFrame>,
+    );
+
+    expect(document.activeElement).toBe(voice);
   });
 });
