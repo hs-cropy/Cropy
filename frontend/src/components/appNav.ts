@@ -2,8 +2,8 @@ import type { NavItem } from "./navItem";
 
 // Figma 의 내비: 헤더는 새 진단·진단 결과·진단 이력, 모바일 하단은 촬영·진단·이력.
 // "진단 결과"는 아직 자기 화면(경로)이 없다. 진단 결과가 "/" 화면 안의 상태이기 때문이다.
-// 그래서 지금은 진단 화면("/")으로 보내기만 하고 현재 화면으로 표시되지 않는다.
-// 결과 화면에 경로가 생기면 href 와 currentNavKey 를 고친다
+// 그래서 지금은 자리만 차지하고 누를 수 없다(disabled).
+// 결과 화면에 경로가 생기면 href 를 고치고 disabled 를 지운 뒤 currentNavKey 에 넣는다
 export const APP_NAV_ITEMS: NavItem[] = [
   {
     key: "capture",
@@ -18,6 +18,7 @@ export const APP_NAV_ITEMS: NavItem[] = [
     label: "진단 결과",
     mobileLabel: "진단",
     icon: "icon-[lucide--scan-search]",
+    disabled: true,
   },
   {
     key: "history",

@@ -40,10 +40,10 @@ describe("currentNavKey", () => {
     expect(currentNavKey(pathname)).toBe(key);
   });
 
-  it("내비 항목은 Figma 의 세 개이고 실제로 있는 화면만 가리킨다", () => {
-    expect(APP_NAV_ITEMS.map((item) => [item.key, item.href])).toEqual([
+  it("내비 항목은 Figma 의 세 개다. 자기 화면이 없는 진단 결과는 누를 수 없다", () => {
+    expect(APP_NAV_ITEMS.map((item) => [item.key, item.disabled ? null : item.href])).toEqual([
       ["capture", "/"],
-      ["result", "/"],
+      ["result", null],
       ["history", "/history"],
     ]);
   });
@@ -108,7 +108,7 @@ describe("AppFrame", () => {
 
     for (const name of ["주요 메뉴", "하단 메뉴"]) {
       const links = within(screen.getByRole("navigation", { name })).getAllByRole("link");
-      expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", "/", "/history"]);
+      expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", null, "/history"]);
     }
   });
 
@@ -122,17 +122,15 @@ describe("AppFrame", () => {
     render(<AppFrame>화면</AppFrame>);
     const header = within(screen.getByRole("banner"));
 
-    expect(
-      header
-        .getAllByRole("switch")
-        .map((item) => item.getAttribute("aria-label") ?? item.textContent),
-    ).toEqual(["큰 글자", "음성 안내"]);
+    expect(header.getAllByRole("switch")).toHaveLength(2);
+    expect(header.getByRole("switch", { name: "큰 글자" })).toBeTruthy();
+    expect(header.getByRole("switch", { name: "음성 안내" })).toBeTruthy();
     expect(header.queryByRole("button")).toBeNull();
     // 로고와 내비 항목 말고는 링크가 없다 (기기 진단 링크는 진단 화면 본문으로 옮겼다)
     expect(header.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
       "/",
       "/",
-      "/",
+      null,
       "/history",
     ]);
   });

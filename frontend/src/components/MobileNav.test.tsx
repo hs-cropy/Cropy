@@ -127,3 +127,39 @@ describe("MobileNav — 디자인 시스템 사양", () => {
     expect(other.classList.contains("text-cropy-action-primary")).toBe(false);
   });
 });
+
+describe("MobileNav — 갈 화면이 없는 항목", () => {
+  const WITH_DISABLED: NavItem[] = ITEMS.map((item) =>
+    item.key === "result" ? { ...item, disabled: true } : item,
+  );
+
+  it("자리와 라벨은 그대로 두되 링크가 아니라서 Tab 으로 닿지 않는다", () => {
+    render(<MobileNav items={WITH_DISABLED} />);
+    const nav = within(screen.getByRole("navigation"));
+    const disabled = nav.getByRole("link", { name: "진단" });
+
+    expect(nav.getAllByRole("listitem")).toHaveLength(3);
+    expect(disabled.tagName).toBe("SPAN");
+    expect(disabled.getAttribute("aria-disabled")).toBe("true");
+    expect(disabled.hasAttribute("href")).toBe(false);
+    expect(disabled.hasAttribute("tabindex")).toBe(false);
+  });
+
+  it("current 로 지정해도 현재 화면으로 표시하지 않는다", () => {
+    render(<MobileNav items={WITH_DISABLED} current="result" />);
+    const nav = within(screen.getByRole("navigation"));
+
+    expect(nav.getByRole("link", { name: "진단" }).hasAttribute("aria-current")).toBe(false);
+    expect(nav.getAllByRole("link").filter((link) => link.hasAttribute("aria-current"))).toEqual(
+      [],
+    );
+  });
+
+  it("모양은 선택되지 않은 항목과 같다", () => {
+    render(<MobileNav items={WITH_DISABLED} />);
+    const nav = within(screen.getByRole("navigation"));
+    const classes = Array.from(nav.getByRole("link", { name: "진단" }).classList);
+
+    expect(classes).toEqual(expect.arrayContaining(["font-medium", "text-cropy-text-secondary"]));
+  });
+});
