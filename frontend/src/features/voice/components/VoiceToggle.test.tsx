@@ -17,15 +17,16 @@ beforeEach(() => {
 });
 
 function toggleButton() {
-  return screen.getByRole("button", { name: /음성/ });
+  return screen.getByRole("switch", { name: "음성 안내" });
 }
 
 describe("VoiceToggle", () => {
-  it("기본은 꺼짐이고 스크린리더에 상태를 알려준다", () => {
+  it('기본은 꺼짐이다. 이름은 "음성 안내"로 고정하고 상태는 aria-checked 로 알린다', () => {
     render(<VoiceToggle />);
 
-    expect(toggleButton().getAttribute("aria-pressed")).toBe("false");
-    expect(toggleButton().textContent).toContain("안내 꺼짐");
+    expect(toggleButton().getAttribute("aria-checked")).toBe("false");
+    // 좁은 화면용 글자(\"음성\")와 넓은 화면용 글자(\"음성 안내\")가 함께 들어 있다
+    expect(toggleButton().textContent).toBe("음성음성 안내");
   });
 
   it("켜면 저장하고, 홈에서는 켬 안내에 이어 홈 안내를 읽는다", () => {
@@ -33,8 +34,7 @@ describe("VoiceToggle", () => {
 
     fireEvent.click(toggleButton());
 
-    expect(toggleButton().getAttribute("aria-pressed")).toBe("true");
-    expect(toggleButton().textContent).toContain("안내 켜짐");
+    expect(toggleButton().getAttribute("aria-checked")).toBe("true");
     expect(localStorage.getItem(VOICE_SETTING_KEY)).toBe("on");
     expect(spokenTexts(synth)).toEqual(["음성 안내를 켰어요", "작물을 고르고 잎을 찍어주세요"]);
   });
@@ -54,7 +54,7 @@ describe("VoiceToggle", () => {
 
     fireEvent.click(toggleButton());
 
-    expect(toggleButton().getAttribute("aria-pressed")).toBe("false");
+    expect(toggleButton().getAttribute("aria-checked")).toBe("false");
     expect(localStorage.getItem(VOICE_SETTING_KEY)).toBe("off");
     expect(synth.cancel).toHaveBeenCalledTimes(1);
     expect(synth.speak).not.toHaveBeenCalled();
@@ -64,13 +64,19 @@ describe("VoiceToggle", () => {
     setVoiceEnabled(true);
     render(<VoiceToggle />);
 
-    expect(toggleButton().getAttribute("aria-pressed")).toBe("true");
+    expect(toggleButton().getAttribute("aria-checked")).toBe("true");
   });
 
-  it("Web Speech를 지원하지 않는 브라우저에서는 버튼을 숨긴다", () => {
+  it("Web Speech를 지원하지 않는 브라우저에서는 스위치를 숨긴다", () => {
     vi.unstubAllGlobals();
     render(<VoiceToggle />);
 
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("switch")).toBeNull();
+  });
+
+  it("배치용 className 을 스위치에 전달한다", () => {
+    render(<VoiceToggle className="xl:w-[8.25rem]" />);
+
+    expect(Array.from(toggleButton().classList)).toContain("xl:w-[8.25rem]");
   });
 });
