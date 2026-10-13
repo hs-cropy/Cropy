@@ -1,0 +1,9 @@
+{
+  "preflight": "passed",
+  "img_size": 384,
+  "batch_size": 16,
+  "precision": "float32",
+  "max_memory_allocated_bytes": 4425789440,
+  "max_memory_reserved_bytes": 5066719232,
+  "gpu": "Tesla T4"
+}

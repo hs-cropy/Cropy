@@ -1,0 +1,51 @@
+﻿구분,conversation_id,기능,split,phase,원문,변경사유
+예비 보존,V5_D_100_2,get_diagnosis,train,singleton_reserve,고추 사진 결과를 처음 보고 있어 결과에 적힌 심각도 속성을 알려줘,split 유지 초과분 예비 보존
+예비 보존,V5_D_100_1,get_diagnosis,train,singleton_reserve,고추 사진 결과를 처음 보고 있어요 결과에 적힌 심각도 속성을 알려주세요,split 유지 초과분 예비 보존
+예비 보존,V5_D_099_2,get_diagnosis,train,singleton_reserve,배추 분류 기록을 설명받고 싶어 현재 결과의 병명 후보가 무엇인지 알려줘,split 유지 초과분 예비 보존
+예비 보존,V5_D_099_1,get_diagnosis,train,singleton_reserve,배추 분류 기록을 설명받고 싶어요 현재 결과의 병명 후보가 무엇인지 알려주세요,split 유지 초과분 예비 보존
+예비 보존,V5_D_098_2,get_diagnosis,train,singleton_reserve,무 사진을 확인하고 있어요 관리한 뒤 얼마나 좋아졌는지 알려줘,split 유지 초과분 예비 보존
+예비 보존,V5_D_130_2,get_diagnosis,validation,singleton_reserve,내가 찍은 배추 결과에 대해 묻고 싶어 병든 면적이 어느 정도인지 결과에서 확인해줘,split 유지 초과분 예비 보존
+예비 보존,V5_D_130_1,get_diagnosis,validation,singleton_reserve,내가 찍은 배추 결과에 대해 묻고 싶어요 병든 면적이 어느 정도인지 결과에서 확인해주세요,split 유지 초과분 예비 보존
+예비 보존,V5_M_100_3,get_prediction_metrics,train,singleton_reserve,이번 고추 사진 결 과를 보고 있어요 앞선 후보와 다음 후보의 차이가 궁금해요,split 유지 초과분 예비 보존
+예비 보존,V5_M_100_2,get_prediction_metrics,train,singleton_reserve,이번 고추 사진 결과를 보고 있어 앞선 후보와 다음 후보의 차이가 궁금해,split 유지 초과분 예비 보존
+예비 보존,V5_M_100_1,get_prediction_metrics,train,singleton_reserve,이번 고추 사진 결과를 보고 있어요 앞선 후보와 다음 후보의 차이가 궁금해요,split 유지 초과분 예비 보존
+예비 보존,V5_M_099_3,get_prediction_metrics,train,singleton_reserve,배추 진단 정보를 살펴보고 있어요 쩜수가 낮으면 정상이라는 뜻인가요,split 유지 초과분 예비 보존
+예비 보존,V5_M_099_2,get_prediction_metrics,train,singleton_reserve,배추 진단 정보를 살펴보고 있어 점수가 낮으면 정상이라는 뜻인가요,split 유지 초과분 예비 보존
+예비 보존,V5_M_099_1,get_prediction_metrics,train,singleton_reserve,배추 진단 정보를 살펴보고 있어요 점수가 낮으면 정상이라는 뜻인가요,split 유지 초과분 예비 보존
+신규 보충,V8_ADD_001,get_care_information,train,singleton,내 밭 원인을 단정하지 말고 이 자료에 적힌 발생 요인만 읽어줘,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_002,get_pesticide_information,train,singleton,제품 추천 대신 약제 자료를 확인할 때 빠뜨리면 안 될 표시 항목을 알려줘,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_003,get_pesticide_information,train,singleton,가상 제품 시의 희석 배수가 빈칸인데 자료로 답할 수 있어,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_004,get_pesticide_information,train,singleton,가상 제품 디는 이름만 나와도 검증을 마친 자료로 봐도 돼,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_005,clarify_request,train,singleton,가상 제품 마와 바가 같이 보이는데 그 약 사용법 좀 말해줘,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_006,clarify_request,train,singleton,선택은 고추인데 결과는 배추래 실제로 찍은 작물은 둘 중 무엇인지 확신이 안 서,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_007,clarify_request,train,singleton,앞에 말한 것에서 그 부분만 더 들려줘,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_008,clarify_request,train,singleton,두 후보 점수가 있는데 이 숫자는 어느 쪽 값이야,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_009,clarify_request,train,singleton,어제 찍은 결과랑 오늘 결과 중 내 기록을 찾아 설명해줘,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_010,clarify_request,train,singleton,음성이 끊겨서 첫 단어가 안 들렸는데 그거 설명해줘,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_011,clarify_request,train,singleton,무인지 배추인지 내가 이름을 모르겠어 이 작물 결과를 설명해줘,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_012,clarify_request,validation,singleton,가상 제품 사하고 아 중에서 저걸 쓰는 간격을 확인하고 싶어,독립 원문 합성 근거 새 가족 사람 검수 전
+신규 보충,V8_ADD_013,clarify_request,validation,singleton,설명 중간에 궁금해졌는데 더 자세한 내용으로 넘어가 줘,독립 원문 합성 근거 새 가족 사람 검수 전
+그룹 통합,V5_R_029_1,get_recapture_guidance,train,singleton,지금 무 결과 화면을 열었어요 저장된 안내대로 어디를 다시 찍어야 하나요,"{""id"": ""V5_R_029_1"", ""before_group"": ""G_V5_R_029"", ""before_seed"": ""S_V5_R_029"", ""after_group"": ""G_V5_R_001"", ""after_seed"": ""S_V5_R_001""}"
+그룹 통합,V5_R_029_2,get_recapture_guidance,train,singleton,지금 무 결과 화면을 열었어 저장된 안내대로 어디를 다시 찍어야 하나요,"{""id"": ""V5_R_029_2"", ""before_group"": ""G_V5_R_029"", ""before_seed"": ""S_V5_R_029"", ""after_group"": ""G_V5_R_001"", ""after_seed"": ""S_V5_R_001""}"
+그룹 통합,V5_R_029_3,get_recapture_guidance,train,singleton,방금 무를 차령했어요 저장된 안내대로 어디를 다시 찍어야 하나요,"{""id"": ""V5_R_029_3"", ""before_group"": ""G_V5_R_029"", ""before_seed"": ""S_V5_R_029"", ""after_group"": ""G_V5_R_001"", ""after_seed"": ""S_V5_R_001""}"
+그룹 통합,V5_R_085_1,get_recapture_guidance,train,singleton,무 결과에서 한 가지 궁금해요 저장된 안내대로 어디를 다시 찍어야 하나요,"{""id"": ""V5_R_085_1"", ""before_group"": ""G_V5_R_085"", ""before_seed"": ""S_V5_R_085"", ""after_group"": ""G_V5_R_057"", ""after_seed"": ""S_V5_R_057""}"
+그룹 통합,V5_R_085_2,get_recapture_guidance,train,singleton,무 결과에서 한 가지 궁금해 저장된 안내대로 어디를 다시 찍어야 하나요,"{""id"": ""V5_R_085_2"", ""before_group"": ""G_V5_R_085"", ""before_seed"": ""S_V5_R_085"", ""after_group"": ""G_V5_R_057"", ""after_seed"": ""S_V5_R_057""}"
+그룹 통합,V5_R_085_3,get_recapture_guidance,train,singleton,무 사진을 화긴하고 있어요 저장된 안내대로 어디를 다시 찍어야 하나요,"{""id"": ""V5_R_085_3"", ""before_group"": ""G_V5_R_085"", ""before_seed"": ""S_V5_R_085"", ""after_group"": ""G_V5_R_057"", ""after_seed"": ""S_V5_R_057""}"
+그룹 통합,V5_R_091_1,get_recapture_guidance,train,singleton,이번 무 사진 결과를 보고 있어요 추가 사진을 찍으면 확진이라고 말해도 되나요,"{""id"": ""V5_R_091_1"", ""before_group"": ""G_V5_R_091"", ""before_seed"": ""S_V5_R_091"", ""after_group"": ""G_V5_R_007"", ""after_seed"": ""S_V5_R_007""}"
+그룹 통합,V5_R_091_2,get_recapture_guidance,train,singleton,이번 무 사진 결과를 보고 있어 추가 사진을 찍으면 확진이라고 말해도 되나요,"{""id"": ""V5_R_091_2"", ""before_group"": ""G_V5_R_091"", ""before_seed"": ""S_V5_R_091"", ""after_group"": ""G_V5_R_007"", ""after_seed"": ""S_V5_R_007""}"
+그룹 통합,V5_R_091_3,get_recapture_guidance,train,singleton,지금 무 결과 화 면을 열었어요 추가 사진을 찍으면 확진이라고 말해도 되나요,"{""id"": ""V5_R_091_3"", ""before_group"": ""G_V5_R_091"", ""before_seed"": ""S_V5_R_091"", ""after_group"": ""G_V5_R_007"", ""after_seed"": ""S_V5_R_007""}"
+그룹 통합,V5_C_065_1,get_care_information,train,singleton,이번 무 사진 결과를 보고 있어요 자료에 적힌 약제 외 관리 항목을 알려주세요,"{""id"": ""V5_C_065_1"", ""before_group"": ""G_V5_C_065"", ""before_seed"": ""S_V5_C_065"", ""after_group"": ""G_V5_C_002"", ""after_seed"": ""S_V5_C_002""}"
+그룹 통합,V5_C_065_2,get_care_information,train,singleton,이번 무 사진 결과를 보고 있어 자료에 적힌 약제 외 관리 항목을 알려줘,"{""id"": ""V5_C_065_2"", ""before_group"": ""G_V5_C_065"", ""before_seed"": ""S_V5_C_065"", ""after_group"": ""G_V5_C_002"", ""after_seed"": ""S_V5_C_002""}"
+그룹 통합,V5_C_065_3,get_care_information,train,singleton,방금 무를 차령했어요 자료에 적힌 약제 외 관리 항목을 알려주세요,"{""id"": ""V5_C_065_3"", ""before_group"": ""G_V5_C_065"", ""before_seed"": ""S_V5_C_065"", ""after_group"": ""G_V5_C_002"", ""after_seed"": ""S_V5_C_002""}"
+그룹 통합,V5_C_085_1,get_care_information,train,singleton,지금 고추 결과 화면을 열었어요 제공된 자료의 원인 항목을 읽어주세요,"{""id"": ""V5_C_085_1"", ""before_group"": ""G_V5_C_085"", ""before_seed"": ""S_V5_C_085"", ""after_group"": ""G_V5_C_001"", ""after_seed"": ""S_V5_C_001""}"
+그룹 통합,V5_C_085_2,get_care_information,train,singleton,지금 고추 결과 화면을 열었어 제공된 자료의 원인 항목을 읽어줘,"{""id"": ""V5_C_085_2"", ""before_group"": ""G_V5_C_085"", ""before_seed"": ""S_V5_C_085"", ""after_group"": ""G_V5_C_001"", ""after_seed"": ""S_V5_C_001""}"
+그룹 통합,V5_C_085_3,get_care_information,train,singleton,방금 고추를 차령했어요 제공된 자료의 원인 항목을 읽어주세요,"{""id"": ""V5_C_085_3"", ""before_group"": ""G_V5_C_085"", ""before_seed"": ""S_V5_C_085"", ""after_group"": ""G_V5_C_001"", ""after_seed"": ""S_V5_C_001""}"
+그룹 통합,V5_C_087_1,get_care_information,train,singleton,이번 배추 사진 결과를 보고 있어요 제공된 관리 항목 중 무엇을 먼저 해야 하나요,"{""id"": ""V5_C_087_1"", ""before_group"": ""G_V5_C_087"", ""before_seed"": ""S_V5_C_087"", ""after_group"": ""G_V5_C_003"", ""after_seed"": ""S_V5_C_003""}"
+그룹 통합,V5_C_087_2,get_care_information,train,singleton,배추 결과에서 한 가지 궁금해 제공된 관리 항목 중 무엇을 먼저 해야 하나요,"{""id"": ""V5_C_087_2"", ""before_group"": ""G_V5_C_087"", ""before_seed"": ""S_V5_C_087"", ""after_group"": ""G_V5_C_003"", ""after_seed"": ""S_V5_C_003""}"
+그룹 통합,V5_C_087_3,get_care_information,train,singleton,배추 결 과에서 한 가지 궁금해요 제공된 관리 항목 중 무엇을 먼저 해야 하나요,"{""id"": ""V5_C_087_3"", ""before_group"": ""G_V5_C_087"", ""before_seed"": ""S_V5_C_087"", ""after_group"": ""G_V5_C_003"", ""after_seed"": ""S_V5_C_003""}"
+그룹 통합,V5_Q_057_1,clarify_request,train,singleton,설명이 필요해서 물어볼게요 선택한 작물과 나온 작물이 다른데 어느 결과를 믿나요,"{""id"": ""V5_Q_057_1"", ""before_group"": ""G_V5_Q_057"", ""before_seed"": ""S_V5_Q_057"", ""after_group"": ""G_V5_Q_001"", ""after_seed"": ""S_V5_Q_001""}"
+그룹 통합,V5_Q_057_2,clarify_request,train,singleton,지금 앱을 켜 두었어요 선택한 작물과 나온 작물이 다른데 어느 결과를 믿나요,"{""id"": ""V5_Q_057_2"", ""before_group"": ""G_V5_Q_057"", ""before_seed"": ""S_V5_Q_057"", ""after_group"": ""G_V5_Q_001"", ""after_seed"": ""S_V5_Q_001""}"
+그룹 통합,V5_Q_057_3,clarify_request,train,singleton,설멍이 필요해서 물어볼게요 선택한 작물과 나온 작물이 다른데 어느 결과를 믿나요,"{""id"": ""V5_Q_057_3"", ""before_group"": ""G_V5_Q_057"", ""before_seed"": ""S_V5_Q_057"", ""after_group"": ""G_V5_Q_001"", ""after_seed"": ""S_V5_Q_001""}"
+그룹 통합,V5_Q_064_1,clarify_request,train,singleton,화면을 보고 질문할게요 가루 그거 하는 거 알려줘요,"{""id"": ""V5_Q_064_1"", ""before_group"": ""G_V5_Q_064"", ""before_seed"": ""S_V5_Q_064"", ""after_group"": ""G_V5_Q_008"", ""after_seed"": ""S_V5_Q_008""}"
+그룹 통합,V5_Q_064_2,clarify_request,train,singleton,화면을 보고 질문할게 가루 그거 하는 거 알려줘요,"{""id"": ""V5_Q_064_2"", ""before_group"": ""G_V5_Q_064"", ""before_seed"": ""S_V5_Q_064"", ""after_group"": ""G_V5_Q_008"", ""after_seed"": ""S_V5_Q_008""}"
+그룹 통합,V5_Q_064_3,clarify_request,train,singleton,지금 앱을 켜 두 었어요 가루 그거 하는 거 알려줘요,"{""id"": ""V5_Q_064_3"", ""before_group"": ""G_V5_Q_064"", ""before_seed"": ""S_V5_Q_064"", ""after_group"": ""G_V5_Q_008"", ""after_seed"": ""S_V5_Q_008""}"

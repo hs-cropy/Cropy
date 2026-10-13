@@ -1,0 +1,32 @@
+{
+  "notebook_compile": true,
+  "embedded_sources_match": true,
+  "ml_tests": "82 passed",
+  "cpu_smoke_resume": "../resolution_finetune_smoke_20261005/verification.json",
+  "status": "GPU training in progress: control256 epochs1..5 started; candidate384 queued automatically after control; final comparison pending",
+  "colab_notebook": "https://colab.research.google.com/drive/1zp83JNRj-g0-Bb4Y6x4Ewl8QmBm16ywq",
+  "uploaded_notebook_bytes_match": true,
+  "notebook_sha256": "8abc29e2f6ccce04b8e34c9131a584ef80802f5c3017207f7fc4c756a033273d",
+  "colab_environment": {
+    "torch": "2.11.0+cu130",
+    "torchvision": "0.26.0+cu130",
+    "gpu": "Tesla T4"
+  },
+  "source_checkpoint_sha256_verified": true,
+  "data_hash_verification": {
+    "images": 36583,
+    "image_and_label_hashes": true,
+    "manifest_hash": true
+  },
+  "gpu_memory_preflight": {
+    "preflight": "passed",
+    "img_size": 384,
+    "batch_size": 16,
+    "precision": "float32",
+    "max_memory_allocated_bytes": 4425789440,
+    "max_memory_reserved_bytes": 5066719232,
+    "gpu": "Tesla T4"
+  },
+  "initial_256_confusion_matches_original": true,
+  "run_folder": "https://drive.google.com/drive/folders/1zLX86RgAsg7UuGTvSHGDBx6xcdRlafsN"
+}

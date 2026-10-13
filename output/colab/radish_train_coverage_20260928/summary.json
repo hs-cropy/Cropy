@@ -1,0 +1,105 @@
+{
+  "train_images": 513,
+  "class_counts": {
+    "2": 344,
+    "3": 169
+  },
+  "groups": 65,
+  "sample_images": 65,
+  "unique_hashes": 513,
+  "metadata_mismatches": 0,
+  "workers": [
+    {
+      "actual": 2,
+      "worker": "3108e",
+      "images": 4,
+      "dimension_mismatch": 0,
+      "date_groups": 3
+    },
+    {
+      "actual": 2,
+      "worker": "3270e",
+      "images": 48,
+      "dimension_mismatch": 0,
+      "date_groups": 8
+    },
+    {
+      "actual": 2,
+      "worker": "3592b",
+      "images": 69,
+      "dimension_mismatch": 0,
+      "date_groups": 8
+    },
+    {
+      "actual": 2,
+      "worker": "5389e",
+      "images": 136,
+      "dimension_mismatch": 0,
+      "date_groups": 11
+    },
+    {
+      "actual": 2,
+      "worker": "6814e",
+      "images": 26,
+      "dimension_mismatch": 0,
+      "date_groups": 3
+    },
+    {
+      "actual": 2,
+      "worker": "9662e",
+      "images": 61,
+      "dimension_mismatch": 0,
+      "date_groups": 10
+    },
+    {
+      "actual": 3,
+      "worker": "3108e",
+      "images": 46,
+      "dimension_mismatch": 0,
+      "date_groups": 9
+    },
+    {
+      "actual": 3,
+      "worker": "5389e",
+      "images": 45,
+      "dimension_mismatch": 0,
+      "date_groups": 5
+    },
+    {
+      "actual": 3,
+      "worker": "9662e",
+      "images": 78,
+      "dimension_mismatch": 0,
+      "date_groups": 8
+    }
+  ],
+  "scope": "train classes 2/3 only; one path-hash-selected image per class/worker/date group; no test images read",
+  "sample_counts": {
+    "2": {
+      "surface": {
+        "뒷면 추정": 35,
+        "판단 불가": 3,
+        "앞면 추정": 5
+      },
+      "framing": {
+        "잎 전체": 16,
+        "근접": 24,
+        "여러 잎": 3
+      }
+    },
+    "3": {
+      "surface": {
+        "앞면 추정": 8,
+        "뒷면 추정": 12,
+        "판단 불가": 2
+      },
+      "framing": {
+        "잎 전체": 12,
+        "근접": 9,
+        "여러 잎": 1
+      }
+    }
+  },
+  "train_val_worker_overlap": 0,
+  "train_val_exact_hash_overlap": 0
+}

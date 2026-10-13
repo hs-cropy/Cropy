@@ -1,0 +1,23 @@
+[
+  {
+    "filekey": 46445,
+    "path": "C:\\cropy\\data\\full\\원천데이터\\train고추정상원천데이터.tar",
+    "bytes": 11719481856,
+    "tar_structure_checked": true,
+    "image_crc_checked": false
+  },
+  {
+    "filekey": 46449,
+    "path": "C:\\cropy\\data\\full\\원천데이터\\train무정상원천데이터.tar",
+    "bytes": 15599536640,
+    "tar_structure_checked": true,
+    "image_crc_checked": false
+  },
+  {
+    "filekey": 46452,
+    "path": "C:\\cropy\\data\\full\\원천데이터\\train배추정상원천데이터.tar",
+    "bytes": 18881288192,
+    "tar_structure_checked": true,
+    "image_crc_checked": false
+  }
+]

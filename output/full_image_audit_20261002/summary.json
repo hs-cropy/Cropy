@@ -1,0 +1,32 @@
+{
+  "archives": 12,
+  "images": 36811,
+  "counts": {
+    "1.Training/01.고추/0.정상": 8575,
+    "1.Training/01.고추/1.질병": 1888,
+    "1.Training/02.무/0.정상": 11001,
+    "1.Training/03.배추/0.정상": 9318,
+    "1.Training/03.배추/1.질병": 1260,
+    "1.Training/02.무/1.질병": 697,
+    "2.Validation/01.고추/0.정상": 1110,
+    "2.Validation/01.고추/1.질병": 229,
+    "2.Validation/02.무/0.정상": 1303,
+    "2.Validation/02.무/1.질병": 100,
+    "2.Validation/03.배추/0.정상": 1183,
+    "2.Validation/03.배추/1.질병": 147
+  },
+  "image_errors": [],
+  "archive_errors": [],
+  "warning_count": 0,
+  "duplicates": {
+    "sha256": {
+      "cross_split": 40,
+      "within_split": 188
+    },
+    "pixel_sha256": {
+      "cross_split": 40,
+      "within_split": 188
+    }
+  },
+  "scope": "All downloaded original Training/Validation TAR images. Full ZIP CRC, Pillow verify/load, SHA256 bytes and EXIF-oriented RGB pixel hash. No perceptual near-duplicate or subject/farm independence proof. No model evaluation or data modification."
+}

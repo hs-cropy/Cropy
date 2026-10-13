@@ -1,0 +1,71 @@
+﻿id,path,date,risk,a_surface,a_marks,a_hard_shadow,a_bright_patch,a_broad_view,a_note,b_surface,b_marks,b_hard_shadow,b_bright_patch,b_broad_view,b_note
+T01,V006_79_1_04_02_03_12_1_9662e_20201021_10.jpeg,2020/10/21,1,front,conspicuous,False,False,True,작은 밝은 고리점 여러 개와 위쪽 가장자리 손상이 보임.,front,conspicuous,False,False,True,넓은 잎에 밝은 고리와 가장자리 구멍이 보임
+T02,V006_79_1_04_02_03_12_1_9662e_20201021_13.jpeg,2020/10/21,1,front,conspicuous,False,False,True,녹색의 넓은 면에 옅은 점이 있고 위쪽 구멍이 눈에 띔.,front,conspicuous,False,False,True,펼쳐진 잎에 큰 구멍과 둥근 옅은 점이 보임
+T03,V006_79_1_04_02_03_12_1_9662e_20201021_3.jpeg,2020/10/21,1,front,conspicuous,False,False,True,넓은 잎에 밝은 고리점이 흩어지고 국소 구멍이 보임.,front,conspicuous,False,True,True,"넓은 잎의 구멍과 옅은 반점, 왼쪽 강한 조명"
+T04,V006_79_1_04_02_03_12_1_9662e_20201021_4.jpeg,2020/10/21,1,front,conspicuous,False,False,True,오른쪽과 아래쪽의 밝은 고리점 및 구멍이 뚜렷함.,front,conspicuous,False,True,True,"여러 고리 모양 점과 구멍, 위쪽 밝은 영역"
+T05,V006_79_1_04_02_03_12_1_9662e_20201021_5.jpeg,2020/10/21,1,front,subtle,False,False,True,녹색 잎 면이 넓게 펼쳐지고 작은 점만 드물게 보임.,front,subtle,False,False,True,대체로 녹색인 넓은 잎에 작은 점이 산재
+T06,V006_79_1_04_02_03_12_1_9662e_20201021_7.jpeg,2020/10/21,1,front,subtle,False,False,True,얕은 잎맥과 미세하게 흩어진 밝은 질감이 보임.,back,subtle,False,False,True,"밝게 솟은 잎맥과 미세한 점, 넓은 잎 일부"
+T07,V006_79_1_04_02_03_12_1_9662e_20201021_8.jpeg,2020/10/21,1,front,conspicuous,False,True,True,밝은 고리점과 작은 구멍이 여러 개이며 우상단이 강하게 비침.,front,conspicuous,False,True,True,"구멍과 옅은 고리 반점, 위쪽 강한 밝기"
+T08,V006_79_1_04_02_03_12_1_9662e_20201102_11.jpeg,2020/11/02,1,back,subtle,False,False,False,도드라진 잎맥의 옅은 잎이 우하단에 있고 배경 비중이 큼.,back,subtle,False,False,False,솟은 잎맥의 잎이 비스듬히 좁게 보임
+T09,V006_79_1_04_02_03_12_1_9662e_20201102_12.jpeg,2020/11/02,1,back,conspicuous,False,True,True,돌출된 잎맥 주변의 밝은 고리점과 아래 작은 구멍이 보임.,back,conspicuous,True,True,True,"밝은 잎맥과 다수 옅은 점, 잎을 가로지르는 그림자"
+T10,V006_79_1_04_02_03_12_1_9662e_20201102_14.jpeg,2020/11/02,1,back,subtle,False,False,True,"넓게 펼친 연녹색 뒷면과 굵은 밝은 잎맥, 작은 점이 보임.",back,subtle,True,True,True,"넓은 옅은 잎과 솟은 잎맥, 손 부근 그림자와 밝은 윗부분"
+T11,V006_79_1_04_02_03_12_1_9662e_20201102_2.jpeg,2020/11/02,1,back,subtle,False,False,True,"옅은 잎 뒷면과 도드라진 망상 잎맥, 작은 밝은 점 하나가 보임.",back,subtle,True,True,True,"밝게 솟은 잎맥, 오른쪽 경계가 있는 그림자"
+T12,V006_79_1_04_02_03_12_1_9662e_20201102_3.jpeg,2020/11/02,1,back,subtle,False,False,True,굵은 밝은 잎맥과 작은 검은 점 두어 개가 보임.,back,conspicuous,True,True,True,"솟은 잎맥 주변 짙은 점과 구멍, 윗부분 그림자"
+T13,V006_79_1_04_02_03_12_1_9662e_20201102_4.jpeg,2020/11/02,1,back,conspicuous,False,False,True,도드라진 잎맥이 펼쳐지고 왼쪽 위 구멍과 작은 검은 점이 보임.,back,conspicuous,True,True,True,"큰 가장자리 구멍과 검은 점, 오른쪽 명암 경계"
+T14,V006_79_1_04_02_03_12_1_9662e_20201102_6.jpeg,2020/11/02,1,back,subtle,False,False,True,옅은 뒷면과 굵은 잎맥이 보이고 변화는 작은 점 수준임.,back,subtle,True,True,False,접혀 좁아진 잎의 솟은 잎맥과 가로 그림자
+T15,V006_79_1_04_02_03_12_1_9662e_20201102_8.jpeg,2020/11/02,1,back,conspicuous,False,False,True,옅은 뒷면 중앙의 작은 흰색 국소 자국과 검은 점이 보임.,back,conspicuous,True,True,True,"작은 밝은 구멍과 어두운 점, 오른쪽 그림자"
+T16,V006_79_1_04_02_03_12_1_9662e_20201102_9.jpeg,2020/11/02,1,uncertain,conspicuous,False,False,True,물방울과 가장자리의 밝은 갈색 자국이 보이며 앞뒷면은 불명확함.,back,conspicuous,True,True,True,"여러 둥근 고리 모양 점, 위쪽 그림자와 밝은 띠"
+T17,V006_79_1_04_02_03_12_1_9662e_20201104_12.jpeg,2020/11/04,1,front,conspicuous,True,True,True,"광택 있는 녹색 면에 밝은 국소 자국과 구멍, 명확한 명암 경계가 보임.",front,conspicuous,True,True,True,"밝은 국소 반점과 구멍, 잎 위 강한 명암"
+T18,V006_79_1_04_02_03_12_1_9662e_20201104_13.jpeg,2020/11/04,1,back,subtle,True,True,True,넓은 옅은 잎 위로 선명한 그림자가 가로지르고 밝게 비친 띠가 있음.,back,subtle,True,True,True,대체로 녹색인 넓은 잎을 큰 그림자가 가로지름
+T19,V006_79_1_04_02_03_12_1_9662e_20201104_14.jpeg,2020/11/04,1,front,conspicuous,False,True,True,녹색 면 중앙의 길쭉한 밝은 갈색 자국과 아래쪽 강한 반사가 보임.,uncertain,conspicuous,False,False,False,접힘으로 면 판단이 어렵고 중앙에 옅은 길쭉한 자국
+T20,V006_79_1_04_02_03_12_1_9662e_20201104_15.jpeg,2020/11/04,1,back,subtle,False,False,True,"굵은 밝은 잎맥과 잔주름, 희미하고 작은 선 모양 색 변화가 보임.",back,subtle,False,False,False,솟은 잎맥의 좁게 꺾인 잎과 작은 갈색 점
+T21,V006_79_1_04_02_03_12_1_9662e_20201104_7.jpeg,2020/11/04,1,back,conspicuous,True,True,True,넓은 뒷면의 작은 국소 밝은 자국과 잎을 가로지르는 그림자가 보임.,back,subtle,True,True,True,"솟은 잎맥과 작은 점, 넓은 잎 위 뚜렷한 그림자"
+T22,V006_79_1_04_02_03_12_1_9662e_20201110_1.jpeg,2020/11/10,1,back,conspicuous,True,True,True,밝은 뒷면에 여러 구멍이 있고 선명한 그림자 경계가 있음.,back,conspicuous,True,True,True,펼쳐진 잎의 구멍과 강한 명암 경계
+T23,V006_79_1_04_02_03_12_1_9662e_20201110_10.jpeg,2020/11/10,1,back,conspicuous,True,True,True,왼쪽 아래의 갈색 가장자리와 잎 위의 짙은 그림자가 보임.,back,conspicuous,True,True,True,잎 하단의 넓은 갈색 부위와 가로 그림자
+T24,V006_79_1_04_02_03_12_1_9662e_20201110_13.jpeg,2020/11/10,1,back,subtle,True,True,True,밝은 굵은 잎맥과 옅은 면에 큰 반점은 없고 아래쪽에 선명한 그림자가 있음.,back,subtle,True,True,True,"밝은 잎맥, 위쪽 밝은 잎과 아래쪽 그림자"
+T25,V006_79_1_04_02_03_12_1_9662e_20201110_15.jpeg,2020/11/10,1,back,conspicuous,True,True,True,"왼쪽의 큰 구멍과 아래 갈색 가장자리, 강한 빛과 그림자가 보임.",back,subtle,True,True,False,굽은 잎의 제한된 면에 선명한 명암 경계
+T26,V006_79_1_04_02_03_12_1_9662e_20201110_2.jpeg,2020/11/10,1,back,conspicuous,True,True,True,위쪽 작은 구멍들이 뚜렷하고 잎 아래 절반에 짙은 그림자가 있음.,back,conspicuous,True,True,True,위쪽 구멍들과 넓게 잎을 가리는 짙은 그림자
+T27,V006_79_1_04_02_03_12_1_9662e_20201110_6.jpeg,2020/11/10,1,back,conspicuous,True,True,True,아래쪽 갈색 가장자리와 위쪽을 가로지르는 날카로운 그림자가 보임.,back,conspicuous,True,True,True,"아래 가장자리 구멍, 위쪽 날카로운 그림자"
+T28,V006_79_1_04_02_03_12_1_9662e_20201110_8.jpeg,2020/11/10,1,back,subtle,True,True,True,넓은 뒷면에 작은 밝은 점만 보이고 위쪽에 선명한 그림자가 있음.,back,subtle,True,True,True,"뚜렷한 잎맥과 미세한 점, 위쪽 잎 그림자"
+T29,V006_79_1_04_02_03_12_1_9662e_20201116_1.jpeg,2020/11/16,1,back,conspicuous,True,True,False,손에 잡힌 비교적 작은 잎의 왼쪽 갈색 가장자리와 그림자가 보임.,back,subtle,True,True,False,"작게 잡힌 잎과 손, 잎 일부 밝은 면과 그림자"
+T30,V006_79_1_04_02_03_12_1_9662e_20201116_10.jpeg,2020/11/16,1,back,subtle,True,True,True,굵고 밝은 잎맥과 작은 점들이 보이며 아래쪽에 강한 빛의 경계가 있음.,back,subtle,True,True,True,"밝은 돌출 잎맥과 작은 점, 아래쪽 밝은 띠"
+T31,V006_79_1_04_02_03_12_1_9662e_20201116_11.jpeg,2020/11/16,1,back,conspicuous,True,True,False,손에 잡힌 작은 잎의 왼쪽 갈색 가장자리와 잎 위 명암 경계가 보임.,back,conspicuous,True,True,False,"작게 잡힌 잎 가장자리에 갈색 부위, 부분 그림자"
+T32,V006_79_1_04_02_03_12_1_9662e_20201116_14.jpeg,2020/11/16,1,back,conspicuous,False,False,True,"넓은 어두운 뒷면과 밝은 잎맥, 두 개의 국소 구멍이 보임.",back,conspicuous,True,False,True,넓은 잎의 구멍과 손 아래 그림자
+T33,V006_79_1_04_02_03_12_1_9662e_20201116_2.jpeg,2020/11/16,1,front,conspicuous,True,True,True,"넓은 녹색 면에 갈색 가장자리와 찢어진 부분, 국소 빛과 그림자가 보임.",front,conspicuous,True,True,True,갈색으로 보이는 가장자리와 넓은 면의 강한 명암
+T34,V006_79_1_04_02_03_12_1_9662e_20201116_3.jpeg,2020/11/16,1,back,conspicuous,True,True,True,옅은 뒷면의 좁은 갈색 자국과 아래 오른쪽을 가로지르는 그림자가 보임.,back,conspicuous,True,True,True,"중앙 옆 작은 갈색 부위, 손 그림자와 밝은 면"
+T35,V006_79_1_04_02_03_12_1_9662e_20201116_5.jpeg,2020/11/16,1,back,subtle,False,False,True,주요 잎은 비교적 균일한 청록색 뒷면이며 작은 밝은 점만 보임.,back,conspicuous,False,False,True,밝게 솟은 잎맥과 오른쪽 가장자리 갈색 부위
+T36,V006_79_1_04_02_03_12_1_9662e_20201116_6.jpeg,2020/11/16,1,back,subtle,True,True,True,도드라진 잎맥과 미약한 색 변화가 보이며 잎 위로 선명한 그림자가 교차함.,back,subtle,True,True,True,대체로 녹색인 잎을 뚜렷한 그림자 경계가 가로지름
+T37,V006_79_1_04_02_03_12_1_9662e_20201116_7.jpeg,2020/11/16,1,back,conspicuous,True,True,True,어두운 뒷면 중앙에 테두리 있는 구멍이 보이고 왼쪽 일부가 강하게 비침.,back,subtle,True,True,True,"넓은 잎과 작은 점, 위쪽 강한 빛과 큰 그림자"
+T38,V006_79_1_04_02_03_12_1_9662e_20201116_9.jpeg,2020/11/16,1,back,subtle,True,True,True,넓은 뒷면에 작은 점 하나가 보이고 하단에는 날카로운 경계의 과도하게 밝은 영역이 있음.,back,subtle,True,True,True,"작은 점과 돌출 잎맥, 아래 왼쪽 과하게 밝은 영역"
+T39,V006_79_1_04_02_03_12_1_9662e_20201124_1.jpeg,2020/11/24,1,back,conspicuous,False,False,True,연녹색 뒷면에 큰 구멍과 작은 굽은 갈색 자국이 뚜렷함.,back,conspicuous,False,False,True,넓은 잎 중앙의 큰 구멍과 주변 갈색 테두리
+T40,V006_79_1_04_02_03_12_1_9662e_20201124_11.jpeg,2020/11/24,1,back,conspicuous,False,False,False,접혀서 좁게 보이는 잎에 갈색 가장자리와 여러 구멍이 있음.,back,conspicuous,False,False,False,좁게 접힌 잎의 여러 구멍과 갈색 가장자리
+T41,V006_79_1_04_02_03_12_2_9662e_20201026_10.jpeg,2020/10/26,2,back,conspicuous,False,False,False,작게 잡힌 주요 잎에 나란한 밝은 국소 자국이 보이고 배경 비중이 큼.,back,conspicuous,False,False,False,작게 잡힌 잎 가장자리의 밝은 갈색 점
+T42,V006_79_1_04_02_03_12_2_9662e_20201026_11.jpeg,2020/10/26,2,front,conspicuous,False,False,False,여러 녹색 잎이 겹치며 위쪽 주요 잎 오른편에 작은 흰색 자국이 보임.,front,conspicuous,True,False,True,넓은 잎의 밝은 국소 자국과 위쪽 그늘
+T43,V006_79_1_04_02_03_12_2_9662e_20201026_13.jpeg,2020/10/26,2,back,conspicuous,False,False,True,물방울과 돌출된 잎맥이 넓게 보이고 왼쪽 중앙에 작은 갈색 국소 자국이 있음.,back,conspicuous,False,False,True,밝은 잎맥 옆 국소 갈색 자국과 작은 검은 점
+T44,V006_79_1_04_02_03_12_2_9662e_20201026_15.jpeg,2020/10/26,2,back,conspicuous,False,False,True,물방울 많은 옅은 뒷면의 오른쪽에 뚜렷한 갈색 국소 자국이 있음.,back,conspicuous,True,True,True,거친 밝은 잎의 갈색 부위와 오른쪽 그림자
+T45,V006_79_1_04_02_03_12_2_9662e_20201026_4.jpeg,2020/10/26,2,front,conspicuous,True,True,False,여러 작은 잎 중 둥근 잎에 갈색 자국이 있고 국소 햇빛과 그림자가 보임.,uncertain,conspicuous,True,True,False,여러 잎이 겹쳐 면 판단이 어렵고 국소 갈색 자국이 보임
+T46,V006_79_1_04_02_03_12_2_9662e_20201026_6.jpeg,2020/10/26,2,back,conspicuous,True,True,False,좁게 들린 뒷면에 갈색 국소 자국과 손 부근의 선명한 그림자가 보임.,back,conspicuous,True,True,False,좁게 잡은 잎의 갈색 부위와 가로 그림자 띠
+T47,V006_79_1_04_02_03_12_2_9662e_20201026_7.jpeg,2020/10/26,2,front,conspicuous,True,True,True,넓은 녹색 면에 밝은 갈색 자국이 있으며 왼쪽에 강한 빛의 띠가 있음.,front,conspicuous,True,True,True,중앙 밝은 갈색 부위와 왼쪽 강한 햇빛 띠
+T48,V006_79_1_04_02_03_12_2_9662e_20201026_8.jpeg,2020/10/26,2,back,conspicuous,True,True,True,물방울 많은 뒷면의 갈색 자국과 위쪽 손 주변의 강한 빛·그림자 경계가 보임.,back,conspicuous,True,True,True,펼쳐진 잎의 갈색 점과 손 아래 밝고 어두운 영역
+T49,V006_79_1_04_02_03_12_2_9662e_20201026_9.jpeg,2020/10/26,2,front,conspicuous,False,False,False,작은 중앙 잎에 흰색 국소 자국들이 모여 있고 주변 잎 비중이 큼.,front,conspicuous,False,False,False,주변 잎 사이 작은 잎에 밝은 국소 자국
+T50,V006_79_1_04_02_03_12_2_9662e_20201102_1.jpeg,2020/11/02,2,back,conspicuous,True,True,True,"넓은 뒷면에 뚜렷한 둥근 어두운 자국과 흰색 자국, 위쪽 명암 경계가 보임.",back,conspicuous,True,True,True,"큰 짙은 점과 흰 점, 위쪽 밝은 영역과 그림자"
+T51,V006_79_1_04_02_03_12_2_9662e_20201102_15.jpeg,2020/11/02,2,front,conspicuous,False,False,True,넓은 녹색 잎에 갈색 및 밝은 국소 자국이 여러 개 흩어져 있음.,front,conspicuous,True,True,True,"넓은 잎의 여러 갈색·밝은 점, 위쪽 그림자 띠"
+T52,V006_79_1_04_02_03_12_2_9662e_20201102_16.jpeg,2020/11/02,2,front,conspicuous,False,False,True,넓은 녹색 잎의 물방울 아래에 밝은 갈색 국소 자국이 보임.,front,conspicuous,False,False,True,둥글게 도드라진 점과 아래쪽 갈색 부위
+T53,V006_79_1_04_02_03_12_2_9662e_20201102_5.jpeg,2020/11/02,2,back,conspicuous,False,True,True,굵은 밝은 잎맥 주위에 큰 구멍과 작은 검은 점들이 있고 오른쪽이 강하게 밝음.,back,conspicuous,True,True,True,"잎의 여러 구멍과 말린 가장자리, 강한 명암"
+T54,V006_79_1_04_02_03_12_2_9662e_20201104_2.jpeg,2020/11/04,2,front,conspicuous,True,True,True,여러 밝은 점상 자국과 가장자리 갈색 부분이 보이며 선명한 그림자가 잎을 가로지름.,front,conspicuous,True,True,True,"갈색·흰 점과 가장자리 변화, 잎을 덮는 큰 그림자"
+T55,V006_79_1_04_02_03_12_2_9662e_20201104_3.jpeg,2020/11/04,2,front,subtle,True,True,True,넓은 녹색 면에 드문 작은 갈색 점이 있고 상부에 뚜렷한 그림자 경계가 있음.,front,conspicuous,True,True,True,분산된 갈색·밝은 점과 위쪽 날카로운 그림자
+T56,V006_79_1_04_02_03_12_2_9662e_20201104_4.jpeg,2020/11/04,2,front,conspicuous,True,True,True,"큰 흰색 국소 자국과 뜯긴 가장자리, 오른쪽의 강한 빛·그림자 경계가 보임.",front,conspicuous,True,True,True,"크게 밝은 국소 부위와 구멍, 주변 강한 명암"
+T57,V006_79_1_04_02_03_12_2_9662e_20201104_8.jpeg,2020/11/04,2,back,conspicuous,True,True,True,넓은 뒷면 위쪽의 작은 갈색 자국과 대각선으로 나뉜 빛·그림자가 보임.,back,conspicuous,True,True,True,윗가장자리 갈색 부위와 넓은 면의 그림자
+T58,V006_79_1_04_02_03_12_2_9662e_20201110_14.jpeg,2020/11/10,2,back,conspicuous,False,False,True,연녹색 뒷면의 작은 밝은 갈색 자국과 아래 가장자리의 갈변이 보임.,back,conspicuous,True,True,True,"중앙 옅은 자국과 아래 가장자리 갈색, 국소 그림자"
+T59,V006_79_1_04_02_03_12_2_9662e_20201110_3.jpeg,2020/11/10,2,back,conspicuous,True,True,True,"뒷면 중앙의 옅은 손상 자국과 구멍, 윗부분을 가로지르는 짙은 그림자가 보임.",back,conspicuous,True,True,True,"중앙 흰 손상 자국과 구멍, 잎맥 아래 짙은 그림자"
+T60,V006_79_1_04_02_03_12_2_9662e_20201110_4.jpeg,2020/11/10,2,back,conspicuous,True,True,True,뒷면에 크고 작은 구멍이 많이 보이며 위쪽에 손 모양 그림자가 있음.,back,conspicuous,True,True,True,"여러 큰 구멍과 갈색 테두리, 손 그림자"
+T61,V006_79_1_04_02_03_12_2_9662e_20201110_5.jpeg,2020/11/10,2,back,conspicuous,True,True,False,여러 잎 중 가까운 잎의 구멍과 선명한 그림자가 보이며 배경 잎 비중이 큼.,back,conspicuous,True,True,True,"넓은 앞쪽 잎의 구멍과 작은 점, 강한 잎 그림자"
+T62,V006_79_1_04_02_03_12_2_9662e_20201116_12.jpeg,2020/11/16,2,back,conspicuous,True,True,False,손에 잡힌 잎의 갈색 타원 자국과 강한 그림자 경계가 보이며 다른 잎이 함께 큼.,back,conspicuous,True,True,True,중앙 갈색 부위와 잎·손이 만드는 그림자
+T63,V006_79_1_04_02_03_12_2_9662e_20201124_12.jpeg,2020/11/24,2,back,conspicuous,False,False,False,가까운 작은 잎에 넓은 갈색 가장자리 자국이 있고 뒤쪽 잎이 크게 보임.,back,conspicuous,False,False,True,앞쪽 잎의 넓은 옅은 갈색 가장자리
+T64,V006_79_1_04_02_03_12_2_9662e_20201124_13.jpeg,2020/11/24,2,back,conspicuous,False,False,True,넓은 뒷면 중앙의 흰색·갈색 국소 자국과 위쪽 구멍이 뚜렷함.,back,conspicuous,False,False,True,넓은 잎 중앙의 큰 옅은 갈색 부위와 구멍
+T65,V006_79_1_04_02_03_12_2_9662e_20201124_14.jpeg,2020/11/24,2,back,conspicuous,False,False,True,밝게 도드라진 잎맥 주위의 둥근 갈색 자국과 여러 밝은 점이 보임.,back,conspicuous,False,False,True,갈색 원형 부위와 많은 작은 밝은 점
+T66,V006_79_1_04_02_03_12_2_9662e_20201124_15.jpeg,2020/11/24,2,back,conspicuous,False,False,False,좁고 접힌 뒷면에 여러 큰 구멍과 가장자리 갈색 자국이 보임.,back,conspicuous,False,False,False,좁게 굽은 잎의 큰 구멍과 갈색 가장자리
+T67,V006_79_1_04_02_03_12_2_9662e_20201124_5.jpeg,2020/11/24,2,back,conspicuous,False,False,True,"넓은 청록색 면과 밝은 잎맥, 오른쪽의 큰 흰색 국소 자국이 보임.",back,conspicuous,False,False,True,넓은 잎 가장자리의 흰 부위와 여러 밝은 점
+T68,V006_79_1_04_02_03_12_2_9662e_20201124_6.jpeg,2020/11/24,2,back,conspicuous,False,False,False,접혀 작게 보이는 주요 잎의 가장자리에 넓은 흰색·갈색 자국이 있음.,back,conspicuous,False,False,False,손으로 잡은 작은 접힌 잎에 넓은 옅은 갈색 부위
+T69,V006_79_1_04_02_03_12_2_9662e_20201124_7.jpeg,2020/11/24,2,back,conspicuous,False,False,True,넓은 뒷면에 여러 구멍과 밝은 국소 자국이 뚜렷함.,back,conspicuous,False,False,True,넓은 잎의 구멍과 뚜렷한 밝은 갈색 점
+T70,V006_79_1_04_02_03_12_3_9662e_20201124_9.jpeg,2020/11/24,3,back,conspicuous,False,False,False,여러 잎이 좁고 말린 상태이며 많은 구멍과 밝은 갈색 가장자리가 보임.,uncertain,conspicuous,False,False,False,여러 잎이 겹치며 큰 구멍과 말린 가장자리가 보임

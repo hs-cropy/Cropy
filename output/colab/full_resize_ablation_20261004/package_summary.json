@@ -1,0 +1,15 @@
+{
+  "train_geometry": "full_resize",
+  "code_sha256": "c4a7568a37e5ca2408bbb3a558ac4656331433ad37d8022cc805f4a365a7edf0",
+  "source_sha256": {
+    "train.py": "0e72b4fad3e98f02df46652fd9094f48bc826582221236f779f890979c16f6ff",
+    "train_full_colab.py": "6329a4ebf1628c646a57409535b028e8a9a0f7efe80bdf2380b26bc5b7144dfc",
+    "train_group_baseline.py": "d10243e4a3ebe256b885bafca95f3cabac24692270d54f4ea0959b39340837fc",
+    "compare_crop_ablation.py": "db1136e5eeec0816939fe2a0193743237b323d35d8cd4ccd29cb477df9e4303f"
+  },
+  "notebook_sha256": "c130a06d8a0be636351efef3c3efc1cf1f9bf38d04a219335a4e985055deebf1",
+  "data_sha256": "52dea0080285d76b6cbc09c2659c052a18f20ef620d05bca462203e64e6872ee",
+  "result_path": "cropy_runs/full512_resnet50_full_resize_v1",
+  "status": "GPU training started; performance results pending",
+  "colab_notebook": "https://colab.research.google.com/drive/1HGqC1kw62DBzLmMGoTrXBxNh_yIkSzMC"
+}

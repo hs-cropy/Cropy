@@ -106,3 +106,6 @@ backend/app/data/seed/*
 # Storybook
 /frontend/storybook-static/
 /frontend/debug-storybook.log
+
+/ml/test-results/
+/마음ai/test-results/

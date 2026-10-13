@@ -1,0 +1,5178 @@
+{
+  "scope": "Current full prepared_deduplicated_v1 manifest: class_id=3, filename token9662e; 70 train +8 val. No training or mutations to dataset/model. Prior surface tags rejoined by exact original file SHA256, not by prior split.",
+  "manifest_path": "data/full/prepared_deduplicated_v1/manifest.csv",
+  "manifest_sha256": "a0ad80fdadfe51a6101fc0e0190b361ec9a7ea25e99e73bbc497f222483c82b7",
+  "dataset_rows": 36583,
+  "all_training_rows": 32513,
+  "class3_split_token_counts": {
+    "1.Training": {
+      "2852e": 32,
+      "3055e": 42,
+      "3108e": 43,
+      "5389e": 40,
+      "9662e": 70
+    },
+    "2.Validation": {
+      "2852e": 1,
+      "3055e": 7,
+      "3108e": 3,
+      "5389e": 5,
+      "9662e": 8
+    }
+  },
+  "train_summary": {
+    "n": 70,
+    "dates": {
+      "20201021": 7,
+      "20201026": 9,
+      "20201102": 13,
+      "20201104": 9,
+      "20201110": 11,
+      "20201116": 11,
+      "20201124": 10
+    },
+    "risk_codes": {
+      "1": 40,
+      "2": 29,
+      "3": 1
+    },
+    "growth_codes": {
+      "12": 70
+    },
+    "description_worker": {
+      "": 70
+    },
+    "description_region": {
+      "9": 70
+    },
+    "surface_tags_from_prior_review": {
+      "앞면 추정": 19,
+      "뒷면 추정": 50,
+      "판단 불가": 1
+    }
+  },
+  "validation_summary": {
+    "n": 8,
+    "dates": {
+      "20201020": 1,
+      "20201021": 2,
+      "20201026": 1,
+      "20201102": 1,
+      "20201104": 2,
+      "20201110": 1
+    },
+    "risk_codes": {
+      "1": 7,
+      "2": 1
+    },
+    "growth_codes": {
+      "12": 8
+    },
+    "description_worker": {
+      "": 8
+    },
+    "description_region": {
+      "9": 8
+    },
+    "surface_tags_from_prior_review": {
+      "앞면 추정": 3,
+      "뒷면 추정": 5
+    }
+  },
+  "check_failures": [],
+  "checks_n": {
+    "label_sha256": 78,
+    "image_sha256": 78,
+    "image_dimensions_manifest": 78,
+    "image_dimensions_label": 78,
+    "image_name_label": 78,
+    "date_label_filename": 78,
+    "type_label_filename": 78,
+    "disease_label_filename": 78,
+    "crop_label_filename": 78,
+    "area_label_filename": 78,
+    "grow_label_filename": 78,
+    "risk_label_filename": 78,
+    "class3_codes": 78
+  },
+  "train_unique_file_hashes": 70,
+  "train_unique_pixel_hashes": 70,
+  "val_vs_all_train_exact_duplicates": {
+    "sha256": [],
+    "pixel_sha256": []
+  },
+  "error_comparisons": [
+    {
+      "review_id": "3-2",
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201020_9.jpeg",
+      "date": "20201020",
+      "risk_code": 1,
+      "same_token_date_train_n": 0,
+      "same_token_date_risk_train_n": 0,
+      "same_token_date_train": [],
+      "same_date_all_class3_train_n": 0,
+      "same_token_date_class2_train_n": 1,
+      "all_training_exact_file_matches": [],
+      "all_training_exact_pixel_matches": []
+    },
+    {
+      "review_id": "3-3",
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201021_6.jpeg",
+      "date": "20201021",
+      "risk_code": 1,
+      "same_token_date_train_n": 7,
+      "same_token_date_risk_train_n": 7,
+      "same_token_date_train": [
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201021_5.jpeg",
+          "sequence_number": 5,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "앞면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R385"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201021_7.jpeg",
+          "sequence_number": 7,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "앞면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R384"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201021_4.jpeg",
+          "sequence_number": 4,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R382"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201021_8.jpeg",
+          "sequence_number": 8,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "앞면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R386"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201021_3.jpeg",
+          "sequence_number": 3,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "앞면 추정",
+            "source": "visual_review_20260928",
+            "expert_status": "전문가 미검수",
+            "id": "T59"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201021_10.jpeg",
+          "sequence_number": 10,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "앞면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R379"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201021_13.jpeg",
+          "sequence_number": 13,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "앞면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R381"
+          }
+        }
+      ],
+      "same_date_all_class3_train_n": 23,
+      "same_token_date_class2_train_n": 7,
+      "all_training_exact_file_matches": [],
+      "all_training_exact_pixel_matches": []
+    },
+    {
+      "review_id": "3-4",
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201104_1.jpeg",
+      "date": "20201104",
+      "risk_code": 1,
+      "same_token_date_train_n": 9,
+      "same_token_date_risk_train_n": 5,
+      "same_token_date_train": [
+        {
+          "path": "V006_79_1_04_02_03_12_2_9662e_20201104_2.jpeg",
+          "sequence_number": 2,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 2
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R418"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_2_9662e_20201104_3.jpeg",
+          "sequence_number": 3,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 2
+          },
+          "prior_surface_tag": {
+            "surface": "앞면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R410"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_2_9662e_20201104_4.jpeg",
+          "sequence_number": 4,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 2
+          },
+          "prior_surface_tag": {
+            "surface": "앞면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R416"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201104_7.jpeg",
+          "sequence_number": 7,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R414"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_2_9662e_20201104_8.jpeg",
+          "sequence_number": 8,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 2
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R417"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201104_12.jpeg",
+          "sequence_number": 12,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "앞면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R412"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201104_13.jpeg",
+          "sequence_number": 13,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "앞면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R409"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201104_14.jpeg",
+          "sequence_number": 14,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "판단 불가",
+            "source": "visual_review_20260928",
+            "expert_status": "전문가 미검수",
+            "id": "T62"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201104_15.jpeg",
+          "sequence_number": 15,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R413"
+          }
+        }
+      ],
+      "same_date_all_class3_train_n": 12,
+      "same_token_date_class2_train_n": 6,
+      "all_training_exact_file_matches": [],
+      "all_training_exact_pixel_matches": []
+    },
+    {
+      "review_id": "3-5",
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201110_12.jpeg",
+      "date": "20201110",
+      "risk_code": 1,
+      "same_token_date_train_n": 11,
+      "same_token_date_risk_train_n": 7,
+      "same_token_date_train": [
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201110_13.jpeg",
+          "sequence_number": 13,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R419"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201110_10.jpeg",
+          "sequence_number": 10,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R421"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_2_9662e_20201110_14.jpeg",
+          "sequence_number": 14,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 2
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R426"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201110_15.jpeg",
+          "sequence_number": 15,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R423"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201110_8.jpeg",
+          "sequence_number": 8,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R425"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201110_6.jpeg",
+          "sequence_number": 6,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R424"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_2_9662e_20201110_5.jpeg",
+          "sequence_number": 5,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 2
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R429"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_2_9662e_20201110_4.jpeg",
+          "sequence_number": 4,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 2
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R428"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_2_9662e_20201110_3.jpeg",
+          "sequence_number": 3,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 2
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R427"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201110_2.jpeg",
+          "sequence_number": 2,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260928",
+            "expert_status": "전문가 미검수",
+            "id": "T63"
+          }
+        },
+        {
+          "path": "V006_79_1_04_02_03_12_1_9662e_20201110_1.jpeg",
+          "sequence_number": 1,
+          "annotation_codes": {
+            "disease": 4,
+            "crop": 2,
+            "area": 3,
+            "grow": 12,
+            "risk": 1
+          },
+          "prior_surface_tag": {
+            "surface": "뒷면 추정",
+            "source": "visual_review_20260929",
+            "expert_status": "전문가 미검수",
+            "id": "R420"
+          }
+        }
+      ],
+      "same_date_all_class3_train_n": 13,
+      "same_token_date_class2_train_n": 8,
+      "all_training_exact_file_matches": [],
+      "all_training_exact_pixel_matches": []
+    }
+  ],
+  "records": [
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201021_10.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201021",
+      "sequence_number": 10,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201021_10.jpeg",
+        "date": "2020/10/21",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1001,
+          "ytl": 556,
+          "xbr": 3162,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "e97fe4b1d70667bdb10c1e34c1fa2efb617326c162dba79bc8b40638db671420",
+      "pixel_sha256": "5fab5c1861c8bb98e0f120c2c494eea7af411490ae00211fc1b95b007020f8bf",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_10.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_10.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R379"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201021_13.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201021",
+      "sequence_number": 13,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201021_13.jpeg",
+        "date": "2020/10/21",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1517,
+          "ytl": 416,
+          "xbr": 2797,
+          "ybr": 3019
+        }
+      ],
+      "sha256": "a19804d9a8559d3deac4b4ca1b232f1ea628ef5ae47e2aa4febf52647bc5e75c",
+      "pixel_sha256": "0e2780de432e498b4934b93922e9362467b4696cec8e872e9b8f314823033e53",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_13.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_13.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R381"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201021_3.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201021",
+      "sequence_number": 3,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201021_3.jpeg",
+        "date": "2020/10/21",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 0,
+          "xbr": 1635,
+          "ybr": 3003
+        }
+      ],
+      "sha256": "043bb9d6b419de293753a377dd6e4878062c352843cfdefdcf2192334e647dfb",
+      "pixel_sha256": "a94a8b455354dbcde6222905fd4fc18e27192acf529bb25165815475ab6e64f3",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_3.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_3.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260928",
+        "expert_status": "전문가 미검수",
+        "id": "T59"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201021_4.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201021",
+      "sequence_number": 4,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201021_4.jpeg",
+        "date": "2020/10/21",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 0,
+          "xbr": 3532,
+          "ybr": 3013
+        }
+      ],
+      "sha256": "e6a5dcbbc681f9aab9a4802dbd1a72633aecbc0888c2c70751497964aae4e8f1",
+      "pixel_sha256": "7417e364321ae095df4137db8676f5b621010bc8af332e99ad1c8e367183d382",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_4.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_4.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R382"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201021_5.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201021",
+      "sequence_number": 5,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201021_5.jpeg",
+        "date": "2020/10/21",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 380,
+          "ytl": 56,
+          "xbr": 3392,
+          "ybr": 2218
+        }
+      ],
+      "sha256": "3bd9a8eea9f09dc0c3660f1ed59d5581712b2ba1fd676891e4257bde4992933b",
+      "pixel_sha256": "a30586c9c1f0f4f1ab0e8bb38d4712284cfc3aefdf25806e22cec340ffe637fd",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_5.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_5.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R385"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201021_7.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201021",
+      "sequence_number": 7,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201021_7.jpeg",
+        "date": "2020/10/21",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 2022,
+          "ytl": 1127,
+          "xbr": 4032,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "7d776ca5da061629ebb8c5623812adf7b0b109d6ecd4a1fe9982286d0c40c255",
+      "pixel_sha256": "f23022eb260688e9894b1e3101913d2344f5e78151d0c1ffa2992ba147bbf8fa",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_7.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_7.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R384"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201021_8.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201021",
+      "sequence_number": 8,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201021_8.jpeg",
+        "date": "2020/10/21",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 976,
+          "ytl": 11,
+          "xbr": 4018,
+          "ybr": 3003
+        }
+      ],
+      "sha256": "dc83b66b37170f17723bcea2e54c77e8671397bdda5cdc678ddc20f89d3e8ab5",
+      "pixel_sha256": "664cce040a151e48a3d956cfe82694ee1071cd7c1bafdeeee675835e3a7daa1c",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_8.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_8.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R386"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201102_11.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 11,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201102_11.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1546,
+          "ytl": 697,
+          "xbr": 4022,
+          "ybr": 2634
+        }
+      ],
+      "sha256": "af7ba126ef8d69cbac75fedf571edd091081790e10831ba39dd06d5eae451ca9",
+      "pixel_sha256": "8f602688a29992f8a52934d961aeeef300fd06ccdeaa226e602c38b558df73e7",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_11.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_11.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R397"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201102_12.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 12,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201102_12.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 11,
+          "ytl": 0,
+          "xbr": 2907,
+          "ybr": 2774
+        }
+      ],
+      "sha256": "9576b22efea1fb54101afdf3e4bf3865629c3163dcb68347aabd81eac70adc3d",
+      "pixel_sha256": "120623d83b6aa67b84674ce75cd22f2c8755b1e414e1016bee4fdf58778ebfc6",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_12.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_12.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R398"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201102_14.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 14,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201102_14.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1037,
+          "ytl": 0,
+          "xbr": 3713,
+          "ybr": 2333
+        }
+      ],
+      "sha256": "239efa14b981948d8b65ee00b987a233391caed7d42df3bbfdac01b3b7a03588",
+      "pixel_sha256": "645a0278edf4bf8ca3cac1c56030fe4e6c30d752ddf3de4efeaffc559edb7435",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_14.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_14.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260928",
+        "expert_status": "전문가 미검수",
+        "id": "T61"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201102_2.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 2,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201102_2.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 191,
+          "xbr": 4032,
+          "ybr": 2808
+        }
+      ],
+      "sha256": "da4246515f3eec8cfaa6167c904fd9c1996f5ab498ae7d9813ca0c2b2ccf408c",
+      "pixel_sha256": "c8db2fbc3c756e0148a942a1835cb64ee065b13718929904e2cc7d00d6ffe987",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_2.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_2.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R400"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201102_3.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 3,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201102_3.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 741,
+          "ytl": 0,
+          "xbr": 3238,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "4fcf325a50124d03fd84adc5630b20f498d226e6167a0255c89b21f7e10046d7",
+      "pixel_sha256": "8c54ba2a3f91d4cd35560bcceba9582f42095a7923570134b56d3933d0e899fa",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_3.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_3.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R401"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201102_4.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 4,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201102_4.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1,
+          "ytl": 1,
+          "xbr": 3768,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "56148696cc811edc1c7837396422f8ca2b1f9433c52fd6691d1bf4f2491763a5",
+      "pixel_sha256": "1bcb301e3c5d5d0cb841a95a595c89d39afaea8181d94e0c2b572aeb45a953b0",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_4.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_4.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R408"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201102_6.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 6,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201102_6.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 286,
+          "ytl": 0,
+          "xbr": 3593,
+          "ybr": 3018
+        }
+      ],
+      "sha256": "e151ba1452191f0cd7c189d4157dad320f438034eeb227e6e7de27a8b543dce2",
+      "pixel_sha256": "5b8af1014853c32066eeecf5cf67f040731deb4ec127f604c61046dbfcf1ce3f",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_6.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_6.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R402"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201102_8.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 8,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201102_8.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 5,
+          "ytl": 216,
+          "xbr": 4032,
+          "ybr": 2768
+        }
+      ],
+      "sha256": "5ec639aedcd1beeaeb7d98ab620aff22f03c9cf9f102e3dec3ab866b9ad984e2",
+      "pixel_sha256": "8bbbd0081fe5d2d2cc8fe08f73d7d9a0e34797742c29dd61fecd509cc0fca9bc",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_8.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_8.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R403"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201102_9.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 9,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201102_9.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 406,
+          "ytl": 0,
+          "xbr": 2652,
+          "ybr": 2258
+        }
+      ],
+      "sha256": "6ff3239442bba024e9af0f9375f4e16407571b73aeab8769c31de05b165f3618",
+      "pixel_sha256": "9154493e634bebe3d93759beab5b9cfc2cd2b119da9972562f626cad8ca3d9be",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_9.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_9.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R396"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201104_12.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201104",
+      "sequence_number": 12,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201104_12.jpeg",
+        "date": "2020/11/04",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 1012,
+          "xbr": 2496,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "e7d717cdab894262ef20b7af6fa964b837717fd2fdd0fffa5d8b8ab2cc9aecc9",
+      "pixel_sha256": "f197aa613c5d7b6ff1e2d3392d660892982633ca6961206e0b78b57ed40ecbd1",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_12.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_12.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R412"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201104_13.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201104",
+      "sequence_number": 13,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201104_13.jpeg",
+        "date": "2020/11/04",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1681,
+          "ytl": 706,
+          "xbr": 3172,
+          "ybr": 2103
+        }
+      ],
+      "sha256": "9c91279a8c9b6b7d72386168a5b8ca8c418a7cc32dc5cf2cda5253357cc6b1e9",
+      "pixel_sha256": "ab4e2521cd05dda9e98b60ee93cbdaed5d41d5b8d6592cbf35081c0747e4a419",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_13.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_13.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R409"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201104_14.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201104",
+      "sequence_number": 14,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201104_14.jpeg",
+        "date": "2020/11/04",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 846,
+          "ytl": 1432,
+          "xbr": 2822,
+          "ybr": 3018
+        }
+      ],
+      "sha256": "057c0aababa335894fb67f87577ec81f070b31fc86395399b9a5af3906c5196c",
+      "pixel_sha256": "8c57529c9b78a0283bdecb5eee88ea4fdc5ba8f34a05ce06ad893721a29e7431",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_14.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_14.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "판단 불가",
+        "source": "visual_review_20260928",
+        "expert_status": "전문가 미검수",
+        "id": "T62"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201104_15.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201104",
+      "sequence_number": 15,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201104_15.jpeg",
+        "date": "2020/11/04",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 0,
+          "xbr": 4023,
+          "ybr": 3018
+        }
+      ],
+      "sha256": "a66b0ef4d5b11f840b6c6b6cd221aed5b6c7e5f60fa50ca5109213daaf58cc74",
+      "pixel_sha256": "c3b8384a8be7a61c4de92e3b7af8eb3f40f96ea0f7b1efa469b72f7c486099b2",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_15.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_15.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R413"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201104_7.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201104",
+      "sequence_number": 7,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201104_7.jpeg",
+        "date": "2020/11/04",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 962,
+          "xbr": 974,
+          "ybr": 1643
+        }
+      ],
+      "sha256": "261e55e8501bfb3db4ce7d92067743526483566bfc935a3a90709a1d962ed647",
+      "pixel_sha256": "ea9ec77a5991877ed90fff83d85d27f37bb0c43d2c83aa641321cd05928a31aa",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_7.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_7.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R414"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201110_1.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 1,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201110_1.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1056,
+          "ytl": 1078,
+          "xbr": 2171,
+          "ybr": 1823
+        }
+      ],
+      "sha256": "f1e60d1834afc6e06a5b64c8fd808d70eb7ec3275d9699b53489fa63c07f5418",
+      "pixel_sha256": "000a7557cab6f76edd7ab8ff6269f7bcd112d18dcaca0e4fb9b7ad389e292aba",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_1.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_1.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R420"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201110_10.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 10,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201110_10.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 300,
+          "ytl": 756,
+          "xbr": 3192,
+          "ybr": 2283
+        }
+      ],
+      "sha256": "0930a96ef879025d26a5a15a22b0d93c97a768888cd2479d8e0d39b1e3800e5f",
+      "pixel_sha256": "f3f7d644640e6e547e0802356c09ee21425dce7c700c9c7a41d1db8710370213",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_10.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_10.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R421"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201110_13.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 13,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201110_13.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1721,
+          "ytl": 0,
+          "xbr": 4032,
+          "ybr": 1646
+        }
+      ],
+      "sha256": "24816d9e45cf8003cecc578687fb452d972188e2910690e808d826fc76656e86",
+      "pixel_sha256": "097878e0e650fc1dc76e23a704a91f346bdf7e79fe84a3573c481e91ee44c746",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_13.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_13.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R419"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201110_15.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 15,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201110_15.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 2088,
+          "ytl": 1153,
+          "xbr": 3698,
+          "ybr": 2424
+        }
+      ],
+      "sha256": "5c654497bc0cd1d6296bada8b469e7e9bcc3a3ea000552de8189221ce3efad0c",
+      "pixel_sha256": "0c336fd7d4a3c4312348749ed8e0759751d8d96d7444ade2e5f5bd2128ced5e5",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_15.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_15.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R423"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201110_2.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 2,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201110_2.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 592,
+          "xbr": 2126,
+          "ybr": 1868
+        }
+      ],
+      "sha256": "de4c6bbf6ba9eb5e068e6c32bccb808dfad0c79792c89d9e2373dcfd10414ac4",
+      "pixel_sha256": "a46320c15891874e1fe798fe28087fd06a8cd57ebda6ec4c3848a8f279c710cc",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_2.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_2.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260928",
+        "expert_status": "전문가 미검수",
+        "id": "T63"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201110_6.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 6,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201110_6.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1087,
+          "ytl": 922,
+          "xbr": 3102,
+          "ybr": 1608
+        }
+      ],
+      "sha256": "150f3c898c28a7f74b76283d41537b73982087e9110020ab67a2505971195a06",
+      "pixel_sha256": "2e638c3efae46cf8a5a7bd9f33646c2dd2c8fafa9cde66dc3510c5353e508f8c",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_6.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_6.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R424"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201110_8.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 8,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201110_8.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 957,
+          "xbr": 3492,
+          "ybr": 2759
+        }
+      ],
+      "sha256": "bdd8ec2abb70146eab58adbd0e8158fac5c658d3300b72fa42d4317c978c3dca",
+      "pixel_sha256": "d485aa3216cbf02e1d3011bdae5fb342bec40aea5589c53e11ccfd6788bc0d50",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_8.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_8.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R425"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201116_1.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201116",
+      "sequence_number": 1,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201116_1.jpeg",
+        "date": "2020/11/16",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1742,
+          "ytl": 662,
+          "xbr": 2607,
+          "ybr": 2944
+        }
+      ],
+      "sha256": "b490650be88828f11afb1113ffa71b52902e08511b3fe41615c3d03e606dd504",
+      "pixel_sha256": "5bc440e93e8ca96e6d5ba3085571c784c7f8ae842aca92acbafd1328292cd54a",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_1.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_1.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R433"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201116_10.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201116",
+      "sequence_number": 10,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201116_10.jpeg",
+        "date": "2020/11/16",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 0,
+          "xbr": 4012,
+          "ybr": 2597
+        }
+      ],
+      "sha256": "cd580d5dcc499888521e24f86b5cd1a91870f20363a3f5ad6690aa52941dffb3",
+      "pixel_sha256": "4b6a3fcc40041bb0da010ca7383c7513b1ba923e9d6c624a6be48c4e73a00523",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_10.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_10.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260928",
+        "expert_status": "전문가 미검수",
+        "id": "T64"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201116_11.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201116",
+      "sequence_number": 11,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201116_11.jpeg",
+        "date": "2020/11/16",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1641,
+          "ytl": 1133,
+          "xbr": 2211,
+          "ybr": 2099
+        }
+      ],
+      "sha256": "0a1995e4353c8b951d0450076471d45573788cf10203d6e989c0de51febc5ebf",
+      "pixel_sha256": "ca3345c0d618af083bb06be2c6b341920f486e8a6484dd650e7edde1d31ca5e4",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_11.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_11.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R430"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201116_14.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201116",
+      "sequence_number": 14,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201116_14.jpeg",
+        "date": "2020/11/16",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 2028,
+          "ytl": 981,
+          "xbr": 3668,
+          "ybr": 2993
+        }
+      ],
+      "sha256": "5fcae676a1662ce2633105017fb858c40b7afcc9884211ceb4fb871b471afcae",
+      "pixel_sha256": "f458a9feffaa21f6603274a1473ebc7d2e3c6b2234851c6914877184404020f0",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_14.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_14.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R434"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201116_2.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201116",
+      "sequence_number": 2,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201116_2.jpeg",
+        "date": "2020/11/16",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1802,
+          "ytl": 651,
+          "xbr": 2546,
+          "ybr": 2863
+        }
+      ],
+      "sha256": "5ea02b68689cecf89c54eaf8a89163dac24de488edcdbbf34f527a7eaa6d88c3",
+      "pixel_sha256": "b9dda09395ab5ed3396530aa54871768967633d8af666bee8389b11b5c319fa6",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_2.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_2.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R435"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201116_3.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201116",
+      "sequence_number": 3,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201116_3.jpeg",
+        "date": "2020/11/16",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 741,
+          "ytl": 1092,
+          "xbr": 3783,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "1eb157a3daba3f4274fd295898b8af9274061821215f7fa35a9c98a32a3c560c",
+      "pixel_sha256": "d5127ea37997cf8ced0e36c75c28a2f365be2b854d4c684a69e8a9ff4f7ce94c",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_3.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_3.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R436"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201116_5.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201116",
+      "sequence_number": 5,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201116_5.jpeg",
+        "date": "2020/11/16",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 330,
+          "ytl": 0,
+          "xbr": 2461,
+          "ybr": 2367
+        }
+      ],
+      "sha256": "08d24c801b0e3c35798080a1e86d323750bd1fbfebfa78bf97136a4c5e0dea5a",
+      "pixel_sha256": "1fe1fde44ee8e12e3f0c33d4bcec62d33b96a8fff8c37c8e69a0a8e4bc3148fb",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_5.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_5.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R438"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201116_6.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201116",
+      "sequence_number": 6,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201116_6.jpeg",
+        "date": "2020/11/16",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1941,
+          "ytl": 212,
+          "xbr": 4032,
+          "ybr": 2379
+        }
+      ],
+      "sha256": "21f517f02cbbcc078f212761ae363963f30a2da46f07123f14f2891e0cf7dcde",
+      "pixel_sha256": "2c352583e0147600adfdc00c2bf50f8f3fa67fa91438aeae6e806ba9f24d00f0",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_6.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_6.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R431"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201116_7.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201116",
+      "sequence_number": 7,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201116_7.jpeg",
+        "date": "2020/11/16",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1277,
+          "ytl": 1006,
+          "xbr": 3463,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "f77f1885e89b05e7571fb799a30be9b9ac60fddfee08cb439af69305f405b1e3",
+      "pixel_sha256": "7623b893834c5e5f368ef49942fd98c30ecebabe6b1f468d2f3d6897037d295e",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_7.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_7.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R432"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201116_9.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201116",
+      "sequence_number": 9,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201116_9.jpeg",
+        "date": "2020/11/16",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 0,
+          "xbr": 3202,
+          "ybr": 2392
+        }
+      ],
+      "sha256": "14490f5e521ead27c1a422a01a7c17495171d4b4ecb03d649f7c6af65d2c532a",
+      "pixel_sha256": "546bc247742736068cccac010f2f43c9a3c50d047be3c274fbf7667aac9938c2",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_9.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201116_9.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R437"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201124_1.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201124",
+      "sequence_number": 1,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201124_1.jpeg",
+        "date": "2020/11/24",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 0,
+          "xbr": 4032,
+          "ybr": 1987
+        }
+      ],
+      "sha256": "29780d06aae160e74be6e078fab1776a6ce781fc748bf4272334ced38a33bd8d",
+      "pixel_sha256": "89143a8a9433b94cb2a1909fbeda33267f25a7f2de305496abf1a8700657f2c1",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201124_1.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201124_1.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R441"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201124_11.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201124",
+      "sequence_number": 11,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201124_11.jpeg",
+        "date": "2020/11/24",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1722,
+          "ytl": 0,
+          "xbr": 2407,
+          "ybr": 2702
+        }
+      ],
+      "sha256": "832458c1257595da3e34338af9976ac25f14d918502eac27d5367536d81aa96c",
+      "pixel_sha256": "0c56e1461a7f9b1bd8f7a183bf8a2c1bb6519f96bcce7ea90614625de23c45db",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201124_11.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201124_11.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R440"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201026_10.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201026",
+      "sequence_number": 10,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201026_10.jpeg",
+        "date": "2020/10/26",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1807,
+          "ytl": 546,
+          "xbr": 3108,
+          "ybr": 2058
+        }
+      ],
+      "sha256": "2eab6b3bfd601544f574a5bd4c1808d068f1e34b7bc383361735feef050bb038",
+      "pixel_sha256": "1350525a08e8c39e0e2d34cad05fa2c79896f7a5b8f96bbb48702f61248aa293",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_10.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_10.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R387"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201026_11.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201026",
+      "sequence_number": 11,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201026_11.jpeg",
+        "date": "2020/10/26",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 6,
+          "xbr": 2261,
+          "ybr": 2219
+        }
+      ],
+      "sha256": "df2838446c0490993e5d113769bec6274053924648c2286d23be5391274b9ee5",
+      "pixel_sha256": "a73dfaa57c39d1b25f4e4f0ee46da3ecc8b43e24877a96c9a9478dc87cb88887",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_11.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_11.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R389"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201026_13.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201026",
+      "sequence_number": 13,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201026_13.jpeg",
+        "date": "2020/10/26",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 180,
+          "ytl": 586,
+          "xbr": 4032,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "5758ba38dd9ab67bfe912c960b4379482e9a6aa1be91718ef8e7f788c87e7fae",
+      "pixel_sha256": "bf35b25ef9a7004fc9a81ec72feede3c43593090ca49fc9f658e049f96194673",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_13.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_13.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R390"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201026_15.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201026",
+      "sequence_number": 15,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201026_15.jpeg",
+        "date": "2020/10/26",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 1007,
+          "xbr": 4032,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "c038d49f8bf29d5c69932e07911b7ac60f6836eaa75f58456574deab3e8e6be6",
+      "pixel_sha256": "5358e685e23faff790157091ff34e5d746570c9b930db7bd9213a81898704e0a",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_15.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_15.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R392"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201026_4.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201026",
+      "sequence_number": 4,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201026_4.jpeg",
+        "date": "2020/10/26",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 720,
+          "ytl": 617,
+          "xbr": 2261,
+          "ybr": 1643
+        }
+      ],
+      "sha256": "436aea7196d5b189ab582aedab8ef6340528358f480947ab4733c2e7bd7ed757",
+      "pixel_sha256": "e1c080eca6b7855889ae4a85121c838169387bc93bedd669976657129aa296bc",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_4.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_4.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R394"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201026_6.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201026",
+      "sequence_number": 6,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201026_6.jpeg",
+        "date": "2020/10/26",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1491,
+          "ytl": 0,
+          "xbr": 2236,
+          "ybr": 1807
+        }
+      ],
+      "sha256": "f77ba6eb57c1522dec1cbfa6c8588f40c600950da5bf48660141a1e3505022b5",
+      "pixel_sha256": "b7fe3856885f23a7bfd8c6875dab5a1cf5902086b1d11e5a875af553b61c0954",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_6.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_6.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260928",
+        "expert_status": "전문가 미검수",
+        "id": "T60"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201026_7.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201026",
+      "sequence_number": 7,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201026_7.jpeg",
+        "date": "2020/10/26",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1451,
+          "ytl": 0,
+          "xbr": 4032,
+          "ybr": 2182
+        }
+      ],
+      "sha256": "c22806768519db3c9704e0469a51f5f1a4d40fada5cc411f4b530f6e45a3ec95",
+      "pixel_sha256": "ff0a551fb2fb41b75207c2d69a88d2bf366b2aac05cdc54f6f2647c41d198ef2",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_7.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_7.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R393"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201026_8.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201026",
+      "sequence_number": 8,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201026_8.jpeg",
+        "date": "2020/10/26",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 686,
+          "xbr": 2841,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "ff4aa3524d8f01ef3b2752828116b65770a8d0ff7b3d6a22f73971c94868c05f",
+      "pixel_sha256": "a8863f01ac295d0dd5e4edfa0cf552e111437de0d9564aeff2507d5e2c3fa0e4",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_8.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_8.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R395"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201026_9.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201026",
+      "sequence_number": 9,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201026_9.jpeg",
+        "date": "2020/10/26",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1486,
+          "ytl": 1272,
+          "xbr": 2661,
+          "ybr": 2989
+        }
+      ],
+      "sha256": "2f6f3fc1c4587329326a7d5f0cd459500a57fda227dc33c04b12088b5a7769d1",
+      "pixel_sha256": "761545e07f38122061f431bea38309a58fe243a1c9ce91f29a3b055ca2c54732",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_9.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_9.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R388"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201102_1.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 1,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201102_1.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 355,
+          "ytl": 0,
+          "xbr": 2891,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "777f8bcd32e8164970d56b0cb1f86cac3339ea22e5bf240bfb91ff0e565b6f78",
+      "pixel_sha256": "c1361f872234d837abd759ddfae68ff98bc85c7481aa13c92758abbccb555ab0",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201102_1.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201102_1.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R404"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201102_15.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 15,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201102_15.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 75,
+          "ytl": 396,
+          "xbr": 3902,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "15af43ba5e2df56b4791dfb5dc43c110ee7f4b55da38e3bafb30d784dba0d648",
+      "pixel_sha256": "6993ccb5bbdc6f904678effb2c5abe0e949a2ab5676b81e9057f1a7fd980f4a6",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201102_15.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201102_15.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R405"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201102_16.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 16,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201102_16.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 296,
+          "ytl": 0,
+          "xbr": 4032,
+          "ybr": 2297
+        }
+      ],
+      "sha256": "df3e897e86c6b1042228a1a26aa9523f448cedf5157031bffd874572806e13b7",
+      "pixel_sha256": "18aaee8e9dd773f83ba1b44b92d5d490a1b40161d9852831571317c7344bbbaa",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201102_16.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201102_16.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R406"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201102_5.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 5,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201102_5.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 30,
+          "ytl": 0,
+          "xbr": 4028,
+          "ybr": 2987
+        }
+      ],
+      "sha256": "e05a9c0f3e79df53869c2d87abd10cb415dd2b3a9e599f556078996c59c715c8",
+      "pixel_sha256": "763bad580df77e63bf6567062fdf426b174ad324f7664d47b89587e612c3ecda",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201102_5.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201102_5.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R407"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201104_2.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201104",
+      "sequence_number": 2,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201104_2.jpeg",
+        "date": "2020/11/04",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 2407,
+          "ytl": 1178,
+          "xbr": 4032,
+          "ybr": 2294
+        }
+      ],
+      "sha256": "2d8e6d98820805fd482ac020f979b2123bc97517c475cd6e76de5fc131a78411",
+      "pixel_sha256": "7d16ab0e00044d1c8e6387fde1c094dd23be465447353af9256cdb577c3de1c2",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201104_2.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201104_2.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R418"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201104_3.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201104",
+      "sequence_number": 3,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201104_3.jpeg",
+        "date": "2020/11/04",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 1583,
+          "xbr": 2641,
+          "ybr": 2989
+        }
+      ],
+      "sha256": "74bf71372c0542279a8052217309bce702212cc61cb74ef18419b4abf1ce5156",
+      "pixel_sha256": "76d335264626d486644c95ba19c95d7d9bd2cde72c9d17008303018bb6e83c32",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201104_3.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201104_3.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R410"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201104_4.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201104",
+      "sequence_number": 4,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201104_4.jpeg",
+        "date": "2020/11/04",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 571,
+          "ytl": 5,
+          "xbr": 2677,
+          "ybr": 2013
+        }
+      ],
+      "sha256": "3599390d5528239e6f14e256c22b8ef4d074fbb1a6e15680bab7e70942412d3e",
+      "pixel_sha256": "00b17d63159c7be40275bb098f3bb69a966f5bc20379467b718890dab2b0cc37",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201104_4.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201104_4.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R416"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201104_8.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201104",
+      "sequence_number": 8,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201104_8.jpeg",
+        "date": "2020/11/04",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 162,
+          "xbr": 2651,
+          "ybr": 1168
+        }
+      ],
+      "sha256": "6f94b9daf23e52b285d66ec4377b40e96e36a9036761998b73dc9643ceb1b3a1",
+      "pixel_sha256": "44b905980cb8cac1a4471b3e458c08cc5c4427cb5d46e4a1e33f5bf908a0580e",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201104_8.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201104_8.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R417"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201110_14.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 14,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201110_14.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 865,
+          "ytl": 1303,
+          "xbr": 2326,
+          "ybr": 2424
+        }
+      ],
+      "sha256": "8efa91251d362887ea3c43e37a3fd1f23aea00473bedaf97d250da5ad8f827f6",
+      "pixel_sha256": "cafef90699770dabd432f696ac5c09af04fc3c9a03c5cbcea65610c68561afd7",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201110_14.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201110_14.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R426"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201110_3.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 3,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201110_3.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1936,
+          "ytl": 1453,
+          "xbr": 3956,
+          "ybr": 2139
+        }
+      ],
+      "sha256": "9a2e0abc4aa1ac66026186cff40f7fcb2714d4a674d106a2abbdaae539652cb1",
+      "pixel_sha256": "49ae3743cb035cbedd1762ee411d6c67d153e6af97e0ffed454a3a38c5c1b64e",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201110_3.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201110_3.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R427"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201110_4.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 4,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201110_4.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1196,
+          "ytl": 1392,
+          "xbr": 3417,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "397de68eb0218d6ae25b8063687d44d1682ad448d14496346eafc773be31c4ba",
+      "pixel_sha256": "43fd78824f595a826355fc7e88e06f6211f2ec7d6a55ec19cbec9d49ca3de2f8",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201110_4.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201110_4.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R428"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201110_5.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 5,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201110_5.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 946,
+          "ytl": 1018,
+          "xbr": 2467,
+          "ybr": 2884
+        }
+      ],
+      "sha256": "a46545d3cd95570835fbf28b7dbf9bb84713813c5611b43547c83e1e0cb3886b",
+      "pixel_sha256": "9e60e496766c62b99ecfff3b6604aab1be70d08dcbae8b90982f18b46ee40e1f",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201110_5.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201110_5.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R429"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201116_12.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201116",
+      "sequence_number": 12,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201116_12.jpeg",
+        "date": "2020/11/16",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1820,
+          "ytl": 210,
+          "xbr": 2740,
+          "ybr": 2037
+        }
+      ],
+      "sha256": "f658898939cd34b4a8985e44c97b19cf2384b5d67de121ff8dff1c72f75ddb72",
+      "pixel_sha256": "b5aa206f9b417e86be3697b2d2337c67efc506139395f7b9a2277da6bb621a05",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201116_12.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201116_12.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R439"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201124_12.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201124",
+      "sequence_number": 12,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201124_12.jpeg",
+        "date": "2020/11/24",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 510,
+          "ytl": 547,
+          "xbr": 3067,
+          "ybr": 2389
+        }
+      ],
+      "sha256": "17470adfac04860fa19fec92a4c12f574cf60272a10c20f8f9d839d6bb5afde1",
+      "pixel_sha256": "0a1c37b59a03360f90cf7fbf24f8d265aefb01808313b24c241049a92926d57d",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_12.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_12.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R442"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201124_13.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201124",
+      "sequence_number": 13,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201124_13.jpeg",
+        "date": "2020/11/24",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 102,
+          "xbr": 4032,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "542471ce39500a8200ebad776f6ba306740039cf6cac1253c326b53ba39c9944",
+      "pixel_sha256": "1c33fbd7056fb75e5c443fc0c1393ff082b0a7d5ac0e1eb4de08f85f8b5b6061",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_13.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_13.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R447"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201124_14.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201124",
+      "sequence_number": 14,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201124_14.jpeg",
+        "date": "2020/11/24",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 906,
+          "ytl": 0,
+          "xbr": 4017,
+          "ybr": 2608
+        }
+      ],
+      "sha256": "c72400cb2af1dd7bcc1408404e62802502bbda7248e69622b45b9304847f341b",
+      "pixel_sha256": "d0f7e9625aa7c584770e38171c40c746db3f4f9976e1f2c8cbc497ba855587ac",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_14.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_14.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R443"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201124_15.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201124",
+      "sequence_number": 15,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201124_15.jpeg",
+        "date": "2020/11/24",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1461,
+          "ytl": 261,
+          "xbr": 2351,
+          "ybr": 2618
+        }
+      ],
+      "sha256": "219c14324b5dd9024bc1adbac47d6a31d68cee099bfce38df408c211250853f7",
+      "pixel_sha256": "58abc6e1ff935e66aacf5cbe89abac60e29a120ed6966e447934a74d45593dc7",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_15.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_15.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R444"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201124_5.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201124",
+      "sequence_number": 5,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201124_5.jpeg",
+        "date": "2020/11/24",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 6,
+          "xbr": 2946,
+          "ybr": 3024
+        }
+      ],
+      "sha256": "7df8e401ec4de2c688e5cde316c3711ffda3ee290ac0329bca36b2c89b53077f",
+      "pixel_sha256": "7d969ce2d0aced3eb4f96e2568339365068ae17dd89d4f38d3b2cf093c9a9b3f",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_5.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_5.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260928",
+        "expert_status": "전문가 미검수",
+        "id": "T65"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201124_6.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201124",
+      "sequence_number": 6,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201124_6.jpeg",
+        "date": "2020/11/24",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 2007,
+          "ytl": 777,
+          "xbr": 2802,
+          "ybr": 2784
+        }
+      ],
+      "sha256": "0ded286c1a6f7f7be84272ae791e6cb89b4567037ac198d9737b8832484a70da",
+      "pixel_sha256": "e81bd96fecd109c38093ca6d491c69058b6be49d001185af8caee470c5b701d8",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_6.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_6.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R445"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201124_7.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201124",
+      "sequence_number": 7,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201124_7.jpeg",
+        "date": "2020/11/24",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1831,
+          "ytl": 607,
+          "xbr": 2836,
+          "ybr": 2559
+        }
+      ],
+      "sha256": "a898f18edb29886ee87bc561815e8c9d881784c1d89445de236a4bfdf7782f85",
+      "pixel_sha256": "418d495da17aba8b2887829b1bdd7a5f9136d377a23b07f72414d5f2a86b164e",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_7.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201124_7.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R446"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_3_9662e_20201124_9.jpeg",
+      "split": "1.Training",
+      "filename_token": "9662e",
+      "date": "20201124",
+      "sequence_number": 9,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_3_9662e_20201124_9.jpeg",
+        "date": "2020/11/24",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 3
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 1182,
+          "ytl": 1238,
+          "xbr": 3067,
+          "ybr": 2319
+        }
+      ],
+      "sha256": "14689e67238dd69c1a11802b5f8cd79f9e83adbdd87ec646cc51eac328b5f4e6",
+      "pixel_sha256": "39f75296a12fd558faf7287894d7856036b8afc4d1d3015ded8de9de86373340",
+      "image_path": "data/full/prepared_deduplicated_v1/images/train/3_무노균병/V006_79_1_04_02_03_12_3_9662e_20201124_9.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/train/3_무노균병/V006_79_1_04_02_03_12_3_9662e_20201124_9.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R448"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201020_9.jpeg",
+      "split": "2.Validation",
+      "filename_token": "9662e",
+      "date": "20201020",
+      "sequence_number": 9,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201020_9.jpeg",
+        "date": "2020/10/20",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 160,
+          "ytl": 1038,
+          "xbr": 2831,
+          "ybr": 2914
+        }
+      ],
+      "sha256": "9adea5a7a54abc59ec570302bf3fe97ea34224212ca777d7e22fd212045af401",
+      "pixel_sha256": "7f8e45300f532d02a8f80b8732f00c6d2a45afaa775e029bd1e481b37e147030",
+      "image_path": "data/full/prepared_deduplicated_v1/images/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201020_9.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201020_9.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": {
+        "review_id": "3-2",
+        "actual": 3,
+        "predicted": 8,
+        "score": 0.5547232627868652,
+        "true_score": 0.03995239734649658
+      },
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260928",
+        "expert_status": "전문가 미검수",
+        "id": "T58"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201021_11.jpeg",
+      "split": "2.Validation",
+      "filename_token": "9662e",
+      "date": "20201021",
+      "sequence_number": 11,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201021_11.jpeg",
+        "date": "2020/10/21",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 360,
+          "ytl": 0,
+          "xbr": 4032,
+          "ybr": 1891
+        }
+      ],
+      "sha256": "8963d767bdac0c51fa909466adfbc3f132e154dad19cb63a3dbec012d683af84",
+      "pixel_sha256": "6bc78e80fa959fcfa07229f332c8d2d6fdd7d87eaf0fb2b574da14f3acd9ca66",
+      "image_path": "data/full/prepared_deduplicated_v1/images/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_11.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_11.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R380"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201021_6.jpeg",
+      "split": "2.Validation",
+      "filename_token": "9662e",
+      "date": "20201021",
+      "sequence_number": 6,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201021_6.jpeg",
+        "date": "2020/10/21",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 535,
+          "ytl": 1,
+          "xbr": 3317,
+          "ybr": 2993
+        }
+      ],
+      "sha256": "e1e530b7d11807d3e65f2ba8ed4af5225d0d65380223b0502913602cdd03917b",
+      "pixel_sha256": "cdcbd698fddd0e302754bcd78c7990e5a45a14eadda40dde9e2527a27af2fdaa",
+      "image_path": "data/full/prepared_deduplicated_v1/images/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_6.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201021_6.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": {
+        "review_id": "3-3",
+        "actual": 3,
+        "predicted": 8,
+        "score": 0.6779513359069824,
+        "true_score": 0.013988298363983631
+      },
+      "prior_surface_tag": {
+        "surface": "앞면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R383"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201102_13.jpeg",
+      "split": "2.Validation",
+      "filename_token": "9662e",
+      "date": "20201102",
+      "sequence_number": 13,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201102_13.jpeg",
+        "date": "2020/11/02",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 2138,
+          "ytl": 1596,
+          "xbr": 3002,
+          "ybr": 2623
+        }
+      ],
+      "sha256": "290a27138ac1168e4f5b311c200bba642c48fe392b6661194f6fe4580d677a86",
+      "pixel_sha256": "35ed43eb5725675011b4dfa096e1bc3bac23a30dcf080778a0b8d2727d1f756a",
+      "image_path": "data/full/prepared_deduplicated_v1/images/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_13.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201102_13.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R399"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201104_1.jpeg",
+      "split": "2.Validation",
+      "filename_token": "9662e",
+      "date": "20201104",
+      "sequence_number": 1,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201104_1.jpeg",
+        "date": "2020/11/04",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 711,
+          "ytl": 141,
+          "xbr": 3883,
+          "ybr": 3003
+        }
+      ],
+      "sha256": "279f7bb159d3895fe4258f07eafa1247c67c3170317902067a925c30141aec8d",
+      "pixel_sha256": "87a58ecdd8fdc1774678b01370ab58a4b053a3e0db488b4c8c3a493ee72eb9f2",
+      "image_path": "data/full/prepared_deduplicated_v1/images/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_1.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_1.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": {
+        "review_id": "3-4",
+        "actual": 3,
+        "predicted": 2,
+        "score": 0.8845768570899963,
+        "true_score": 0.020157018676400185
+      },
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R411"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201104_9.jpeg",
+      "split": "2.Validation",
+      "filename_token": "9662e",
+      "date": "20201104",
+      "sequence_number": 9,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201104_9.jpeg",
+        "date": "2020/11/04",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 0,
+          "ytl": 86,
+          "xbr": 4023,
+          "ybr": 2113
+        }
+      ],
+      "sha256": "680d187a64c34aa0b1a9eeee6650be7977614943f961b36c31d8e1ce0a63ad5a",
+      "pixel_sha256": "a257039994761aaea5e64497a1847603327aac684fb6d45809e961863e93ac41",
+      "image_path": "data/full/prepared_deduplicated_v1/images/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_9.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201104_9.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R415"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_1_9662e_20201110_12.jpeg",
+      "split": "2.Validation",
+      "filename_token": "9662e",
+      "date": "20201110",
+      "sequence_number": 12,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_1_9662e_20201110_12.jpeg",
+        "date": "2020/11/10",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 1
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 566,
+          "ytl": 0,
+          "xbr": 3968,
+          "ybr": 2269
+        }
+      ],
+      "sha256": "03fbe97e2219b7e0a68726014743925e9a02ee5ceeed0ee6b8c59271a23c777d",
+      "pixel_sha256": "6a7ee61967a6c8e13a9108b47e4e2a7b7fa37f8d121d5649023b5c1d70406272",
+      "image_path": "data/full/prepared_deduplicated_v1/images/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_12.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/val/3_무노균병/V006_79_1_04_02_03_12_1_9662e_20201110_12.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": {
+        "review_id": "3-5",
+        "actual": 3,
+        "predicted": 2,
+        "score": 0.3102760910987854,
+        "true_score": 0.16538405418395996
+      },
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R422"
+      }
+    },
+    {
+      "path": "V006_79_1_04_02_03_12_2_9662e_20201026_14.jpeg",
+      "split": "2.Validation",
+      "filename_token": "9662e",
+      "date": "20201026",
+      "sequence_number": 14,
+      "description": {
+        "image": "V006_79_1_04_02_03_12_2_9662e_20201026_14.jpeg",
+        "date": "2020/10/26",
+        "worker": "",
+        "height": 3024,
+        "width": 4032,
+        "task": 79,
+        "type": 1,
+        "region": 9
+      },
+      "annotation_codes": {
+        "disease": 4,
+        "crop": 2,
+        "area": 3,
+        "grow": 12,
+        "risk": 2
+      },
+      "bounding_boxes": [
+        {
+          "xtl": 2642,
+          "ytl": 241,
+          "xbr": 3372,
+          "ybr": 2038
+        }
+      ],
+      "sha256": "95ef91632854a643f4142f440890bfba1174b369d8a6d0f14fe53c531e82b43e",
+      "pixel_sha256": "c4a82f436402dd574ef2a9bfe11e6a6a4282bcaab86588569dcb29bcc573f076",
+      "image_path": "data/full/prepared_deduplicated_v1/images/val/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_14.jpeg",
+      "label_path": "data/full/prepared_deduplicated_v1/labels/val/3_무노균병/V006_79_1_04_02_03_12_2_9662e_20201026_14.jpeg.json",
+      "checks": {
+        "label_sha256": true,
+        "image_sha256": true,
+        "image_dimensions_manifest": true,
+        "image_dimensions_label": true,
+        "image_name_label": true,
+        "date_label_filename": true,
+        "type_label_filename": true,
+        "disease_label_filename": true,
+        "crop_label_filename": true,
+        "area_label_filename": true,
+        "grow_label_filename": true,
+        "risk_label_filename": true,
+        "class3_codes": true
+      },
+      "existing_error": null,
+      "prior_surface_tag": {
+        "surface": "뒷면 추정",
+        "source": "visual_review_20260929",
+        "expert_status": "전문가 미검수",
+        "id": "R391"
+      }
+    }
+  ],
+  "limitations": [
+    "The original description.worker is empty; 9662e is called filename token. Earlier reports call it collector code but no original codebook was verified here.",
+    "Risk/grow are recorded codes, without assigning severity/growth semantics.",
+    "Same token/date or consecutive sequence numbers do not prove same plant or near duplicate.",
+    "Hash comparisons are exact duplicate checks, not perceptual similarity checks.",
+    "Original label consistency is not a biological diagnostic validation.",
+    "Prior surface tags are a single AI preliminary review, not expert labels; current split was rejoined by exact SHA256."
+  ]
+}

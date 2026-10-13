@@ -1,0 +1,46 @@
+[
+  {
+    "file": "comparison/comparison.json",
+    "error": "HTTPError"
+  },
+  {
+    "file": "finetune_256/val_metrics.json",
+    "error": "HTTPError"
+  },
+  {
+    "file": "finetune_256/environment.json",
+    "error": "HTTPError"
+  },
+  {
+    "file": "finetune_256/history.json",
+    "error": "HTTPError"
+  },
+  {
+    "file": "finetune_256/initial_val_metrics.json",
+    "error": "HTTPError"
+  },
+  {
+    "file": "finetune_256/config.json",
+    "error": "HTTPError"
+  },
+  {
+    "file": "finetune_384/config.json",
+    "error": "HTTPError"
+  },
+  {
+    "file": "finetune_384/environment.json",
+    "error": "HTTPError"
+  },
+  {
+    "file": "finetune_384/val_metrics.json",
+    "error": "HTTPError"
+  },
+  {
+    "file": "finetune_384/initial_val_metrics.json",
+    "error": "HTTPError"
+  },
+  {
+    "file": "finetune_384/history.json",
+    "error": "HTTPError"
+  }
+]

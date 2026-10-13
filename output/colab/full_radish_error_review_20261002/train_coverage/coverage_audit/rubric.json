@@ -1,0 +1,18 @@
+{
+  "scope": "Describe observable appearance, not diagnose diseases. 70 training images, 4 validation anchors.",
+  "surface": {
+    "front": "upper leaf surface impression, relatively flat veins",
+    "back": "underside impression, raised bright veins",
+    "uncertain": "cannot determine from view"
+  },
+  "marks": {
+    "subtle": "main leaf mostly green/pale-green, diffuse tone/texture or sparse tiny points; no clearly conspicuous localized brown/white lesion or damaged patch",
+    "conspicuous": "one or more obvious localized brown/white/dark patches, conspicuous pale ring spots, damaged/necrotic-looking edges or holes dominate local attention",
+    "uncertain": "quality/occlusion prevents judgment"
+  },
+  "hard_shadow": "boolean: clear cast-shadow edge crosses principal leaf, dark surrounding background alone does not count",
+  "bright_patch": "boolean: main leaf has strongly illuminated or washed-out local area, not merely light green color",
+  "broad_view": "boolean: one broad unfolded leaf face fills a substantial frame area, not a narrow folded leaf or distant canopy",
+  "note": "brief visible evidence; avoid disease identification; uncertain when necessary",
+  "matching": "After all annotation, count training examples matching validation anchor surface + marks + hard_shadow + bright_patch + broad_view exactly. Also report relaxed surface+marks matches. Do not invent a numerical sufficiency threshold."
+}

@@ -1,0 +1,5 @@
+﻿conversation_id,action,before_phase,after_phase,function_name,split,scenario_group_id,seed_id,user_text,llm_output
+P_N002,reserve_family,singleton,singleton_reserve,clarify_request,train,G_N_T_MANAGEMENT_DECISION,S_N_T_MANAGEMENT_DECISION,정상이면 예방 약도 지금 뿌릴 필요 없는 거야,<hs_clarify_request><hs_target_product><hs-end>
+STT_014,reserve_family,singleton,singleton_reserve,clarify_request,train,G_N_T_MANAGEMENT_DECISION,S_N_T_MANAGEMENT_DECISION,정상이라믄 예방약도 안써도 대나요,<hs_clarify_request><hs_target_product><hs-end>
+V11_R_001,add_recapture,,singleton,get_recapture_guidance,train,G_R_T_01,S_R_T_01,지금 보고 있는 무 사진에서 다시 촬영할 위치와 찍는 방법만 알려 주세요,<hs_get_recapture_guidance><hs_topic_where><hs-end>
+V11_R_002,add_recapture,,singleton,get_recapture_guidance,train,G_R_T_01,S_R_T_01,지금 보는 무 사진에서 다시 촤령할 위치랑 찍는 방법만 알려 주세여,<hs_get_recapture_guidance><hs_topic_where><hs-end>

@@ -1,5 +1,23 @@
 # cropy - Architecture
 
+**갱신:** 2026-10-12. 현재 로컬 웹앱 구현과 목표 단말 구성을 구분한다.
+
+## 단말 목표와 현재 구현
+
+목표 단말은 **Orange Pi 5 Plus / RK3588 / ARM64 / RAM 16GB**다. 서버 추론은 PyTorch이며 브라우저 오프라인 경로는 ONNX Runtime WASM을 사용한다. RKNN/RKLLM 보드 런타임은 연결되지 않았다. 보드 OS·드라이버·ARM64 의존성·자원 실측은 [배포 가이드](ORANGEPI5_DEPLOY.md)에 따라 확인한다.
+
+```text
+현재: 스마트폰/PC 브라우저 → Next.js 프록시 → FastAPI 프로세스
+                                                 ├─ PyTorch CNN
+                                                 ├─ SQLite / 이미지 파일
+                                                 └─ 병해·농약 카탈로그 조회
+목표: Orange Pi 5 Plus 내부에 웹·API·CNN·DB 배치
+      카메라·마이크 → 단말 입력 → 진단/질문 근거 → Qwen/RKLLM
+      검증된 handler/문장 → 화면·TTS → 스피커
+```
+
+스마트폰 브라우저는 준비된 ONNX 모델을 내려받은 뒤 오프라인 추론·기기 기록 저장·서버 동기화를 수행할 수 있다. 실제 기기 성능은 추가 검증 대상이다. 브라우저 TTS 안내는 구현되었으며 Qwen 기능 토큰·STT·보드 단말 에이전트는 계획이다. SUDA는 SDK와 보드 지원을 확인한 뒤 선택 비교할 대안이다. 인터넷 없는 전체 흐름과 NPU 경합은 실기기에서 검증한다.
+
 ## 시스템 구성
 
 ```
@@ -77,7 +95,7 @@ cropy/
 | 계층 | 기술 |
 |------|------|
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS 3, Iconify(Lucide) |
-| Backend | FastAPI 0.115, SQLAlchemy 2.0, Pydantic v2 |
+| Backend | FastAPI 0.143, SQLAlchemy 2.0, Pydantic v2 |
 | ML | PyTorch, torchvision — ResNet50 fine-tune (9클래스) + ResNet18 혼동쌍 분류기 |
 | Database | SQLite (현재 개발·단일 호스트 운영), PostgreSQL은 후속 선택 사항 |
 | Storage | 로컬 파일 시스템 — `backend/uploads/`, `StaticFiles`로 서빙 |
@@ -121,7 +139,7 @@ cropy/
   `ensure_columns()`가 보완한다 (칼럼 삭제·타입 변경은 미지원).
   시드 데이터는 매 기동마다 JSON을 목표 상태로 동기화한다
   ([DATABASE.md](DATABASE.md#seed-data) 참고).
-- **업로드 정리 없음.** `uploads/`가 무한히 증가한다. 업로드 크기는
+- **보관기간·자동 정리 정책 미확정.** 수동 고아 파일 정리 도구가 있으며 업로드 크기는
   `MAX_UPLOAD_MB`(기본 10MB), 이미지 픽셀 수는 `MAX_IMAGE_PIXELS`(기본 40,000,000)로
   제한되고 2차 촬영 사진도 DB에 기록된다. 모델 출력 검증 실패 시 이번 요청 파일은
   정리하며 일반 추론·DB 실패에도 롤백과 새 파일 제거를 수행한다. 재촬영 교체는
@@ -130,4 +148,10 @@ cropy/
 - **이미지 정적 제공.** `/uploads`는 JPEG·PNG 확장자만 고정 MIME과 `nosniff`로 제공한다.
   기존 `.html` 등 비허용 확장자 파일은 디스크에 보존되지만 해당 URL은 404가 된다.
 - **단일 프로세스 전제.** 모델을 프로세스 메모리에 상주시키므로 워커를 늘리면
-  워커 수만큼 메모리를 쓴다 (ResNet50 기준 체크포인트 94MB).
+  워커 수만큼 모델 메모리가 필요하다. ResNet50 기본 체크포인트는 약 94.4MB(십진 단위)이며 파일 크기와 실행 RAM은 다르다.
+
+## 데이터 보호와 모듈 간 계약
+
+사용자 사진은 이력 이미지로 로컬 저장하고 정적 URL로 제공한다. 현재 인증과 사용자별 접근 제어가 없어 공유 환경의 개인정보 보호 설계는 추가 작업이다. 서버 모델 해시·전처리·prediction_mode와 재촬영 출처를 이력에 기록한다. 데이터 보관기간·음성 로그 범위는 운영 정책으로 확정한다.
+
+CNN→백엔드 계약은 [모델 명세](MODEL_SPEC.md), 백엔드→프론트 계약은 [API 명세](API_SPEC.md), 화면 구현 범위는 [기능명세](xpdocs/06_웹앱_기능명세서.md)에 정의한다. 최신 UI/UX 보고서의 시안은 현재 코드의 구현 완료를 의미하지 않는다.
