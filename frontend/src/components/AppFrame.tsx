@@ -40,19 +40,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
           homeHref="/"
           actions={
             <>
-              {/* 기기 안에서 진단하는 정적 페이지. 앱에서 그 페이지로 가는 길은 여기뿐이다.
-                  좁은 화면에서는 로고가 밀려 사라지지 않게 두 줄로 적는다 */}
-              <a
-                href="/offline/index.html"
-                className="inline-flex min-h-12 shrink-0 items-center whitespace-nowrap rounded-full bg-brand-tint px-3 text-center text-xs font-bold leading-tight"
-              >
-                <span>
-                  기기 <br className="sm:hidden" />
-                  진단
-                </span>
-              </a>
-              <TextSizeToggle />
-              <VoiceToggle />
+              {/* 넓은 데스크탑(xl)에서는 Figma 의 고정 폭(112px, 132px)을 쓴다 */}
+              <TextSizeToggle className="xl:w-28" />
+              <VoiceToggle className="xl:w-[8.25rem]" />
             </>
           }
         />

@@ -30,7 +30,7 @@ function currentLinks() {
 
 describe("currentNavKey", () => {
   it.each([
-    ["/", "diagnose"],
+    ["/", "capture"],
     ["/history", "history"],
     ["/history/abc", "history"],
     ["/historyx", undefined],
@@ -40,11 +40,23 @@ describe("currentNavKey", () => {
     expect(currentNavKey(pathname)).toBe(key);
   });
 
-  it("내비 항목은 실제로 있는 화면만 가리킨다", () => {
+  it("내비 항목은 Figma 의 세 개이고 실제로 있는 화면만 가리킨다", () => {
     expect(APP_NAV_ITEMS.map((item) => [item.key, item.href])).toEqual([
-      ["diagnose", "/"],
+      ["capture", "/"],
+      ["result", "/"],
       ["history", "/history"],
     ]);
+  });
+
+  it("헤더와 모바일 하단의 라벨이 Figma 와 같다", () => {
+    expect(APP_NAV_ITEMS.map((item) => item.label)).toEqual(["새 진단", "진단 결과", "진단 이력"]);
+    expect(APP_NAV_ITEMS.map((item) => item.mobileLabel)).toEqual(["촬영", "진단", "이력"]);
+  });
+
+  it("자기 화면이 없는 진단 결과는 어느 경로에서도 현재 화면이 아니다", () => {
+    for (const pathname of ["/", "/history", "/history/abc", "/unknown"]) {
+      expect(currentNavKey(pathname)).not.toBe("result");
+    }
   });
 });
 
@@ -67,10 +79,10 @@ describe("AppFrame", () => {
     expect(follows(nav, footer)).toBe(true);
   });
 
-  it("홈에서는 헤더 내비와 하단 내비의 진단 항목이 현재 화면이다", () => {
+  it("홈에서는 헤더 내비의 새 진단과 하단 내비의 촬영이 현재 화면이다", () => {
     render(<AppFrame>화면</AppFrame>);
 
-    expect(currentLinks()).toEqual([["새 진단"], ["진단"]]);
+    expect(currentLinks()).toEqual([["새 진단"], ["촬영"]]);
   });
 
   it("이력 목록과 이력 상세에서는 이력 항목이 현재 화면이다", () => {
@@ -96,7 +108,7 @@ describe("AppFrame", () => {
 
     for (const name of ["주요 메뉴", "하단 메뉴"]) {
       const links = within(screen.getByRole("navigation", { name })).getAllByRole("link");
-      expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", "/history"]);
+      expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", "/", "/history"]);
     }
   });
 
@@ -106,15 +118,34 @@ describe("AppFrame", () => {
     expect(screen.getByRole("link", { name: "Cropy 홈" }).getAttribute("href")).toBe("/");
   });
 
-  it("헤더에 기기 진단 링크와 큰글씨·음성 버튼이 있다", () => {
+  it("헤더 오른쪽에는 큰 글자·음성 안내 스위치만 있다", () => {
     render(<AppFrame>화면</AppFrame>);
     const header = within(screen.getByRole("banner"));
 
-    expect(header.getByRole("link", { name: "기기 진단" }).getAttribute("href")).toBe(
-      "/offline/index.html",
+    expect(
+      header
+        .getAllByRole("switch")
+        .map((item) => item.getAttribute("aria-label") ?? item.textContent),
+    ).toEqual(["큰 글자", "음성 안내"]);
+    expect(header.queryByRole("button")).toBeNull();
+    // 로고와 내비 항목 말고는 링크가 없다 (기기 진단 링크는 진단 화면 본문으로 옮겼다)
+    expect(header.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      "/",
+      "/",
+      "/",
+      "/history",
+    ]);
+  });
+
+  it("넓은 데스크탑에서 스위치는 Figma 의 고정 폭을 쓴다", () => {
+    render(<AppFrame>화면</AppFrame>);
+
+    expect(Array.from(screen.getByRole("switch", { name: "큰 글자" }).classList)).toContain(
+      "xl:w-28",
     );
-    expect(header.getByRole("button", { name: /큰글씨/ })).toBeTruthy();
-    expect(header.getByRole("button", { name: /음성/ })).toBeTruthy();
+    expect(Array.from(screen.getByRole("switch", { name: "음성 안내" }).classList)).toContain(
+      "xl:w-[8.25rem]",
+    );
   });
 
   it("실제 화면을 넣어도 main 은 하나다", async () => {
@@ -162,7 +193,7 @@ describe("AppFrame", () => {
         <LegacyPage scrollLabel="진단하기">홈</LegacyPage>
       </AppFrame>,
     );
-    const voice = screen.getByRole("button", { name: /음성/ });
+    const voice = screen.getByRole("switch", { name: "음성 안내" });
     voice.focus();
     rerender(
       <AppFrame>
