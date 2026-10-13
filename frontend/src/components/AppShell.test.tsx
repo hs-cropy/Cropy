@@ -51,6 +51,19 @@ describe("AppShell", () => {
     );
   });
 
+  it("인쇄할 때는 높이 고정을 풀어 본문 전체가 나온다", () => {
+    render(
+      <AppShell data-testid="shell">
+        <AppShellPage>화면</AppShellPage>
+      </AppShell>,
+    );
+
+    expect(classes(screen.getByTestId("shell"))).toEqual(
+      expect.arrayContaining(["print:!h-auto", "print:overflow-visible"]),
+    );
+    expect(classes(screen.getByRole("region"))).toContain("print:overflow-visible");
+  });
+
   it("화면 자리는 남은 높이를 차지하고 안쪽이 줄어들 수 있다", () => {
     render(
       <AppShell>
