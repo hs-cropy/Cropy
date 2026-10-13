@@ -23,6 +23,12 @@ const BAR =
 const NAV_ITEM =
   "flex items-center justify-center gap-2 whitespace-nowrap rounded-lg p-3 text-cropy-helper xl:w-28";
 
+// 선택되지 않은 항목에 마우스를 올리면 연초록 배경이 가운데에서 둥글게 번져 나오고 글자가 초록이 된다.
+// (Figma 에 호버 상태가 없어 정한 값. 손가락으로 누르는 기기에서는 호버가 남지 않게 뺀다)
+// 배경은 글자 뒤의 ::before 로 그려서 크기와 투명도만 바꾼다
+const NAV_ITEM_HOVER =
+  "relative isolate transition-colors duration-200 before:absolute before:inset-0 before:-z-10 before:scale-50 before:rounded-full before:bg-cropy-action-subtle before:opacity-0 before:transition before:duration-200 before:ease-out [@media(hover:hover)]:hover:text-cropy-action-primary [@media(hover:hover)]:hover:before:scale-100 [@media(hover:hover)]:hover:before:opacity-100";
+
 interface HeaderProps extends Omit<ComponentPropsWithRef<"header">, "children"> {
   /** lg 부터 보이는 내비 항목. 그보다 좁으면 하단 내비(MobileNav)가 대신한다 */
   items?: NavItem[];
@@ -82,22 +88,38 @@ export function Header({
             <ul className="flex items-center gap-2">
               {items.map((item) => {
                 const active = item.key === current;
+                const content = (
+                  <>
+                    <span aria-hidden className={cn(item.icon, "h-5 w-5 shrink-0")} />
+                    {item.label}
+                  </>
+                );
                 return (
                   <li key={item.key}>
-                    <Link
-                      href={item.href}
-                      aria-current={active ? "page" : undefined}
-                      className={cn(
-                        NAV_ITEM,
-                        FOCUS,
-                        active
-                          ? "bg-cropy-action-subtle font-bold text-cropy-action-primary"
-                          : "font-medium text-cropy-text-secondary [@media(hover:hover)]:hover:bg-cropy-surface-canvas",
-                      )}
-                    >
-                      <span aria-hidden className={cn(item.icon, "h-5 w-5 shrink-0")} />
-                      {item.label}
-                    </Link>
+                    {item.disabled ? (
+                      // 갈 화면이 없는 항목: 모양은 선택되지 않은 항목과 같고 링크가 아니다
+                      <span
+                        role="link"
+                        aria-disabled="true"
+                        className={cn(NAV_ITEM, "font-medium text-cropy-text-secondary")}
+                      >
+                        {content}
+                      </span>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          NAV_ITEM,
+                          FOCUS,
+                          active
+                            ? "bg-cropy-action-subtle font-bold text-cropy-action-primary"
+                            : cn("font-medium text-cropy-text-secondary", NAV_ITEM_HOVER),
+                        )}
+                      >
+                        {content}
+                      </Link>
+                    )}
                   </li>
                 );
               })}

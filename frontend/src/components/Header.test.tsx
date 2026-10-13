@@ -209,4 +209,65 @@ describe("Header — 디자인 시스템 사양", () => {
     );
     expect(other.classList.contains("bg-cropy-action-subtle")).toBe(false);
   });
+
+  it("선택되지 않은 항목은 마우스를 올리면 연초록 배경이 둥글게 번지고 글자가 초록이 된다", () => {
+    render(<Header items={ITEMS} current="capture" />);
+    const [selected, other] = navLinks();
+
+    expect(Array.from(other.classList)).toEqual(
+      expect.arrayContaining([
+        "relative",
+        "isolate",
+        "before:absolute",
+        "before:inset-0",
+        "before:-z-10",
+        "before:rounded-full",
+        "before:bg-cropy-action-subtle",
+        "before:opacity-0",
+        "before:scale-50",
+        "before:transition",
+        "[@media(hover:hover)]:hover:before:opacity-100",
+        "[@media(hover:hover)]:hover:before:scale-100",
+        "[@media(hover:hover)]:hover:text-cropy-action-primary",
+      ]),
+    );
+    // 선택된 항목은 이미 배경이 있어 호버 효과를 겹치지 않는다
+    expect(Array.from(selected.classList).some((name) => name.includes("hover"))).toBe(false);
+  });
+});
+
+describe("Header — 갈 화면이 없는 항목", () => {
+  const WITH_DISABLED: NavItem[] = ITEMS.map((item) =>
+    item.key === "result" ? { ...item, disabled: true } : item,
+  );
+
+  it("자리와 라벨은 그대로 두되 링크가 아니라서 Tab 으로 닿지 않는다", () => {
+    render(<Header items={WITH_DISABLED} />);
+    const nav = within(screen.getByRole("navigation", { name: "주요 메뉴" }));
+    const disabled = nav.getByRole("link", { name: "진단 결과" });
+
+    expect(nav.getAllByRole("listitem")).toHaveLength(3);
+    expect(disabled.tagName).toBe("SPAN");
+    expect(disabled.getAttribute("aria-disabled")).toBe("true");
+    expect(disabled.hasAttribute("href")).toBe(false);
+    expect(disabled.hasAttribute("tabindex")).toBe(false);
+  });
+
+  it("current 로 지정해도 현재 화면으로 표시하지 않는다", () => {
+    render(<Header items={WITH_DISABLED} current="result" />);
+    const nav = within(screen.getByRole("navigation", { name: "주요 메뉴" }));
+
+    expect(nav.getByRole("link", { name: "진단 결과" }).hasAttribute("aria-current")).toBe(false);
+    expect(nav.getAllByRole("link").filter((link) => link.hasAttribute("aria-current"))).toEqual(
+      [],
+    );
+  });
+
+  it("모양은 선택되지 않은 항목과 같다", () => {
+    render(<Header items={WITH_DISABLED} />);
+    const nav = within(screen.getByRole("navigation", { name: "주요 메뉴" }));
+    const classes = Array.from(nav.getByRole("link", { name: "진단 결과" }).classList);
+
+    expect(classes).toEqual(expect.arrayContaining(["font-medium", "text-cropy-text-secondary"]));
+  });
 });
