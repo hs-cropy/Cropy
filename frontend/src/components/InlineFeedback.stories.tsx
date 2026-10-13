@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { fn } from "storybook/test";
 import { Button } from "./Button";
@@ -17,6 +18,7 @@ const meta = {
   argTypes: {
     mascot: { control: "select", options: MASCOT_NAMES },
     tone: { control: "inline-radio", options: ["alert", "status"] },
+    open: { control: "boolean" },
     headingLevel: { control: "inline-radio", options: [2, 3, 4] },
     actions: { control: false },
   },
@@ -70,6 +72,27 @@ export const Busy: Story = {
     title: "진단 이력을 불러오고 있어요",
     children: "저장한 기록을 확인하는 중이에요.\n잠시만 기다려주세요.",
     tone: "status",
+  },
+};
+
+/**
+ * 진행 중 안내를 켜고 끈다. 스크린리더가 읽도록 status 영역은 꺼져 있을 때도 남아 있고,
+ * 비어 있는 동안에는 위아래 블록 사이의 간격을 차지하지 않는다
+ */
+export const BusyToggle: Story = {
+  args: { ...Busy.args },
+  render: function BusyToggleStory(args) {
+    const [loading, setLoading] = useState(false);
+
+    return (
+      <div className="flex max-w-[30rem] flex-col items-start gap-4">
+        <Button size="compact" variant="secondary" onClick={() => setLoading((value) => !value)}>
+          {loading ? "불러오기 끝" : "불러오기 시작"}
+        </Button>
+        <InlineFeedback {...args} open={loading} />
+        <p className="text-cropy-caption text-cropy-text-secondary">안내 아래에 놓인 내용</p>
+      </div>
+    );
   },
 };
 

@@ -1,5 +1,6 @@
 import { createRef } from "react";
 import { render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Button } from "./Button";
@@ -25,10 +26,71 @@ describe("InlineFeedback", () => {
 
   it("tone=status 는 하던 말을 끊지 않는 status다. 읽히지 않을 수 있어 aria-busy는 붙이지 않는다", () => {
     render(<InlineFeedback mascot="analysis" title="불러오고 있어요" tone="status" />);
+    const region = screen.getByRole("status");
 
-    expect(screen.getByRole("status", { name: "불러오고 있어요" }).hasAttribute("aria-busy")).toBe(
-      false,
+    expect(region.textContent).toContain("불러오고 있어요");
+    expect(region.hasAttribute("aria-busy")).toBe(false);
+    expect(region.firstElementChild?.hasAttribute("aria-busy")).toBe(false);
+  });
+
+  it("status 는 바깥 영역만 알린다. 안의 카드는 role 도 이름도 없어 랜드마크가 되지 않는다", () => {
+    render(<InlineFeedback mascot="analysis" title="불러오고 있어요" tone="status" />);
+    const card = screen.getByRole("status").firstElementChild as Element;
+
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(card.tagName).toBe("SECTION");
+    expect(card.hasAttribute("role")).toBe(false);
+    expect(card.hasAttribute("aria-labelledby")).toBe(false);
+    expect(screen.queryByRole("region")).toBeNull();
+  });
+
+  it("status 는 open=false 여도 빈 영역을 그려 두고, 켜면 같은 영역 안에 카드를 넣는다", () => {
+    const feedback = (open: boolean) => (
+      <InlineFeedback mascot="analysis" title="불러오고 있어요" tone="status" open={open} />
     );
+    const { rerender } = render(feedback(false));
+    const region = screen.getByRole("status");
+
+    expect(region.childElementCount).toBe(0);
+    expect(region.textContent).toBe("");
+
+    rerender(feedback(true));
+    expect(screen.getByRole("status")).toBe(region);
+    expect(screen.getByRole("heading", { name: "불러오고 있어요" })).toBeTruthy();
+    expect(region.childElementCount).toBe(1);
+
+    rerender(feedback(false));
+    expect(screen.getByRole("status")).toBe(region);
+    expect(region.childElementCount).toBe(0);
+  });
+
+  it("status 는 처음부터 켜져 있어도 빈 영역을 먼저 그린 뒤 카드를 넣는다", () => {
+    const feedback = <InlineFeedback mascot="analysis" title="불러오고 있어요" tone="status" />;
+    const first = document.createElement("div");
+    first.innerHTML = renderToString(feedback);
+
+    expect(first.querySelector("[role=status]")?.childElementCount).toBe(0);
+
+    render(feedback);
+    expect(screen.getByRole("status").childElementCount).toBe(1);
+  });
+
+  it("빈 status 영역은 숨기지 않고 흐름에서만 뺀다", () => {
+    render(<InlineFeedback mascot="analysis" title="제목" tone="status" open={false} />);
+    const region = screen.getByRole("status");
+
+    expect(classes(region)).toEqual(["empty:absolute"]);
+    expect(region.hasAttribute("hidden")).toBe(false);
+  });
+
+  it("alert 는 open=false 면 그리지 않고, 켜는 시점에 나타난다", () => {
+    const feedback = (open: boolean) => <InlineFeedback mascot="warning" title="제목" open={open} />;
+    const { container, rerender } = render(feedback(false));
+
+    expect(container.childElementCount).toBe(0);
+
+    rerender(feedback(true));
+    expect(screen.getByRole("alert", { name: "제목" })).toBeTruthy();
   });
 
   it("제목은 기본 h3이고 headingLevel로 화면의 제목 순서에 맞춘다", () => {
@@ -128,6 +190,14 @@ describe("InlineFeedback", () => {
     expect(card.getAttribute("aria-live")).toBe("off");
   });
 
+  it("status 의 알림 방식은 카드가 아니라 알리는 바깥 영역에 붙는다", () => {
+    render(<InlineFeedback mascot="analysis" title="제목" tone="status" aria-live="off" />);
+    const region = screen.getByRole("status");
+
+    expect(region.getAttribute("aria-live")).toBe("off");
+    expect(region.firstElementChild?.hasAttribute("aria-live")).toBe(false);
+  });
+
   it("ref·className·나머지 속성을 전달하되 role은 tone으로만 정한다", () => {
     const ref = createRef<HTMLElement>();
     render(
@@ -144,6 +214,27 @@ describe("InlineFeedback", () => {
     expect(ref.current).toBe(screen.getByTestId("feedback"));
     expect(classes(ref.current as HTMLElement)).toContain("max-w-[30rem]");
     expect(ref.current?.getAttribute("role")).toBe("alert");
+  });
+
+  it("status 에서도 ref·className·나머지 속성은 카드로 가고, role 은 바깥 영역에만 있다", () => {
+    const ref = createRef<HTMLElement>();
+    render(
+      <InlineFeedback
+        ref={ref}
+        mascot="analysis"
+        title="제목"
+        tone="status"
+        className="max-w-[30rem]"
+        data-testid="feedback"
+        {...{ role: "note" }}
+      />,
+    );
+    const card = screen.getByTestId("feedback");
+
+    expect(ref.current).toBe(card);
+    expect(card.parentElement).toBe(screen.getByRole("status"));
+    expect(classes(card)).toEqual(expect.arrayContaining(["max-w-[30rem]", "bg-cropy-surface"]));
+    expect(card.hasAttribute("role")).toBe(false);
   });
 });
 

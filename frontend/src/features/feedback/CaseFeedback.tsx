@@ -22,6 +22,8 @@ interface CaseFeedbackProps extends Omit<
 /**
  * 문구 사전의 안내를 그대로 보여 준다. 어떤 오류에 어떤 케이스를 쓸지와 버튼이 할 일은
  * 쓰는 화면이 정한다. 사전에 없는 문구가 필요하면 InlineFeedback 을 직접 쓴다.
+ * 진행 중 안내(history-loading, save-pending)는 조건부로 렌더링하지 말고 open 으로 켜고 끈다:
+ * <CaseFeedback caseId="history-loading" open={loading} />
  */
 export function CaseFeedback({
   caseId,
