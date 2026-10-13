@@ -25,8 +25,11 @@ describe("VoiceToggle", () => {
     render(<VoiceToggle />);
 
     expect(toggleButton().getAttribute("aria-checked")).toBe("false");
-    // 좁은 화면용 글자(\"음성\")와 넓은 화면용 글자(\"음성 안내\")가 함께 들어 있다
-    expect(toggleButton().textContent).toBe("음성음성 안내");
+    // 좁은 화면에서는 "음성", md 부터 "음성 안내"로 보인다
+    expect(Array.from(screen.getByText("음성").classList)).toContain("md:hidden");
+    expect(Array.from(screen.getByText("음성 안내").classList)).toEqual(
+      expect.arrayContaining(["hidden", "md:inline"]),
+    );
   });
 
   it("켜면 저장하고, 홈에서는 켬 안내에 이어 홈 안내를 읽는다", () => {

@@ -53,13 +53,14 @@ describe("TextSizeToggle", () => {
   });
 
   it("저장이 막혀도 이번 화면에는 적용한다", () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("저장할 수 없음");
     });
     render(<TextSizeToggle />);
 
     fireEvent.click(toggle());
 
+    expect(setItem).toHaveBeenCalledWith(TEXT_SIZE_KEY, "large");
     expect(toggle().getAttribute("aria-checked")).toBe("true");
     expect(document.documentElement.dataset.textsize).toBe("large");
   });
