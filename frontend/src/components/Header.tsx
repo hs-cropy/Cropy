@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ComponentPropsWithRef, ReactNode } from "react";
+import type { ComponentPropsWithRef, MouseEvent, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./Logo";
 import type { NavItem } from "./navItem";
@@ -34,6 +34,8 @@ interface HeaderProps extends Omit<ComponentPropsWithRef<"header">, "children"> 
   items?: NavItem[];
   /** 현재 화면에 해당하는 항목의 key. 경로를 보고 정하는 일은 쓰는 쪽이 한다 */
   current?: string;
+  /** 항목을 눌렀을 때. 이동은 링크가 하고, 쓰는 쪽이 event.preventDefault() 로 막을 수 있다 */
+  onItemClick?: (item: NavItem, event: MouseEvent<HTMLAnchorElement>) => void;
   /** 로고를 눌렀을 때 갈 곳. 없으면 로고는 링크가 아니다 */
   homeHref?: string;
   homeLabel?: string;
@@ -48,6 +50,7 @@ interface HeaderProps extends Omit<ComponentPropsWithRef<"header">, "children"> 
 export function Header({
   items = [],
   current,
+  onItemClick,
   homeHref,
   homeLabel = "Cropy 홈",
   navLabel = "주요 메뉴",
@@ -109,6 +112,7 @@ export function Header({
                       <Link
                         href={item.href}
                         aria-current={active ? "page" : undefined}
+                        onClick={(event) => onItemClick?.(item, event)}
                         className={cn(
                           NAV_ITEM,
                           FOCUS,

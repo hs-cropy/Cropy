@@ -1,6 +1,7 @@
 import { createRef } from "react";
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { Header } from "./Header";
 import type { NavItem } from "./navItem";
 import { Switch } from "./Switch";
@@ -26,6 +27,36 @@ function navLinks() {
 }
 
 describe("Header", () => {
+  it("항목을 누르면 그 항목을 알린다. 이동은 링크가 그대로 한다", async () => {
+    const onItemClick = vi.fn((_item: NavItem, event: { preventDefault: () => void }) =>
+      // jsdom 은 페이지를 옮기지 못한다
+      event.preventDefault(),
+    );
+    render(<Header items={ITEMS} onItemClick={onItemClick} />);
+
+    await userEvent.click(within(nav()).getByRole("link", { name: "진단 이력" }));
+
+    expect(onItemClick).toHaveBeenCalledTimes(1);
+    expect(onItemClick.mock.calls[0][0]).toBe(ITEMS[2]);
+    expect(navLinks()[2].getAttribute("href")).toBe("/history");
+  });
+
+  it("누를 수 없는 항목과 로고는 알리지 않는다", async () => {
+    const onItemClick = vi.fn();
+    render(
+      <Header
+        items={[ITEMS[0], { ...ITEMS[1], disabled: true }]}
+        homeHref="#home"
+        onItemClick={onItemClick}
+      />,
+    );
+
+    await userEvent.click(within(nav()).getByRole("link", { name: "진단 결과" }));
+    await userEvent.click(screen.getByRole("link", { name: "Cropy 홈" }));
+
+    expect(onItemClick).not.toHaveBeenCalled();
+  });
+
   it("로고를 그린다. 갈 곳을 주지 않으면 링크가 아니다", () => {
     render(<Header />);
 

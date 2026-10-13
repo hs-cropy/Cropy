@@ -12,6 +12,7 @@ import {
 import { diagnoseImage } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { DiagnosisResult } from "./DiagnosisResult";
+import { subscribeNewDiagnosis } from "./newDiagnosis";
 import { RecapturePanel } from "./RecapturePanel";
 import { Toast, useToast } from "./Toast";
 
@@ -113,6 +114,26 @@ export function DiagnoseForm() {
     setCameraOpen(false);
     captureCardRef.current?.focus();
   };
+
+  /** 내비의 "새 진단": 진행 중인 진단을 버리고 처음 상태로 돌아간다 */
+  const reset = () => {
+    // 취소한 요청은 스스로 loading 을 풀지 않으므로 여기서 푼다.
+    // 늦게 도착한 응답은 handleSubmit 이 취소 여부를 보고 버린다
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setLoading(false);
+    setFile(null);
+    setPreview(null);
+    setResult(null);
+    setError(null);
+    setCropType("");
+    setCameraOpen(false);
+    clearToast();
+    cancelSpeech();
+    captureCardRef.current?.focus();
+  };
+  // 렌더마다 다시 구독한다: reset 이 나중에 state 를 읽게 되어도 낡은 값을 보지 않는다
+  useEffect(() => subscribeNewDiagnosis(reset));
 
   const handleCapture = (captured: File) => {
     // 통과하지 못하면 카메라를 열어 둔 채 다시 찍게 한다

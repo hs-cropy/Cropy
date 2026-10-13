@@ -1,12 +1,14 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
 import { VoiceToggle } from "@/features/voice";
 import { APP_NAV_ITEMS, currentNavKey } from "./appNav";
 import { AppShell, AppShellFooter } from "./AppShell";
 import { Header } from "./Header";
 import { MobileNav } from "./MobileNav";
+import type { NavItem } from "./navItem";
+import { requestNewDiagnosis } from "./newDiagnosis";
 import { TextSizeToggle } from "./TextSizeToggle";
 
 /**
@@ -30,6 +32,19 @@ export function AppFrame({ children }: { children: ReactNode }) {
       ?.focus({ preventScroll: true });
   }, [pathname]);
 
+  // 진단 화면에서 "새 진단"을 다시 누르면 같은 주소라 화면이 그대로 남는다.
+  // 진단 폼에 처음 상태로 돌아가라고 알린다. 다른 화면에서 누르면 옮겨 가서 새로 열리므로 알릴 것이 없다
+  const handleNavClick = (item: NavItem, event: MouseEvent<HTMLAnchorElement>) => {
+    if (item.key !== "capture" || pathname !== "/") return;
+    // 새 탭·새 창으로 여는 클릭은 지금 화면을 건드리지 않는다
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    // 같은 주소로 다시 옮겨 가지 않는다. 옮기려다 연결이 끊겨 있으면 화면을 통째로 새로 고칠 수 있다
+    event.preventDefault();
+    requestNewDiagnosis();
+  };
+
   return (
     <AppShell
       ref={shellRef}
@@ -37,6 +52,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <Header
           items={APP_NAV_ITEMS}
           current={current}
+          onItemClick={handleNavClick}
           homeHref="/"
           actions={
             <>
@@ -47,7 +63,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           }
         />
       }
-      nav={<MobileNav items={APP_NAV_ITEMS} current={current} />}
+      nav={<MobileNav items={APP_NAV_ITEMS} current={current} onItemClick={handleNavClick} />}
       footer={<AppShellFooter />}
     >
       {children}
