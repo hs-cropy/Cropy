@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fetchDiagnosisDetail } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { DiagnosisResult } from "@/components/DiagnosisResult";
+import { LegacyPage } from "@/components/LegacyPage";
 import { RecapturePanel } from "@/components/RecapturePanel";
 
 export default function HistoryDetailPage() {
@@ -28,7 +29,7 @@ export default function HistoryDetailPage() {
   }, [id, refresh]);
 
   return (
-    <div className="mx-auto w-full max-w-2xl">
+    <LegacyPage scrollLabel="진단 기록" className="md:max-w-2xl lg:max-w-2xl">
       <Link
         href="/history"
         className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition hover:text-ink"
@@ -52,6 +53,6 @@ export default function HistoryDetailPage() {
           <DiagnosisResult result={result} onSaved={updateResult} isRecord />
         </div>
       )}
-    </div>
+    </LegacyPage>
   );
 }

@@ -1,6 +1,7 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { LegacyPage } from "@/components/LegacyPage";
 import { fetchHistory } from "@/lib/api";
 import type { DiagnosisSummary, Severity } from "@/types/diagnosis";
 const GRADES = { high: "위험", medium: "주의", low: "낮음" };
@@ -25,7 +26,7 @@ export default function HistoryPage() {
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [crop, grade, page, refresh]);
-  return <div>
+  return <LegacyPage scrollLabel="진단 이력">
     <h1 className="mb-5 text-2xl font-extrabold">진단 이력</h1>
     <div className="mb-4 flex flex-wrap gap-3">
       <label>작물 <select className="rounded-lg border p-2" value={crop} onChange={e => { setCrop(e.target.value); setPage(1); }}>
@@ -60,5 +61,5 @@ export default function HistoryPage() {
       <span>{page} / {Math.ceil(counts.total / 20)}</span>
       <button disabled={page * 20 >= counts.total} onClick={() => setPage(x => x + 1)} className="rounded-lg border px-4 py-2 disabled:opacity-40">다음</button>
     </nav>}
-  </div>;
+  </LegacyPage>;
 }

@@ -1,8 +1,9 @@
 import { DiagnoseForm } from "@/components/DiagnoseForm";
+import { LegacyPage } from "@/components/LegacyPage";
 
 export default function HomePage() {
   return (
-    <>
+    <LegacyPage scrollLabel="진단하기">
       <section className="mb-5 md:mb-7">
         <h1 className="text-[1.4375rem] font-extrabold leading-snug tracking-tight text-ink md:text-[1.75rem]">
           사진 한 장으로 <br className="md:hidden" />
@@ -13,6 +14,6 @@ export default function HomePage() {
         </p>
       </section>
       <DiagnoseForm />
-    </>
+    </LegacyPage>
   );
 }

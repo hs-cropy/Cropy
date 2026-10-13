@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { AppBar } from "@/components/AppBar";
-import { BottomNav } from "@/components/BottomNav";
+import { AppFrame } from "@/components/AppFrame";
 
 export const metadata: Metadata = {
   title: "CropCare AI",
@@ -35,11 +34,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <div className="mx-auto flex min-h-screen w-full max-w-app flex-col bg-paper shadow-[0_0_60px_-30px_rgba(28,43,34,0.25)] md:max-w-3xl md:shadow-none lg:max-w-5xl">
-          <AppBar />
-          <main className="flex-1 px-5 pb-28 pt-5 md:px-8 md:pb-16 md:pt-8">{children}</main>
-          <BottomNav />
-        </div>
+        {/* 각 화면이 AppShellPage 로 <main> 을 그린다 */}
+        <AppFrame>{children}</AppFrame>
       </body>
     </html>
   );
