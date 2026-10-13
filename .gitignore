@@ -103,5 +103,9 @@ backend/app/data/seed/*
 /frontend/test-results/
 /backend/test-results/
 
+# Storybook
+/frontend/storybook-static/
+/frontend/debug-storybook.log
+
 /ml/test-results/
 /마음ai/test-results/
