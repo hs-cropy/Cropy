@@ -19,7 +19,7 @@ describe("LegacyPage", () => {
     expect(region.contains(screen.getByRole("heading", { level: 1 }))).toBe(true);
   });
 
-  it("옛 layout 의 위 여백과 본문 폭을 그대로 둔다", () => {
+  it("옛 layout 의 위 여백과 본문의 최대 폭을 그대로 둔다", () => {
     render(
       <LegacyPage scrollLabel="진단하기">
         <p data-testid="content">내용</p>

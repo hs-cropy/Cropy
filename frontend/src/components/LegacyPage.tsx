@@ -11,7 +11,8 @@ interface LegacyPageProps {
 
 /**
  * 아직 새 디자인으로 옮기지 않은 화면을 새 틀(AppShellPage)에 넣는 임시 래퍼.
- * 옛 layout 이 주던 위 여백과 본문 폭(모바일 440px·md 704px·lg 960px)을 그대로 둔다.
+ * 옛 layout 이 주던 위 여백과 본문의 최대 폭(모바일 440px·md 704px·lg 960px)을 그대로 둔다.
+ * 좌우 여백은 틀의 값(24px)을 따르므로 좁은 화면에서는 옛 화면(20px)보다 본문이 8px 좁다.
  * 화면을 새로 쓸 때는 AppShellPage 에 PageHeader·ActionBar 를 직접 넣고,
  * 쓰는 곳이 없어지면 이 파일을 지운다.
  */
