@@ -1,6 +1,7 @@
 import { createRef } from "react";
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { Header } from "./Header";
 import type { NavItem } from "./navItem";
 import { Switch } from "./Switch";
@@ -26,6 +27,36 @@ function navLinks() {
 }
 
 describe("Header", () => {
+  it("항목을 누르면 그 항목을 알린다. 이동은 링크가 그대로 한다", async () => {
+    const onItemClick = vi.fn((_item: NavItem, event: { preventDefault: () => void }) =>
+      // jsdom 은 페이지를 옮기지 못한다
+      event.preventDefault(),
+    );
+    render(<Header items={ITEMS} onItemClick={onItemClick} />);
+
+    await userEvent.click(within(nav()).getByRole("link", { name: "진단 이력" }));
+
+    expect(onItemClick).toHaveBeenCalledTimes(1);
+    expect(onItemClick.mock.calls[0][0]).toBe(ITEMS[2]);
+    expect(navLinks()[2].getAttribute("href")).toBe("/history");
+  });
+
+  it("누를 수 없는 항목과 로고는 알리지 않는다", async () => {
+    const onItemClick = vi.fn();
+    render(
+      <Header
+        items={[ITEMS[0], { ...ITEMS[1], disabled: true }]}
+        homeHref="#home"
+        onItemClick={onItemClick}
+      />,
+    );
+
+    await userEvent.click(within(nav()).getByRole("link", { name: "진단 결과" }));
+    await userEvent.click(screen.getByRole("link", { name: "Cropy 홈" }));
+
+    expect(onItemClick).not.toHaveBeenCalled();
+  });
+
   it("로고를 그린다. 갈 곳을 주지 않으면 링크가 아니다", () => {
     render(<Header />);
 
@@ -130,14 +161,22 @@ describe("Header", () => {
 // 디자인 시스템(Cropy/V2/Mobile/Header, Cropy/V2/Desktop/Header) 사양표.
 // 값이 바뀌면 디자인과 어긋난 것이므로 클래스 이름까지 고정한다
 describe("Header — 디자인 시스템 사양", () => {
-  it("좁은 화면은 회색 배경, lg 부터 흰 배경에 아래 테두리다", () => {
+  it("배경이 없어 틀의 배경이 비친다 (화면이 디자인 시스템보다 우선). 필요하면 className 으로 준다", () => {
+    const ref = createRef<HTMLElement>();
+    const { rerender } = render(<Header ref={ref} />);
+
+    expect(Array.from(ref.current!.classList).filter((name) => /(^|:)bg-/.test(name))).toEqual([]);
+
+    rerender(<Header ref={ref} className="bg-cropy-surface" />);
+    expect(Array.from(ref.current!.classList)).toContain("bg-cropy-surface");
+  });
+
+  it("lg 부터 아래 테두리가 있고 노치만큼 위를 띄운다", () => {
     const ref = createRef<HTMLElement>();
     render(<Header ref={ref} />);
 
     expect(Array.from(ref.current!.classList)).toEqual(
       expect.arrayContaining([
-        "bg-cropy-surface-canvas",
-        "lg:bg-cropy-surface",
         "lg:border-b",
         "lg:border-cropy-border",
         "pt-[env(safe-area-inset-top)]",
@@ -200,5 +239,66 @@ describe("Header — 디자인 시스템 사양", () => {
       expect.arrayContaining(["font-medium", "text-cropy-text-secondary", "text-cropy-helper"]),
     );
     expect(other.classList.contains("bg-cropy-action-subtle")).toBe(false);
+  });
+
+  it("선택되지 않은 항목은 마우스를 올리면 연초록 배경이 둥글게 번지고 글자가 초록이 된다", () => {
+    render(<Header items={ITEMS} current="capture" />);
+    const [selected, other] = navLinks();
+
+    expect(Array.from(other.classList)).toEqual(
+      expect.arrayContaining([
+        "relative",
+        "isolate",
+        "before:absolute",
+        "before:inset-0",
+        "before:-z-10",
+        "before:rounded-full",
+        "before:bg-cropy-action-subtle",
+        "before:opacity-0",
+        "before:scale-50",
+        "before:transition",
+        "[@media(hover:hover)]:hover:before:opacity-100",
+        "[@media(hover:hover)]:hover:before:scale-100",
+        "[@media(hover:hover)]:hover:text-cropy-action-primary",
+      ]),
+    );
+    // 선택된 항목은 이미 배경이 있어 호버 효과를 겹치지 않는다
+    expect(Array.from(selected.classList).some((name) => name.includes("hover"))).toBe(false);
+  });
+});
+
+describe("Header — 갈 화면이 없는 항목", () => {
+  const WITH_DISABLED: NavItem[] = ITEMS.map((item) =>
+    item.key === "result" ? { ...item, disabled: true } : item,
+  );
+
+  it("자리와 라벨은 그대로 두되 링크가 아니라서 Tab 으로 닿지 않는다", () => {
+    render(<Header items={WITH_DISABLED} />);
+    const nav = within(screen.getByRole("navigation", { name: "주요 메뉴" }));
+    const disabled = nav.getByRole("link", { name: "진단 결과" });
+
+    expect(nav.getAllByRole("listitem")).toHaveLength(3);
+    expect(disabled.tagName).toBe("SPAN");
+    expect(disabled.getAttribute("aria-disabled")).toBe("true");
+    expect(disabled.hasAttribute("href")).toBe(false);
+    expect(disabled.hasAttribute("tabindex")).toBe(false);
+  });
+
+  it("current 로 지정해도 현재 화면으로 표시하지 않는다", () => {
+    render(<Header items={WITH_DISABLED} current="result" />);
+    const nav = within(screen.getByRole("navigation", { name: "주요 메뉴" }));
+
+    expect(nav.getByRole("link", { name: "진단 결과" }).hasAttribute("aria-current")).toBe(false);
+    expect(nav.getAllByRole("link").filter((link) => link.hasAttribute("aria-current"))).toEqual(
+      [],
+    );
+  });
+
+  it("모양은 선택되지 않은 항목과 같다", () => {
+    render(<Header items={WITH_DISABLED} />);
+    const nav = within(screen.getByRole("navigation", { name: "주요 메뉴" }));
+    const classes = Array.from(nav.getByRole("link", { name: "진단 결과" }).classList);
+
+    expect(classes).toEqual(expect.arrayContaining(["font-medium", "text-cropy-text-secondary"]));
   });
 });

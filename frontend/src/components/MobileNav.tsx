@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ComponentPropsWithRef } from "react";
+import type { ComponentPropsWithRef, MouseEvent } from "react";
 import { cn } from "@/lib/cn";
 import type { NavItem } from "./navItem";
 
@@ -12,6 +12,8 @@ interface MobileNavProps extends Omit<ComponentPropsWithRef<"nav">, "children"> 
   items: NavItem[];
   /** 현재 화면에 해당하는 항목의 key. 경로를 보고 정하는 일은 쓰는 쪽이 한다 */
   current?: string;
+  /** 항목을 눌렀을 때. 이동은 링크가 하고, 쓰는 쪽이 event.preventDefault() 로 막을 수 있다 */
+  onItemClick?: (item: NavItem, event: MouseEvent<HTMLAnchorElement>) => void;
 }
 
 /**
@@ -22,6 +24,7 @@ interface MobileNavProps extends Omit<ComponentPropsWithRef<"nav">, "children"> 
 export function MobileNav({
   items,
   current,
+  onItemClick,
   className,
   "aria-label": ariaLabel = "하단 메뉴",
   ...rest
@@ -36,21 +39,38 @@ export function MobileNav({
       <ul className="flex h-[4.5rem] items-center px-6 py-2">
         {items.map((item) => {
           const active = item.key === current;
+          const content = (
+            <>
+              <span aria-hidden className={cn(item.icon, "h-6 w-6 shrink-0")} />
+              {item.mobileLabel ?? item.label}
+            </>
+          );
           return (
             <li key={item.key} className="min-w-0 flex-1">
-              <Link
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  ITEM,
-                  active
-                    ? "font-bold text-cropy-action-primary"
-                    : "font-medium text-cropy-text-secondary",
-                )}
-              >
-                <span aria-hidden className={cn(item.icon, "h-6 w-6 shrink-0")} />
-                {item.mobileLabel ?? item.label}
-              </Link>
+              {item.disabled ? (
+                // 갈 화면이 없는 항목: 모양은 선택되지 않은 항목과 같고 링크가 아니다
+                <span
+                  role="link"
+                  aria-disabled="true"
+                  className={cn(ITEM, "font-medium text-cropy-text-secondary")}
+                >
+                  {content}
+                </span>
+              ) : (
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  onClick={(event) => onItemClick?.(item, event)}
+                  className={cn(
+                    ITEM,
+                    active
+                      ? "font-bold text-cropy-action-primary"
+                      : "font-medium text-cropy-text-secondary",
+                  )}
+                >
+                  {content}
+                </Link>
+              )}
             </li>
           );
         })}

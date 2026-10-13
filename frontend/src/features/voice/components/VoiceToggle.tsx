@@ -2,17 +2,23 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Switch } from "@/components/Switch";
 import { PROMPT_HOME, PROMPT_VOICE_ON } from "../lib/prompts";
 import { cancelSpeech, isSpeechSupported, speak } from "../lib/speech";
 import { setVoiceEnabled, useVoiceSetting } from "../hooks/useVoiceSetting";
 
+interface VoiceToggleProps {
+  /** 배치용 클래스 (폭 등). 스위치의 모양은 Switch 가 정한다 */
+  className?: string;
+}
+
 /**
  * 음성 안내 켜기/끄기 (06_웹앱_기능명세서 공통 컴포넌트 VoiceGuide).
  *
- * 큰글씨 토글과 같은 모양으로 앱바에 나란히 두고, 아이콘만 두지 않고 "음성"
- * 라벨을 함께 보인다. 읽을 수 없는 브라우저에서는 버튼을 숨긴다.
+ * 큰 글자 스위치와 같은 모양으로 헤더에 나란히 둔다. 좁은 화면에서는 글자를 "음성"으로
+ * 줄이고 이름은 "음성 안내"로 고정한다. 읽을 수 없는 브라우저에서는 스위치를 숨긴다.
  */
-export function VoiceToggle() {
+export function VoiceToggle({ className }: VoiceToggleProps) {
   const enabled = useVoiceSetting();
   const pathname = usePathname();
   const [supported, setSupported] = useState(true);
@@ -24,8 +30,8 @@ export function VoiceToggle() {
 
   if (!supported) return null;
 
-  const toggle = () => {
-    const next = !enabled;
+  // 누른 그 자리에서 바로 읽어야 한다. 효과(effect)로 미루면 iOS 가 발화를 막는다
+  const change = (next: boolean) => {
     setVoiceEnabled(next);
     // 홈 진입 안내(M01-F6)는 상호작용 전이라 브라우저가 막는 경우가 많아,
     // 홈에서 켜면 이 탭 안에서 홈 안내까지 이어 읽는다
@@ -34,22 +40,9 @@ export function VoiceToggle() {
   };
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-pressed={enabled}
-      className={`inline-flex min-h-12 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-bold transition ${
-        enabled
-          ? "border-brand bg-brand text-ink"
-          : "border-line bg-surface text-ink hover:border-brand/60"
-      }`}
-    >
-      <span
-        aria-hidden
-        className={`${enabled ? "icon-[lucide--volume-2]" : "icon-[lucide--volume-x]"} h-4 w-4`}
-      />
-      음성
-      <span className="sr-only">{enabled ? " 안내 켜짐" : " 안내 꺼짐"}</span>
-    </button>
+    <Switch checked={enabled} onCheckedChange={change} aria-label="음성 안내" className={className}>
+      <span className="md:hidden">음성</span>
+      <span className="hidden md:inline">음성 안내</span>
+    </Switch>
   );
 }

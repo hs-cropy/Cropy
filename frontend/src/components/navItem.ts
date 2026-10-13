@@ -12,4 +12,9 @@ export interface NavItem {
    * (Tailwind 가 소스에서 이 글자를 찾아 아이콘을 만든다)
    */
   icon: string;
+  /**
+   * 아직 갈 화면이 없는 항목. 자리와 모양은 그대로 두되 링크가 아니라서 누를 수 없고
+   * Tab 으로도 닿지 않는다. 스크린리더에는 "사용할 수 없음"으로 읽힌다
+   */
+  disabled?: boolean;
 }

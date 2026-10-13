@@ -63,15 +63,7 @@ function Switches() {
 function Shell({ current, children }: { current: string; children: React.ReactNode }) {
   return (
     <AppShell
-      header={
-        <Header
-          items={ITEMS}
-          current={current}
-          homeHref="#home"
-          actions={<Switches />}
-          className="bg-transparent lg:bg-transparent"
-        />
-      }
+      header={<Header items={ITEMS} current={current} homeHref="#home" actions={<Switches />} />}
       nav={<MobileNav items={ITEMS} current={current} />}
       footer={<AppShellFooter />}
     >

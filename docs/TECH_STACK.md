@@ -36,7 +36,7 @@
 ```
 frontend/src/
 ├── app/              # App Router 페이지 (홈=진단, history=이력)
-├── components/       # AppBar, BottomNav, DiagnoseForm,
+├── components/       # AppFrame, AppShell, Header, MobileNav, DiagnoseForm,
 │                     # DiagnosisResult, RecapturePanel, TextSizeToggle
 ├── lib/api.ts        # 백엔드 API 호출 래퍼
 └── types/            # API 응답 타입 정의

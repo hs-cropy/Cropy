@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchDiagnosisDetail } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
+import { AppShellPage } from "@/components/AppShell";
 import { DiagnosisResult } from "@/components/DiagnosisResult";
 import { RecapturePanel } from "@/components/RecapturePanel";
 
@@ -15,43 +16,70 @@ export default function HistoryDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
-  const updateResult = (saved: DiagnoseResponse) => setResult(previous => previous?.id === saved.id ? saved : previous);
+  const updateResult = (saved: DiagnoseResponse) =>
+    setResult((previous) => (previous?.id === saved.id ? saved : previous));
 
   useEffect(() => {
     const controller = new AbortController();
-    setResult(null); setLoading(true); setError(null);
+    setResult(null);
+    setLoading(true);
+    setError(null);
     fetchDiagnosisDetail(id, controller.signal)
-      .then(data => { if (!controller.signal.aborted) setResult(data); })
-      .catch((err) => { if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "기록을 불러오지 못했습니다."); })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+      .then((data) => {
+        if (!controller.signal.aborted) setResult(data);
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted)
+          setError(err instanceof Error ? err.message : "기록을 불러오지 못했습니다.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
     return () => controller.abort();
   }, [id, refresh]);
 
   return (
-    <div className="mx-auto w-full max-w-2xl">
-      <Link
-        href="/history"
-        className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition hover:text-ink"
-      >
-        <span aria-hidden className="icon-[lucide--chevron-left] h-4 w-4" />
-        이력 목록
-      </Link>
+    <AppShellPage scrollLabel="진단 기록">
+      <div className="mx-auto w-full max-w-[27.5rem] pt-5 md:max-w-2xl md:pt-8">
+        <Link
+          href="/history"
+          className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition hover:text-ink"
+        >
+          <span aria-hidden className="icon-[lucide--chevron-left] h-4 w-4" />
+          이력 목록
+        </Link>
 
-      {loading && <p className="py-10 text-center text-sm text-khaki">불러오는 중…</p>}
-      {(error || (!loading && !result)) && (
-        <div role="alert" className="rounded-card bg-signal-high-tint px-4 py-3 text-sm font-medium text-signal-high-ink">
-          {error || "해당 기록을 찾을 수 없습니다."}
-          <button className="mt-2 block rounded-lg bg-brand px-4 py-2 text-ink" onClick={() => setRefresh(x => x + 1)}>다시 불러오기</button>
-        </div>
-      )}
-      {result && (
-        <div className="space-y-4">
-          {result.recapture && result.save_status === "saved" && result.prediction_mode !== "browser" && (
-            <RecapturePanel key={result.id} diagnosisId={result.id} guidance={result.recapture} onRefined={updateResult} />
-          )}
-          <DiagnosisResult result={result} onSaved={updateResult} isRecord />
-        </div>
-      )}
-    </div>
+        {loading && <p className="py-10 text-center text-sm text-khaki">불러오는 중…</p>}
+        {(error || (!loading && !result)) && (
+          <div
+            role="alert"
+            className="rounded-card bg-signal-high-tint px-4 py-3 text-sm font-medium text-signal-high-ink"
+          >
+            {error || "해당 기록을 찾을 수 없습니다."}
+            <button
+              className="mt-2 block rounded-lg bg-brand px-4 py-2 text-ink"
+              onClick={() => setRefresh((x) => x + 1)}
+            >
+              다시 불러오기
+            </button>
+          </div>
+        )}
+        {result && (
+          <div className="space-y-4">
+            {result.recapture &&
+              result.save_status === "saved" &&
+              result.prediction_mode !== "browser" && (
+                <RecapturePanel
+                  key={result.id}
+                  diagnosisId={result.id}
+                  guidance={result.recapture}
+                  onRefined={updateResult}
+                />
+              )}
+            <DiagnosisResult result={result} onSaved={updateResult} isRecord />
+          </div>
+        )}
+      </div>
+    </AppShellPage>
   );
 }

@@ -6,9 +6,10 @@ const BACKGROUND_MOBILE = "/background/farm-mobile.webp";
 const BACKGROUND_DESKTOP = "/background/farm-desktop.webp";
 
 // 화면 높이에 맞춘 틀. 주소 표시줄이 접히고 펴져도 맞도록 dvh 를 쓰고, 모르는 브라우저에는 vh 를 준다.
-// 높이는 className 으로 바꿀 수 없다 (h-* 를 넘겨도 dvh 규칙이 남는다)
+// 높이는 className 으로 바꿀 수 없다 (h-* 를 넘겨도 dvh 규칙이 남는다).
+// 인쇄할 때는 높이 고정을 풀어 본문 전체가 나오게 한다
 const ROOT =
-  "relative isolate flex h-screen flex-col overflow-hidden bg-cropy-surface supports-[height:100dvh]:h-dvh";
+  "relative isolate flex h-screen flex-col overflow-hidden bg-cropy-surface supports-[height:100dvh]:h-dvh print:!h-auto print:overflow-visible";
 
 interface AppShellProps extends ComponentPropsWithRef<"div"> {
   /** 위쪽 Header */
@@ -79,7 +80,7 @@ export function AppShellPage({
         aria-label={scrollLabel}
         // 버튼이 없는 본문도 키보드(방향키·스페이스)로 스크롤할 수 있어야 한다
         tabIndex={0}
-        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 pb-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-cropy-action-primary lg:pb-6 xl:px-16"
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 pb-5 print:overflow-visible focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-cropy-action-primary lg:pb-6 xl:px-16"
       >
         <div className="mx-auto flex w-full max-w-[75rem] flex-col gap-4">{children}</div>
       </div>
