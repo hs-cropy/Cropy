@@ -10,7 +10,11 @@ describe("CaseFeedback", () => {
     const { title, message, primary, secondary, busy } = FEEDBACK[id];
     render(<CaseFeedback caseId={id} />);
 
-    const card = screen.getByRole(busy ? "status" : "alert", { name: title });
+    // 진행 중 안내는 바깥 status 영역 안에 카드가 들어 있다
+    const card = busy
+      ? (screen.getByRole("status").firstElementChild as Element)
+      : screen.getByRole("alert", { name: title });
+    expect(screen.getByRole("heading", { name: title })).toBeTruthy();
     expect(card.children[2].textContent).toBe(message);
     expect(screen.getAllByRole("heading")).toHaveLength(1);
     expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(
@@ -26,6 +30,26 @@ describe("CaseFeedback", () => {
 
     render(<CaseFeedback caseId="history-failed" />);
     expect(screen.getByRole("alert")).toBeTruthy();
+  });
+
+  it.each(["history-loading", "save-pending"] as const)(
+    "%s 는 open=false 여도 빈 status 영역을 그려 두고, 켜면 그 안에 문구를 넣는다",
+    (id) => {
+      const { rerender } = render(<CaseFeedback caseId={id} open={false} />);
+      const region = screen.getByRole("status");
+
+      expect(region.textContent).toBe("");
+
+      rerender(<CaseFeedback caseId={id} open />);
+      expect(screen.getByRole("status")).toBe(region);
+      expect(region.textContent).toContain(FEEDBACK[id].title);
+    },
+  );
+
+  it("오류 안내는 open=false 면 그리지 않는다", () => {
+    const { container } = render(<CaseFeedback caseId="history-failed" open={false} />);
+
+    expect(container.childElementCount).toBe(0);
   });
 
   it("주 버튼과 보조 버튼이 각자의 일을 한다", async () => {
@@ -87,5 +111,14 @@ describe("CaseFeedback", () => {
 
     expect(Array.from(screen.getByRole("alert").classList)).toContain("max-w-[30rem]");
     expect(screen.getByRole("heading", { level: 2 })).toBeTruthy();
+  });
+
+  it("진행 중 안내의 ref·className 도 status 영역이 아니라 안의 카드로 전달한다", () => {
+    const ref = createRef<HTMLElement>();
+    render(<CaseFeedback ref={ref} caseId="save-pending" className="max-w-[30rem]" />);
+    const region = screen.getByRole("status");
+
+    expect(ref.current).toBe(region.firstElementChild);
+    expect(Array.from((ref.current as HTMLElement).classList)).toContain("max-w-[30rem]");
   });
 });
