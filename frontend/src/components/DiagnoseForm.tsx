@@ -630,6 +630,7 @@ export function DiagnoseForm() {
                 diagnosisId={result.id}
                 guidance={result.recapture}
                 onRefined={updateResult}
+                actionsVisible={activeTab === "diagnosis"}
               />
             ) : result.decision_reasons?.includes("low_confidence") &&
               result.save_status === "saved" &&
@@ -646,6 +647,7 @@ export function DiagnoseForm() {
                     fallbackInputRef.current?.click();
                   }
                 }}
+                actionsVisible={activeTab === "diagnosis"}
               />
             ) : (
               /* 일반 결과 / 저장 실패 복구는 기존 DiagnosisResult 유지 */
@@ -687,6 +689,7 @@ export function DiagnoseForm() {
               window.location.hash = "capture";
               galleryInputRef.current?.click();
             }}
+            actionsVisible={activeTab === "diagnosis"}
           />
         ) : (
           <div className="rounded-2xl border border-cropy-border bg-white px-6 py-10 text-center">

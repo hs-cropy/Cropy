@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/Button";
+import { DiagnosisPageActions } from "@/components/DiagnosisPageActions";
 import { Card } from "@/components/Card";
 import { Mascot } from "@/components/Mascot";
 
@@ -9,6 +10,7 @@ interface DiagnosisFailurePanelProps {
   onRetry: () => void;
   onPickDifferent: () => void;
   loading?: boolean;
+  actionsVisible?: boolean;
 }
 
 export function DiagnosisFailurePanel({
@@ -16,6 +18,7 @@ export function DiagnosisFailurePanel({
   onRetry,
   onPickDifferent,
   loading = false,
+  actionsVisible = true,
 }: DiagnosisFailurePanelProps) {
   return (
     <section aria-label="진단 분석 실패" className="flex flex-col gap-5">
@@ -39,20 +42,18 @@ export function DiagnosisFailurePanel({
         </p>
       </Card>
 
-      <div className="grid gap-2 lg:flex lg:gap-3">
-        <Button loading={loading} onClick={onRetry} fullWidth className="lg:w-60 lg:flex-none">
+      <DiagnosisPageActions visible={actionsVisible}>
+        <Button loading={loading} onClick={onRetry}>
           {loading ? "다시 분석 중…" : "다시 시도하기"}
         </Button>
         <Button
           variant="secondary"
           onClick={onPickDifferent}
           disabled={loading}
-          fullWidth
-          className="lg:w-60 lg:flex-none"
         >
           다른 사진 선택
         </Button>
-      </div>
+      </DiagnosisPageActions>
     </section>
   );
 }

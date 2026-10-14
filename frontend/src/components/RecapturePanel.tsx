@@ -6,6 +6,7 @@ import { validateImage } from "@/features/camera";
 import { refineDiagnosis } from "@/lib/api";
 import type { DiagnoseResponse, RecaptureGuidance } from "@/types/diagnosis";
 import { Button } from "@/components/Button";
+import { DiagnosisPageActions } from "@/components/DiagnosisPageActions";
 import { Card } from "@/components/Card";
 import { Mascot } from "@/components/Mascot";
 import { DiagnosisFailurePanel } from "@/components/DiagnosisFailurePanel";
@@ -14,6 +15,8 @@ interface Props {
   diagnosisId: string;
   guidance: RecaptureGuidance;
   onRefined: (result: DiagnoseResponse) => void;
+  /** CSS로 숨겨진 진단 탭에서는 고정 버튼도 숨긴다. */
+  actionsVisible?: boolean;
 }
 
 type Step = "candidates" | "guide" | "preview" | "failure";
@@ -26,7 +29,12 @@ function objectParticle(value: string): string {
   return (code - 0xac00) % 28 === 0 ? "를" : "을";
 }
 
-export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
+export function RecapturePanel({
+  diagnosisId,
+  guidance,
+  onRefined,
+  actionsVisible = true,
+}: Props) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const requestRef = useRef<AbortController | null>(null);
@@ -122,23 +130,18 @@ export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
           <div className="grid gap-4 lg:grid-cols-2">
             <Card radius="lg" padding="lg">
               <h3 className="text-lg font-bold text-cropy-text-primary">AI가 비교 중인 후보</h3>
-              <div className="mt-3 space-y-3">
+              <div className="mt-4 space-y-3">
                 {guidance.candidates.map((candidate, index) => (
-                  <div
-                    key={`${candidate.name}-${index}`}
-                    className="rounded-xl border border-[#ECECEF] p-4"
-                  >
-                    <p className="font-semibold text-[#191919]">
-                      <span className="mr-2 text-[#2E8B57]">
-                        후보 {index + 1}
-                      </span>
+                  <div key={`${candidate.name}-${index}`} className="rounded-xl bg-cropy-surface-canvas p-4">
+                    <p className="font-bold text-cropy-text-primary">
+                      <span className="mr-2 text-cropy-action-primary">후보 {index + 1}</span>
                       {candidate.name}
                     </p>
                   </div>
                 ))}
               </div>
-              <p className="mt-4 text-sm text-[#6B6B6B]">
-                위 후보는 아직 확정된 진단이 아니에요.
+              <p className="mt-4 text-sm text-cropy-text-secondary">
+                후보 예시이며 아직 확정된 진단이 아니에요.
               </p>
             </Card>
 
@@ -162,19 +165,17 @@ export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
               </p>
             </Card>
           </div>
-          <div className="grid gap-2 lg:flex lg:gap-3">
-            <Button onClick={() => setStep("guide")} fullWidth className="lg:w-60 lg:flex-none">
+          <DiagnosisPageActions visible={actionsVisible}>
+            <Button onClick={() => setStep("guide")}>
               그림 보고 다시 촬영하기
             </Button>
             <Button
               variant="secondary"
               onClick={() => cameraRef.current?.click()}
-              fullWidth
-              className="lg:w-60 lg:flex-none"
             >
               바로 다시 촬영
             </Button>
-          </div>
+          </DiagnosisPageActions>
         </>
       )}
 
@@ -232,19 +233,17 @@ export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
               </p>
             </Card>
           </div>
-          <div className="grid gap-2 lg:flex lg:gap-3">
-            <Button onClick={() => cameraRef.current?.click()} fullWidth className="lg:w-60 lg:flex-none">
+          <DiagnosisPageActions visible={actionsVisible}>
+            <Button onClick={() => cameraRef.current?.click()}>
               {guidance.region} 다시 촬영
             </Button>
             <Button
               variant="secondary"
               onClick={() => galleryRef.current?.click()}
-              fullWidth
-              className="lg:w-60 lg:flex-none"
             >
               갤러리에서 선택
             </Button>
-          </div>
+          </DiagnosisPageActions>
           <button
             type="button"
             className="self-start text-sm font-semibold text-cropy-text-secondary underline-offset-4 hover:underline"
@@ -279,12 +278,10 @@ export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
             </p>
           </Card>
           {loading && <p role="status" className="text-center text-base text-cropy-text-secondary">재촬영 사진을 분석하고 있어요.</p>}
-          <div className="grid gap-2 lg:flex lg:gap-3">
+          <DiagnosisPageActions visible={actionsVisible}>
             <Button
               loading={loading}
               onClick={() => void analyze(selectedFile)}
-              fullWidth
-              className="lg:w-60 lg:flex-none"
             >
               {loading ? "재분석 중…" : "이 사진으로 다시 분석"}
             </Button>
@@ -292,12 +289,10 @@ export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
               variant="secondary"
               onClick={() => cameraRef.current?.click()}
               disabled={loading}
-              fullWidth
-              className="lg:w-60 lg:flex-none"
             >
               다시 촬영하기
             </Button>
-          </div>
+          </DiagnosisPageActions>
           <button
             type="button"
             disabled={loading}
@@ -315,6 +310,7 @@ export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
           loading={loading}
           onRetry={() => void analyze(selectedFile)}
           onPickDifferent={() => galleryRef.current?.click()}
+          actionsVisible={actionsVisible}
         />
       )}
 

@@ -1,10 +1,10 @@
 
-import { AppShellPage } from "@/components/AppShell";
+import { DiagnosisPageShell } from "@/components/DiagnosisPageActions";
 import { DiagnoseForm } from "@/components/DiagnoseForm";
 
 export default function HomePage() {
   return (
-    <AppShellPage scrollLabel="진단하기">
+    <DiagnosisPageShell scrollLabel="진단하기">
       {/* 기존 화면의 여백 및 본문 최대 너비 유지 */}
       <div className="mx-auto w-full max-w-[27.5rem] pt-5 md:max-w-[44rem] md:pt-8 lg:max-w-[60rem]">
         <section className="mb-5 md:mb-7">
@@ -32,6 +32,6 @@ export default function HomePage() {
 
         <DiagnoseForm />
       </div>
-    </AppShellPage>
+    </DiagnosisPageShell>
   );
 }

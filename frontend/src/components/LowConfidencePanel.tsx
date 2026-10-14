@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/Button";
+import { DiagnosisPageActions } from "@/components/DiagnosisPageActions";
 import { Card } from "@/components/Card";
 import { Mascot } from "@/components/Mascot";
 
@@ -9,6 +10,7 @@ interface LowConfidencePanelProps {
   /** API에서 받은 0~1 범위의 신뢰도. 화면 분기용 임계값으로 사용하지 않는다. */
   confidence: number;
   onRetake: () => void;
+  actionsVisible?: boolean;
 }
 
 const PHOTO_TIPS = [
@@ -17,7 +19,11 @@ const PHOTO_TIPS = [
   "빛 반사 없이 밝은 곳에서 촬영하세요.",
 ];
 
-export function LowConfidencePanel({ confidence, onRetake }: LowConfidencePanelProps) {
+export function LowConfidencePanel({
+  confidence,
+  onRetake,
+  actionsVisible = true,
+}: LowConfidencePanelProps) {
   const [showGuide, setShowGuide] = useState(false);
   const percent = Number.isFinite(confidence)
     ? `${Math.round(Math.max(0, Math.min(1, confidence)) * 100)}%`
@@ -72,20 +78,18 @@ export function LowConfidencePanel({ confidence, onRetake }: LowConfidencePanelP
         </Card>
       )}
 
-      <div className="grid gap-2 lg:flex lg:gap-3">
-        <Button onClick={onRetake} fullWidth className="lg:w-60 lg:flex-none">
+      <DiagnosisPageActions visible={actionsVisible}>
+        <Button onClick={onRetake}>
           다시 촬영하기
         </Button>
         <Button
           variant="secondary"
           onClick={() => setShowGuide((current) => !current)}
           aria-expanded={showGuide}
-          fullWidth
-          className="lg:w-60 lg:flex-none"
         >
           {showGuide ? "촬영 방법 닫기" : "촬영 방법 보기"}
         </Button>
-      </div>
+      </DiagnosisPageActions>
     </section>
   );
 }
