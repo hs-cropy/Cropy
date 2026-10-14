@@ -55,7 +55,7 @@ function Shot({
   accent?: boolean;
 }) {
   return (
-    <figure className="overflow-hidden rounded-2xl bg-[#EDF7F1]">
+    <figure className="overflow-hidden rounded-2xl bg-cropy-action-subtle">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
@@ -64,10 +64,10 @@ function Shot({
       />
 
       <figcaption
-        className={`px-3 py-2 text-sm font-bold ${
+        className={`px-3 py-2 text-cropy-helper font-bold ${
           accent
-            ? "text-[#2E8B57]"
-            : "text-[#6B6B6B]"
+            ? "text-cropy-action-hover"
+            : "text-cropy-text-secondary"
         }`}
       >
         {label}
@@ -114,7 +114,7 @@ export function DiagnosisResult({
       {result.prediction_mode === "browser" && (
         <p
           role="status"
-          className="rounded-xl bg-[#EDF7F1] p-4 text-base leading-6 text-[#191919]"
+          className="rounded-xl bg-cropy-action-subtle p-4 text-cropy-body-lg text-cropy-text-primary"
         >
           브라우저에서 생성해 동기화한 결과예요.
           서버에서 사진을 다시 분석한 결과는 아닙니다.
@@ -125,7 +125,7 @@ export function DiagnosisResult({
       {isRecord && (
         <p
           role="status"
-          className="rounded-xl bg-[#EDF7F1] p-4 text-base leading-6 text-[#191919]"
+          className="rounded-xl bg-cropy-action-subtle p-4 text-cropy-body-lg text-cropy-text-primary"
         >
           {result.content_status === "snapshot"
             ? "저장 당시의 결과와 관리 안내예요. 현재 상태는 새 사진으로 확인하세요."
@@ -137,7 +137,7 @@ export function DiagnosisResult({
       {result.prediction_mode === "mock" && (
         <p
           role="status"
-          className="rounded-xl bg-signal-med-tint p-4 text-base leading-6 text-signal-med-ink"
+          className="rounded-xl bg-signal-med-tint p-4 text-cropy-body-lg text-signal-med-ink"
         >
           시연용 예시 결과입니다.
           업로드한 사진의 실제 진단 결과가 아닙니다.
@@ -150,7 +150,7 @@ export function DiagnosisResult({
       {/* ==================================
           진단 결과 요약 카드
          ================================== */}
-      <section className="overflow-hidden rounded-2xl border border-[#ECECEF] bg-white shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-cropy-border bg-cropy-surface shadow-sm">
 
         {/* 위험 등급 */}
         <div
@@ -167,7 +167,7 @@ export function DiagnosisResult({
                 className="icon-[lucide--circle-check] h-5 w-5 text-signal-low-ink"
               />
 
-              <span className="text-base font-bold text-signal-low-ink">
+              <span className="text-cropy-body-lg font-bold text-signal-low-ink">
                 {isUncertain
                   ? "정상 여부가 확실하지 않아요"
                   : "정상으로 분류됐어요"}
@@ -181,7 +181,7 @@ export function DiagnosisResult({
               />
 
               <span
-                className={`text-base font-bold ${severity.text}`}
+                className={`text-cropy-body-lg font-bold ${severity.text}`}
               >
                 {severity.label}
               </span>
@@ -190,7 +190,7 @@ export function DiagnosisResult({
 
           {/* 재촬영한 결과 표시 */}
           {isRefined && (
-            <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-sm font-bold text-[#2E8B57]">
+            <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-cropy-surface/80 px-3 py-1 text-cropy-helper font-bold text-cropy-action-hover">
               <span
                 aria-hidden="true"
                 className="icon-[lucide--scan-search] h-4 w-4"
@@ -222,10 +222,10 @@ export function DiagnosisResult({
 
               {/* 재촬영 분석 안내 */}
               <p
-                className={`mt-3 flex items-start gap-2 rounded-xl p-3 text-sm leading-6 ${
+                className={`mt-3 flex items-start gap-2 rounded-xl p-3 text-cropy-helper ${
                   isUncertain
                     ? "bg-signal-med-tint text-signal-med-ink"
-                    : "bg-[#EDF7F1] text-[#26784B]"
+                    : "bg-cropy-action-subtle text-cropy-action-hover"
                 }`}
               >
                 <span
@@ -244,7 +244,7 @@ export function DiagnosisResult({
             </div>
           ) : (
             result.image_url && (
-              <div className="mb-5 overflow-hidden rounded-2xl bg-[#EDF7F1]">
+              <div className="mb-5 overflow-hidden rounded-2xl bg-cropy-action-subtle">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={result.image_url}
@@ -257,24 +257,24 @@ export function DiagnosisResult({
 
           {/* 작물 */}
           {result.crop_type && (
-            <p className="text-sm font-semibold text-[#6B6B6B]">
+            <p className="text-cropy-helper font-semibold text-cropy-text-secondary">
               {result.crop_type}
             </p>
           )}
 
           {/* 병해 이름 */}
-          <h2 className="mt-2 text-2xl font-extrabold leading-8 tracking-tight text-[#191919]">
+          <h2 className="mt-2 text-cropy-heading-lg text-cropy-text-primary">
             {result.disease_name}
           </h2>
 
           {/* 모델 신뢰도 */}
           <div className="mt-5">
             <div className="mb-2 flex items-baseline justify-between gap-3">
-              <span className="text-base font-semibold text-[#6B6B6B]">
+              <span className="text-cropy-body-lg font-semibold text-cropy-text-secondary">
                 AI 진단 신뢰도
               </span>
 
-              <span className="tnum text-2xl font-extrabold text-[#191919]">
+              <span className="tnum text-cropy-heading-lg text-cropy-text-primary">
                 {pct}%
               </span>
             </div>
@@ -285,10 +285,10 @@ export function DiagnosisResult({
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={pct}
-              className="h-3 overflow-hidden rounded-full bg-[#EDF7F1]"
+              className="h-3 overflow-hidden rounded-full bg-cropy-action-subtle"
             >
               <div
-                className="h-full rounded-full bg-[#2E8B57]"
+                className="h-full rounded-full bg-cropy-action-primary"
                 style={{
                   width: `${Math.max(0, Math.min(100, pct))}%`,
                 }}
@@ -297,7 +297,7 @@ export function DiagnosisResult({
 
             {/* 낮은 신뢰도 안내 */}
             {isUncertain && (
-              <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-signal-med-ink">
+              <p className="mt-3 flex items-start gap-2 text-cropy-helper text-signal-med-ink">
                 <span
                   aria-hidden="true"
                   className="icon-[lucide--circle-alert] mt-1 h-4 w-4 shrink-0"
@@ -314,8 +314,8 @@ export function DiagnosisResult({
 
           {/* 다른 진단 후보 */}
           {result.top_predictions.length > 1 && (
-            <div className="mt-5 border-t border-[#ECECEF] pt-4">
-              <h3 className="mb-3 text-base font-bold text-[#191919]">
+            <div className="mt-5 border-t border-cropy-border pt-4">
+              <h3 className="mb-3 text-cropy-body-lg font-bold text-cropy-text-primary">
                 그 밖의 가능성
               </h3>
 
@@ -323,7 +323,7 @@ export function DiagnosisResult({
                 {result.top_predictions.slice(1).map((p) => (
                   <span
                     key={p.name}
-                    className="rounded-lg bg-[#F7F7F8] px-3 py-2 text-sm text-[#6B6B6B]"
+                    className="rounded-lg bg-cropy-surface-canvas px-3 py-2 text-cropy-helper text-cropy-text-secondary"
                   >
                     {p.name}
                     {" · "}
@@ -340,8 +340,8 @@ export function DiagnosisResult({
           현재 또는 저장 당시 관리 안내
          ================================== */}
       {!!result.management_actions?.length && (
-        <section className="rounded-2xl border border-[#ECECEF] bg-white p-5">
-          <h2 className="text-xl font-extrabold text-[#191919]">
+        <section className="rounded-2xl border border-cropy-border bg-white p-5">
+          <h2 className="text-cropy-heading-md text-cropy-text-primary">
             {isRecord
               ? "진단 당시 관리 안내"
               : "지금 해야 할 일"}
@@ -354,11 +354,11 @@ export function DiagnosisResult({
                   key={index}
                   className="flex items-start gap-3"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EDF7F1] text-sm font-bold text-[#2E8B57]">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cropy-action-subtle text-cropy-helper font-bold text-cropy-action-hover">
                     {index + 1}
                   </span>
 
-                  <p className="pt-0.5 text-base leading-7 text-[#191919]">
+                  <p className="pt-0.5 text-base leading-7 text-cropy-text-primary">
                     {action}
                   </p>
                 </li>

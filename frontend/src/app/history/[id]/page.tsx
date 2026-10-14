@@ -13,6 +13,7 @@ import { DiagnosisResult } from "@/components/DiagnosisResult";
 import { RecapturePanel } from "@/components/RecapturePanel";
 
 import { CropMismatchNotice } from "@/components/CropMismatchNotice";
+import { Button, buttonClassName } from "@/components/Button";
 
 export default function HistoryDetailPage() {
   const params = useParams<{ id: string }>();
@@ -78,17 +79,16 @@ export default function HistoryDetailPage() {
         {/* ======================================
             상단: 진단 이력 목록으로 돌아가기
         ====================================== */}
-
         <nav aria-label="이력 상세 탐색" className="mb-5">
           <Link
             href="/history"
             className={[
-              "inline-flex min-h-11 items-center gap-2",
+              "inline-flex min-h-cropy-control-md items-center gap-2",
               "rounded-xl px-1 py-2",
-              "text-base font-semibold text-[#6B6B6B]",
-              "transition-colors hover:text-[#2E8B57]",
+              "text-cropy-body-lg font-semibold text-cropy-text-secondary",
+              "transition-colors hover:text-cropy-action-hover",
               "focus-visible:outline-2",
-              "focus-visible:outline-[#2E8B57]",
+              "focus-visible:outline-cropy-action-primary",
             ].join(" ")}
           >
             <span
@@ -102,13 +102,12 @@ export default function HistoryDetailPage() {
         {/* ======================================
             페이지 제목 및 캐릭터
         ====================================== */}
-
-        <header className="relative mb-6 min-h-[100px] pr-20">
-          <h1 className="text-2xl font-bold text-[#191919]">
+        <header className="relative mb-6 min-h-[6.25rem] pr-20">
+          <h1 className="text-cropy-heading-lg text-cropy-text-primary">
             저장된 진단
           </h1>
 
-          <p className="mt-2 text-sm leading-[22px] text-[#6B6B6B]">
+          <p className="mt-2 text-cropy-helper text-cropy-text-secondary">
             저장 당시의 결과예요.
             <br />
             현재 상태는 새 사진으로 확인하세요.
@@ -119,30 +118,29 @@ export default function HistoryDetailPage() {
             src="/mobile-prototype/assets/46875.png"
             alt=""
             aria-hidden="true"
-            className="absolute right-0 top-0 h-[76px] w-[76px] object-contain"
+            className="absolute right-0 top-0 h-[4.75rem] w-[4.75rem] object-contain"
           />
         </header>
 
         {/* ======================================
             로딩 상태
         ====================================== */}
-
         {loading && (
           <div
             role="status"
             aria-live="polite"
-            className="rounded-2xl border border-[#ECECEF] bg-white px-6 py-12 text-center"
+            className="rounded-2xl border border-cropy-border bg-cropy-surface px-6 py-12 text-center"
           >
             <span
               aria-hidden="true"
-              className="icon-[lucide--loader-circle] mx-auto block h-10 w-10 animate-spin text-[#2E8B57]"
+              className="icon-[lucide--loader-circle] mx-auto block h-10 w-10 animate-spin text-cropy-action-primary"
             />
 
-            <h2 className="mt-5 text-lg font-bold text-[#191919]">
+            <h2 className="mt-5 text-cropy-feedback-title text-cropy-text-primary">
               진단 기록을 불러오고 있어요
             </h2>
 
-            <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
+            <p className="mt-2 text-cropy-body-lg text-cropy-text-secondary">
               저장된 사진과 분석 결과를 확인하는 중이에요.
             </p>
           </div>
@@ -151,66 +149,52 @@ export default function HistoryDetailPage() {
         {/* ======================================
             오류 또는 기록 없음
         ====================================== */}
-
         {!loading && (error || !result) && (
           <div
             role="alert"
-            className="rounded-2xl border border-[#ECECEF] bg-white px-6 py-10 text-center"
+            className="rounded-2xl border border-cropy-border bg-cropy-surface px-6 py-10 text-center"
           >
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF1F0]">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-cropy-status-attention-surface">
               <span
                 aria-hidden="true"
-                className="icon-[lucide--circle-alert] h-8 w-8 text-[#B42318]"
+                className="icon-[lucide--circle-alert] h-8 w-8 text-cropy-status-attention"
               />
             </div>
 
-            <h2 className="mt-5 text-lg font-bold text-[#191919]">
+            <h2 className="mt-5 text-cropy-feedback-title text-cropy-text-primary">
               {error
                 ? "진단 기록을 불러오지 못했어요"
                 : "진단 기록을 찾을 수 없어요"}
             </h2>
 
-            <p className="mt-3 break-words text-base leading-6 text-[#6B6B6B]">
+            <p className="mt-3 break-words text-cropy-body-lg text-cropy-text-secondary">
               {error ||
                 "요청한 진단 기록이 없거나 더 이상 조회할 수 없어요."}
             </p>
 
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setRefresh((value) => value + 1)
+              <Button
+                variant="primary"
+                size="default"
+                onClick={() => setRefresh((value) => value + 1)}
+                icon={
+                  <span
+                    aria-hidden="true"
+                    className="icon-[lucide--refresh-cw] h-5 w-5"
+                  />
                 }
-                className={[
-                  "inline-flex min-h-[3.25rem]",
-                  "items-center justify-center gap-2",
-                  "rounded-xl bg-[#2E8B57] px-5 py-3",
-                  "text-base font-bold text-white",
-                  "hover:bg-[#26784B]",
-                  "focus-visible:outline-2",
-                  "focus-visible:outline-offset-2",
-                  "focus-visible:outline-[#2E8B57]",
-                ].join(" ")}
               >
-                <span
-                  aria-hidden="true"
-                  className="icon-[lucide--refresh-cw] h-5 w-5"
-                />
                 다시 불러오기
-              </button>
+              </Button>
 
               <Link
                 href="/history"
-                className={[
-                  "inline-flex min-h-[3.25rem]",
-                  "items-center justify-center",
-                  "rounded-xl border border-[#2E8B57]",
-                  "bg-white px-5 py-3",
-                  "text-base font-bold text-[#2E8B57]",
-                  "hover:bg-[#EDF7F1]",
-                ].join(" ")}
+                className={buttonClassName({
+                  variant: "secondary",
+                  size: "default",
+                })}
               >
-                이력 목록으로
+                <span className="min-w-0">이력 목록으로</span>
               </Link>
             </div>
           </div>
@@ -245,23 +229,24 @@ export default function HistoryDetailPage() {
             )}
 
             {/* 하단 이력 목록 복귀 */}
-
             <Link
               href="/history"
               className={[
-                "flex min-h-[3.25rem] w-full",
-                "items-center justify-center gap-2",
-                "rounded-xl border border-[#2E8B57]",
-                "bg-white px-5 py-3",
-                "text-base font-bold text-[#2E8B57]",
-                "transition-colors hover:bg-[#EDF7F1]",
+                buttonClassName({
+                  variant: "secondary",
+                  size: "default",
+                  fullWidth: true,
+                }),
+                "mt-2",
               ].join(" ")}
             >
               <span
                 aria-hidden="true"
-                className="icon-[lucide--arrow-left] h-5 w-5"
+                className="icon-[lucide--arrow-left] h-5 w-5 shrink-0"
               />
-              진단 이력으로 돌아가기
+              <span className="min-w-0">
+                진단 이력으로 돌아가기
+              </span>
             </Link>
           </div>
         )}

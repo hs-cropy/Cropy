@@ -29,7 +29,10 @@ let diagnosisCalls = 0;
 let refineCalls = 0;
 let imageUrl = "";
 
+// ======================================
 // 테스트용 진단 데이터
+// ======================================
+
 function createResult(overrides = {}) {
   return {
     id: "recapture-test-001",
@@ -38,7 +41,6 @@ function createResult(overrides = {}) {
     crop_type: "고추",
     category: "disease",
     severity: "medium",
-
     confidence: 0.46,
 
     prediction_mode: "mock",
@@ -95,8 +97,13 @@ function createResult(overrides = {}) {
   };
 }
 
-// 프론트의 실제 API 요청을 가로채
+// ======================================
+// 프론트엔드 API 요청 가로채기
+// ======================================
+
 // 백엔드 대신 테스트 응답을 전달한다.
+// 첫 refine 요청은 실패, 두 번째는 성공한다.
+
 await page.route(
   /\/api\/v1\/diagnose(?:\/[^/?]+\/refine)?(?:\?.*)?$/,
   async (route) => {
@@ -118,12 +125,20 @@ await page.route(
     }
 
     const isRefine =
-      /\/diagnose\/[^/?]+\/refine/.test(request.url());
+      /\/diagnose\/[^/?]+\/refine(?:\?.*)?$/.test(
+        request.url()
+      );
 
     if (isRefine) {
       refineCalls += 1;
 
-      // 첫 번째 재촬영 분석은 강제로 실패
+      // 재분석 요청은 최초 진단과 같은 ID여야 한다.
+      assert.match(
+        request.url(),
+        /\/diagnose\/recapture-test-001\/refine(?:\?.*)?$/
+      );
+
+      // 첫 번째 재분석은 실패
       if (refineCalls === 1) {
         await route.fulfill({
           status: 503,
@@ -140,7 +155,7 @@ await page.route(
         return;
       }
 
-      // 두 번째 요청(재시도)은 성공
+      // 두 번째 재분석은 성공
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -164,7 +179,6 @@ await page.route(
 
             decision_status: "confirmed",
             decision_reasons: [],
-
             recapture: null,
 
             is_refined: true,
@@ -176,7 +190,7 @@ await page.route(
       return;
     }
 
-    // 최초 AI 진단: 낮은 신뢰도 + 후보 혼동
+    // 최초 AI 진단
     diagnosisCalls += 1;
 
     await route.fulfill({
@@ -191,7 +205,10 @@ await page.route(
 try {
   await page.goto(`${origin}/#capture`);
 
-  // 실제 이미지 검증에 통과할 PNG 생성
+  // ======================================
+  // 테스트용 PNG 생성
+  // ======================================
+
   const pngBase64 = await page.evaluate(() => {
     const canvas = document.createElement("canvas");
 
@@ -199,6 +216,10 @@ try {
     canvas.height = 512;
 
     const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("Canvas를 생성할 수 없습니다.");
+    }
 
     ctx.fillStyle = "#579447";
     ctx.fillRect(0, 0, 512, 512);
@@ -219,9 +240,9 @@ try {
     buffer: Buffer.from(pngBase64, "base64"),
   };
 
-  // ==============================
-  // TEST 1. 최초 진단
-  // ==============================
+  // ======================================
+  // TEST 1. 최초 진단 및 혼동 후보 표시
+  // ======================================
 
   await page
     .locator('input[aria-label="갤러리 사진 선택"]')
@@ -233,7 +254,6 @@ try {
     })
     .click();
 
-  // 진단 성공 시 재촬영 안내가 표시되어야 함
   await page
     .getByRole("heading", {
       name: "비슷한 증상이 보여요",
@@ -249,33 +269,37 @@ try {
     true
   );
 
-  console.log("PASS 1: 낮은 신뢰도 / 혼동 후보 안내");
-  // 브라우저에서 재촬영 화면을 직접 확인하기 위해 일시정지
-    if (headed) {
-        await page.pause();
-    }
+  console.log(
+    "PASS 1: 낮은 신뢰도 / 혼동 후보 안내"
+  );
 
-  // ==============================
-  // TEST 2. 촬영 가이드 펼치기
-  // ==============================
+  if (headed) {
+    await page.pause();
+  }
+
+  // ======================================
+  // TEST 2. 추가 촬영 가이드 펼치기
+  // ======================================
 
   await page
     .getByRole("button", {
-      name: "촬영 방법 보기",
+      name: "그림 보고 다시 촬영하기",
     })
     .click();
 
   await page
     .getByRole("heading", {
-      name: "추가 촬영 방법",
+      name: "추가 사진은 이렇게 찍어주세요",
     })
     .waitFor();
 
-  console.log("PASS 2: 추가 촬영 가이드 표시");
+  console.log(
+    "PASS 2: 추가 촬영 가이드 표시"
+  );
 
-  // ==============================
-  // TEST 3. 잘못된 파일
-  // ==============================
+  // ======================================
+  // TEST 3. 잘못된 이미지 파일 차단
+  // ======================================
 
   await page
     .locator(
@@ -287,94 +311,126 @@ try {
       buffer: Buffer.from("not an image"),
     });
 
+  // 이미지 검증 실패 안내 확인
   await page
-    .getByRole("alert")
-    .filter({
-      hasText: "사진을 분석하지 못했어요",
+    .locator(
+      'section[aria-label="추가 촬영 안내"] [role="alert"]'
+    )
+    .waitFor({ state: "visible" });
+
+  // 잘못된 파일은 refine API로 보내지 않는다.
+  assert.equal(refineCalls, 0);
+
+  // 촬영 가이드 화면이 유지되어야 한다.
+  await page
+    .getByRole("heading", {
+      name: "추가 사진은 이렇게 찍어주세요",
     })
     .waitFor();
 
-  // 잘못된 파일은 서버에 보내지 않아야 함
-  assert.equal(refineCalls, 0);
+  console.log(
+    "PASS 3: 유효하지 않은 파일 차단"
+  );
 
-  console.log("PASS 3: 유효하지 않은 파일 차단");
-
-  // ==============================
+  // ======================================
   // TEST 4. 재촬영 분석 실패
-  // ==============================
+  // ======================================
 
+  // 정상 이미지 선택
   await page
     .locator(
       'input[aria-label="갤러리에서 추가 사진 선택"]'
     )
     .setInputFiles(photo);
 
+  // 먼저 미리보기 화면이 표시되어야 한다.
   await page
-    .getByRole("alert")
-    .filter({
-      hasText:
-        "재촬영 분석 서버가 응답하지 않았어요.",
+    .getByRole("heading", {
+      name: "추가 사진을 확인해 주세요",
     })
     .waitFor();
 
-  assert.equal(refineCalls, 1);
+  // 사진 선택만으로 API가 호출되지 않아야 한다.
+  assert.equal(refineCalls, 0);
 
-  // 재촬영 실패 시 원래 진단 결과가 유지돼야 함
-  assert.equal(
-    await page.getByRole("heading", {
-      name: "고추 탄저병",
-    }).count(),
-    1
-  );
-
-  console.log("PASS 4: 재촬영 실패 / 기존 결과 유지");
-
-  // ==============================
-  // TEST 5. 같은 사진으로 재시도
-  // ==============================
-
+  // 실제 분석 확정 버튼 클릭
   await page
     .getByRole("button", {
-      name: "같은 사진으로 다시 시도",
+      name: "이 사진으로 다시 분석",
     })
     .click();
 
-  // 갱신 결과가 화면에 표시되는지 확인
+  // 실패 화면 표시 확인
+  await page
+    .getByRole("heading", {
+      name: "분석을 완료하지 못했어요",
+    })
+    .waitFor();
+
+  // 첫 refine 요청은 503 실패
+  assert.equal(refineCalls, 1);
+
+  // 실패해도 원래 진단은 유지되어야 한다.
+  // 이후 같은 diagnosisId와 선택한 사진으로
+  // 재시도할 수 있어야 한다.
+  console.log(
+    "PASS 4: 재촬영 분석 실패 화면 표시"
+  );
+
+  // ======================================
+  // TEST 5. 같은 사진으로 재시도
+  // ======================================
+
+  // DiagnosisFailurePanel의 실제 버튼명
+  await page
+    .getByRole("button", {
+      name: "다시 시도하기",
+    })
+    .click();
+
+  // 갱신된 병해명 표시 확인
   await page
     .getByRole("heading", {
       name: "고추 세균점무늬병",
     })
     .waitFor();
 
+  // refine 요청이 정확히 두 번 발생해야 한다.
   assert.equal(refineCalls, 2);
 
-  // 2차 사진 분석 결과 표시
+  // 재촬영 결과 확인
   await page
     .getByText("사진 2장 분석", {
       exact: true,
     })
     .waitFor();
 
-  // 성공 후 재촬영 안내는 사라져야 함
+  // 성공 후 혼동 후보 화면이 사라져야 한다.
   assert.equal(
-    await page.getByRole("heading", {
-      name: "비슷한 증상이 보여요",
-    }).count(),
+    await page
+      .getByRole("heading", {
+        name: "비슷한 증상이 보여요",
+      })
+      .count(),
     0
   );
 
-  console.log("PASS 5: 재시도 성공 / 결과 갱신");
+  console.log(
+    "PASS 5: 같은 사진 재시도 성공 / 결과 갱신"
+  );
 
-  // ==============================
-  // TEST 6. 브라우저 오류 확인
-  // ==============================
+  // ======================================
+  // TEST 6. 브라우저 실행 오류 확인
+  // ======================================
 
   assert.deepEqual(pageErrors, []);
 
-  console.log("PASS 6: 브라우저 실행 오류 없음");
+  console.log(
+    "PASS 6: 브라우저 실행 오류 없음"
+  );
 
   console.log(
-    "\n재촬영 프론트엔드 테스트 전체 통과!"
+    "\n재촬영 프론트엔드 E2E 테스트 전체 통과!"
   );
 
   if (headed) {

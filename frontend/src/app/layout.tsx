@@ -13,6 +13,7 @@ export const viewport: Viewport = {
   themeColor: "#F7F7F8",
   width: "device-width",
   initialScale: 1,
+  // viewport-fit=cover가 있어야 iOS에서 safe-area inset을 올바르게 적용할 수 있다.
   viewportFit: "cover",
 };
 

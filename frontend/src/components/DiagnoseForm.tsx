@@ -31,6 +31,7 @@ import { LowConfidencePanel } from "./LowConfidencePanel";
 import { DiagnosisFailurePanel } from "./DiagnosisFailurePanel";
 
 import { CropMismatchNotice } from "./CropMismatchNotice";
+import { Button } from "@/components/Button";
 
 // 작물 선택 목록
 const CROP_TYPES = [
@@ -409,16 +410,16 @@ export function DiagnoseForm() {
       >
         {/* 화면 제목 */}
         <div className="mb-6">
-          <h1 className="text-[1.375rem] font-extrabold leading-[1.875rem] tracking-tight text-[#191919] md:text-[2rem] md:leading-tight">
+          <h1 className="text-cropy-title-mobile text-cropy-text-primary md:text-cropy-title-desktop">
             사진 한 장이면 충분해요
           </h1>
 
-          <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
+          <p className="mt-2 text-cropy-body-lg text-cropy-text-secondary">
             아픈 작물을 촬영하면 AI가 병해를 분석해 드려요.
           </p>          
           <a
             href="/offline/index.html"
-            className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-bold text-brown hover:text-ink"
+            className="mt-2 inline-flex min-h-cropy-control-md items-center gap-1 text-cropy-helper font-bold text-cropy-text-primary hover:text-cropy-action-hover"
           >
             인터넷 없이 기기에서 진단하기
             <span
@@ -441,10 +442,10 @@ export function DiagnoseForm() {
               type="button"
               onClick={openCamera}
               disabled={loading}
-              className={`group block aspect-[4/3] w-full overflow-hidden rounded-2xl transition-colors ${
+              className={`group block aspect-[4/3] w-full overflow-hidden rounded-2xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cropy-action-primary ${
                 preview
-                  ? "border border-[#ECECEF] bg-white"
-                  : "border-2 border-dashed border-[#2E8B57]/40 bg-white hover:border-[#2E8B57]"
+                  ? "border border-cropy-border bg-cropy-surface"
+                  : "border-2 border-dashed border-cropy-action-primary/40 bg-cropy-surface hover:border-cropy-action-primary"
               } disabled:cursor-not-allowed disabled:opacity-60`}
             >
               {preview ? (
@@ -456,26 +457,25 @@ export function DiagnoseForm() {
                     className="h-full w-full object-cover"
                   />
 
-                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/75 px-4 py-2 text-sm font-bold text-white backdrop-blur">
+                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/75 px-4 py-2 text-cropy-helper font-bold text-cropy-text-on-action backdrop-blur">
                     다시 촬영하기
                   </span>
                 </span>
               ) : (
                 <span className="flex h-full flex-col items-center justify-center px-5 text-center">
-
                   {/* 카메라 아이콘 */}
-                  <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#EDF7F1] text-[#2E8B57] transition-transform group-hover:scale-105">
+                  <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-cropy-action-subtle text-cropy-action-primary transition-transform group-hover:scale-105">
                     <span
                       aria-hidden="true"
                       className="icon-[lucide--camera] h-8 w-8"
                     />
                   </span>
 
-                  <span className="text-lg font-bold text-[#191919]">
+                  <span className="text-cropy-feedback-title text-cropy-text-primary">
                     사진 촬영하기
                   </span>
 
-                  <span className="mt-2 text-base leading-6 text-[#6B6B6B]">
+                  <span className="mt-2 text-cropy-body-lg leading-6 text-cropy-text-secondary">
                     잎이나 과실이 선명하게
                     <br />
                     보이도록 찍어주세요.
@@ -491,7 +491,7 @@ export function DiagnoseForm() {
               onClick={() =>
                 galleryInputRef.current?.click()
               }
-              className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 text-base font-semibold text-[#2E8B57] disabled:opacity-50"
+              className="mt-3 flex min-h-cropy-button-web w-full items-center justify-center gap-2 text-cropy-body-lg font-semibold text-cropy-action-hover disabled:opacity-50"
             >
               <span
                 aria-hidden="true"
@@ -537,7 +537,7 @@ export function DiagnoseForm() {
 
             {/* 작물 선택 */}
             <fieldset className="mt-6">
-              <legend className="mb-3 text-base font-bold text-[#191919]">
+              <legend className="mb-3 text-cropy-body-lg font-bold text-cropy-text-primary">
                 작물 선택
               </legend>
 
@@ -554,10 +554,10 @@ export function DiagnoseForm() {
                         setCropType(crop.value)
                       }
                       aria-pressed={active}
-                      className={`inline-flex min-h-12 items-center gap-1.5 rounded-xl border px-4 py-2 text-base font-semibold transition-colors ${
+                      className={`inline-flex min-h-cropy-button-web items-center gap-1.5 rounded-xl border px-4 py-2 text-cropy-body-lg font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cropy-action-primary ${
                         active
-                          ? "border-[#2E8B57] bg-[#EDF7F1] text-[#2E8B57]"
-                          : "border-[#ECECEF] bg-white text-[#6B6B6B] hover:border-[#2E8B57]/50"
+                          ? "border-cropy-action-primary bg-cropy-action-subtle text-cropy-action-hover"
+                          : "border-cropy-border bg-cropy-surface text-cropy-text-secondary hover:border-cropy-action-primary/50"
                       } disabled:opacity-50`}
                     >
                       <span aria-hidden="true">
@@ -575,7 +575,7 @@ export function DiagnoseForm() {
             {error && (
               <div
                 role="alert"
-                className="mt-4 rounded-xl bg-[#FFF1F0] p-4 text-base leading-6 text-[#D92D20]"
+                className="mt-4 rounded-xl bg-cropy-status-attention-surface p-4 text-cropy-body-lg text-cropy-status-attention"
               >
                 <div className="flex items-start gap-2">
                   <span
@@ -589,36 +589,27 @@ export function DiagnoseForm() {
             )}
 
             {/* AI 진단 시작 버튼 */}
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="mt-6 flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl bg-[#2E8B57] px-5 py-3 text-base font-bold text-white transition-colors hover:bg-[#26784B] active:bg-[#1F633D] disabled:cursor-not-allowed disabled:opacity-50"
+              variant="primary"
+              size="default"
+              fullWidth
+              loading={loading}
+              className="mt-6"
+              icon={
+                <span
+                  aria-hidden="true"
+                  className="icon-[lucide--scan-search] h-5 w-5"
+                />
+              }
             >
-              {loading ? (
-                <>
-                  <span
-                    aria-hidden="true"
-                    className="icon-[lucide--loader-circle] h-5 w-5 animate-spin"
-                  />
-
-                  진단 중…
-                </>
-              ) : (
-                <>
-                  <span
-                    aria-hidden="true"
-                    className="icon-[lucide--scan-search] h-5 w-5"
-                  />
-
-                  AI 진단 시작
-                </>
-              )}
-            </button>
+              {loading ? "진단 중…" : "AI 진단 시작"}
+            </Button>
 
           </form>
 
           {/* 데스크톱 촬영 도움말 */}
-          <aside className="mt-6 hidden rounded-2xl border border-[#ECECEF] bg-white p-6 shadow-sm lg:mt-0 lg:block">
+          <aside className="mt-6 hidden rounded-2xl border border-[#ECECEF] bg-cropy-surface p-6 shadow-sm lg:mt-0 lg:block">
 
             <h2 className="flex items-center gap-2 text-lg font-bold text-[#191919]">
               <span
@@ -632,7 +623,7 @@ export function DiagnoseForm() {
               {PHOTO_TIPS.map((tip) => (
                 <li
                   key={tip}
-                  className="flex items-start gap-3 text-base leading-6 text-[#6B6B6B]"
+                  className="flex items-start gap-3 text-cropy-body-lg leading-6 text-[#6B6B6B]"
                 >
                   <span
                     aria-hidden="true"
@@ -643,8 +634,7 @@ export function DiagnoseForm() {
                 </li>
               ))}
             </ul>
-
-            <p className="mt-6 rounded-xl bg-[#EDF7F1] p-4 text-sm leading-6 text-[#2E8B57]">
+            <p className="mt-6 rounded-xl bg-cropy-action-subtle p-4 text-cropy-helper font-semibold text-cropy-action-hover">
               사진을 선택하고 진단을 시작하면
               AI 분석 결과를 확인할 수 있어요.
             </p>
@@ -705,30 +695,39 @@ export function DiagnoseForm() {
               /* 일반 결과 / 저장 실패 복구는 기존 DiagnosisResult 유지 */
               <>
                 <header className="space-y-2">
-                  <h2 className="text-2xl font-bold text-cropy-text-primary lg:text-3xl">
+                  <h2 className="text-cropy-heading-lg text-cropy-text-primary lg:text-3xl">
                     진단 결과
                   </h2>
-                  <p className="text-base text-cropy-text-secondary">
+                  <p className="text-cropy-body-lg text-cropy-text-secondary">
                     AI 분석 결과와 관리 방법을 확인하세요.
                   </p>
                 </header>
                 {result.recapture && result.save_status !== "saved" && (
                   <div role="status" className="rounded-xl border border-cropy-border bg-cropy-action-subtle p-4">
                     <p className="font-semibold text-cropy-text-primary">추가 촬영 안내가 있어요</p>
-                    <p className="mt-2 text-base leading-6 text-cropy-text-secondary">
+                    <p className="mt-2 text-cropy-body-lg leading-6 text-cropy-text-secondary">
                       현재 진단 결과를 저장한 뒤 재촬영을 진행할 수 있어요.
                     </p>
                   </div>
                 )}
                 <DiagnosisResult result={result} onSaved={updateResult} />
-                <button
+                <Button
                   type="button"
-                  onClick={() => { window.location.hash = "capture"; }}
-                  className="flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl border border-[#2E8B57] bg-white px-5 py-3 text-base font-semibold text-[#2E8B57] transition-colors hover:bg-[#EDF7F1]"
+                  variant="secondary"
+                  size="default"
+                  fullWidth
+                  onClick={() => {
+                    window.location.hash = "capture";
+                  }}
+                  icon={
+                    <span
+                      aria-hidden="true"
+                      className="icon-[lucide--camera] h-5 w-5"
+                    />
+                  }
                 >
-                  <span aria-hidden className="icon-[lucide--camera] size-5" />
                   다른 사진으로 새 진단
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -744,7 +743,7 @@ export function DiagnoseForm() {
             actionsVisible={activeTab === "diagnosis"}
           />
         ) : (
-          <div className="rounded-2xl border border-cropy-border bg-white px-6 py-10 text-center">
+          <div className="rounded-2xl border border-cropy-border bg-cropy-surface px-6 py-10 text-center">
             <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-cropy-action-subtle">
               <span
                 aria-hidden
@@ -753,22 +752,27 @@ export function DiagnoseForm() {
                 }`}
               />
             </span>
-            <h2 className="mt-5 text-xl font-bold text-cropy-text-primary">
+            <h2 className="mt-5 text-cropy-heading-md text-cropy-text-primary">
               {loading ? "사진을 분석하고 있어요" : "아직 진단 결과가 없어요"}
             </h2>
-            <p role="status" className="mt-3 whitespace-pre-line text-base leading-6 text-cropy-text-secondary">
+            <p role="status" className="mt-3 whitespace-pre-line text-cropy-body-lg leading-6 text-cropy-text-secondary">
               {loading
                 ? "분석이 완료되면 결과를 보여드릴게요."
                 : "촬영 탭에서 사진을 선택하고\nAI 진단을 시작해 주세요."}
             </p>
             {!loading && (
-              <button
+              <Button
                 type="button"
-                onClick={() => { window.location.hash = "capture"; }}
-                className="mt-6 min-h-[3.25rem] w-full rounded-xl bg-[#2E8B57] px-5 py-3 text-base font-semibold text-white hover:bg-[#26784B]"
+                variant="primary"
+                size="default"
+                fullWidth
+                className="mt-6"
+                onClick={() => {
+                  window.location.hash = "capture";
+                }}
               >
                 사진 촬영하기
-              </button>
+              </Button>
             )}
           </div>
         )}

@@ -4,7 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* :root {
   --cropy-canvas: #F7F7F8;
   --cropy-surface: #FFFFFF;
   --cropy-text: #191919;
@@ -15,7 +15,7 @@
   --cropy-primary-hover: #26784B;
   --cropy-primary-pressed: #1F633D;
   --cropy-attention: #D92D20;
-}
+} */
 
 @layer base {
   html {

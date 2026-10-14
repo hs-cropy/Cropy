@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { AppShellPage } from "@/components/AppShell";
+import { Button } from "@/components/Button";
 import { fetchHistory } from "@/lib/api";
 import type {
   DiagnosisSummary,
@@ -380,11 +381,11 @@ export default function HistoryPage() {
         ====================================== */}
 
         <header className="relative mb-6 min-h-[112px] pr-20">
-          <h1 className="text-[24px] font-bold leading-8 tracking-tight text-[#191919]">
+          <h1 className="text-cropy-heading-lg text-cropy-text-primary">
             진단 이력
           </h1>
 
-          <p className="mt-2 text-sm leading-[22px] text-[#6B6B6B]">
+          <p className="mt-2 text-cropy-helper text-cropy-text-secondary">
             {isNoHistory ? (
               "저장한 진단을 모아볼 수 있어요."
             ) : (
@@ -402,7 +403,7 @@ export default function HistoryPage() {
             src="/mobile-prototype/assets/46875.png"
             alt=""
             aria-hidden="true"
-            className="absolute right-0 top-0 h-[76px] w-[76px] object-contain md:h-20 md:w-20"
+            className="absolute right-0 top-0 h-[4.75rem] w-[4.75rem] object-contain md:h-20 md:w-20"
           />
         </header>
 
@@ -413,7 +414,7 @@ export default function HistoryPage() {
         {!isNoHistory && (
           <section
             aria-label="진단 이력 필터"
-            className="mb-5 max-w-[420px] space-y-5"
+            className="mb-5 max-w-[26.25rem] space-y-5"
           >
             <FilterChips
               title="작물"
@@ -450,7 +451,7 @@ export default function HistoryPage() {
                 role="status"
                 className="mb-4 flex min-h-5 items-center gap-3"
               >
-                <p className="text-[13px] font-semibold text-[#6B6B6B]">
+                <p className="text-cropy-caption font-semibold text-cropy-text-secondary">
                   {crop || "전체 작물"}
                   {" · "}
                   {gradeLabel}
@@ -497,8 +498,8 @@ export default function HistoryPage() {
                 className={[
                   "w-full",
                   "lg:overflow-hidden lg:rounded-2xl",
-                  "lg:border lg:border-[#ECECEF]",
-                  "lg:bg-white",
+                  "lg:border lg:border-cropy-border",
+                  "lg:bg-cropy-surface",
                 ].join(" ")}
               >
                 {/* 데스크톱 테이블 헤더 */}
@@ -507,9 +508,9 @@ export default function HistoryPage() {
                     "hidden lg:grid",
                     "lg:grid-cols-[minmax(0,2.5fr)_minmax(0,1.3fr)_90px_100px_72px]",
                     "lg:items-center lg:gap-x-4",
-                    "lg:border-b lg:border-[#ECECEF]",
-                    "lg:bg-[#F7F7F8] lg:px-5 lg:py-4",
-                    "text-sm font-semibold text-[#6B6B6B]",
+                    "lg:border-b lg:border-cropy-border",
+                    "lg:bg-cropy-surface-canvas lg:px-5 lg:py-4",
+                    "text-cropy-helper font-semibold text-cropy-text-secondary",
                   ].join(" ")}
                 >
                   <span>진단 내용</span>
@@ -546,7 +547,6 @@ export default function HistoryPage() {
           {/* ======================================
               페이지네이션
           ====================================== */}
-
           {!isPageLoading &&
             !error &&
             totalPages > 1 && (
@@ -554,27 +554,26 @@ export default function HistoryPage() {
                 aria-label="진단 이력 페이지"
                 className="mt-6 flex items-center justify-center gap-4"
               >
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="compact"
                   disabled={page <= 1}
                   onClick={() => changePage(page - 1)}
-                  className="min-h-11 rounded-xl border border-[#ECECEF] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-40"
                 >
                   이전
-                </button>
+                </Button>
 
                 <span className="text-sm font-semibold text-[#6B6B6B]">
                   {page} / {totalPages}
                 </span>
-
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="compact"
                   disabled={page >= totalPages}
                   onClick={() => changePage(page + 1)}
-                  className="min-h-11 rounded-xl border border-[#ECECEF] bg-white px-4 py-2 text-sm font-semibold disabled:opacity-40"
                 >
                   다음
-                </button>
+                </Button>
               </nav>
             )}
         </section>
