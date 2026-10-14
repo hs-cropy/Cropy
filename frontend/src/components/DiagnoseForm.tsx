@@ -381,7 +381,18 @@ export function DiagnoseForm() {
 
           <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
             아픈 작물을 촬영하면 AI가 병해를 분석해 드려요.
-          </p>
+          </p>          
+          <a
+            href="/offline/index.html"
+            className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-bold text-brown hover:text-ink"
+          >
+            인터넷 없이 기기에서 진단하기
+            <span
+              aria-hidden="true"
+              className="icon-[lucide--chevron-right] h-4 w-4"
+            />
+          </a>
+
         </div>
 
         {/* 데스크톱: 촬영 폼 / 촬영 안내 2열 */}

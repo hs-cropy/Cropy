@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
-import { validateImage } from "@/features/camera";
+import { CameraCapture, isCameraSupported, validateImage, } from "@/features/camera";
 import { refineDiagnosis } from "@/lib/api";
 import type { DiagnoseResponse, RecaptureGuidance } from "@/types/diagnosis";
 import { Button } from "@/components/Button";
@@ -38,8 +38,8 @@ export function RecapturePanel({
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const requestRef = useRef<AbortController | null>(null);
-
   const [step, setStep] = useState<Step>("candidates");
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,17 +55,22 @@ export function RecapturePanel({
     };
   }, [previewUrl]);
 
-  const selectPhoto = (file: File) => {
-    if (loading) return;
+  const selectPhoto = (file: File): boolean => {
+    if (loading) return false;
+
     const check = validateImage(file);
+
     if (!check.ok) {
       setError(check.message);
-      return;
+      return false;
     }
+
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
     setError(null);
     setStep("preview");
+
+    return true;
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -73,6 +78,33 @@ export function RecapturePanel({
     event.target.value = "";
     if (file) selectPhoto(file);
   };
+
+  
+  const openCamera = () => {
+    if (loading) return;
+
+    if (isCameraSupported()) {
+      // 프로젝트에 구현된 카메라 화면 실행
+      setError(null);
+      setCameraOpen(true);
+    } else {
+      // 브라우저 카메라 API 미지원 시 기본 촬영 기능 사용
+      cameraRef.current?.click();
+    }
+  };
+
+  const handleCameraCapture = (captured: File) => {
+    // 촬영한 사진 검증 및 미리보기 표시
+    if (selectPhoto(captured)) {
+      setCameraOpen(false);
+    }
+  };
+
+  const handleCameraGallery = () => {
+    setCameraOpen(false);
+    galleryRef.current?.click();
+  };
+
 
   const analyze = async (file: File | null) => {
     if (!file || requestRef.current) return;
@@ -171,7 +203,7 @@ export function RecapturePanel({
             </Button>
             <Button
               variant="secondary"
-              onClick={() => cameraRef.current?.click()}
+              onClick={openCamera}
             >
               바로 다시 촬영
             </Button>
@@ -234,12 +266,13 @@ export function RecapturePanel({
             </Card>
           </div>
           <DiagnosisPageActions visible={actionsVisible}>
-            <Button onClick={() => cameraRef.current?.click()}>
+            <Button onClick={openCamera} disabled={loading}>
               {guidance.region} 다시 촬영
             </Button>
             <Button
               variant="secondary"
               onClick={() => galleryRef.current?.click()}
+              disabled={loading}
             >
               갤러리에서 선택
             </Button>
@@ -287,7 +320,7 @@ export function RecapturePanel({
             </Button>
             <Button
               variant="secondary"
-              onClick={() => cameraRef.current?.click()}
+              onClick={openCamera}
               disabled={loading}
             >
               다시 촬영하기
@@ -318,6 +351,16 @@ export function RecapturePanel({
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
         </p>
+      )}
+
+      {cameraOpen && (
+        <CameraCapture
+          onCapture={handleCameraCapture}
+          onClose={() => setCameraOpen(false)}
+          onCaptureError={setError}
+          onGallery={handleCameraGallery}
+          notice={null}
+        />
       )}
 
       <input
