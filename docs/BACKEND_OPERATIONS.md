@@ -1,5 +1,7 @@
 # 백엔드 운영 및 복구
 
+온라인 사전 준비, PSIS 카탈로그 반영, 로컬 LLM 연결과 단말 검증 순서는 [백엔드 후속 작업](BACKEND_NEXT_STEPS.md)을 따른다.
+
 ## 실행 모드
 
 개발 환경은 `APP_ENV=development`, `ALLOW_MOCK_PREDICTIONS=true`일 때 모델이 없어도 예시 진단을 제공한다. 응답과 화면에 mock임을 표시한다. 운영에서는 `APP_ENV=production`, `ALLOW_MOCK_PREDICTIONS=false`로 실행한다. Compose 기본값은 운영 모드다. 모델이 없거나 클래스 매핑이 잘못되면 진단을 503으로 차단한다.
