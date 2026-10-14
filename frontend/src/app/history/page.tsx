@@ -379,19 +379,13 @@ useEffect(() => {
         </p>
 
         {/* 이력이 있을 때 상단 마스코트 표시 */}
-        {!isPageLoading &&
-          !error &&
-          !isNoHistory && (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/mobile-prototype/assets/46875.png"
-                alt=""
-                aria-hidden="true"
-                className="absolute right-0 top-0 h-[76px] w-[76px] object-contain md:h-20 md:w-20"
-              />
-            </>
-          )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/mobile-prototype/assets/46875.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute right-0 top-0 h-[76px] w-[76px] object-contain md:h-20 md:w-20"
+        />
       </header>
 
       {/* ======================================
