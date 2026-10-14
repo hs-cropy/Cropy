@@ -27,6 +27,9 @@ import { subscribeNewDiagnosis } from "./newDiagnosis";
 import { RecapturePanel } from "./RecapturePanel";
 import { Toast, useToast } from "./Toast";
 
+import { LowConfidencePanel } from "./LowConfidencePanel";
+import { DiagnosisFailurePanel } from "./DiagnosisFailurePanel";
+
 // 작물 선택 목록
 const CROP_TYPES = [
   { value: "", label: "자동 감지", icon: "✨" },
@@ -51,6 +54,7 @@ export function DiagnoseForm() {
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const fallbackInputRef = useRef<HTMLInputElement>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // 촬영 및 진단 상태
   const [cropType, setCropType] = useState("");
@@ -119,6 +123,12 @@ export function DiagnoseForm() {
 
     if (result.recapture) {
       speak(buildRecapturePrompt(result.recapture));
+    } else if (
+      result.decision_reasons?.includes("low_confidence") &&
+      result.save_status === "saved" &&
+      result.prediction_mode !== "browser"
+    ) {
+      speak("추가 확인이 필요해요. 현재 사진만으로는 병해를 확정하기 어려워요. 사진을 다시 촬영해 주세요.");
     } else {
       speak(buildResultPrompt(result));
     }
@@ -261,7 +271,71 @@ export function DiagnoseForm() {
       if (controller.signal.aborted) return;
 
       // 분석 결과 저장
-      setResult(data);
+      
+      const previewMode =
+        process.env.NODE_ENV === "development"
+          ? new URLSearchParams(window.location.search).get("preview")
+          : null;
+
+      let displayResult: DiagnoseResponse = data;
+
+      // ① 낮은 신뢰도 미리보기
+      if (previewMode === "low-confidence") {
+        displayResult = {
+          ...data,
+          confidence: 0.42,
+          decision_status: "low_confidence",
+          decision_reasons: ["low_confidence"],
+          recapture: null,
+          save_status: "saved",
+          prediction_mode: "mock",
+        };
+      }
+
+      // ② 혼동쌍 미리보기
+      if (previewMode === "confusion") {
+        displayResult = {
+          ...data,
+          crop_type: "무",
+          disease_name: "무 검은무늬병",
+          confidence: 0.47,
+          top_predictions: [
+            {
+              name: "무 검은무늬병",
+              confidence: 0.47,
+            },
+            {
+              name: "무 노균병",
+              confidence: 0.42,
+            },
+          ],
+          decision_status: "confusion",
+          decision_reasons: ["confusion", "low_confidence"],
+          save_status: "saved",
+          prediction_mode: "mock",
+
+          recapture: {
+            region: "잎 뒷면",
+            instruction:
+              "같은 잎을 뒤집어 반점이 있는 곳의 뒷면이 보이도록 찍어주세요.",
+            margin: 0.05,
+            candidates: [
+              {
+                name: "무 노균병",
+                cue: "",
+              },
+              {
+                name: "무 검은무늬병",
+                cue: "",
+              },
+            ],
+          },
+        };
+      }
+
+      setResult(displayResult);
+
+
 
       // 성공하면 진단 탭으로 이동
       window.location.hash = "diagnosis";
@@ -273,6 +347,7 @@ export function DiagnoseForm() {
           ? err.message
           : "진단에 실패했어요. 잠시 후 다시 시도해 주세요."
       );
+      window.location.hash = "diagnosis";
     } finally {
       if (requestRef.current === controller) {
         requestRef.current = null;
@@ -313,7 +388,7 @@ export function DiagnoseForm() {
         <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-8">
 
           {/* 기존 촬영 기능 전체 유지 */}
-          <form onSubmit={handleSubmit} aria-busy={loading}>
+          <form ref={formRef} onSubmit={handleSubmit} aria-busy={loading}>
 
             {/* 사진 촬영 카드 */}
             <button
@@ -540,134 +615,110 @@ export function DiagnoseForm() {
         aria-label="AI 진단 결과"
         className={
           activeTab === "diagnosis"
-            ? "mx-auto w-full max-w-3xl space-y-5"
+            ? "mx-auto w-full max-w-5xl space-y-5"
             : "hidden"
         }
       >
-        {/* 화면 제목 */}
-        <div className="mb-6">
-          <h1 className="text-[1.375rem] font-extrabold leading-[1.875rem] text-[#191919] md:text-[2rem]">
-            진단 결과
-          </h1>
-
-          <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
-            AI 분석 결과와 관리 방법을 확인하세요.
-          </p>
-        </div>
-
         {result ? (
-          /* 진단 결과가 존재하는 상태 */
           <div className="space-y-5">
-
+            {/* 후보 혼동을 최우선 표시. 백엔드의 재촬영 안내 데이터가 있어야 함. */}
             {result.recapture &&
             result.save_status === "saved" &&
             result.prediction_mode !== "browser" ? (
-              /*
-                재촬영이 필요한 상태
-                → 일반 진단 결과는 숨기고 재촬영 안내만 표시
-              */
               <RecapturePanel
                 key={result.id}
                 diagnosisId={result.id}
                 guidance={result.recapture}
                 onRefined={updateResult}
               />
-            ) : (
-              /*
-                재촬영이 필요하지 않은 상태,
-                또는 결과가 아직 저장되지 않은 상태
-                → 일반 진단 결과 및 저장 복구 표시
-              */
-              <div className="space-y-4">
-                {result.recapture &&
-                  result.save_status !== "saved" && (
-                    <div
-                      role="status"
-                      className="rounded-xl border border-[#ECECEF] bg-[#EDF7F1] p-4"
-                    >
-                      <p className="text-base font-semibold text-[#191919]">
-                        추가 촬영 안내가 있어요
-                      </p>
-
-                      <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
-                        현재 진단 결과를 저장한 뒤
-                        재촬영을 진행할 수 있어요.
-                      </p>
-                    </div>
-                  )}
-
-                <DiagnosisResult
-                  result={result}
-                  onSaved={updateResult}
-                />
-              </div>
-            )}
-
-            {/* 새 진단을 위해 촬영 탭으로 이동 */}
-            <button
-              type="button"
-              onClick={() => {
-                window.location.hash = "capture";
-              }}
-              className="flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl border border-[#2E8B57] bg-white px-5 py-3 text-base font-semibold text-[#2E8B57] transition-colors hover:bg-[#EDF7F1]"
-            >
-              <span
-                aria-hidden="true"
-                className="icon-[lucide--camera] h-5 w-5"
+            ) : result.decision_reasons?.includes("low_confidence") &&
+              result.save_status === "saved" &&
+              result.prediction_mode !== "browser" ? (
+              <LowConfidencePanel
+                confidence={result.confidence}
+                onRetake={() => {
+                  reset();
+                  window.location.hash = "capture";
+                  if (isCameraSupported()) {
+                    primeSpeech();
+                    setCameraOpen(true);
+                  } else {
+                    fallbackInputRef.current?.click();
+                  }
+                }}
               />
-              다른 사진으로 새 진단
-            </button>
+            ) : (
+              /* 일반 결과 / 저장 실패 복구는 기존 DiagnosisResult 유지 */
+              <>
+                <header className="space-y-2">
+                  <h2 className="text-2xl font-bold text-cropy-text-primary lg:text-3xl">
+                    진단 결과
+                  </h2>
+                  <p className="text-base text-cropy-text-secondary">
+                    AI 분석 결과와 관리 방법을 확인하세요.
+                  </p>
+                </header>
+                {result.recapture && result.save_status !== "saved" && (
+                  <div role="status" className="rounded-xl border border-cropy-border bg-cropy-action-subtle p-4">
+                    <p className="font-semibold text-cropy-text-primary">추가 촬영 안내가 있어요</p>
+                    <p className="mt-2 text-base leading-6 text-cropy-text-secondary">
+                      현재 진단 결과를 저장한 뒤 재촬영을 진행할 수 있어요.
+                    </p>
+                  </div>
+                )}
+                <DiagnosisResult result={result} onSaved={updateResult} />
+                <button
+                  type="button"
+                  onClick={() => { window.location.hash = "capture"; }}
+                  className="flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl border border-[#2E8B57] bg-white px-5 py-3 text-base font-semibold text-[#2E8B57] transition-colors hover:bg-[#EDF7F1]"
+                >
+                  <span aria-hidden className="icon-[lucide--camera] size-5" />
+                  다른 사진으로 새 진단
+                </button>
+              </>
+            )}
           </div>
+        ) : error ? (
+          <DiagnosisFailurePanel
+            message={error}
+            loading={loading}
+            onRetry={() => formRef.current?.requestSubmit()}
+            onPickDifferent={() => {
+              window.location.hash = "capture";
+              galleryInputRef.current?.click();
+            }}
+          />
         ) : (
-          /* 진단 결과가 없는 상태 */
-          <div className="rounded-2xl border border-[#ECECEF] bg-white px-6 py-10 text-center shadow-sm">
-            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#EDF7F1]">
+          <div className="rounded-2xl border border-cropy-border bg-white px-6 py-10 text-center">
+            <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-cropy-action-subtle">
               <span
-                aria-hidden="true"
-                className={`h-8 w-8 text-[#2E8B57] ${
-                  loading
-                    ? "icon-[lucide--loader-circle] animate-spin"
-                    : error
-                      ? "icon-[lucide--circle-alert]"
-                      : "icon-[lucide--scan-search]"
+                aria-hidden
+                className={`size-8 text-cropy-action-primary ${
+                  loading ? "icon-[lucide--loader-circle] animate-spin" : "icon-[lucide--scan-search]"
                 }`}
               />
             </span>
-
-            <h2 className="mt-5 text-xl font-bold text-[#191919]">
-              {loading
-                ? "사진을 분석하고 있어요"
-                : error
-                  ? "분석을 완료하지 못했어요"
-                  : "아직 진단 결과가 없어요"}
+            <h2 className="mt-5 text-xl font-bold text-cropy-text-primary">
+              {loading ? "사진을 분석하고 있어요" : "아직 진단 결과가 없어요"}
             </h2>
-
-            <p
-              role={error ? "alert" : "status"}
-              className="mt-3 whitespace-pre-line text-base leading-6 text-[#6B6B6B]"
-            >
+            <p role="status" className="mt-3 whitespace-pre-line text-base leading-6 text-cropy-text-secondary">
               {loading
                 ? "분석이 완료되면 결과를 보여드릴게요."
-                : error ??
-                  "촬영 탭에서 사진을 선택하고\nAI 진단을 시작해 주세요."}
+                : "촬영 탭에서 사진을 선택하고\nAI 진단을 시작해 주세요."}
             </p>
-
             {!loading && (
               <button
                 type="button"
-                onClick={() => {
-                  window.location.hash = "capture";
-                }}
-                className="mt-6 flex min-h-[3.25rem] w-full items-center justify-center rounded-xl bg-[#2E8B57] px-5 py-3 text-base font-semibold text-white hover:bg-[#26784B]"
+                onClick={() => { window.location.hash = "capture"; }}
+                className="mt-6 min-h-[3.25rem] w-full rounded-xl bg-[#2E8B57] px-5 py-3 text-base font-semibold text-white hover:bg-[#26784B]"
               >
-                {error
-                  ? "촬영 화면으로 돌아가기"
-                  : "사진 촬영하기"}
+                사진 촬영하기
               </button>
             )}
           </div>
         )}
       </section>
+
 
 
       {/* ====================================

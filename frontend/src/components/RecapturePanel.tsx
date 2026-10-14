@@ -1,23 +1,14 @@
-
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ChangeEvent,
-} from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import { validateImage } from "@/features/camera";
 import { refineDiagnosis } from "@/lib/api";
-
-import type {
-  DiagnoseResponse,
-  RecaptureGuidance,
-} from "@/types/diagnosis";
-
-import { AppButton } from "./ui/AppButton";
-import { AppCard } from "./ui/AppCard";
+import type { DiagnoseResponse, RecaptureGuidance } from "@/types/diagnosis";
+import { Button } from "@/components/Button";
+import { Card } from "@/components/Card";
+import { Mascot } from "@/components/Mascot";
+import { DiagnosisFailurePanel } from "@/components/DiagnosisFailurePanel";
 
 interface Props {
   diagnosisId: string;
@@ -25,31 +16,24 @@ interface Props {
   onRefined: (result: DiagnoseResponse) => void;
 }
 
-function objectParticle(word: string): string {
-  const trimmed = word.trim();
+type Step = "candidates" | "guide" | "preview" | "failure";
 
-  if (!trimmed) return "을(를)";
-
-  const last = trimmed.charCodeAt(trimmed.length - 1);
-
-  if (last < 0xac00 || last > 0xd7a3) {
-    return "을(를)";
-  }
-
-  return (last - 0xac00) % 28 === 0 ? "를" : "을";
+function objectParticle(value: string): string {
+  const word = value.trim();
+  if (!word) return "을(를)";
+  const code = word.charCodeAt(word.length - 1);
+  if (code < 0xac00 || code > 0xd7a3) return "을(를)";
+  return (code - 0xac00) % 28 === 0 ? "를" : "을";
 }
 
-export function RecapturePanel({
-  diagnosisId,
-  guidance,
-  onRefined,
-}: Props) {
+export function RecapturePanel({ diagnosisId, guidance, onRefined }: Props) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const requestRef = useRef<AbortController | null>(null);
 
-  const [guideOpen, setGuideOpen] = useState(false);
-  const [retryFile, setRetryFile] = useState<File | null>(null);
+  const [step, setStep] = useState<Step>("candidates");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,244 +41,289 @@ export function RecapturePanel({
     return () => requestRef.current?.abort();
   }, [diagnosisId]);
 
-  const analyze = async (file: File) => {
-    if (requestRef.current) return;
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
+  const selectPhoto = (file: File) => {
+    if (loading) return;
     const check = validateImage(file);
-
     if (!check.ok) {
       setError(check.message);
       return;
     }
-
-    setRetryFile(file);
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
     setError(null);
-    setLoading(true);
+    setStep("preview");
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) selectPhoto(file);
+  };
+
+  const analyze = async (file: File | null) => {
+    if (!file || requestRef.current) return;
+    const check = validateImage(file);
+    if (!check.ok) {
+      setError(check.message);
+      setStep("preview");
+      return;
+    }
 
     const controller = new AbortController();
     requestRef.current = controller;
+    setError(null);
+    setLoading(true);
 
     try {
-      const refined = await refineDiagnosis(
-        diagnosisId,
-        file,
-        { signal: controller.signal }
-      );
-
+      const refined = await refineDiagnosis(diagnosisId, file, {
+        signal: controller.signal,
+      });
       if (controller.signal.aborted) return;
-
-      setRetryFile(null);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setStep("candidates");
       onRefined(refined);
-    } catch (err) {
+    } catch (caught) {
       if (controller.signal.aborted) return;
-
       setError(
-        err instanceof Error
-          ? err.message
-          : "재확정에 실패했어요. 다시 시도해 주세요."
+        caught instanceof Error
+          ? caught.message
+          : "재분석에 실패했어요. 다시 시도해 주세요.",
       );
+      setStep("failure");
     } finally {
-      if (requestRef.current === controller) {
-        requestRef.current = null;
-      }
-      if (!controller.signal.aborted) {
-        setLoading(false);
-      }
-    }
-  };
-
-  const handleFileChange = (
-    event: ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-
-    if (file) {
-      void analyze(file);
+      if (requestRef.current === controller) requestRef.current = null;
+      if (!controller.signal.aborted) setLoading(false);
     }
   };
 
   return (
-    <section
-      aria-label="추가 촬영 안내"
-      className="space-y-4"
-    >
-      {/* 1. 후보 안내 */}
-      <AppCard>
-        <div className="mb-4 flex items-center gap-2">
-          <span
-            aria-hidden
-            className="icon-[lucide--scan-search] h-6 w-6 text-[#2E8B57]"
-          />
-          <h2 className="text-xl font-bold text-[#191919]">
-            비슷한 증상이 보여요
-          </h2>
-        </div>
-
-        <p className="text-base leading-6 text-[#6B6B6B]">
-          현재 사진만으로는 병해 후보를 구분하기
-          어려워요.
-        </p>
-
-        <h3 className="mt-6 text-base font-bold text-[#191919]">
-          AI가 비교 중인 후보
-        </h3>
-
-        <div className="mt-3 space-y-3">
-          {guidance.candidates.map((candidate, index) => (
-            <div
-              key={candidate.name}
-              className="rounded-xl border border-[#ECECEF] p-4"
-            >
-              <p className="font-semibold text-[#191919]">
-                <span className="mr-2 text-[#2E8B57]">
-                  후보 {index + 1}
-                </span>
-                {candidate.name}
-              </p>
-
-              <p className="mt-2 text-sm leading-6 text-[#6B6B6B]">
-                {candidate.cue}
+    <section aria-label="추가 촬영 안내" className="flex flex-col gap-5">
+      {step === "candidates" && (
+        <>
+          <header className="flex items-start justify-between gap-4">
+            <div className="min-w-0 space-y-2">
+              <h2 className="text-2xl font-bold text-cropy-text-primary lg:text-3xl">
+                비슷한 증상이 보여요
+              </h2>
+              <p className="break-keep text-base leading-7 text-cropy-text-secondary">
+                두 병해를 구분하기 위해 같은 잎의 특정 부위를 한 장 더 찍어주세요.
               </p>
             </div>
-          ))}
-        </div>
+            <Mascot name="comparing" size={64} className="lg:size-20" />
+          </header>
 
-        <p className="mt-4 text-sm text-[#6B6B6B]">
-          위 후보는 아직 확정된 진단이 아니에요.
-        </p>
-      </AppCard>
-
-      {/* 2. 추가 촬영 부위 */}
-      <AppCard>
-        <h3 className="text-lg font-bold text-[#191919]">
-          이번엔 {guidance.region}
-          {objectParticle(guidance.region)} 찍어주세요
-        </h3>
-
-        <p className="mt-3 text-base leading-6 text-[#6B6B6B]">
-          {guidance.instruction}
-        </p>
-
-        <div className="mt-4 rounded-xl bg-[#EDF7F1] p-4">
-          <p className="font-semibold text-[#2E8B57]">
-            추가 촬영 부위
-          </p>
-          <p className="mt-1 text-base font-bold text-[#191919]">
-            {guidance.region}
-          </p>
-        </div>
-      </AppCard>
-
-      {/* 3. 촬영 방법 */}
-      {guideOpen && (
-        <AppCard>
-          <h3 className="text-lg font-bold text-[#191919]">
-            추가 촬영 방법
-          </h3>
-
-          <div className="mt-5 space-y-5">
-            <div>
-              <p className="font-bold text-[#191919]">
-                01 · 해당 부위가 크게 보이게
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card radius="lg" padding="lg">
+              <h3 className="text-lg font-bold text-cropy-text-primary">AI가 비교 중인 후보</h3>
+              <div className="mt-3 space-y-3">
+                {guidance.candidates.map((candidate, index) => (
+                  <div
+                    key={`${candidate.name}-${index}`}
+                    className="rounded-xl border border-[#ECECEF] p-4"
+                  >
+                    <p className="font-semibold text-[#191919]">
+                      <span className="mr-2 text-[#2E8B57]">
+                        후보 {index + 1}
+                      </span>
+                      {candidate.name}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-sm text-[#6B6B6B]">
+                위 후보는 아직 확정된 진단이 아니에요.
               </p>
-              <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
-                {guidance.region}와 주변 병징이
-                사진에 충분히 크게 보이도록
-                가까이 촬영해 주세요.
-              </p>
-            </div>
+            </Card>
 
-            <div className="border-t border-[#ECECEF] pt-5">
-              <p className="font-bold text-[#191919]">
-                02 · 색과 무늬가 잘 보이게
+            <Card radius="lg" padding="lg" className="space-y-4">
+              <h3 className="text-lg font-bold text-cropy-text-primary">
+                이번엔 {guidance.region}{objectParticle(guidance.region)} 찍어주세요
+              </h3>
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl bg-cropy-surface-canvas px-4 py-6">
+                <div className="flex flex-col items-center gap-2">
+                  <span aria-hidden className="icon-[lucide--leaf] size-12 text-cropy-text-secondary" />
+                  <span className="text-sm font-semibold text-cropy-text-secondary">앞면</span>
+                </div>
+                <span aria-hidden className="icon-[lucide--rotate-cw] size-6 text-cropy-text-secondary" />
+                <div className="flex flex-col items-center gap-2">
+                  <span aria-hidden className="icon-[lucide--leaf] size-12 text-cropy-action-primary" />
+                  <span className="text-sm font-semibold text-cropy-action-primary">{guidance.region}</span>
+                </div>
+              </div>
+              <p className="break-keep text-base leading-7 text-cropy-text-secondary">
+                {guidance.instruction}
               </p>
-              <p className="mt-2 text-base leading-6 text-[#6B6B6B]">
-                밝은 곳에서 그림자와 빛 반사를 피하고,
-                초점을 맞춰 촬영해 주세요.
-              </p>
-            </div>
+            </Card>
           </div>
-        </AppCard>
-      )}
-
-      {/* 4. 오류 및 재시도 */}
-      {error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-[#D92D20]/20 bg-[#FFF1F0] p-4"
-        >
-          <p className="font-semibold text-[#D92D20]">
-            사진을 분석하지 못했어요
-          </p>
-
-          <p className="mt-2 text-sm leading-6 text-[#6B6B6B]">
-            {error}
-          </p>
-
-          {retryFile && (
-            <div className="mt-4">
-              <AppButton
-                disabled={loading}
-                loading={loading}
-                onClick={() => void analyze(retryFile)}
-              >
-                같은 사진으로 다시 시도
-              </AppButton>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 5. 행동 버튼 */}
-      <div className="space-y-3">
-        {!guideOpen ? (
-          <>
-            <AppButton
-              disabled={loading}
-              onClick={() => setGuideOpen(true)}
-            >
-              촬영 방법 보기
-            </AppButton>
-
-            <AppButton
+          <div className="grid gap-2 lg:flex lg:gap-3">
+            <Button onClick={() => setStep("guide")} fullWidth className="lg:w-60 lg:flex-none">
+              그림 보고 다시 촬영하기
+            </Button>
+            <Button
               variant="secondary"
-              disabled={loading}
               onClick={() => cameraRef.current?.click()}
+              fullWidth
+              className="lg:w-60 lg:flex-none"
             >
               바로 다시 촬영
-            </AppButton>
-          </>
-        ) : (
-          <>
-            <AppButton
-              loading={loading}
-              onClick={() => cameraRef.current?.click()}
-            >
-              {guidance.region} 다시 촬영
-            </AppButton>
+            </Button>
+          </div>
+        </>
+      )}
 
-            <AppButton
+      {step === "guide" && (
+        <>
+          <header className="flex items-start justify-between gap-4">
+            <div className="min-w-0 space-y-2">
+              <h2 className="text-2xl font-bold text-cropy-text-primary lg:text-3xl">
+                추가 사진은 이렇게 찍어주세요
+              </h2>
+              <p className="break-keep text-base leading-7 text-cropy-text-secondary">
+                크게, 밝게, 흔들리지 않게 찍어주세요.
+              </p>
+            </div>
+            <Mascot name="retake" size={64} className="lg:size-20" />
+          </header>
+
+          <Card radius="lg" padding="lg" className="space-y-2">
+            <h3 className="text-lg font-bold text-cropy-text-primary">이번 추가 촬영 부위: {guidance.region}</h3>
+            <p className="break-keep text-base leading-7 text-cropy-text-secondary">
+              {guidance.instruction}
+            </p>
+          </Card>
+
+          <div className="grid gap-3 lg:grid-cols-3">
+            <Card radius="lg" padding="lg" className="space-y-3">
+              <p className="font-bold text-cropy-text-primary">01 · 잎이 화면을 채우게</p>
+              <div className="flex items-center justify-center gap-6 rounded-xl bg-cropy-surface-canvas py-5">
+                <span aria-hidden className="icon-[lucide--leaf] size-6 text-cropy-text-secondary" />
+                <span aria-hidden className="icon-[lucide--arrow-right] size-5 text-cropy-text-secondary" />
+                <span aria-hidden className="icon-[lucide--leaf] size-14 text-cropy-action-primary" />
+              </div>
+              <p className="text-sm leading-6 text-cropy-text-secondary">
+                병반이 있는 부위와 주변 잎을 화면에 크게 담아주세요.
+              </p>
+            </Card>
+            <Card radius="lg" padding="lg" className="space-y-3">
+              <p className="font-bold text-cropy-text-primary">02 · 색과 무늬가 보이게</p>
+              <div className="flex items-center justify-center gap-6 rounded-xl bg-cropy-surface-canvas py-5">
+                <span aria-hidden className="icon-[lucide--sun] size-10 text-cropy-text-secondary" />
+                <span aria-hidden className="icon-[lucide--leaf] size-14 text-cropy-action-primary" />
+              </div>
+              <p className="text-sm leading-6 text-cropy-text-secondary">
+                밝은 그늘에서 촬영하고 강한 빛 반사와 그림자를 피해 주세요.
+              </p>
+            </Card>
+            <Card radius="lg" padding="lg" className="space-y-3">
+              <p className="font-bold text-cropy-text-primary">03 · 초점을 맞춘 뒤 촬영</p>
+              <div className="flex items-center justify-center gap-6 rounded-xl bg-cropy-surface-canvas py-5">
+                <span aria-hidden className="icon-[lucide--focus] size-10 text-cropy-text-secondary" />
+                <span aria-hidden className="icon-[lucide--leaf] size-14 text-cropy-action-primary" />
+              </div>
+              <p className="text-sm leading-6 text-cropy-text-secondary">
+                촬영 전에 잎의 반점에 초점을 맞추고 흔들리지 않게 찍어주세요.
+              </p>
+            </Card>
+          </div>
+          <div className="grid gap-2 lg:flex lg:gap-3">
+            <Button onClick={() => cameraRef.current?.click()} fullWidth className="lg:w-60 lg:flex-none">
+              {guidance.region} 다시 촬영
+            </Button>
+            <Button
               variant="secondary"
-              disabled={loading}
               onClick={() => galleryRef.current?.click()}
+              fullWidth
+              className="lg:w-60 lg:flex-none"
             >
               갤러리에서 선택
-            </AppButton>
+            </Button>
+          </div>
+          <button
+            type="button"
+            className="self-start text-sm font-semibold text-cropy-text-secondary underline-offset-4 hover:underline"
+            onClick={() => setStep("candidates")}
+          >
+            후보 안내로 돌아가기
+          </button>
+        </>
+      )}
 
-            <button
-              type="button"
-              className="min-h-11 w-full text-sm font-semibold text-[#6B6B6B]"
-              onClick={() => setGuideOpen(false)}
-              disabled={loading}
+      {step === "preview" && selectedFile && (
+        <>
+          <header className="space-y-2">
+            <h2 className="text-2xl font-bold text-cropy-text-primary lg:text-3xl">
+              추가 사진을 확인해 주세요
+            </h2>
+            <p className="text-base text-cropy-text-secondary">
+              선택한 사진을 확인한 후 다시 분석할 수 있어요.
+            </p>
+          </header>
+          <Card radius="lg" padding="lg" className="flex flex-col items-center gap-4">
+            {previewUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={previewUrl}
+                alt="새로 촬영한 작물 사진 미리보기"
+                className="max-h-[24rem] w-full rounded-xl object-contain"
+              />
+            )}
+            <p className="max-w-full break-all text-sm text-cropy-text-secondary">
+              {selectedFile.name}
+            </p>
+          </Card>
+          {loading && <p role="status" className="text-center text-base text-cropy-text-secondary">재촬영 사진을 분석하고 있어요.</p>}
+          <div className="grid gap-2 lg:flex lg:gap-3">
+            <Button
+              loading={loading}
+              onClick={() => void analyze(selectedFile)}
+              fullWidth
+              className="lg:w-60 lg:flex-none"
             >
-              후보 안내로 돌아가기
-            </button>
-          </>
-        )}
-      </div>
+              {loading ? "재분석 중…" : "이 사진으로 다시 분석"}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => cameraRef.current?.click()}
+              disabled={loading}
+              fullWidth
+              className="lg:w-60 lg:flex-none"
+            >
+              다시 촬영하기
+            </Button>
+          </div>
+          <button
+            type="button"
+            disabled={loading}
+            className="self-start text-sm font-semibold text-cropy-text-secondary underline-offset-4 hover:underline disabled:opacity-50"
+            onClick={() => galleryRef.current?.click()}
+          >
+            다른 사진을 갤러리에서 선택
+          </button>
+        </>
+      )}
 
-      {/* 실제 파일 입력 */}
+      {step === "failure" && (
+        <DiagnosisFailurePanel
+          message={error}
+          loading={loading}
+          onRetry={() => void analyze(selectedFile)}
+          onPickDifferent={() => galleryRef.current?.click()}
+        />
+      )}
+
+      {error && step !== "failure" && (
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+
       <input
         ref={cameraRef}
         type="file"
@@ -306,7 +335,6 @@ export function RecapturePanel({
         className="sr-only"
         tabIndex={-1}
       />
-
       <input
         ref={galleryRef}
         type="file"
