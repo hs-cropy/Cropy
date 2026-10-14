@@ -11,7 +11,7 @@ import type {
   Severity,
 } from "@/types/diagnosis";
 
-import { FilterChips } from "@/components/ui/FilterChips";
+import { FilterChips } from "@/components/history/FilterChips";
 import { RecordRow } from "@/components/history/RecordRow";
 import { HistoryEmptyState } from "@/components/history/HistoryEmptyState";
 

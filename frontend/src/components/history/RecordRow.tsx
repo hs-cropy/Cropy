@@ -2,7 +2,7 @@
 import Link from "next/link";
 
 import type { DiagnosisSummary } from "@/types/diagnosis";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { StatusBadge } from "@/components/history/StatusBadge";
 
 interface RecordRowProps {
   item: DiagnosisSummary;
