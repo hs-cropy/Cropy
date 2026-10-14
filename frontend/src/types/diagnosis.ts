@@ -93,12 +93,3 @@ export interface PaginatedHistory {
   unfiltered_total: number;
   crop_total: number;
 }
-
-// interface Props {
-//   diagnosisId: string;
-//   guidance: RecaptureGuidance;
-//   confidence: number;
-//   decisionStatus?: string;
-//   decisionReasons?: string[];
-//   onRefined: (result: DiagnoseResponse) => void;
-// }

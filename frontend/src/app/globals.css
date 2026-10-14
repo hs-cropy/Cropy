@@ -4,19 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* :root {
-  --cropy-canvas: #F7F7F8;
-  --cropy-surface: #FFFFFF;
-  --cropy-text: #191919;
-  --cropy-text-secondary: #6B6B6B;
-  --cropy-border: #ECECEF;
-  --cropy-primary: #2E8B57;
-  --cropy-primary-subtle: #EDF7F1;
-  --cropy-primary-hover: #26784B;
-  --cropy-primary-pressed: #1F633D;
-  --cropy-attention: #D92D20;
-} */
-
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;

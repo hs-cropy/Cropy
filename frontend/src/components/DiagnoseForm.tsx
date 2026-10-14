@@ -609,12 +609,12 @@ export function DiagnoseForm() {
           </form>
 
           {/* 데스크톱 촬영 도움말 */}
-          <aside className="mt-6 hidden rounded-2xl border border-[#ECECEF] bg-cropy-surface p-6 shadow-sm lg:mt-0 lg:block">
+          <aside className="mt-6 hidden rounded-2xl border border-cropy-border bg-cropy-surface p-6 shadow-sm lg:mt-0 lg:block">
 
-            <h2 className="flex items-center gap-2 text-lg font-bold text-[#191919]">
+            <h2 className="flex items-center gap-2 text-cropy-heading-md font-bold text-cropy-text-primary">
               <span
                 aria-hidden="true"
-                className="icon-[lucide--info] h-5 w-5 text-[#2E8B57]"
+                className="icon-[lucide--info] h-5 w-5 text-cropy-action-primary"
               />
               좋은 사진 촬영 팁
             </h2>
@@ -623,11 +623,11 @@ export function DiagnoseForm() {
               {PHOTO_TIPS.map((tip) => (
                 <li
                   key={tip}
-                  className="flex items-start gap-3 text-cropy-body-lg leading-6 text-[#6B6B6B]"
+                  className="flex items-start gap-3 text-cropy-body-lg leading-6 text-cropy-text-secondary"
                 >
                   <span
                     aria-hidden="true"
-                    className="icon-[lucide--check] mt-1 h-5 w-5 shrink-0 text-[#2E8B57]"
+                    className="icon-[lucide--check] mt-1 h-5 w-5 shrink-0 text-cropy-action-primary"
                   />
 
                   <span>{tip}</span>

@@ -380,7 +380,7 @@ export default function HistoryPage() {
             상단 제목 및 캐릭터
         ====================================== */}
 
-        <header className="relative mb-6 min-h-[112px] pr-20">
+        <header className="relative mb-6 min-h-28 pr-20">
           <h1 className="text-cropy-heading-lg text-cropy-text-primary">
             진단 이력
           </h1>
@@ -477,7 +477,7 @@ export default function HistoryPage() {
 
           {/* 전체 진단 이력이 없는 경우: M-07 */}
           {isNoHistory && (
-            <div className="mx-auto w-full max-w-[420px]">
+            <div className="mx-auto w-full max-w-[26.25rem]">
               <HistoryEmptyState
                 mode="no-history"
                 onResetFilters={resetFilters}
@@ -563,7 +563,7 @@ export default function HistoryPage() {
                   이전
                 </Button>
 
-                <span className="text-sm font-semibold text-[#6B6B6B]">
+                <span className="text-cropy-helper text-cropy-text-secondary">
                   {page} / {totalPages}
                 </span>
                 <Button
