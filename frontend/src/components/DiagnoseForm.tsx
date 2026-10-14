@@ -30,6 +30,8 @@ import { Toast, useToast } from "./Toast";
 import { LowConfidencePanel } from "./LowConfidencePanel";
 import { DiagnosisFailurePanel } from "./DiagnosisFailurePanel";
 
+import { CropMismatchNotice } from "./CropMismatchNotice";
+
 // 작물 선택 목록
 const CROP_TYPES = [
   { value: "", label: "자동 감지", icon: "✨" },
@@ -206,12 +208,13 @@ export function DiagnoseForm() {
     captureCardRef.current?.focus();
   };
 
-  /** 내비의 "새 진단": 진행 중인 진단을 버리고 처음 상태로 돌아간다 */
+  /** 내비의 "새 진단": 진행 중인 진단을 취소하고 촬영 화면으로 돌아간다 */
   const reset = () => {
-    // 취소한 요청은 스스로 loading 을 풀지 않으므로 여기서 푼다.
-    // 늦게 도착한 응답은 handleSubmit 이 취소 여부를 보고 버린다
+    // 진행 중인 진단 요청 취소
     requestRef.current?.abort();
     requestRef.current = null;
+
+    // 이전 진단 상태 초기화
     setLoading(false);
     setFile(null);
     setPreview(null);
@@ -219,23 +222,41 @@ export function DiagnoseForm() {
     setError(null);
     setCropType("");
     setCameraOpen(false);
+
     clearToast();
     cancelSpeech();
-    // React가 loading=false를 화면에 반영한 뒤 포커스 이동
+
+    // 진단 결과 탭에 남지 않고 촬영 탭으로 이동
+    if (window.location.hash !== "#capture") {
+      window.location.hash = "capture";
+    }
+
+    // 촬영 탭이 화면에 반영된 후 초점 이동
     setFocusAfterReset(true);
   };
+
   // 렌더마다 다시 구독한다: reset 이 나중에 state 를 읽게 되어도 낡은 값을 보지 않는다
   
   useEffect(() => {
-    if (!focusAfterReset || loading) return;
+    // 초기화가 요청되지 않았거나,
+    // 진단 중이거나,
+    // 촬영 탭이 아직 화면에 반영되지 않았다면 대기
+    if (
+      !focusAfterReset ||
+      loading ||
+      activeTab !== "capture"
+    ) {
+      return;
+    }
 
     const button = captureCardRef.current;
 
+    // 버튼이 활성화되고 촬영 탭이 표시된 후 초점 이동
     if (button && !button.disabled) {
       button.focus();
       setFocusAfterReset(false);
     }
-  }, [focusAfterReset, loading]);
+  }, [focusAfterReset, loading, activeTab]);
 
   useEffect(() => subscribeNewDiagnosis(reset));
 
@@ -645,34 +666,41 @@ export function DiagnoseForm() {
       >
         {result ? (
           <div className="space-y-5">
-            {/* 후보 혼동을 최우선 표시. 백엔드의 재촬영 안내 데이터가 있어야 함. */}
-            {result.recapture &&
-            result.save_status === "saved" &&
-            result.prediction_mode !== "browser" ? (
-              <RecapturePanel
-                key={result.id}
-                diagnosisId={result.id}
-                guidance={result.recapture}
-                onRefined={updateResult}
-                actionsVisible={activeTab === "diagnosis"}
-              />
-            ) : result.decision_reasons?.includes("low_confidence") &&
-              result.save_status === "saved" &&
-              result.prediction_mode !== "browser" ? (
-              <LowConfidencePanel
-                confidence={result.confidence}
-                onRetake={() => {
-                  reset();
-                  window.location.hash = "capture";
-                  if (isCameraSupported()) {
-                    primeSpeech();
-                    setCameraOpen(true);
-                  } else {
-                    fallbackInputRef.current?.click();
-                  }
-                }}
-                actionsVisible={activeTab === "diagnosis"}
-              />
+            {/* 예외 화면에서도 작물 불일치 안내 표시 */}
+                {result.save_status === "saved" &&
+                  result.prediction_mode !== "browser" &&
+                  (result.recapture ||
+                    result.decision_reasons?.includes("low_confidence")) && (
+                    <CropMismatchNotice result={result} />
+                  )}
+
+                {/* 후보 혼동을 최우선 표시 */}
+                {result.recapture &&
+                  result.save_status === "saved" &&
+                  result.prediction_mode !== "browser" ? (
+                  <RecapturePanel
+                    key={result.id}
+                    diagnosisId={result.id}
+                    guidance={result.recapture}
+                    onRefined={updateResult}
+                    actionsVisible={activeTab === "diagnosis"}
+                  />
+                ) : result.decision_reasons?.includes("low_confidence") &&
+                  result.save_status === "saved" &&
+                  result.prediction_mode !== "browser" ? (
+                  <LowConfidencePanel
+                    confidence={result.confidence}
+                    onRetake={() => {
+                      reset();
+                      if (isCameraSupported()) {
+                        primeSpeech();
+                        setCameraOpen(true);
+                      } else {
+                        fallbackInputRef.current?.click();
+                      }
+                    }}
+                    actionsVisible={activeTab === "diagnosis"}
+                  />
             ) : (
               /* 일반 결과 / 저장 실패 복구는 기존 DiagnosisResult 유지 */
               <>

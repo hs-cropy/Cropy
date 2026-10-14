@@ -12,6 +12,8 @@ import { AppShellPage } from "@/components/AppShell";
 import { DiagnosisResult } from "@/components/DiagnosisResult";
 import { RecapturePanel } from "@/components/RecapturePanel";
 
+import { CropMismatchNotice } from "@/components/CropMismatchNotice";
+
 export default function HistoryDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -223,12 +225,17 @@ export default function HistoryDetailPage() {
             {result.recapture &&
             result.save_status === "saved" &&
             result.prediction_mode !== "browser" ? (
-              <RecapturePanel
-                key={result.id}
-                diagnosisId={result.id}
-                guidance={result.recapture}
-                onRefined={updateResult}
-              />
+              <>
+                {/* 혼동 후보 화면에서도 작물 불일치 안내 유지 */}
+                <CropMismatchNotice result={result} />
+
+                <RecapturePanel
+                  key={result.id}
+                  diagnosisId={result.id}
+                  guidance={result.recapture}
+                  onRefined={updateResult}
+                />
+              </>
             ) : (
               <DiagnosisResult
                 result={result}
@@ -238,6 +245,7 @@ export default function HistoryDetailPage() {
             )}
 
             {/* 하단 이력 목록 복귀 */}
+
             <Link
               href="/history"
               className={[

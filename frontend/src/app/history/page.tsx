@@ -14,6 +14,8 @@ import { FilterChips } from "@/components/ui/FilterChips";
 import { RecordRow } from "@/components/history/RecordRow";
 import { HistoryEmptyState } from "@/components/history/HistoryEmptyState";
 
+import { CaseFeedback } from "@/features/feedback/CaseFeedback";
+
 const PAGE_SIZE = 20;
 const STORAGE_KEY = "cropy:history-view";
 
@@ -458,46 +460,19 @@ export default function HistoryPage() {
               </div>
             )}
 
-          {/* 로딩 */}
-          {isPageLoading && (
-            <div
-              role="status"
-              className="rounded-2xl border border-[#ECECEF] bg-white p-8 text-center"
-            >
-              <span
-                aria-hidden="true"
-                className="icon-[lucide--loader-circle] mx-auto block h-8 w-8 animate-spin text-[#2E8B57]"
-              />
-
-              <p className="mt-3 text-sm text-[#6B6B6B]">
-                진단 이력을 불러오고 있어요.
-              </p>
-            </div>
-          )}
+          {/* 로딩: 항상 마운트하고 open으로 표시 여부 제어 */}
+          <CaseFeedback
+            caseId="history-loading"
+            open={isPageLoading}
+          />
 
           {/* API 오류 */}
-          {!isPageLoading && error && (
-            <div
-              role="alert"
-              className="rounded-2xl border border-[#ECECEF] bg-white p-6"
-            >
-              <h2 className="text-lg font-bold text-[#191919]">
-                이력을 불러오지 못했어요
-              </h2>
+          <CaseFeedback
+            caseId="history-failed"
+            open={!isPageLoading && Boolean(error)}
+            onPrimary={() => setRefresh((n) => n + 1)}
+          />
 
-              <p className="mt-2 text-sm leading-6 text-[#6B6B6B]">
-                {error}
-              </p>
-
-              <button
-                type="button"
-                onClick={() => setRefresh((n) => n + 1)}
-                className="mt-4 min-h-11 rounded-xl bg-[#2E8B57] px-5 py-2 font-bold text-white"
-              >
-                다시 불러오기
-              </button>
-            </div>
-          )}
 
           {/* 전체 진단 이력이 없는 경우: M-07 */}
           {isNoHistory && (

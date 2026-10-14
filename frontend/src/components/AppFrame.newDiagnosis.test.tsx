@@ -110,6 +110,8 @@ beforeEach(() => {
   URL.revokeObjectURL = vi.fn();
 });
 
+window.location.hash = "capture";
+
 afterEach(() => {
   document.removeEventListener("click", stopNavigation);
 });
@@ -128,6 +130,32 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
       expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
 
       await userEvent.click(navLink(nav, name));
+
+      await userEvent.click(navLink(nav, name));
+
+      // 새 진단 클릭 후 촬영 탭으로 돌아왔는지 확인
+      await waitFor(() => {
+        expect(window.location.hash).toBe("#capture");
+
+        const captureSection = screen.getByRole("region", {
+          name: "사진 촬영",
+        });
+
+        expect(captureSection.classList.contains("hidden")).toBe(false);
+      });
+
+      // 기존 테스트 유지
+      expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
+
+      expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
+
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview");
+
+      expect(
+        screen.getByRole("button", { name: "자동 감지" }).getAttribute("aria-pressed")
+      ).toBe("true");
+
+      expect(document.activeElement).toBe(captureCard());
 
       expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
       expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
