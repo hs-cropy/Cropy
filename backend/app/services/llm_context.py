@@ -20,10 +20,10 @@ def build_llm_input(diagnosis: DiagnoseResponse) -> DiagnosisLLMInput:
         category=diagnosis.category,
         severity=diagnosis.severity,
         confidence=diagnosis.confidence,
-        top_predictions=[item.model_copy(deep=True) for item in diagnosis.top_predictions],
+        top_predictions=[item.model_dump() for item in diagnosis.top_predictions],
         description=diagnosis.description,
         causes=list(diagnosis.causes),
         prevention=list(diagnosis.prevention),
-        pesticides=[item.model_copy(deep=True) for item in diagnosis.pesticides],
-        recapture=diagnosis.recapture.model_copy(deep=True) if diagnosis.recapture else None,
+        pesticides=[item.model_dump() for item in diagnosis.pesticides],
+        recapture=diagnosis.recapture.model_dump() if diagnosis.recapture else None,
     )
