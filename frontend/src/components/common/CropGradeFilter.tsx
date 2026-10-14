@@ -4,7 +4,7 @@ import type { Severity } from "@/types/diagnosis";
 
 type Crop = "" | "고추" | "무" | "배추";
 
-type Grade = Severity | "";
+export type Grade = Severity | "";
 
 interface Props {
   crop: Crop;
