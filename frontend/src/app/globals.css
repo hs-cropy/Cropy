@@ -47,13 +47,6 @@
   .tnum {
     font-variant-numeric: tabular-nums;
   }
-  /* horizontal swipe rows (crop chips) scroll without a visible bar */
-  .no-scrollbar {
-    scrollbar-width: none;
-  }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

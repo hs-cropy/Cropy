@@ -1,0 +1,34 @@
+{
+  "verified_images": 36583,
+  "verified_labels": 36583,
+  "missing_or_extra_files": 0,
+  "image_hash_mismatches": 0,
+  "label_hash_mismatches": 0,
+  "class_mismatches": 0,
+  "byte_duplicates": 0,
+  "pixel_duplicates_from_audit": 0,
+  "split_counts": {
+    "1.Training": 32513,
+    "2.Validation": 4070
+  },
+  "class_counts": {
+    "1.Training/6_고추정상": 8575,
+    "1.Training/0_고추탄저병": 967,
+    "1.Training/1_고추흰가루병": 912,
+    "1.Training/7_무정상": 10797,
+    "1.Training/2_무검은무늬병": 462,
+    "1.Training/3_무노균병": 227,
+    "1.Training/8_배추정상": 9316,
+    "1.Training/4_배추검은썩음병": 801,
+    "1.Training/5_배추노균병": 456,
+    "2.Validation/6_고추정상": 1110,
+    "2.Validation/0_고추탄저병": 117,
+    "2.Validation/1_고추흰가루병": 112,
+    "2.Validation/7_무정상": 1301,
+    "2.Validation/2_무검은무늬병": 76,
+    "2.Validation/3_무노균병": 24,
+    "2.Validation/8_배추정상": 1183,
+    "2.Validation/4_배추검은썩음병": 110,
+    "2.Validation/5_배추노균병": 37
+  }
+}

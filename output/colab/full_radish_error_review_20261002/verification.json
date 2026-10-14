@@ -1,0 +1,11 @@
+{
+  "checkpoint": "C:/Users/rlagj/Downloads/best_model.pth",
+  "epoch": 3,
+  "manifest_sha256_verified": true,
+  "radish_confusion_rows_match": true,
+  "evaluated": 100,
+  "radish_downy_errors": 5,
+  "radish_black_spot_errors": 7,
+  "correct_downy_controls": 19,
+  "scope": "Only classes 2 and 3 were rerun; global metrics read from checkpoint"
+}

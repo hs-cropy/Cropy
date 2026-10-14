@@ -1,0 +1,595 @@
+{
+  "analyzed_on": "2026-10-06",
+  "scope": "Stored best-checkpoint metadata and confusion matrices, supplemented by complete Drive comparison Markdown and five-epoch training logs; no fresh image inference or training.",
+  "original_baseline": {
+    "config": {
+      "arch": "resnet50",
+      "epochs": 20,
+      "batch_size": 16,
+      "img_size": 256,
+      "seed": 42,
+      "lr": 0.0001,
+      "balanced_sampler": true,
+      "selection": "highest validation macro_f1; earliest tie",
+      "manifest_sha256": "1d8924f17fa8cc02f69607a14a60e879301e24e2fd74a8a01792b491d8701b34",
+      "classes": [
+        "0_고추탄저병",
+        "1_고추흰가루병",
+        "2_무검은무늬병",
+        "3_무노균병",
+        "4_배추검은썩음병",
+        "5_배추노균병",
+        "6_고추정상",
+        "7_무정상",
+        "8_배추정상"
+      ],
+      "smoke_per_class": 0,
+      "train_images": 32513,
+      "val_images": 4070,
+      "num_workers": 2,
+      "train_geometry": "random_crop"
+    },
+    "confusion_matrix": [
+      [
+        117,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        112,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        69,
+        6,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        3,
+        19,
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        108,
+        1,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        37,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1109,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        1298,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        3,
+        0,
+        1178
+      ]
+    ],
+    "best_epoch": 3,
+    "accuracy": 0.9943488943488944,
+    "macro_f1": 0.9608033962143776,
+    "support": [
+      117,
+      112,
+      76,
+      24,
+      110,
+      37,
+      1110,
+      1301,
+      1183
+    ],
+    "precision": [
+      1.0,
+      0.9911504424778761,
+      0.9583333333333334,
+      0.76,
+      1.0,
+      0.925,
+      0.9937275985663082,
+      1.0,
+      0.9974597798475868
+    ],
+    "recall": [
+      1.0,
+      1.0,
+      0.9078947368421053,
+      0.7916666666666666,
+      0.9818181818181818,
+      1.0,
+      0.9990990990990991,
+      0.9976940814757879,
+      0.9957734573119188
+    ],
+    "f1": [
+      1.0,
+      0.9955555555555555,
+      0.9324324324324325,
+      0.7755102040816326,
+      0.9908256880733946,
+      0.961038961038961,
+      0.9964061096136568,
+      0.9988457098884186,
+      0.9966159052453468
+    ],
+    "correct": 4047,
+    "errors": 23
+  },
+  "checkpoints": {
+    "256": {
+      "filename": "256_best_model.pth",
+      "sha256": "77ee5e3182737ed578af32146e7ff0b81c4113c73a2d47711a16bb104d95f4c2",
+      "bytes": 94417641,
+      "best_epoch": 4,
+      "planned_epochs": 5,
+      "completed_epochs": 5,
+      "config": {
+        "arch": "resnet50",
+        "epochs": 5,
+        "batch_size": 16,
+        "img_size": 256,
+        "train_geometry": "random_crop",
+        "seed": 42,
+        "lr": 1e-05,
+        "balanced_sampler": true,
+        "selection": "highest validation macro_f1; earliest tie",
+        "manifest_sha256": "1d8924f17fa8cc02f69607a14a60e879301e24e2fd74a8a01792b491d8701b34",
+        "classes": [
+          "0_고추탄저병",
+          "1_고추흰가루병",
+          "2_무검은무늬병",
+          "3_무노균병",
+          "4_배추검은썩음병",
+          "5_배추노균병",
+          "6_고추정상",
+          "7_무정상",
+          "8_배추정상"
+        ],
+        "smoke_per_class": 0,
+        "train_images": 32513,
+        "val_images": 4070,
+        "num_workers": 2,
+        "init_checkpoint_sha256": "4ef9988d85259b776eaf8fa5824edd2c28b08371e0c19296221e107b670d0060",
+        "init_checkpoint_epoch": 3,
+        "init_checkpoint_img_size": 256
+      },
+      "confusion_matrix": [
+        [
+          116,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          112,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          71,
+          3,
+          0,
+          0,
+          0,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          6,
+          17,
+          0,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          109,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          37,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1110,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1300,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          1181
+        ]
+      ],
+      "correct": 4053,
+      "errors": 17,
+      "accuracy": 0.9958230958230958,
+      "macro_f1": 0.9624362614681655,
+      "support": [
+        117,
+        112,
+        76,
+        24,
+        110,
+        37,
+        1110,
+        1301,
+        1183
+      ],
+      "precision": [
+        1.0,
+        1.0,
+        0.922077922077922,
+        0.85,
+        1.0,
+        0.9487179487179487,
+        0.9973045822102425,
+        0.9976976208749041,
+        1.0
+      ],
+      "recall": [
+        0.9914529914529915,
+        1.0,
+        0.9342105263157895,
+        0.7083333333333334,
+        0.990909090909091,
+        1.0,
+        1.0,
+        0.9992313604919293,
+        0.9983093829247676
+      ],
+      "f1": [
+        0.9957081545064378,
+        1.0,
+        0.9281045751633987,
+        0.7727272727272727,
+        0.9954337899543378,
+        0.9736842105263158,
+        0.9986504723346828,
+        0.9984639016897081,
+        0.9991539763113367
+      ],
+      "delta_from_original": {
+        "accuracy": 0.0014742014742014087,
+        "macro_f1": 0.0016328652537879185
+      },
+      "weight_validation": {
+        "state_entries": 320,
+        "all_finite": true,
+        "strict_resnet50_load": true
+      }
+    },
+    "384": {
+      "filename": "384_best_model.pth",
+      "sha256": "387cac3d75de881da51419959d4e383e28e6c471e0dde1135affba6b24f5480d",
+      "bytes": 94417641,
+      "best_epoch": 1,
+      "planned_epochs": 5,
+      "completed_epochs": 5,
+      "config": {
+        "arch": "resnet50",
+        "epochs": 5,
+        "batch_size": 16,
+        "img_size": 384,
+        "train_geometry": "random_crop",
+        "seed": 42,
+        "lr": 1e-05,
+        "balanced_sampler": true,
+        "selection": "highest validation macro_f1; earliest tie",
+        "manifest_sha256": "1d8924f17fa8cc02f69607a14a60e879301e24e2fd74a8a01792b491d8701b34",
+        "classes": [
+          "0_고추탄저병",
+          "1_고추흰가루병",
+          "2_무검은무늬병",
+          "3_무노균병",
+          "4_배추검은썩음병",
+          "5_배추노균병",
+          "6_고추정상",
+          "7_무정상",
+          "8_배추정상"
+        ],
+        "smoke_per_class": 0,
+        "train_images": 32513,
+        "val_images": 4070,
+        "num_workers": 2,
+        "init_checkpoint_sha256": "4ef9988d85259b776eaf8fa5824edd2c28b08371e0c19296221e107b670d0060",
+        "init_checkpoint_epoch": 3,
+        "init_checkpoint_img_size": 256
+      },
+      "confusion_matrix": [
+        [
+          116,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          112,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          76,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          9,
+          15,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          108,
+          2,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          37,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          2,
+          0,
+          0,
+          0,
+          0,
+          1107,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1301,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          2,
+          1180
+        ]
+      ],
+      "correct": 4052,
+      "errors": 18,
+      "accuracy": 0.9955773955773956,
+      "macro_f1": 0.960004569771328,
+      "support": [
+        117,
+        112,
+        76,
+        24,
+        110,
+        37,
+        1110,
+        1301,
+        1183
+      ],
+      "precision": [
+        0.9914529914529915,
+        0.9739130434782609,
+        0.8941176470588236,
+        1.0,
+        1.0,
+        0.925,
+        1.0,
+        0.9984650805832693,
+        1.0
+      ],
+      "recall": [
+        0.9914529914529915,
+        1.0,
+        1.0,
+        0.625,
+        0.9818181818181818,
+        1.0,
+        0.9972972972972973,
+        1.0,
+        0.9974640743871513
+      ],
+      "f1": [
+        0.9914529914529915,
+        0.986784140969163,
+        0.9440993788819876,
+        0.7692307692307693,
+        0.9908256880733946,
+        0.961038961038961,
+        0.9986468200270636,
+        0.999231950844854,
+        0.9987304274227676
+      ],
+      "delta_from_original": {
+        "accuracy": 0.0012285012285011554,
+        "macro_f1": -0.0007988264430496272
+      },
+      "weight_validation": {
+        "state_entries": 320,
+        "all_finite": true,
+        "strict_resnet50_load": true
+      }
+    }
+  },
+  "configuration_differences": [
+    "img_size"
+  ],
+  "source_hash_matches_prior_saved_audit": true,
+  "paired_delta_384_minus_256": {
+    "accuracy": -0.0002457002457002533,
+    "macro_f1": -0.0024316916968375457
+  },
+  "limitations": [
+    "Model weights load strictly and stored metrics match the stored confusion matrices; no fresh validation-image inference was performed.",
+    "Completion, selected best epochs, fixed epoch-five metrics, and recorded environment were checked against complete Drive comparison Markdown and training logs.",
+    "Original source SHA256 was matched against an earlier saved audit, not freshly recomputed from the original source file.",
+    "Matching recorded environment fields does not prove all software and hardware were identical.",
+    "Raw history and comparison JSON downloads were unavailable; their bytes were not claimed as fetched or independently audited.",
+    "Repeatedly inspected single validation split and seed; no independent test, per-image paired prediction audit for these new models, or deployment benchmark."
+  ],
+  "supplemental_run_verification": "drive_training_verification.json",
+  "completion_verified_from_drive_logs": true
+}

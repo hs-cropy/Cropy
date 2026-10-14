@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-08",
+  "author": "김헌영",
+  "human_review": {
+    "status": "not_performed",
+    "cases": 131,
+    "approved": 0,
+    "pending": 131,
+    "results_applied": 0
+  },
+  "colab": {
+    "status": "not_run",
+    "user_confirmed_not_run": true,
+    "metrics": null,
+    "reload_verified": false,
+    "missing_results": [
+      "train_metrics.json",
+      "eval_metrics.json",
+      "eval_cases.json",
+      "reload_check.json"
+    ],
+    "runtime_tested": false
+  },
+  "source_sha256": "d86800d67a3f25e09444f6e79ac1247080ff6bef8e5d7b9a14d4d02dd2c79e97",
+  "function_counts": {
+    "clarify_request": {
+      "train": 320,
+      "validation": 80
+    },
+    "get_care_information": {
+      "train": 320,
+      "validation": 80
+    },
+    "get_diagnosis": {
+      "train": 320,
+      "validation": 80
+    },
+    "get_pesticide_information": {
+      "train": 320,
+      "validation": 80
+    },
+    "get_prediction_metrics": {
+      "train": 320,
+      "validation": 80
+    },
+    "get_recapture_guidance": {
+      "train": 320,
+      "validation": 80
+    },
+    "handle_scope_limit": {
+      "train": 320,
+      "validation": 80
+    }
+  },
+  "active": 2800,
+  "reserve": 15,
+  "local_checks": {
+    "workbook_consistency": "passed",
+    "split_crossings": 0,
+    "exact_user_duplicates": 0,
+    "zero_approval_gate": "blocked_as_expected",
+    "notebook_compilation": "passed"
+  },
+  "ready_for_training": false
+}

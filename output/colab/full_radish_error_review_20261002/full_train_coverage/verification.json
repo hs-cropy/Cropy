@@ -1,0 +1,11 @@
+{
+  "official_train_class3_exact_coverage": 227,
+  "remaining_image_sha256_verified": 157,
+  "annotated_remaining": 157,
+  "candidate_review_rows": 5,
+  "only_train_candidates": true,
+  "compatible_candidates": 3,
+  "disputed_candidates": 2,
+  "html_links_checked": 493,
+  "collection_template_rows": 2
+}

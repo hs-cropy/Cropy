@@ -1,0 +1,193 @@
+[
+  {
+    "file": "data\\full\\라벨데이터\\고추정상라벨링데이터.tar",
+    "bytes": 4080640,
+    "members": [
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/01.고추/0.정상.zip.part0",
+        "bytes": 4077725,
+        "count": 8575,
+        "extensions": {
+          ".json": 8575
+        },
+        "disease_counts": {
+          "0": 8575
+        },
+        "json_read_crc": "passed"
+      }
+    ]
+  },
+  {
+    "file": "data\\full\\라벨데이터\\고추질병라벨링데이터.tar",
+    "bytes": 865280,
+    "members": [
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/01.고추/1.질병.zip.part0",
+        "bytes": 862373,
+        "count": 1888,
+        "extensions": {
+          ".json": 1888
+        },
+        "disease_counts": {
+          "1": 973,
+          "2": 915
+        },
+        "json_read_crc": "passed"
+      }
+    ]
+  },
+  {
+    "file": "data\\full\\라벨데이터\\무정상라벨링데이터.tar",
+    "bytes": 5223936,
+    "members": [
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/02.무/0.정상.zip.part0",
+        "bytes": 5221084,
+        "count": 11001,
+        "extensions": {
+          ".json": 11001
+        },
+        "disease_counts": {
+          "0": 11001
+        },
+        "json_read_crc": "passed"
+      }
+    ]
+  },
+  {
+    "file": "data\\full\\라벨데이터\\무질병라벨링데이터.tar",
+    "bytes": 320000,
+    "members": [
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/02.무/1.질병.zip.part0",
+        "bytes": 317434,
+        "count": 697,
+        "extensions": {
+          ".json": 697
+        },
+        "disease_counts": {
+          "3": 470,
+          "4": 227
+        },
+        "json_read_crc": "passed"
+      }
+    ]
+  },
+  {
+    "file": "data\\full\\라벨데이터\\배추정상라벨링데이터.tar",
+    "bytes": 4418048,
+    "members": [
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/03.배추/0.정상.zip.part0",
+        "bytes": 4415059,
+        "count": 9318,
+        "extensions": {
+          ".json": 9318
+        },
+        "disease_counts": {
+          "0": 9318
+        },
+        "json_read_crc": "passed"
+      }
+    ]
+  },
+  {
+    "file": "data\\full\\라벨데이터\\배추질병라벨링데이터.tar",
+    "bytes": 577024,
+    "members": [
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/라벨링데이터/03.배추/1.질병.zip.part0",
+        "bytes": 574040,
+        "count": 1260,
+        "extensions": {
+          ".json": 1260
+        },
+        "disease_counts": {
+          "5": 802,
+          "6": 458
+        },
+        "json_read_crc": "passed"
+      }
+    ]
+  },
+  {
+    "file": "data\\full\\원천데이터\\고추질병원천데이터.tar",
+    "bytes": 3683144704,
+    "members": [
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/원천데이터/01.고추/1.질병.zip.part0",
+        "bytes": 1073741824,
+        "status": "Split ZIP segment; not a standalone ZIP (expected)"
+      },
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/원천데이터/01.고추/1.질병.zip.part1073741824",
+        "bytes": 1073741824,
+        "status": "Split ZIP segment; not a standalone ZIP (expected)"
+      },
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/원천데이터/01.고추/1.질병.zip.part2147483648",
+        "bytes": 1073741824,
+        "status": "Split ZIP segment; not a standalone ZIP (expected)"
+      },
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/원천데이터/01.고추/1.질병.zip.part3221225472",
+        "bytes": 461911750,
+        "count": 1888,
+        "extensions": {
+          ".jpg": 1888
+        },
+        "validation": "ZIP directory readable; image payload CRC not checked"
+      }
+    ],
+    "split_offsets_contiguous": true
+  },
+  {
+    "file": "data\\full\\원천데이터\\무질병원천데이터.tar",
+    "bytes": 1209459712,
+    "members": [
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/원천데이터/02.무/1.질병.zip.part0",
+        "bytes": 1073741824,
+        "status": "Split ZIP segment; not a standalone ZIP (expected)"
+      },
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/원천데이터/02.무/1.질병.zip.part1073741824",
+        "bytes": 135714756,
+        "count": 697,
+        "extensions": {
+          ".jpg": 46,
+          ".jpeg": 651
+        },
+        "validation": "ZIP directory readable; image payload CRC not checked"
+      }
+    ],
+    "split_offsets_contiguous": true
+  },
+  {
+    "file": "data\\full\\원천데이터\\배추질병원천데이터.tar",
+    "bytes": 2563540480,
+    "members": [
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/원천데이터/03.배추/1.질병.zip.part0",
+        "bytes": 1073741824,
+        "status": "Split ZIP segment; not a standalone ZIP (expected)"
+      },
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/원천데이터/03.배추/1.질병.zip.part1073741824",
+        "bytes": 1073741824,
+        "status": "Split ZIP segment; not a standalone ZIP (expected)"
+      },
+      {
+        "path": "073.노지_작물_질병_진단/01.데이터/1.Training/원천데이터/03.배추/1.질병.zip.part2147483648",
+        "bytes": 416050808,
+        "count": 1260,
+        "extensions": {
+          ".jpg": 1105,
+          ".jpeg": 155
+        },
+        "validation": "ZIP directory readable; image payload CRC not checked"
+      }
+    ],
+    "split_offsets_contiguous": true
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "checked_at": "2026-10-02T05:33:43.810535+00:00",
+  "dataset": 147,
+  "filekey": 46445,
+  "url": "https://api.aihub.or.kr/down/0.6/147.do?fileSn=46445",
+  "http_status": 200,
+  "content_type": "application/x-tar",
+  "content_length": null,
+  "bytes_inspected": 4096,
+  "tar_header_detected": true,
+  "result": "Archive stream received; full download/integrity not tested."
+}

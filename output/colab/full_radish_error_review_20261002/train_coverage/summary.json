@@ -1,0 +1,43 @@
+{
+  "checkpoint_sha256": "4ef9988d85259b776eaf8fa5824edd2c28b08371e0c19296221e107b670d0060",
+  "groups": {
+    "2852e": {
+      "train_downy": 32,
+      "correct": 32,
+      "predictions": {
+        "3": 32
+      }
+    },
+    "3055e": {
+      "train_downy": 42,
+      "correct": 42,
+      "predictions": {
+        "3": 42
+      }
+    },
+    "3108e": {
+      "train_downy": 43,
+      "correct": 43,
+      "predictions": {
+        "3": 43
+      }
+    },
+    "5389e": {
+      "train_downy": 40,
+      "correct": 40,
+      "predictions": {
+        "3": 40
+      }
+    },
+    "9662e": {
+      "train_downy": 70,
+      "correct": 70,
+      "predictions": {
+        "3": 70
+      }
+    }
+  },
+  "manifest_verified": true,
+  "validation_predictions_match": true,
+  "total_inference": 307
+}

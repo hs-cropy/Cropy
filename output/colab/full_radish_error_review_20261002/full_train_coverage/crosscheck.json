@@ -1,0 +1,40 @@
+{
+  "method": "Parent reviewed sheets01/05/09/13/15/16 (57 images) and enlarged candidates/borderlines. First pass one assigned AI per157 image; not two complete independent reviews. Prior70 retain two-rater tags.",
+  "reviewed_sheets": [
+    "01",
+    "05",
+    "09",
+    "13",
+    "15",
+    "16"
+  ],
+  "additional_ids": [
+    "U029",
+    "U055",
+    "U078",
+    "U118",
+    "U147"
+  ],
+  "candidate_rechecks": [
+    {
+      "id": "U044",
+      "decision": "compatible_with_target_appearance",
+      "surface": "front",
+      "marks": "subtle",
+      "hard_shadow": true,
+      "bright_patch": true,
+      "broad_view": true,
+      "note": "넓은 녹색 잎에 작은 고립된 점과 뚜렷한 명암 경계. 작은 점과 국소 반점의 경계 사례이며 병해 확진은 아님."
+    },
+    {
+      "id": "U151",
+      "decision": "compatible_with_target_appearance",
+      "surface": "front",
+      "marks": "subtle",
+      "hard_shadow": false,
+      "bright_patch": false,
+      "broad_view": true,
+      "note": "넓은 녹색 잎과 작은 옅은 점 하나. 큰 국소 자국은 적음. 병해 확진은 아님."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "arch": "resnet18",
+  "epochs": 2,
+  "batch_size": 9,
+  "img_size": 64,
+  "train_geometry": "random_crop",
+  "seed": 42,
+  "lr": 0.0001,
+  "balanced_sampler": true,
+  "selection": "highest validation macro_f1; earliest tie",
+  "manifest_sha256": "1d8924f17fa8cc02f69607a14a60e879301e24e2fd74a8a01792b491d8701b34",
+  "classes": [
+    "0_고추탄저병",
+    "1_고추흰가루병",
+    "2_무검은무늬병",
+    "3_무노균병",
+    "4_배추검은썩음병",
+    "5_배추노균병",
+    "6_고추정상",
+    "7_무정상",
+    "8_배추정상"
+  ],
+  "smoke_per_class": 2,
+  "train_images": 18,
+  "val_images": 18,
+  "num_workers": 0
+}

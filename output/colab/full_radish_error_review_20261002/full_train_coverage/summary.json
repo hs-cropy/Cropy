@@ -1,0 +1,90 @@
+{
+  "scope": "All227 official training downy class3 images. Image-appearance coverage only, not disease diagnosis. No new images added or training run.",
+  "prior70": {
+    "rater_a_target": 3,
+    "rater_b_target": 1,
+    "common_ids": [
+      "T05"
+    ],
+    "disputed_ids": [
+      "T06",
+      "T55"
+    ]
+  },
+  "additional157": {
+    "reviewed": 157,
+    "target_ids": [
+      "U044",
+      "U151"
+    ],
+    "target_parent_rechecked": true
+  },
+  "all227": {
+    "compatible_ids": [
+      "T05",
+      "U044",
+      "U151"
+    ],
+    "disputed_ids": [
+      "T06",
+      "T55"
+    ],
+    "compatible_n": 3,
+    "including_disputed_n": 5,
+    "compatible_fraction": 0.013215859030837005,
+    "including_disputed_fraction": 0.022026431718061675,
+    "compatible_groups": [
+      "3055e",
+      "5389e",
+      "9662e"
+    ],
+    "compatible_dates": [
+      "2020/10/21",
+      "2020/10/27",
+      "2020/11/06"
+    ]
+  },
+  "groups": {
+    "2852e": {
+      "train": 32,
+      "compatible_ids": [],
+      "disputed_ids": []
+    },
+    "3055e": {
+      "train": 42,
+      "compatible_ids": [
+        "U044"
+      ],
+      "disputed_ids": []
+    },
+    "3108e": {
+      "train": 43,
+      "compatible_ids": [],
+      "disputed_ids": []
+    },
+    "5389e": {
+      "train": 40,
+      "compatible_ids": [
+        "U151"
+      ],
+      "disputed_ids": []
+    },
+    "9662e": {
+      "train": 70,
+      "compatible_ids": [
+        "T05"
+      ],
+      "disputed_ids": [
+        "T06",
+        "T55"
+      ]
+    }
+  },
+  "limitations": [
+    "Two-rater full review for previous70; single primary review plus parent candidate/sample crosscheck for remaining157.",
+    "Range reflects known disputed cases, not a confidence interval or bound on missed cases.",
+    "Same group/date does not establish same or independent plant identity.",
+    "Labels remain unverified by a plant disease expert.",
+    "Selecting more examples for review does not add new training information; all candidates were already in train."
+  ]
+}

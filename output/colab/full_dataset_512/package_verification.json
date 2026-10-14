@@ -1,0 +1,11 @@
+{
+  "images": 36583,
+  "labels": 36583,
+  "packaged_hash_duplicates": 0,
+  "all_image_and_label_hashes_verified": true,
+  "all_image_dimensions_verified": true,
+  "decoded_class_split_samples": 18,
+  "code_bundle_matches_local_sources": true,
+  "notebook_cells_compile": true,
+  "colab_gpu_executed": false
+}

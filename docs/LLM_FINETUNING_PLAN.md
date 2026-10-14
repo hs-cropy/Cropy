@@ -1,8 +1,29 @@
 # cropy LLM 파인튜닝 적용 계획
 
-> 작성일: 2026-09-17. 대상 장치: Orange Pi 5 Plus / RK3588 / RAM 16GB.
+> 최초 작성: 2026-09-17 · 갱신: 2026-10-08. 대상: Orange Pi 5 Plus / RK3588 / RAM 16GB.
 > 한성대학교 특강 1·2를 프로젝트에 적용한 **팀 내부 기술 계획**이다. 학습·변환·성능 검증을 완료했다는 의미는 아니다.
 > 외부 제공 강의 자료와 재촬영 관련 내부 정보를 포함하므로 팀 규칙에 따라 외부 공유 전 공개 범위를 확인한다.
+
+## 최신 데이터와 통합 방향
+
+현재 웹앱의 브라우저 한국어 TTS 촬영·결과·재촬영 안내는 구현되어 있다. Qwen/RKLLM·LLM handler·STT 및 보드 음성 통합은 연결되지 않았다. CNN 분류와 DB 조회 결과를 근거로 Qwen이 기능을 선택하고, 검증된 handler·템플릿 응답을 화면/TTS에 전달하는 방식을 데이터로 구체화하고 있다. 자연어 설명을 직접 생성하는 9월 초기 계획과 기능 토큰 방식은 별도 실험 버전이다.
+
+| 항목 | 2026-10-06 최신 기록 |
+|---|---|
+| 데이터 | v5 싱글턴 7기능 ×400개 = 2,800개 초안 |
+| 분할 | train 2,240 / 개발 validation 560. 독립 최종 test는 별도 준비 |
+| 기능 | get_diagnosis, get_prediction_metrics, get_recapture_guidance, get_care_information, get_pesticide_information, clarify_request, handle_scope_limit |
+| v6 AI 검수 | 문제 미발견 2,239 / 보류 397 / 불합격 164 |
+| 사람 승인 | 0개. AI 문제 미발견은 approved와 다름 |
+| 실행 상태 | 실제 토큰 ID·종료·exporter·handler·TTS·모델 학습·보드 추론 미검증 |
+
+입력은 사용자 발화와 필요한 근거 컨텍스트로 구성하고 정답 토큰·원문·분할·검수 메모를 모델 입력에서 제외한다. 불합격 수정과 반환 상태 경계 확정, 독립 사람 검수를 먼저 진행한 뒤 tokenizer/chat template/종료와 handler/TTS를 소량 시험한다. 합성 STT를 실제 음성 인식 성능으로 표시하지 않는다.
+
+기능 토큰은 데이터 시트의 설계 계약이며 현재 REST API가 아니다. 등록 토큰 여부·호출 인자·허용 기능·실행 오류·근거 없는 출력의 폴백은 실제 코드 통합 때 확정한다. 함수 선택 성공과 근거를 읽는 TTS 성공을 각각 평가한다.
+
+근거: [v5 구축 결과](https://github.com/hs-cropy/Cropy/blob/3a26f14ff1d897c11cb068eba3a76b5ceb00ba60/마음ai/Qwen35_데이터시트/전체기능400_구축결과_v5.md), [v6 전체 AI 검수](https://github.com/hs-cropy/Cropy/blob/3a26f14ff1d897c11cb068eba3a76b5ceb00ba60/마음ai/Qwen35_데이터시트/전체2800_매뉴얼기반_AI검수_v6.md), [검수 매뉴얼](https://github.com/hs-cropy/Cropy/blob/3a26f14ff1d897c11cb068eba3a76b5ceb00ba60/마음ai/Qwen35_데이터시트_검수_매뉴얼.md).
+
+아래 1~10절의 자연어 답변·train 1,000/validation 200/test 200·LoRA 값은 **초기 설명 생성 실험안**으로 보존한다. 현재 기능 토큰 초안의 수량·승인 상태로 해석하지 않는다. 변환·보드 검증과 근거 유지 원칙은 두 경로 모두 적용한다.
 
 ## 1. 파인튜닝의 목적과 범위
 
@@ -47,16 +68,16 @@ CNN 결과를 LLM 입력으로 전달하는 것만으로 파인튜닝이 필수�
            근거·수치 검증 → 화면 표시 / TTS
 ```
 
-- CNN 학습: [`ml/train.py`](../ml/train.py). LLM 학습은 별도 디렉터리와 환경으로 분리한다.
-- 진단 및 DB 조회: [`diagnosis_service.py`](https://github.com/hs-cropy/Cropy/blob/backend/backend/app/services/diagnosis_service.py).
-- 입력 계약 근거: [`DiagnoseResponse`](https://github.com/hs-cropy/Cropy/blob/backend/backend/app/schemas/diagnosis.py).
-- 클래스 정의: [`MODEL_SPEC.md`](MODEL_SPEC.md). 고추·무·배추의 병해 6종과 정상 3종이다.
+- CNN 학습: [`ml/train.py`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/ml/train.py). LLM 학습은 별도 디렉터리와 환경으로 분리한다.
+- 진단 및 DB 조회: [`diagnosis_service.py`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/backend/app/services/diagnosis_service.py).
+- 입력 계약 근거: [`DiagnoseResponse`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/backend/app/schemas/diagnosis.py).
+- 클래스 정의: [`MODEL_SPEC.md`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/docs/MODEL_SPEC.md). 고추·무·배추의 병해 6종과 정상 3종이다.
 
 현재 진단 응답 중 `disease_name`, `crop_type`, `category`, `confidence`, `top_predictions`, `description`, `causes`, `prevention`, `pesticides`, `recapture`를 필요한 범위에서 전달한다. 사진 경로, 내부 식별자, 생성 시각은 질문에 필요하지 않으면 제외한다.
 
 `severity`는 현재 DB 병해 속성에서 오는 값이므로 사진에서 측정한 병의 진행 정도로 설명하면 안 된다. `confidence`도 보정된 실제 발병 확률로 단정하지 않고 모델 분류 점수로 취급한다.
 
-추가 입력으로 `model_loaded`, 데이터 출처·검증 상태, 현재 질문의 대상 진단을 백엔드에서 관리하는 방안을 제안한다. 이들은 현재 `DiagnoseResponse`에 모두 있는 필드가 아니다. Mock 결과나 검증되지 않은 시드 데이터를 실제 진단·검증된 등록 정보처럼 설명하는 데이터는 만들지 않는다.
+현재 DiagnoseResponse에는 prediction_mode·model_version·preprocessing_version·작물 불일치와 농약 source/verification_status/synced_at이 있다. model_loaded는 health/ready 응답 필드이며 진단 응답에 없다. 질문 대상과 추가 근거 메타데이터는 입력 구성기에서 별도로 정의한다. Mock 결과나 검증되지 않은 시드 데이터를 실제 진단·검증된 등록 정보처럼 설명하는 데이터는 만들지 않는다.
 
 ## 4. 모델 및 환경 선택
 
@@ -71,7 +92,7 @@ CNN 결과를 LLM 입력으로 전달하는 것만으로 파인튜닝이 필수�
 
 강의의 학습 환경은 x86_64 + A100 80GB 예시이며 프로젝트의 필수 최소 사양은 아니다. 서버에서 학습과 RKLLM 변환을 수행하고 Orange Pi에서는 추론한다. Transformers·PEFT·학습 도구 환경과 RKLLM 변환 환경은 분리하여 버전을 기록한다.
 
-기존 [`ORANGEPI5_DEPLOY.md`](ORANGEPI5_DEPLOY.md)는 Orange Pi 5/RK3588S와 CNN 중심 설명이다. 이번 계획의 5 Plus/RK3588 및 LLM 포함 메모리·드라이버 조건으로 별도 검증해야 한다.
+[`ORANGEPI5_DEPLOY.md`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/docs/ORANGEPI5_DEPLOY.md)의 대상은 5 Plus/RK3588이다. CNN CPU 기준선을 먼저 검증하고 LLM·음성을 포함한 메모리·드라이버 조건을 별도로 검증한다.
 
 ## 5. 학습 데이터 설계
 
@@ -255,6 +276,10 @@ docs/llm_runs/<run_id>.md   # 데이터/모델 버전, 설정, 품질 및 보드
 
 - 팀 제공 PDF: `[마음AI] 한성대학교 특강1(데이터 기획) 자료 (1).pdf` — 기능 정의, 문장 다양화, STT 오류 대응, 평가 데이터와 실패 분석.
 - 팀 제공 PDF: `한성대학교_특강2_통합_LLM학습_양자화_포팅 (1).pdf` — 4~16쪽 모델·데이터·학습·평가, 17~32쪽 양자화·포팅·검증, 33~38쪽 음성 연동.
-- [`팀 프로젝트 규칙`](xpdocs/10_팀_프로젝트_규칙.md), [`모델 명세`](MODEL_SPEC.md), [`음성 연동 아이디어`](SUDA_INTEGRATION.md).
+- [`팀 프로젝트 규칙`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/docs/xpdocs/10_팀_프로젝트_규칙.md), [`모델 명세`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/docs/MODEL_SPEC.md), [`음성 연동 아이디어`](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/docs/SUDA_INTEGRATION.md).
 
 강의의 버전·지원 목록·성능 표는 강의 당시 제공 환경의 참고값이다. 이 문서의 데이터 수량, LoRA 설정, 채택 기준은 cropy용 제안이며 강의의 의무 요구사항이나 실측 결과가 아니다.
+
+## 2026년 10월 8일 데이터 정답 수정
+
+[v7 수정 이력](https://github.com/hs-cropy/Cropy/blob/a552a4197ddc5513ae7694979f98330c1d312c76/마음ai/Qwen35_데이터시트/정답변경본_v7_수정내역.md)에서 v6 불합격 164개의 정답·참고 TTS를 수정했다. 전체 2,800개(train 2,240/validation 560)는 유지하되 기능별 수량은 재분류로 달라졌다. 변경 164개는 draft이고 사람 승인 0개, 기존 보류 397개는 남아 있다. 위 v5/v6 수치는 당시 구축·AI 검수 기록이며 v7의 독립 재검수·실제 학습 완료를 의미하지 않는다.
