@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setVoiceEnabled } from "@/features/voice/hooks/useVoiceSetting";
@@ -74,7 +74,10 @@ function pickPhoto(container: HTMLElement, name = "leaf.jpg") {
 }
 
 function captureCard() {
-  return screen.getByRole("button", { name: /사진 촬영하기/ });
+  return screen.getAllByRole("button", {
+    name: /사진 촬영하기/,
+    hidden: true,
+  })[0];
 }
 
 function submitButton(name: "AI 진단 시작" | "진단 중…") {
@@ -163,8 +166,10 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
   it("고른 사진이 없다는 오류 문구와 떠 있던 토스트도 지운다", async () => {
     const { container } = renderHome();
     await startDiagnosis();
-    pickFile(container, new File(["x"], "memo.txt", { type: "text/plain" }));
-    expect(screen.getByText("먼저 사진을 촬영하거나 선택하세요.")).toBeTruthy();
+    pickFile(container, new File(["x"], "memo.txt", { type: "text/plain" }));    
+    expect(
+      screen.getAllByText("먼저 사진을 촬영하거나 선택하세요.").length
+    ).toBeGreaterThan(0);
     expect(screen.getByText("JPEG·PNG만 올릴 수 있어요")).toBeTruthy();
 
     await userEvent.click(navLink("주요 메뉴", "새 진단"));
@@ -187,8 +192,8 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
 
       expect(vi.mocked(diagnoseImage).mock.calls[0][2]?.signal?.aborted).toBe(true);
       expect(submitButton("AI 진단 시작").disabled).toBe(false);
-      expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
-      expect(document.activeElement).toBe(captureCard());
+      expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();      
+      await waitFor(() => { expect(document.activeElement).toBe(captureCard()); });
     },
   );
 

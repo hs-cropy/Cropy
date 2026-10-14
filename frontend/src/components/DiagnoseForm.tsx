@@ -55,6 +55,7 @@ export function DiagnoseForm() {
   const fallbackInputRef = useRef<HTMLInputElement>(null);
   const requestRef = useRef<AbortController | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [focusAfterReset, setFocusAfterReset] = useState(false);
 
   // 촬영 및 진단 상태
   const [cropType, setCropType] = useState("");
@@ -107,9 +108,8 @@ export function DiagnoseForm() {
     }
 
     // 탭 전환 시 화면 맨 위로 이동
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
+    const reduced =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
 
     window.scrollTo({
       top: 0,
@@ -221,9 +221,22 @@ export function DiagnoseForm() {
     setCameraOpen(false);
     clearToast();
     cancelSpeech();
-    captureCardRef.current?.focus();
+    // React가 loading=false를 화면에 반영한 뒤 포커스 이동
+    setFocusAfterReset(true);
   };
   // 렌더마다 다시 구독한다: reset 이 나중에 state 를 읽게 되어도 낡은 값을 보지 않는다
+  
+  useEffect(() => {
+    if (!focusAfterReset || loading) return;
+
+    const button = captureCardRef.current;
+
+    if (button && !button.disabled) {
+      button.focus();
+      setFocusAfterReset(false);
+    }
+  }, [focusAfterReset, loading]);
+
   useEffect(() => subscribeNewDiagnosis(reset));
 
   const handleCapture = (captured: File) => {
