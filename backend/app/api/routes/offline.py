@@ -10,6 +10,8 @@ from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
 from app.core.errors import APIError
+from app.core.uploads import write_image
+from app.api.documentation import IMAGE_DESCRIPTION, ManifestResponse, OFFLINE_EXAMPLES, UPLOAD_ERRORS, error_response
 from app.models.entities import Diagnosis
 from app.schemas.diagnosis import CropType, DiagnoseResponse, RecaptureGuidance
 from app.services import diagnosis_service as service
@@ -23,7 +25,7 @@ router = APIRouter()
 
 def load_manifest(version=None):
     path = settings.offline_bundle_dir / "manifest.json"
-    if version:
+    if version is not None:
         if len(version) != 64 or any(c not in "0123456789abcdef" for c in version):
             raise APIError(409, "UNSUPPORTED_BUNDLE", "지원하는 오프라인 모델 버전을 확인할 수 없습니다.")
         path = settings.offline_bundle_dir / f"manifest-{version[:16]}.json"
@@ -36,23 +38,27 @@ def load_manifest(version=None):
     return data
 
 
-@router.get("/manifest")
+@router.get("/manifest", summary="현재 브라우저 모델 묶음 조회",
+            description="현재 manifest.json을 반환합니다. 모델 URL·해시·전처리·클래스·정책 및 검증 정보를 제공합니다. model_url은 프론트엔드 정적 자산 경로입니다. 묶음이 준비되지 않았으면 503입니다.",
+            responses={200: {"model": ManifestResponse},
+                       503: error_response("오프라인 모델을 먼저 준비해 주세요.", "OFFLINE_BUNDLE_UNAVAILABLE", True)})
 def manifest():
     return load_manifest()
 
 
 class LocalPrediction(BaseModel):
-    class_id: StrictInt
-    confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
+    class_id: StrictInt = Field(description="클래스 ID 0~8. 분포 내에서 각각 한 번씩 포함")
+    confidence: float = Field(ge=0, le=1, allow_inf_nan=False, description="확률(0~1). 9개 합계는 1±0.001")
 
 
 class LocalRecord(BaseModel):
-    client_record_id: UUID
+    client_record_id: UUID = Field(description="기기에서 만든 기록 UUID. 중복 동기화 방지 키")
     selected_crop: CropType | None = None
     model_version: str = Field(max_length=100)
     preprocessing_version: str = Field(max_length=100)
-    bundle_version: str = Field(max_length=64)
-    created_at: datetime
+    bundle_version: str = Field(min_length=64, max_length=64, pattern="^[0-9a-f]{64}$",
+                                description="manifest.version과 일치하는 64자리 소문자 16진수 묶음 해시")
+    created_at: datetime = Field(description="시간대 포함 촬영 시각. 2000년 이후, 서버 현재 시각+5분 이하")
     predictions: list[LocalPrediction] = Field(min_length=9, max_length=9)
     refined_predictions: list[LocalPrediction] | None = Field(default=None, min_length=9, max_length=9)
 
@@ -106,10 +112,9 @@ def import_record(db, metadata, content, extension, refined_content, refined_ext
     snapshot["decision"] = decision(dist[0][1], bool(m.selected_crop and m.selected_crop != source["crop_type"]),
                                     guidance, source["category"], policy.get("low_confidence_threshold", .5))
     try:
-        settings.upload_dir.mkdir(parents=True, exist_ok=True)
-        original.write_bytes(content)
+        write_image(original, content)
         if second:
-            second.write_bytes(refined_content)
+            write_image(second, refined_content)
         record = Diagnosis(id=id, disease=primary, confidence=dist[0][1],
             top_predictions=[dict(name=names[i], confidence=p) for i, p in dist[:3]],
             original_predictions=[list(p) for p in dist1], image_path=original.name,
@@ -129,9 +134,22 @@ def import_record(db, metadata, content, extension, refined_content, refined_ext
         raise
 
 
-@router.post("/records", response_model=DiagnoseResponse)
-async def sync_record(request: Request, metadata: str = Form(..., max_length=20000),
-                      file: UploadFile = File(...), refined_file: UploadFile | None = File(None)):
+@router.post("/records", response_model=DiagnoseResponse, summary="기기 진단 기록을 서버에 동기화",
+             description="브라우저에서 생성한 예측값과 사진을 저장합니다. 서버 모델 재추론은 수행하지 않으며 prediction_mode=browser입니다. metadata는 JSON 객체를 문자열로 직렬화한 multipart 폼 필드입니다. predictions는 클래스 0~8을 각각 포함한 9개 확률이고 합계는 1±0.001이어야 합니다. created_at은 시간대가 필요하고 2000년 이후·서버 현재 시각+5분 이하여야 합니다. 버전들은 해당 묶음 manifest와 일치해야 합니다. 재촬영 시 refined_predictions와 refined_file을 함께 보내세요. client_record_id로 중복을 판별하며 동일 ID에 다른 내용을 보내면 409입니다. HTTP 200의 save_status도 확인하세요.",
+             responses={200: OFFLINE_EXAMPLES, **UPLOAD_ERRORS,
+                        400: error_response("EMPTY_IMAGE, UNSUPPORTED_IMAGE_FORMAT, INVALID_IMAGE, 잘못된 multipart(HTTP_ERROR) 또는 재촬영 사진·예측값 누락(MISSING_REFINEMENT_EVIDENCE)", "MISSING_REFINEMENT_EVIDENCE", example_detail="재촬영 사진과 예측값을 함께 보내 주세요."),
+                        409: error_response("지원하지 않는 묶음(UNSUPPORTED_BUNDLE), 요청 키 충돌(IDEMPOTENCY_CONFLICT), 기존 기록 충돌(DIAGNOSIS_CHANGED)", "UNSUPPORTED_BUNDLE", example_detail="모델과 전처리 버전이 일치하지 않습니다."),
+                        503: error_response("DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가", "DATABASE_UNAVAILABLE", True, example_detail="기록 처리에 실패했습니다. 다시 시도해 주세요.")})
+async def sync_record(request: Request, metadata: str = Form(..., max_length=20000,
+                      description="LocalRecord 스키마의 JSON 문자열. 필수: client_record_id(UUID), model_version(100자 이하), preprocessing_version(100자 이하), bundle_version(64자리 소문자 16진수), created_at(시간대 포함), predictions(9개 class_id/confidence). 선택: selected_crop(고추/무/배추), refined_predictions(동일한 9개 분포). 예시의 버전은 실제 manifest 값으로 교체하세요. 버전 형식 오류는 422, 정상 형식의 미지원 묶음은 409입니다.",
+                      json_schema_extra={"contentMediaType": "application/json",
+                                         "contentSchema": {"$ref": "#/components/schemas/LocalRecord"},
+                                         "examples": [json.dumps({"client_record_id": "4da54046-bae9-4249-a4b3-85d17b83ee40", "selected_crop": "고추",
+                                            "model_version": "manifest의 model_version", "preprocessing_version": "manifest의 preprocessing_version",
+                                            "bundle_version": "a" * 64, "created_at": "2026-10-15T09:00:00+09:00",
+                                            "predictions": [{"class_id": i, "confidence": .6 if i == 0 else .05} for i in range(9)]}, ensure_ascii=False)]}),
+                      file: UploadFile = File(..., description=IMAGE_DESCRIPTION),
+                      refined_file: UploadFile | None = File(None, description="재촬영 사진. metadata.refined_predictions와 함께 전송")):
     try:
         LocalRecord.model_validate_json(metadata)
     except ValidationError:

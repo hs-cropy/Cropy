@@ -39,6 +39,8 @@ uvicorn app.main:app --reload --port 8000
 
 API 문서: http://localhost:8000/docs
 
+전체 12개 API 목록과 Swagger 실행·입력·오류 안내: [백엔드 API / Swagger](docs/operations/API_SWAGGER.md)
+
 ### 2. Frontend
 
 ```bash
