@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.config import settings
+from app.core.uploads import write_image
 from app.models.entities import Disease, Diagnosis
 from app.schemas.diagnosis import (
     DiagnoseResponse,
@@ -186,10 +187,9 @@ def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str
     if cached:
         return cached
     context = get_prediction_context()
-    settings.upload_dir.mkdir(parents=True, exist_ok=True)
     saved_path = settings.upload_dir / f"{uuid.uuid4()}{Path(filename).suffix or '.jpg'}"
     try:
-        saved_path.write_bytes(file_bytes)
+        write_image(saved_path, file_bytes)
         predictions = predict_all(saved_path)
         diseases = _diseases_for_classes(db, _prediction_classes(predictions))
         primary = diseases[predictions[0][0]]
@@ -239,10 +239,9 @@ def refine_diagnosis(db: Session, diagnosis_id: str, file_bytes: bytes, filename
     class_ids = _prediction_classes(dist1)
     diseases = _diseases_for_classes(db, class_ids)
     old_second = _upload_path(diagnosis.refined_image_path)
-    settings.upload_dir.mkdir(parents=True, exist_ok=True)
     second_path = settings.upload_dir / f"{uuid.uuid4()}{Path(filename).suffix or '.jpg'}"
     try:
-        second_path.write_bytes(file_bytes)
+        write_image(second_path, file_bytes)
         dist2 = predict_all(second_path)
         if _prediction_classes(dist2) != class_ids:
             raise PredictionContractError("Invalid prediction: refinement class sets differ")
