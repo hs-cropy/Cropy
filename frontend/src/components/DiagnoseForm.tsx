@@ -1,6 +1,9 @@
 
 "use client";
 
+import { PhotoPreview } from "./PhotoPreview";
+import { PHOTO_ACCEPT } from "@/features/camera/lib/validateImage";
+
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -450,8 +453,7 @@ export function DiagnoseForm() {
             >
               {preview ? (
                 <span className="relative block h-full w-full">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <PhotoPreview key={preview} fileName={file?.name}
                     src={preview}
                     alt="촬영한 작물 미리보기"
                     className="h-full w-full object-cover"
@@ -504,7 +506,7 @@ export function DiagnoseForm() {
             <input
               ref={galleryInputRef}
               type="file"
-              accept="image/jpeg,image/png"
+              accept={PHOTO_ACCEPT}
               onChange={handleFileChange}
               disabled={loading}
               className="hidden"
@@ -515,7 +517,7 @@ export function DiagnoseForm() {
             <input
               ref={fallbackInputRef}
               type="file"
-              accept="image/jpeg,image/png"
+              accept={PHOTO_ACCEPT}
               capture="environment"
               onChange={handleFileChange}
               disabled={loading}

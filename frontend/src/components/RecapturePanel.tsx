@@ -1,5 +1,8 @@
 "use client";
 
+import { PhotoPreview } from "./PhotoPreview";
+import { PHOTO_ACCEPT } from "@/features/camera/lib/validateImage";
+
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import { CameraCapture, isCameraSupported, validateImage, } from "@/features/camera";
@@ -299,8 +302,7 @@ export function RecapturePanel({
           </header>
           <Card radius="lg" padding="lg" className="flex flex-col items-center gap-4">
             {previewUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <PhotoPreview key={previewUrl} fileName={selectedFile.name}
                 src={previewUrl}
                 alt="새로 촬영한 작물 사진 미리보기"
                 className="max-h-[24rem] w-full rounded-xl object-contain"
@@ -366,7 +368,7 @@ export function RecapturePanel({
       <input
         ref={cameraRef}
         type="file"
-        accept="image/jpeg,image/png"
+        accept={PHOTO_ACCEPT}
         capture="environment"
         onChange={handleFileChange}
         disabled={loading}
@@ -377,7 +379,7 @@ export function RecapturePanel({
       <input
         ref={galleryRef}
         type="file"
-        accept="image/jpeg,image/png"
+        accept={PHOTO_ACCEPT}
         onChange={handleFileChange}
         disabled={loading}
         aria-label="갤러리에서 추가 사진 선택"

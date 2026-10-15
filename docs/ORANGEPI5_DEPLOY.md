@@ -168,7 +168,7 @@ nmcli connection show
 | ML_MODEL_PATH | ../ml/checkpoints/best_model.pth / Compose /models/best_model.pth | 실제 서빙 모델 |
 | ENABLE_PAIR_MODEL | false | 명시적 보조 모델 활성화 |
 | MAX_CONCURRENT_DIAGNOSES | 1 | 프로세스별 동시 진단 제한 |
-| MAX_UPLOAD_MB / MAX_IMAGE_PIXELS | 10 / 40,000,000 | 파일 MiB·픽셀 상한 |
+| MAX_UPLOAD_MB / MAX_IMAGE_PIXELS | 100 / 210,000,000 | 파일 MiB·픽셀 상한 |
 | DATABASE_URL / UPLOAD_DIR | 네이티브 cropcare.db/uploads / Compose /data 아래 | 데이터 영속 경로 |
 | CORS_ORIGINS | http://localhost:3000 | 브라우저가 API를 직접 호출할 때 허용 출처 |
 | BACKEND_ORIGIN | 네이티브 기본 127.0.0.1:8000 / Compose http://backend:8000 | 프론트 빌드 인자 |

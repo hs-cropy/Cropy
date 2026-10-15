@@ -52,9 +52,9 @@ Invoke-WebRequest http://localhost:8000/openapi.json -OutFile openapi.json
 
 ## 진단·저장 흐름
 
-1. `/capabilities`의 `upload`에서 파일 형식·바이트·픽셀 상한을 확인합니다. 기본 파일 한도는 10 MiB, 해상도 상한은 40,000,000픽셀이지만 환경 설정에 따라 달라집니다.
+1. `/capabilities`의 `upload`에서 파일 형식·바이트·픽셀 상한을 확인합니다. 기본 파일 한도는 100 MiB, 해상도 상한은 210,000,000픽셀이지만 환경 설정에 따라 달라집니다.
 2. `/ready`가 200이면 DB 연결과 실제 모델 준비가 완료된 상태입니다. `/health`의 200만으로 추론 준비를 판단하지 않습니다. 개발용 mock도 `/ready`에서는 503입니다.
-3. `/diagnose`의 **file**에 JPEG/PNG를 넣고 파일 파트의 Content-Type을 `image/jpeg` 또는 `image/png`로 지정합니다. 서버는 `image/*` MIME과 실제 파일 내용을 모두 검증합니다. 작물은 폼 항목이 아니라 **쿼리 `crop_type`**입니다.
+3. `/diagnose`의 **file**에 JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진을 넣고 파일 파트의 Content-Type을 해당 `image/*`로 지정합니다. MIME 누락·`application/octet-stream`도 실제 디코딩 검증 후 허용합니다. 새 형식 및 긴 변 4096픽셀 초과 사진은 JPEG로 변환합니다. DNG 압축 방식별 지원은 서버 디코더에 따라 달라집니다. 작물은 폼 항목이 아니라 **쿼리 `crop_type`**입니다.
 4. `prediction_mode`, `decision_status`, `decision_reasons`, `recapture`를 확인합니다. 낮은 신뢰도나 작물 불일치 결과도 HTTP 200일 수 있습니다.
 5. `save_status=failed`이면 진단은 완료됐지만 DB 저장에 실패한 것입니다. `recovery_token`을 `/results/{token}/save`에 넣어 POST합니다. 기본 보관 시간은 24시간이며 실제 값은 `/capabilities`를 확인합니다.
 
