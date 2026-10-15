@@ -12,6 +12,7 @@ from app.core.database import get_db, SessionLocal
 from app.core.uploads import IMAGE_EXTENSIONS
 from app.schemas.diagnosis import CropType, Severity, DiagnoseResponse, PaginatedHistory
 from app.core.errors import APIError
+from app.api.documentation import DATABASE_ERROR, DIAGNOSIS_EXAMPLES, REFINEMENT_EXAMPLES, IMAGE_DESCRIPTION, KEY_DESCRIPTION, UPLOAD_ERRORS, error_response
 from app.services import diagnosis_service
 from app.services.ml_service import ModelUnavailableError
 from app.services.result_recovery import request_context, save_result
@@ -79,12 +80,14 @@ def _with_session(operation, *args):
         return operation(db, *args)
 
 
-@router.post("/diagnose", response_model=DiagnoseResponse)
+@router.post("/diagnose", response_model=DiagnoseResponse, summary="사진으로 병해충 진단",
+             description="multipart/form-data의 file에 사진을 보내고, 선택 작물은 쿼리 crop_type으로 전달합니다. 진단·재촬영 안내와 저장 상태를 반환합니다. HTTP 200이어도 save_status=failed이면 recovery_token으로 저장을 재시도하세요. 개발용 mock 여부는 prediction_mode로 구분합니다.",
+             responses={200: DIAGNOSIS_EXAMPLES, **UPLOAD_ERRORS})
 async def diagnose(
     request: Request,
-    file: UploadFile = File(...),
-    crop_type: CropType | None = Query(None),
-    idempotency_key: str | None = Header(None, min_length=1, max_length=128),
+    file: UploadFile = File(..., description=IMAGE_DESCRIPTION),
+    crop_type: CropType | None = Query(None, description="사용자가 선택한 작물. 미지정 시 모델 예측을 사용합니다.", examples=["고추"]),
+    idempotency_key: str | None = Header(None, min_length=1, max_length=128, description=KEY_DESCRIPTION),
 ):
     try:
         async with request.app.state.diagnosis_limiter:
@@ -98,12 +101,17 @@ async def diagnose(
         raise APIError(503, "MODEL_UNAVAILABLE", "모델 진단 결과를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.", True)
 
 
-@router.post("/diagnose/{diagnosis_id}/refine", response_model=DiagnoseResponse)
+@router.post("/diagnose/{diagnosis_id}/refine", response_model=DiagnoseResponse, summary="재촬영 사진으로 진단 보완",
+             description="기존 진단 id와 판별 부위의 두 번째 사진을 보냅니다. 기존 예측과 결합해 같은 진단을 갱신합니다. 재촬영 불가 상태는 400, 모델 버전 또는 동시 변경 충돌은 409입니다. 저장 실패 시 recovery_token으로 복구할 수 있습니다.",
+             responses={200: REFINEMENT_EXAMPLES, **UPLOAD_ERRORS,
+                        400: error_response("EMPTY_IMAGE, UNSUPPORTED_IMAGE_FORMAT, INVALID_IMAGE, 잘못된 multipart(HTTP_ERROR) 또는 재촬영할 수 없는 진단(REFINEMENT_UNAVAILABLE)", "REFINEMENT_UNAVAILABLE", example_detail="원본 진단 이미지를 찾을 수 없어 재확정할 수 없습니다."),
+                        404: error_response("진단 기록을 찾을 수 없습니다.", "DIAGNOSIS_NOT_FOUND"),
+                        409: error_response("모델/진단 변경(MODEL_VERSION_CONFLICT) 또는 요청 키 충돌(IDEMPOTENCY_CONFLICT)", "MODEL_VERSION_CONFLICT", example_detail="모델 또는 진단이 변경되었습니다. 새 진단을 시작해 주세요.")})
 async def refine(
     diagnosis_id: str,
     request: Request,
-    file: UploadFile = File(...),
-    idempotency_key: str | None = Header(None, min_length=1, max_length=128),
+    file: UploadFile = File(..., description=IMAGE_DESCRIPTION),
+    idempotency_key: str | None = Header(None, min_length=1, max_length=128, description=KEY_DESCRIPTION),
 ):
     """혼동쌍 판별부위 2차 촬영으로 진단을 재확정 (구성 E: 다시점 융합)."""
     try:
@@ -125,24 +133,33 @@ async def refine(
     return result
 
 
-@router.post("/results/{token}/save", response_model=DiagnoseResponse)
+@router.post("/results/{token}/save", response_model=DiagnoseResponse, summary="진단 결과 저장 재시도",
+             description="save_status=failed 응답의 recovery_token을 경로에 넣어 전송합니다. 요청 본문은 없으며 모델을 다시 실행하지 않습니다. 보관 시간은 capabilities.recovery_ttl_hours를 확인하세요. 이미 저장된 동일 토큰은 저장 결과를 반환합니다.",
+             responses={404: error_response("저장할 결과를 찾을 수 없습니다.", "RESULT_NOT_FOUND"),
+                        409: error_response("기록이 변경되어 이전 결과를 저장할 수 없습니다.", "DIAGNOSIS_CHANGED"),
+                        410: error_response("결과 보관 시간이 지났습니다.", "RESULT_EXPIRED"),
+                        503: error_response("저장 실패(SAVE_FAILED), DB 사용 불가(DATABASE_UNAVAILABLE), 복구 저장소 사용 불가(RECOVERY_STORAGE_UNAVAILABLE)", "SAVE_FAILED", True, example_detail="이력에 저장하지 못했습니다. 결과는 보관 중이니 다시 저장해 주세요.")})
 async def recover_result(token: str, request: Request):
     async with request.app.state.diagnosis_limiter:
         return await run_in_threadpool(_with_session, save_result, token)
 
 
-@router.get("/history", response_model=PaginatedHistory)
+@router.get("/history", response_model=PaginatedHistory, summary="진단 이력 목록 조회",
+            description="저장된 이력을 최신 촬영 시각 순으로 조회합니다. 작물·심각도 필터와 페이지네이션을 지원합니다. total은 모든 필터 적용 후 건수, crop_total은 작물 필터만 적용한 건수, unfiltered_total은 전체 건수입니다.",
+            responses={503: DATABASE_ERROR})
 def history(
-    page: int = Query(1, ge=1),
-    size: int = Query(20, ge=1, le=100),
-    crop_type: CropType | None = Query(None),
-    severity: Severity | None = Query(None),
+    page: int = Query(1, ge=1, description="1부터 시작하는 페이지 번호"),
+    size: int = Query(20, ge=1, le=100, description="페이지당 결과 수(최대 100)"),
+    crop_type: CropType | None = Query(None, description="작물 필터"),
+    severity: Severity | None = Query(None, description="심각도 필터: high/medium/low"),
     db: Session = Depends(get_db),
 ):
     return diagnosis_service.get_history(db, page, size, crop_type, severity)
 
 
-@router.get("/history/{diagnosis_id}", response_model=DiagnoseResponse)
+@router.get("/history/{diagnosis_id}", response_model=DiagnoseResponse, summary="진단 이력 상세 조회",
+            description="진단 응답의 id로 저장된 결과를 조회합니다. 당시 참고 정보의 스냅샷 유무는 content_status로, 현재 농약 참고 정보는 current_pesticides로 확인합니다.",
+            responses={404: error_response("진단 기록을 찾을 수 없습니다.", "DIAGNOSIS_NOT_FOUND"), 503: DATABASE_ERROR})
 def history_detail(diagnosis_id: str, db: Session = Depends(get_db)):
     result = diagnosis_service.get_diagnosis_detail(db, diagnosis_id)
     if not result:
