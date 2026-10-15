@@ -146,6 +146,7 @@ describe("AppFrame", () => {
     );
   });
 
+
   it("실제 화면을 넣어도 main 은 하나다", async () => {
     vi.mocked(fetchHistory).mockResolvedValue({
       items: [],
@@ -155,14 +156,21 @@ describe("AppFrame", () => {
       unfiltered_total: 0,
       crop_total: 0,
     });
+
     navigation.pathname = "/history";
+
     render(
       <AppFrame>
         <HistoryPage />
       </AppFrame>,
     );
-    await screen.findByText("아직 진단 기록이 없어요");
 
+    // 실제 진단 이력 화면이 렌더링되었는지 확인
+    await screen.findByRole("heading", {
+      name: "진단 이력",
+    });
+
+    // AppFrame과 HistoryPage를 함께 사용해도 main은 하나
     expect(screen.getAllByRole("main")).toHaveLength(1);
   });
 

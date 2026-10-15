@@ -10,10 +10,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FAF7F0",
+  themeColor: "#F7F7F8",
   width: "device-width",
   initialScale: 1,
-  // safe-area env() values only resolve with viewport-fit=cover (notch/home-bar devices)
+  // viewport-fit=cover가 있어야 iOS에서 safe-area inset을 올바르게 적용할 수 있다.
   viewportFit: "cover",
 };
 
