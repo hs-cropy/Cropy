@@ -9,6 +9,7 @@ import { FakeRoutes, fakeNavigation, fakeRouter } from "@/testing/fakeNavigation
 import { diagnoseImage, fetchDiagnosisDetail } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { AppFrame } from "../AppFrame";
+import { ANALYZING_MS, analyzingHold } from "./analyzingHold";
 import { gradeOf, resultTimeSentence } from "./DiagnosisResultView";
 
 vi.mock("next/navigation", async () => (await import("@/testing/fakeNavigation")).nextNavigation);
@@ -203,7 +204,7 @@ describe("진단 시작 안내 (M-03-1 · D-03-1)", () => {
 });
 
 describe("사진 분석 중 (M-02 · D-02)", () => {
-  it("진단을 시작하면 진단 결과 화면(/diagnosis)에서 고른 사진·진행 표시·분석 취소를 보인다 (임의 진행률 없음)", async () => {
+  it("진단을 시작하면 진단 결과 화면(/diagnosis)에서 고른 사진·진행 막대·분석 취소를 보인다 (막대는 3초 동안 차오르고 값은 읽지 않는다)", async () => {
     vi.mocked(diagnoseImage).mockReturnValue(pendingDiagnosis().promise);
     const { container } = renderHome();
     pickPhoto(container);
@@ -219,6 +220,9 @@ describe("사진 분석 중 (M-02 · D-02)", () => {
     expect(screen.getByAltText("분석 중인 사진").getAttribute("src")).toBe("blob:preview");
     const progress = screen.getByRole("progressbar", { name: "사진 분석 진행" });
     expect(progress.hasAttribute("aria-valuenow")).toBe(false);
+    const fill = progress.firstElementChild as HTMLElement;
+    expect(fill.className).toContain("animate-cropy-progress-fill");
+    expect(fill.style.animationDuration).toBe(`${ANALYZING_MS}ms`);
     expect(screen.getByRole("button", { name: "분석 취소" })).toBeTruthy();
     // 모바일은 화면 아래 고정 버튼이 없다
     expect(screen.queryByRole("group", { name: "화면 행동" })).toBeNull();
@@ -257,6 +261,77 @@ describe("사진 분석 중 (M-02 · D-02)", () => {
     });
     expect(fakeNavigation.pathname).toBe("/");
     expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
+  });
+
+  describe("분석 중 화면은 3초 동안 보인다", () => {
+    beforeEach(() => {
+      analyzingHold.minMs = ANALYZING_MS;
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    async function startDiagnosis() {
+      const { container } = renderHome();
+      pickPhoto(container);
+      fireEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+      await act(async () => {});
+      expect(title()).toBe("사진 분석 중");
+    }
+
+    it("응답이 바로 와도 3초가 지나야 결과로 넘어간다", async () => {
+      vi.mocked(diagnoseImage).mockResolvedValue(response());
+      await startDiagnosis();
+
+      await act(() => vi.advanceTimersByTimeAsync(2900));
+      expect(title()).toBe("사진 분석 중");
+
+      await act(() => vi.advanceTimersByTimeAsync(100));
+      expect(title()).toBe("진단 결과");
+    });
+
+    it("실패해도 3초 뒤에 실패 화면으로 넘어간다", async () => {
+      vi.mocked(diagnoseImage).mockRejectedValue(new Error("서버에 연결하지 못했어요"));
+      await startDiagnosis();
+
+      await act(() => vi.advanceTimersByTimeAsync(2900));
+      expect(title()).toBe("사진 분석 중");
+
+      await act(() => vi.advanceTimersByTimeAsync(100));
+      expect(screen.getByText("서버에 연결하지 못했어요")).toBeTruthy();
+    });
+
+    it("기다리는 동안 분석 취소를 누르면 받아 둔 결과를 보이지 않는다", async () => {
+      vi.mocked(diagnoseImage).mockResolvedValue(response());
+      await startDiagnosis();
+      await act(() => vi.advanceTimersByTimeAsync(1000));
+
+      fireEvent.click(screen.getByRole("button", { name: "분석 취소" }));
+      await act(() => vi.advanceTimersByTimeAsync(2000));
+
+      expect(fakeNavigation.pathname).toBe("/");
+      expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
+      expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBeNull();
+    });
+
+    it("기다리는 동안 새 진단을 누르면 받아 둔 결과를 보이지 않고 촬영 화면 처음으로 간다", async () => {
+      vi.mocked(diagnoseImage).mockResolvedValue(response());
+      await startDiagnosis();
+      await act(() => vi.advanceTimersByTimeAsync(1000));
+
+      fireEvent.click(
+        within(screen.getByRole("navigation", { name: "주요 메뉴" })).getByRole("link", {
+          name: "새 진단",
+        }),
+      );
+      await act(() => vi.advanceTimersByTimeAsync(2000));
+
+      expect(fakeNavigation.pathname).toBe("/");
+      expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
+      expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
+      expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBeNull();
+    });
   });
 
   it("데스크탑은 사진 카드·단계 카드와 화면 아래의 분석 취소다", async () => {

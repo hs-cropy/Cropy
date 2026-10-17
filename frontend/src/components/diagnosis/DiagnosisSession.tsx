@@ -15,6 +15,7 @@ import { validateImage } from "@/features/camera";
 import { diagnoseImage, fetchDiagnosisDetail } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import type { PhotoSource } from "@/components/capture/CaptureScreen";
+import { waitAnalyzingHold } from "./analyzingHold";
 
 /** 새로고침 뒤 진단 결과 화면이 다시 불러올 마지막 결과의 id (저장된 진단만) */
 const LAST_RESULT_KEY = "cropy:lastDiagnosisId";
@@ -38,6 +39,8 @@ interface DiagnosisSession {
   result: DiagnoseResponse | null;
   /** 새로고침 뒤 마지막 결과를 서버에서 다시 불러오는 중 */
   restoring: boolean;
+  /** 지금(또는 마지막) 진단을 시작한 때 (Date.now()). 분석 중 막대가 이 때부터 차오른다 */
+  analysisStartedAt: number | null;
   /** 사진을 고른다. 쓸 수 없는 사진이면 그 까닭(토스트 문구)을 돌려준다 */
   selectFile: (file: File, source: PhotoSource) => string | null;
   clearPhoto: () => void;
@@ -97,6 +100,7 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
   const [photoSource, setPhotoSource] = useState<PhotoSource | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
   const [result, setResult] = useState<DiagnoseResponse | null>(null);
   const [restoring, setRestoring] = useState(false);
 
@@ -210,6 +214,8 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
     writeLastResultId(null);
     const controller = new AbortController();
     requestRef.current = controller;
+    const startedAt = Date.now();
+    setAnalysisStartedAt(startedAt);
 
     // 분석 중 화면은 진단 결과 화면에 있다 (Figma M-02·D-02). 실패 화면의 "다시 시도하기"는 이미 그 화면이다
     if (pathnameRef.current !== DIAGNOSIS_PATH) {
@@ -220,9 +226,13 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
     try {
       // 작물은 고르지 않고 자동 감지로 진단한다 (Figma 사진 확인 화면에 작물 선택이 없다)
       const data = await diagnoseImage(file, undefined, { signal: controller.signal });
+      // 응답이 빨라도 분석 중 화면을 정해진 시간(3초, 막대가 다 찰 때까지)은 보인 뒤 넘긴다
+      await waitAnalyzingHold(startedAt, controller.signal);
       if (controller.signal.aborted) return;
       setResult(withPreviewMode(data));
     } catch (err) {
+      if (controller.signal.aborted) return;
+      await waitAnalyzingHold(startedAt, controller.signal);
       if (controller.signal.aborted) return;
       setError(
         err instanceof Error ? err.message : "진단에 실패했어요. 잠시 후 다시 시도해 주세요.",
@@ -292,6 +302,7 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
         error,
         result,
         restoring,
+        analysisStartedAt,
         selectFile,
         clearPhoto,
         submit: () => void submit(),

@@ -215,16 +215,17 @@ module.exports = {
       maxWidth: {
         app: "30rem",
       },
-      // 분석 중 진행 막대: 실제 진행률이 없어 한 조각이 오가기만 한다 (임의 백분율을 그리지 않는다).
-      // 동작 줄이기 설정에서는 globals.css 가 애니메이션을 끝내 조각이 사라지고 문구만 남는다
+      // 분석 중 진행 막대: 분석 중 화면을 보이는 3초 동안 0% 에서 100% 로 차오른다.
+      // 시간은 쓰는 쪽이 style 로 정한다 (ANALYZING_MS). 동작 줄이기 설정에서는 globals.css 가
+      // 애니메이션을 바로 끝내 가득 찬 막대만 보인다
       keyframes: {
-        "cropy-indeterminate": {
-          "0%": { transform: "translateX(-100%)" },
-          "100%": { transform: "translateX(250%)" },
+        "cropy-progress-fill": {
+          "0%": { transform: "scaleX(0)" },
+          "100%": { transform: "scaleX(1)" },
         },
       },
       animation: {
-        "cropy-indeterminate": "cropy-indeterminate 1.6s ease-in-out infinite",
+        "cropy-progress-fill": "cropy-progress-fill 3s cubic-bezier(0.4, 0, 0.2, 1) both",
       },
     },
   },

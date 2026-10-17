@@ -32,7 +32,7 @@ const twMerge = extendTailwindMerge({
       "min-h": [{ "min-h": ["cropy-button-mobile", "cropy-button-web", "cropy-control-md"] }],
       "max-w": [{ "max-w": ["app"] }],
       shadow: [{ shadow: ["card", "cta"] }],
-      animate: [{ animate: ["cropy-indeterminate"] }],
+      animate: [{ animate: ["cropy-progress-fill"] }],
     },
   },
 });

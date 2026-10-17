@@ -1,15 +1,20 @@
+import { useState } from "react";
+
 import { Button } from "@/components/Button";
 import { cardClassName } from "@/components/Card";
 import { cn } from "@/lib/cn";
+import { ANALYZING_MS } from "./analyzingHold";
 
 // 서버가 단계별 진행을 알려 주지 않아 단계는 이름만 보인다. 지금 단계를 표시하거나
-// 시간에 맞춰 넘기지 않는다 (Figma 개발 가이드: 실제 진행률이 없으면 임의 값을 넣지 않는다)
+// 시간에 맞춰 넘기지 않는다
 const MOBILE_STEPS = ["작물 인식", "병해 비교", "결과 정리"];
 const DESKTOP_STEPS = ["사진 확인", "작물·병해 비교", "결과 정리"];
 
 interface DiagnosisAnalyzingProps {
   /** 분석 중인 사진 (고른 사진의 미리보기 주소) */
   photo: string | null;
+  /** 진단을 시작한 때 (Date.now()). 막대는 이 때부터 ANALYZING_MS 동안 차오른다 */
+  startedAt?: number | null;
   /** 모바일은 본문 안의 "분석 취소"를 쓴다 (데스크탑은 화면 아래 행동 영역에 둔다) */
   onCancel: () => void;
   /** 취소를 눌러 화면을 떠나는 중 */
@@ -30,18 +35,25 @@ function Photo({ photo, className }: { photo: string | null; className: string }
 
 /**
  * 사진 분석 중 (모바일 M-02 · 데스크탑 D-02): 고른 사진을 그대로 보이며 분석을 기다린다.
- * 진행률을 모르므로 막대는 한 조각이 오가기만 하고(값 없는 progressbar), 동작 줄이기 설정에서는
- * 멈춘 채 문구만 남는다.
+ * 막대는 진단을 시작한 때부터 3초(ANALYZING_MS) 동안 0% 에서 100% 로 부드럽게 차오르고, 결과는
+ * 막대가 다 찬 뒤에 보인다 (analyzingHold). 실제 진행률이 아니라 시간에 맞춘 표시라 값은 읽히지
+ * 않는다(값 없는 progressbar). 동작 줄이기 설정에서는 차오르지 않고 바로 가득 찬다.
  * 모바일: 사진 280px(모서리 20px), 로딩 48px, 진행 막대 4px과 단계 13px, "분석 취소" 160×44px, 13px 안내.
  * 데스크탑: 사진 카드 520px(사진 320px 높이·모서리 12px)과 진행 카드(로딩 32px, 24/32px 제목,
  * 16/24px 본문, 단계 01~03)를 32px 간격으로 나란히 둔다.
  */
 export function DiagnosisAnalyzing({
   photo,
+  startedAt = null,
   onCancel,
   cancelling = false,
   desktop = false,
 }: DiagnosisAnalyzingProps) {
+  // 화면을 옮기는 사이 지난 시간만큼 앞당겨 시작해, 막대가 다 차는 때와 결과가 나오는 때를 맞춘다
+  const [elapsed] = useState(() =>
+    startedAt === null ? 0 : Math.min(Math.max(Date.now() - startedAt, 0), ANALYZING_MS),
+  );
+
   if (desktop) {
     return (
       <div className="flex items-center gap-8">
@@ -111,7 +123,10 @@ export function DiagnosisAnalyzing({
           aria-label="사진 분석 진행"
           className="relative h-1 overflow-hidden rounded-sm bg-cropy-border"
         >
-          <div className="absolute inset-y-0 left-0 w-2/5 rounded-sm bg-cropy-action-primary motion-safe:animate-cropy-indeterminate motion-reduce:hidden" />
+          <div
+            className="absolute inset-0 origin-left rounded-sm bg-cropy-action-primary animate-cropy-progress-fill"
+            style={{ animationDuration: `${ANALYZING_MS}ms`, animationDelay: `-${elapsed}ms` }}
+          />
         </div>
         <ol
           aria-label="분석 단계"

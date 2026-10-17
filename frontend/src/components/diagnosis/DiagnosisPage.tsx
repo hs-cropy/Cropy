@@ -159,6 +159,7 @@ export function DiagnosisPage() {
     cancelling,
     restoring,
     photo: preview,
+    analysisStartedAt: session.analysisStartedAt,
     exception,
     onSaved: session.updateResult,
     onCancel: handleCancel,

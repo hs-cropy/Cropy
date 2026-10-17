@@ -71,6 +71,8 @@ export interface DiagnosisScreenProps {
   restoring?: boolean;
   /** 고른 사진의 미리보기 주소 */
   photo: string | null;
+  /** 진단을 시작한 때 (Date.now()). 분석 중 막대가 이 때부터 차오른다 */
+  analysisStartedAt?: number | null;
   /** 실패·저신뢰·재촬영 같은 예외 화면. 있으면 제목·버튼 없이 이것만 그린다 */
   exception?: ReactNode;
   onSaved?: (result: DiagnoseResponse) => void;
@@ -111,6 +113,7 @@ export function useDiagnosisScreen({
   cancelling = false,
   restoring = false,
   photo,
+  analysisStartedAt = null,
   exception,
   onSaved,
   onCancel,
@@ -178,6 +181,7 @@ export function useDiagnosisScreen({
       view === "analyzing" ? (
         <DiagnosisAnalyzing
           photo={photo}
+          startedAt={analysisStartedAt}
           onCancel={onCancel}
           cancelling={cancelling}
           desktop={desktop}
