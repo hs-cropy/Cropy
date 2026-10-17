@@ -22,7 +22,7 @@ import { DiagnosisPageShell } from "./DiagnosisPageActions";
 export function DiagnoseForm() {
   const router = useRouter();
   const session = useDiagnosisSession();
-  const { file, preview, photoSource, loading } = session;
+  const { file, preview, photoSource, loading, refineTarget } = session;
 
   // 새 진단 뒤 초점을 받는 촬영 화면의 첫 컨트롤 (사진 업로드 영역, M-01-0 · D-01)
   const captureFocusRef = useRef<HTMLButtonElement>(null);
@@ -105,7 +105,16 @@ export function DiagnoseForm() {
     onCameraStart: primeSpeech,
     focusRef: captureFocusRef,
     resetKey: captureKey,
+    refine: refineTarget?.guidance,
   });
+
+  /** 추가 촬영 취소: 고른 사진을 비우고 재촬영 안내(진단 결과·이력 상세)로 돌아간다 */
+  const handleCancelRefine = () => {
+    setPhotoFeedback(null);
+    clearToast();
+    cancelSpeech();
+    session.cancelRefine();
+  };
 
   // 다른 화면에서 넘어오며 남긴 일: 새 진단이면 처음 컨트롤에, 분석 취소·사진 고르기면 제목에
   // 초점을 두고, 진단 시작 안내의 "사진 찍기"면 카메라를 켜고, "촬영 방법 보기"면 가이드를 연다
@@ -167,6 +176,17 @@ export function DiagnoseForm() {
             />
           )}
           {capture.body}
+          {/* 추가 촬영 중에는 그만두고 재촬영 안내로 돌아가는 길을 둔다 (진단 중·가이드에서는 감춘다) */}
+          {refineTarget && !loading && locationHash !== "#guide" && (
+            <button
+              type="button"
+              onClick={handleCancelRefine}
+              className="mt-4 inline-flex min-h-cropy-control-md items-center gap-1 text-cropy-helper font-bold text-cropy-text-secondary hover:text-cropy-action-hover lg:mt-6"
+            >
+              <span aria-hidden="true" className="icon-[lucide--chevron-left] h-4 w-4" />
+              추가 촬영 취소
+            </button>
+          )}
         </section>
 
         {/* 촬영 화면은 버튼 두 개짜리 행동 영역이 늘 있어 그 위에 띄운다 */}

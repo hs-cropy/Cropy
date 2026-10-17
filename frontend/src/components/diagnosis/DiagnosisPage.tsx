@@ -29,7 +29,7 @@ const LOW_CONFIDENCE_PROMPT =
  */
 export function DiagnosisPage() {
   const session = useDiagnosisSession();
-  const { result, error, loading, restoring, preview } = session;
+  const { result, error, loading, restoring, preview, refineTarget } = session;
 
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const deviceCameraInputRef = useRef<HTMLInputElement>(null);
@@ -54,12 +54,14 @@ export function DiagnosisPage() {
     if (loading) speak(PROMPT_DIAGNOSING);
   }, [loading, speak]);
 
-  // 결과 낭독
+  // 결과 낭독. 다시 분석은 분석 중에도 원래 결과를 두므로 분석이 끝난 뒤에만 읽는다
   useEffect(() => {
-    if (!result) return;
+    if (!result || loading) return;
     if (result.recapture) speak(buildRecapturePrompt(result.recapture));
     else if (isLowConfidence(result)) speak(LOW_CONFIDENCE_PROMPT);
     else speak(buildResultPrompt(result));
+    // 분석이 끝났다고 같은 결과를 다시 읽지 않는다 (다시 분석 실패 뒤 등)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result, speak]);
 
   /** 사진을 고르면 촬영 화면의 사진 확인으로 간다 */
@@ -111,7 +113,11 @@ export function DiagnosisPage() {
     session.navigate(CAPTURE_PATH, "guide");
   };
 
+  // 진단 실패. 추가 촬영(다시 분석)은 실패해도 원래 결과를 두므로 결과가 있어도 실패 안내를 먼저 보인다
+  const failed = Boolean(error) && (!result || Boolean(refineTarget));
+
   const exceptionVisible =
+    !failed &&
     result?.save_status === "saved" &&
     result.prediction_mode !== "browser" &&
     Boolean(result.recapture || isLowConfidence(result));
@@ -127,7 +133,7 @@ export function DiagnosisPage() {
           key={result.id}
           diagnosisId={result.id}
           guidance={result.recapture}
-          onRefined={session.updateResult}
+          origin={DIAGNOSIS_PATH}
         />
       ) : (
         <LowConfidencePanel
@@ -140,9 +146,9 @@ export function DiagnosisPage() {
         />
       )}
     </div>
-  ) : !result && error ? (
+  ) : failed && error ? (
     // 진단 실패: API 오류 코드에 맞는 Figma 지속형 안내 (사진 문제·서버에 닿지 못함·보내지 못함)
-    <div className="mx-auto w-full max-w-[30rem] pt-5 md:pt-8">
+    <div className="mx-auto flex w-full max-w-[30rem] flex-col gap-4 pt-5 md:pt-8">
       <CaseFeedback
         // 실패 화면에서 다시 고른 사진도 쓸 수 없으면 그 안내로 바꿔 보인다
         caseId={photoFeedback ?? error}
@@ -151,8 +157,27 @@ export function DiagnosisPage() {
           retry: session.submit,
           pickDifferent: () => galleryInputRef.current?.click(),
           checkPhoto: () => session.navigate(CAPTURE_PATH, "focus"),
+          openHistory: () => {
+            cancelSpeech();
+            session.reset();
+            session.navigate("/history");
+          },
         })}
       />
+      {/* 다시 분석이 실패하면 원래 결과(재촬영 안내)로 돌아가는 길을 둔다 */}
+      {refineTarget && (
+        <button
+          type="button"
+          onClick={() => {
+            cancelSpeech();
+            session.cancelRefine();
+          }}
+          className="inline-flex min-h-cropy-control-md items-center gap-1 self-start text-cropy-helper font-bold text-cropy-text-secondary hover:text-cropy-action-hover"
+        >
+          <span aria-hidden="true" className="icon-[lucide--chevron-left] h-4 w-4" />
+          추가 촬영 취소
+        </button>
+      )}
     </div>
   ) : null;
 
@@ -227,13 +252,21 @@ export function DiagnosisPage() {
 
 /**
  * 실패 안내의 버튼이 할 일. 사진 문제(형식·용량·열기)는 다른 사진을 고르고, 보내지 못했으면 다시 보내거나
- * 다른 사진을, 인터넷이 끊겼으면 다시 시도하거나 사진 확인(촬영 화면)으로 돌아간다
+ * 다른 사진을, 인터넷이 끊겼으면 다시 시도하거나 사진 확인(촬영 화면)으로 돌아간다.
+ * 다시 분석할 기록이 없어졌으면(추가 촬영) 이력으로 간다
  */
 function failureActions(
   caseId: FeedbackCaseId,
-  actions: { retry: () => void; pickDifferent: () => void; checkPhoto: () => void },
+  actions: {
+    retry: () => void;
+    pickDifferent: () => void;
+    checkPhoto: () => void;
+    openHistory: () => void;
+  },
 ) {
   switch (caseId) {
+    case "record-unavailable":
+      return { onPrimary: actions.openHistory };
     case "photo-upload":
       return { onPrimary: actions.retry, onSecondary: actions.pickDifferent };
     case "analysis-offline":

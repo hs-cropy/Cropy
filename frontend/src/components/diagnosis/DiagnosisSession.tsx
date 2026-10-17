@@ -14,8 +14,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { validateImage } from "@/features/camera";
 import type { FeedbackCaseId } from "@/features/feedback/cases";
 import { feedbackForRejectedImage, feedbackForRequestError } from "@/features/feedback/errors";
-import { diagnoseImage, fetchDiagnosisDetail } from "@/lib/api";
-import type { DiagnoseResponse } from "@/types/diagnosis";
+import { diagnoseImage, fetchDiagnosisDetail, refineDiagnosis } from "@/lib/api";
+import type { DiagnoseResponse, RecaptureGuidance } from "@/types/diagnosis";
 import type { PhotoSource } from "@/components/capture/CaptureScreen";
 import { waitAnalyzingHold } from "./analyzingHold";
 
@@ -32,6 +32,18 @@ export const DIAGNOSIS_PATH = "/diagnosis";
  */
 export type Arrival = "focus" | "camera" | "reset" | "guide";
 
+/**
+ * 추가 촬영: 후보 혼동 결과(재촬영 안내)에서 같은 진단에 사진을 한 장 더 보낸다. 촬영 화면에서 찍거나
+ * 고른 사진은 새 진단이 아니라 이 진단의 다시 분석(refine)으로 보낸다
+ */
+export interface RefineTarget {
+  /** 다시 분석할 진단의 id */
+  id: string;
+  guidance: RecaptureGuidance;
+  /** 추가 촬영을 취소하면 돌아갈 화면 (진단 결과 또는 이력 상세) */
+  origin: string;
+}
+
 interface DiagnosisSession {
   file: File | null;
   preview: string | null;
@@ -44,8 +56,17 @@ interface DiagnosisSession {
   restoring: boolean;
   /** 지금(또는 마지막) 진단을 시작한 때 (Date.now()). 분석 중 막대가 이 때부터 차오른다 */
   analysisStartedAt: number | null;
-  /** 사진을 고른다. 쓸 수 없는 사진이면 그 안내(photo-format·photo-size)를 돌려준다 */
-  selectFile: (file: File, source: PhotoSource) => FeedbackCaseId | null;
+  /** 추가 촬영 중이면 그 대상. 이때 진단하기는 이 진단의 다시 분석이 된다 */
+  refineTarget: RefineTarget | null;
+  /**
+   * 사진을 고른다. 쓸 수 없는 사진이면 그 안내(photo-format·photo-size)를 돌려준다.
+   * refine 을 주면 그 진단의 추가 촬영 사진으로 고른다 (쓸 수 있는 사진일 때만 추가 촬영을 시작한다)
+   */
+  selectFile: (file: File, source: PhotoSource, refine?: RefineTarget) => FeedbackCaseId | null;
+  /** 추가 촬영을 시작한다 (촬영 화면의 카메라로 찍기 전). 결과는 그대로 둔다 */
+  startRefine: (target: RefineTarget) => void;
+  /** 추가 촬영을 그만두고 고른 사진을 비운 뒤 떠나온 화면으로 돌아간다 */
+  cancelRefine: () => void;
   clearPhoto: () => void;
   /** 진단을 시작한다. 촬영 화면에서 시작하면 진단 결과 화면으로 옮긴다 */
   submit: () => void;
@@ -106,6 +127,13 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
   const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
   const [result, setResult] = useState<DiagnoseResponse | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [refineTarget, setRefineTargetState] = useState<RefineTarget | null>(null);
+  // 같은 클릭 안에서 추가 촬영을 시작하고 사진을 고를 수 있게 바로 읽히는 값을 함께 둔다
+  const refineRef = useRef<RefineTarget | null>(null);
+  const setRefineTarget = (target: RefineTarget | null) => {
+    refineRef.current = target;
+    setRefineTargetState(target);
+  };
 
   const requestRef = useRef<AbortController | null>(null);
   const restoreRef = useRef<AbortController | null>(null);
@@ -133,6 +161,13 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
   useEffect(() => {
     arrivalRef.current = null;
     if (pathname !== DIAGNOSIS_PATH) fromCaptureRef.current = false;
+    // 추가 촬영은 촬영 화면과 진단 결과 화면 사이에서만 이어진다. 다른 화면으로 가면 그만둔다
+    if (pathname !== CAPTURE_PATH && pathname !== DIAGNOSIS_PATH && refineRef.current) {
+      refineRef.current = null;
+      setRefineTargetState(null);
+      // 다시 분석의 실패 안내가 남아 일반 진단의 버튼으로 이어지지 않게 한다
+      setError(null);
+    }
   }, [pathname]);
 
   // 저장된 결과만 새로고침 뒤 다시 불러올 수 있다. 저장되지 않은 결과로 바뀌면 이전 id 를 지운다
@@ -167,20 +202,43 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
     setRestoring(false);
   };
 
-  const selectFile = (next: File, source: PhotoSource) => {
+  const selectFile = (next: File, source: PhotoSource, refine?: RefineTarget) => {
     if (loading) return null;
     const check = validateImage(next);
     if (!check.ok) return feedbackForRejectedImage(check.reason);
 
+    if (refine) setRefineTarget(refine);
     abortRestore();
     setFile(next);
     setPreview(URL.createObjectURL(next));
     setPhotoSource(source);
+    setError(null);
+    // 추가 촬영이면 다시 분석이 끝나기 전까지(실패·취소하면 돌아가 보도록) 결과를 둔다
+    if (refineRef.current) return null;
     // 이전 분석 결과 초기화. 새로고침 때 이전 결과를 되살리지 않게 저장한 id 도 지운다
     setResult(null);
-    setError(null);
     writeLastResultId(null);
     return null;
+  };
+
+  const startRefine = (target: RefineTarget) => {
+    if (loading) return;
+    setRefineTarget(target);
+    setFile(null);
+    setPreview(null);
+    setPhotoSource(null);
+    setError(null);
+  };
+
+  const cancelRefine = () => {
+    const target = refineRef.current;
+    if (loading || !target) return;
+    setRefineTarget(null);
+    setFile(null);
+    setPreview(null);
+    setPhotoSource(null);
+    setError(null);
+    navigate(target.origin, "focus");
   };
 
   const clearPhoto = () => {
@@ -202,19 +260,25 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
     setPhotoSource(null);
     setResult(null);
     setError(null);
+    setRefineTarget(null);
     writeLastResultId(null);
   };
 
   const submit = async () => {
     // 진행 중 중복 시작을 막는다. 사진이 없으면 버튼 자체가 보이지 않는다
-    if (loading || !file) return;
+    // 같은 순간 두 번 눌러 loading 이 아직 반영되지 않았어도 요청이 있으면 막는다
+    if (loading || !file || requestRef.current) return;
+    const refine = refineRef.current;
 
     setLoading(true);
     setError(null);
     // 다시 불러오던 이전 결과가 늦게 들어와 이번 결과·실패를 가리지 않게 한다
     abortRestore();
-    setResult(null);
-    writeLastResultId(null);
+    // 다시 분석은 실패하면 원래 결과(재촬영 안내)로 돌아갈 수 있게 결과를 둔다
+    if (!refine) {
+      setResult(null);
+      writeLastResultId(null);
+    }
     const controller = new AbortController();
     requestRef.current = controller;
     const startedAt = Date.now();
@@ -228,16 +292,24 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
 
     try {
       // 작물은 고르지 않고 자동 감지로 진단한다 (Figma 사진 확인 화면에 작물 선택이 없다)
-      const data = await diagnoseImage(file, undefined, { signal: controller.signal });
+      const data = refine
+        ? await refineDiagnosis(refine.id, file, { signal: controller.signal })
+        : await diagnoseImage(file, undefined, { signal: controller.signal });
       // 응답이 빨라도 분석 중 화면을 정해진 시간(3초, 막대가 다 찰 때까지)은 보인 뒤 넘긴다
       await waitAnalyzingHold(startedAt, controller.signal);
       if (controller.signal.aborted) return;
-      setResult(withPreviewMode(data));
+      if (refine) {
+        setRefineTarget(null);
+        setResult(data);
+      } else {
+        setResult(withPreviewMode(data));
+      }
     } catch (err) {
       if (controller.signal.aborted) return;
       await waitAnalyzingHold(startedAt, controller.signal);
       if (controller.signal.aborted) return;
-      setError(feedbackForRequestError(err, "diagnose"));
+      // 다시 분석이 실패해도 추가 촬영은 이어 간다 (다시 보내기·다른 사진이 다시 분석으로 간다)
+      setError(feedbackForRequestError(err, refine ? "refine" : "diagnose"));
     } finally {
       if (requestRef.current === controller) requestRef.current = null;
       if (!controller.signal.aborted) {
@@ -304,7 +376,10 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
         result,
         restoring,
         analysisStartedAt,
+        refineTarget,
         selectFile,
+        startRefine,
+        cancelRefine,
         clearPhoto,
         submit: () => void submit(),
         cancel,

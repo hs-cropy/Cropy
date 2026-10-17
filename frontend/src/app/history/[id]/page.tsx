@@ -28,7 +28,7 @@ export default function HistoryDetailPage() {
   const [refresh, setRefresh] = useState(0);
 
   // ======================================
-  // 저장 또는 재촬영 결과 갱신
+  // 저장 결과 갱신
   // ======================================
 
   const updateResult = (saved: DiagnoseResponse) => {
@@ -217,7 +217,7 @@ export default function HistoryDetailPage() {
                   key={result.id}
                   diagnosisId={result.id}
                   guidance={result.recapture}
-                  onRefined={updateResult}
+                  origin={`/history/${encodeURIComponent(result.id)}`}
                 />
               </>
             ) : (

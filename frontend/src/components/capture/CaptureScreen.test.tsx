@@ -431,6 +431,49 @@ describe("CaptureScreen — 데스크탑 사진 확인 (D-01-5 · D-01-6)", () =
   });
 });
 
+describe("CaptureScreen — 추가 촬영 (후보 혼동의 재촬영)", () => {
+  const refine = { region: "잎 뒷면", instruction: "같은 잎을 뒤집어 뒷면이 보이도록 찍어주세요." };
+
+  it("찍을 부위를 제목에, 안내를 설명에 두고 최근 진단·기기 진단 링크는 두지 않는다", async () => {
+    vi.mocked(fetchHistory).mockResolvedValue(
+      history([
+        {
+          id: "r1",
+          disease_name: "고추 탄저병",
+          crop_type: "고추",
+          confidence: 0.9,
+          created_at: "2026-10-13T00:00:00Z",
+        },
+      ]),
+    );
+    renderScreen({ refine });
+    await act(async () => {});
+
+    expect(title()).toBe("잎 뒷면 추가 촬영");
+    expect(screen.getByText(refine.instruction)).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /최근 진단/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /인터넷 없이/ })).toBeNull();
+  });
+
+  it("사진 확인은 다시 분석 문구다 (모바일·데스크탑)", async () => {
+    const { handlers, unmount } = renderScreen({
+      refine,
+      preview: "blob:photo",
+      photoSource: "gallery",
+    });
+
+    expect(title()).toBe("추가 사진 확인");
+    await userEvent.click(action("이 사진으로 다시 분석"));
+    expect(handlers.onSubmit).toHaveBeenCalled();
+    unmount();
+
+    stubDesktop();
+    renderScreen({ refine, preview: "blob:photo", photoSource: "gallery", loading: true });
+    expect(title()).toBe("이 사진으로 다시 분석할까요?");
+    expect(action("재분석 중…")).toBeTruthy();
+  });
+});
+
 describe("CaptureScreen — 최근 진단", () => {
   const record: DiagnosisSummary = {
     id: "r1",

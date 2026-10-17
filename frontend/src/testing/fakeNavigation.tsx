@@ -72,7 +72,13 @@ function useRouter() {
   return fakeRouter;
 }
 
-export const nextNavigation = { usePathname, useRouter };
+/** 앱의 동적 경로는 이력 상세(/history/[id]) 하나뿐이라 그 id 만 꺼낸다 */
+function useParams() {
+  const match = usePathname().match(/^\/history\/([^/]+)$/);
+  return match ? { id: decodeURIComponent(match[1]) } : {};
+}
+
+export const nextNavigation = { usePathname, useRouter, useParams };
 
 /** 지금 경로에 맞는 화면을 그린다 (앱의 app/ 폴더 대신) */
 export function FakeRoutes({ routes }: { routes: Record<string, ReactNode> }) {

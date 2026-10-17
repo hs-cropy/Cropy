@@ -179,6 +179,37 @@ const DESKTOP_COPY: Record<View, ScreenCopy> = {
   },
 };
 
+/**
+ * 추가 촬영(후보 혼동의 재촬영) 문구. 시안이 따로 없어 재촬영 안내(RecapturePanel)의 문구를 쓴다.
+ * 카메라 권한 안내·사용 불가·가이드는 기본 문구를 그대로 쓴다
+ */
+function refineCopy(view: View, refine: CaptureRefine, desktop: boolean): ScreenCopy | null {
+  if (view === "photo") {
+    return {
+      title: desktop ? "이 사진으로 다시 분석할까요?" : "추가 사진 확인",
+      description: desktop
+        ? "선택한 사진을 확인한 후 다시 분석할 수 있어요."
+        : "선택한 사진을 확인한 후\n다시 분석할 수 있어요.",
+      mascot: "photo-ready",
+    };
+  }
+  if (view === "upload" || view === "live" || view === "off") {
+    return {
+      title: `${refine.region} 추가 촬영`,
+      description: refine.instruction,
+      // 카메라 꺼짐은 기본 화면처럼 모바일은 마스코트 없이, 데스크탑은 꺼짐 마스코트를 둔다
+      mascot: view === "off" ? (desktop ? "camera-off" : undefined) : "retake",
+    };
+  }
+  return null;
+}
+
+/** 추가 촬영으로 찍을 부위와 안내 */
+export interface CaptureRefine {
+  region: string;
+  instruction: string;
+}
+
 interface PrimaryAction {
   label: string;
   onClick: () => void;
@@ -217,6 +248,8 @@ export interface CaptureScreenProps {
   focusRef?: Ref<HTMLButtonElement>;
   /** 바뀌면 카메라를 끄고 처음 화면으로 돌아간다 (내비의 "새 진단") */
   resetKey?: number;
+  /** 추가 촬영 중이면 찍을 부위. 문구가 바뀌고 진단하기가 "이 사진으로 다시 분석"이 된다 */
+  refine?: CaptureRefine | null;
 }
 
 /** 촬영 화면의 세 조각. 각각 AppShellPage 의 header·본문·actions 자리에 넣는다 */
@@ -266,6 +299,7 @@ export function useCaptureScreen({
   onCameraStart,
   focusRef,
   resetKey = 0,
+  refine = null,
 }: CaptureScreenProps): CaptureScreenHandle {
   // 서버 HTML·하이드레이션 때는 화면 폭을 모른다(null). 그동안은 모바일·데스크탑을 둘 다 그리고
   // CSS 로 하나만 보인다. 폭을 알면 맞는 쪽만 그린다 (아래 return)
@@ -509,7 +543,9 @@ export function useCaptureScreen({
   ): CaptureScreenParts => {
     const desktopUnsupported = desktop && unavailableError === "not-supported";
 
-    const copy: ScreenCopy = desktop ? DESKTOP_COPY[view] : MOBILE_COPY[view];
+    const copy: ScreenCopy =
+      (refine && refineCopy(view, refine, desktop)) ??
+      (desktop ? DESKTOP_COPY[view] : MOBILE_COPY[view]);
     // 폭을 모르는 동안 숨겨진 쪽의 마스코트는 받지 않는다 (display:none 인 lazy 이미지는 받지 않는다)
     const mascotLoading = lazyMascots ? "lazy" : undefined;
 
@@ -528,7 +564,13 @@ export function useCaptureScreen({
                 : { label: UNAVAILABLE[unavailableError].action, onClick: handleUnavailableAction }
               : view === "photo"
                 ? {
-                    label: loading ? "진단 중…" : "이 사진으로 진단하기",
+                    label: refine
+                      ? loading
+                        ? "재분석 중…"
+                        : "이 사진으로 다시 분석"
+                      : loading
+                        ? "진단 중…"
+                        : "이 사진으로 진단하기",
                     onClick: onSubmit,
                     loading,
                   }
@@ -543,7 +585,8 @@ export function useCaptureScreen({
 
     const showsCamera = view === "live" || view === "off";
     // 데스크탑은 촬영 안내를 오른쪽에 두고, 업로드·카메라 화면에서는 최근 진단을 아래에 둔다
-    const showsRecent = recent && (showsCamera || view === "upload");
+    // 추가 촬영 중에는 최근 진단·기기 진단 링크를 두지 않는다 (지금 진단에 사진을 더하는 중이다)
+    const showsRecent = !refine && recent && (showsCamera || view === "upload");
 
     const header = (
       <PageHeader
@@ -669,7 +712,7 @@ export function useCaptureScreen({
           {showsRecent && <RecentDiagnosisCard item={recent} desktop={desktop} />}
 
           {/* Figma 에는 없지만 기기 안에서 진단하는 페이지로 가는 유일한 길이라 남겨 둔다 */}
-          {(showsCamera || view === "upload") && (
+          {!refine && (showsCamera || view === "upload") && (
             <a
               href="/offline/index.html"
               className="inline-flex min-h-cropy-control-md items-center gap-1 self-start text-cropy-helper font-bold text-cropy-text-primary hover:text-cropy-action-hover"
