@@ -1,0 +1,423 @@
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setVoiceEnabled } from "@/features/voice/hooks/useVoiceSetting";
+import { installFakeSpeech } from "@/features/voice/testing/fakeSpeech";
+import HomePage from "@/app/page";
+import DiagnosisRoute from "@/app/diagnosis/page";
+import { FakeRoutes, fakeNavigation, fakeRouter } from "@/testing/fakeNavigation";
+import { diagnoseImage, fetchDiagnosisDetail } from "@/lib/api";
+import type { DiagnoseResponse } from "@/types/diagnosis";
+import { AppFrame } from "../AppFrame";
+import { gradeOf, resultTimeSentence } from "./DiagnosisResultView";
+
+vi.mock("next/navigation", async () => (await import("@/testing/fakeNavigation")).nextNavigation);
+vi.mock("next/link", async () => ({
+  default: (await import("@/testing/fakeNavigation")).FakeLink,
+}));
+vi.mock("@/lib/api", async (original) => ({
+  ...(await original<typeof import("@/lib/api")>()),
+  diagnoseImage: vi.fn(),
+  fetchDiagnosisDetail: vi.fn(),
+  fetchHistory: vi.fn(() =>
+    Promise.resolve({ items: [], total: 0, page: 1, size: 1, unfiltered_total: 0, crop_total: 0 }),
+  ),
+}));
+
+function response(overrides: Partial<DiagnoseResponse> = {}): DiagnoseResponse {
+  return {
+    id: "d1",
+    crop_type: "고추",
+    disease_name: "고추 탄저병",
+    severity: "medium",
+    confidence: 0.9,
+    top_predictions: [{ name: "고추 탄저병", confidence: 0.9 }],
+    management_actions: ["감염 부위 제거", "주변 포기 확인"],
+    causes: [],
+    pesticides: [],
+    prevention: [],
+    // 시간대와 상관없이 같은 시각으로 읽히게 지역 시각으로 둔다
+    created_at: "2026-10-06T14:18:00",
+    save_status: "saved",
+    ...overrides,
+  };
+}
+
+function pendingDiagnosis() {
+  let resolve!: (value: DiagnoseResponse) => void;
+  const promise = new Promise<DiagnoseResponse>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+const stopNavigation = (event: Event) => {
+  if ((event.target as Element).closest("a")) event.preventDefault();
+};
+
+// 앱의 app/ 폴더처럼 경로마다 화면을 바꿔 그린다
+function renderHome() {
+  return render(
+    <AppFrame>
+      <FakeRoutes
+        routes={{ "/": <HomePage />, "/diagnosis": <DiagnosisRoute />, "/history": <p>이력</p> }}
+      />
+    </AppFrame>,
+  );
+}
+
+function pickPhoto(container: HTMLElement) {
+  const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+  fireEvent.change(input, {
+    target: { files: [new File(["x"], "leaf.jpg", { type: "image/jpeg" })] },
+  });
+}
+
+function title() {
+  return screen.getByRole("heading", { level: 1 }).textContent;
+}
+
+function action(name: string) {
+  return within(screen.getByRole("group", { name: "화면 행동" })).getByRole("button", { name });
+}
+
+function bottomDiagnosis() {
+  return within(screen.getByRole("navigation", { name: "하단 메뉴" })).getByRole("link", {
+    name: "진단",
+  });
+}
+
+function stubDesktop() {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query === "(min-width: 1024px)",
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+}
+
+async function goTo(path: string) {
+  await act(async () => {
+    fakeRouter.push(path);
+  });
+}
+
+beforeEach(() => {
+  installFakeSpeech();
+  localStorage.clear();
+  setVoiceEnabled(false);
+  fakeNavigation.reset("/");
+  sessionStorage.clear();
+  vi.mocked(fetchDiagnosisDetail).mockReset();
+  vi.mocked(diagnoseImage).mockReset();
+  document.addEventListener("click", stopNavigation);
+  vi.stubGlobal("matchMedia", () => ({ matches: false }));
+  Element.prototype.scrollIntoView = vi.fn();
+  URL.createObjectURL = vi.fn(() => "blob:preview");
+  URL.revokeObjectURL = vi.fn();
+  window.location.hash = "capture";
+});
+
+afterEach(() => {
+  document.removeEventListener("click", stopNavigation);
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe("진단 시작 안내 (M-03-1 · D-03-1)", () => {
+  it("결과 없이 진단 결과 화면에 오면 안내와 사진 찍기·갤러리 버튼을 보이고, 하단 내비는 진단이다", async () => {
+    renderHome();
+    await goTo("/diagnosis");
+
+    expect(title()).toBe("진단 시작");
+    expect(screen.getByRole("heading", { name: /사진으로 작물 상태를/ })).toBeTruthy();
+    // 가이드는 촬영 화면에 있어 그 주소를 둔다 (새 탭으로 열어도 가이드가 나온다)
+    expect(screen.getByRole("link", { name: "촬영 방법 보기" }).getAttribute("href")).toBe(
+      "/#guide",
+    );
+    expect(action("사진 찍기")).toBeTruthy();
+    expect(action("갤러리에서 선택")).toBeTruthy();
+    expect(bottomDiagnosis().getAttribute("aria-current")).toBe("page");
+  });
+
+  it("데스크탑은 카드 안내와 사진 선택하기·카메라로 촬영 버튼이다", async () => {
+    stubDesktop();
+    renderHome();
+    await goTo("/diagnosis");
+
+    expect(screen.getByRole("heading", { name: "먼저 작물 사진을 준비해주세요" })).toBeTruthy();
+    expect(action("사진 선택하기")).toBeTruthy();
+    expect(action("카메라로 촬영")).toBeTruthy();
+  });
+
+  it("갤러리에서 사진을 고르면 촬영 화면의 사진 확인으로 간다", async () => {
+    const { container } = renderHome();
+    await goTo("/diagnosis");
+
+    pickPhoto(container);
+
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
+  });
+
+  it("촬영 방법 보기는 촬영 화면으로 옮겨 가이드를 열고, 가이드의 사진 찍기는 촬영 화면에 남는다", async () => {
+    const back = vi.spyOn(window.history, "back");
+    const { container } = renderHome();
+    await goTo("/diagnosis");
+
+    await userEvent.click(screen.getByRole("link", { name: "촬영 방법 보기" }));
+
+    await waitFor(() => expect(title()).toBe("촬영 방법"));
+    expect(fakeNavigation.pathname).toBe("/");
+    expect(window.location.hash).toBe("#guide");
+
+    // 브라우저 카메라가 없으면 가이드를 닫고 기기 카메라를 연다. 뒤로 가기로 진단 결과 화면에 가지 않는다
+    const deviceCamera = container.querySelectorAll<HTMLInputElement>('input[type="file"]')[1];
+    const click = vi.spyOn(deviceCamera, "click");
+    await userEvent.click(action("사진 찍기"));
+
+    expect(click).toHaveBeenCalled();
+    expect(back).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe("#capture");
+    expect(fakeNavigation.pathname).toBe("/");
+  });
+
+  it("Ctrl 을 누르고 연 촬영 방법 보기(새 탭)는 이 화면을 옮기지 않는다", async () => {
+    renderHome();
+    await goTo("/diagnosis");
+
+    fireEvent.click(screen.getByRole("link", { name: "촬영 방법 보기" }), { ctrlKey: true });
+
+    expect(fakeNavigation.pathname).toBe("/diagnosis");
+  });
+
+  it("브라우저 카메라가 없으면 사진 찍기는 기기 카메라(파일 선택)를 연다", async () => {
+    const { container } = renderHome();
+    await goTo("/diagnosis");
+    const deviceCamera = container.querySelectorAll<HTMLInputElement>('input[type="file"]')[1];
+    const click = vi.spyOn(deviceCamera, "click");
+
+    await userEvent.click(action("사진 찍기"));
+
+    expect(click).toHaveBeenCalled();
+  });
+});
+
+describe("사진 분석 중 (M-02 · D-02)", () => {
+  it("진단을 시작하면 진단 결과 화면(/diagnosis)에서 고른 사진·진행 표시·분석 취소를 보인다 (임의 진행률 없음)", async () => {
+    vi.mocked(diagnoseImage).mockReturnValue(pendingDiagnosis().promise);
+    const { container } = renderHome();
+    pickPhoto(container);
+
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+
+    await waitFor(() => expect(title()).toBe("사진 분석 중"));
+    expect(fakeNavigation.pathname).toBe("/diagnosis");
+    // 눌렀던 버튼은 촬영 화면과 함께 사라졌으니 바뀐 화면의 제목으로 초점을 옮긴다
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1 })),
+    );
+    expect(screen.getByAltText("분석 중인 사진").getAttribute("src")).toBe("blob:preview");
+    const progress = screen.getByRole("progressbar", { name: "사진 분석 진행" });
+    expect(progress.hasAttribute("aria-valuenow")).toBe(false);
+    expect(screen.getByRole("button", { name: "분석 취소" })).toBeTruthy();
+    // 모바일은 화면 아래 고정 버튼이 없다
+    expect(screen.queryByRole("group", { name: "화면 행동" })).toBeNull();
+    expect(bottomDiagnosis().getAttribute("aria-current")).toBe("page");
+  });
+
+  it("분석 취소는 요청을 끊고 사진 그대로 사진 확인으로 돌아가며, 늦게 온 응답은 버린다", async () => {
+    const pending = pendingDiagnosis();
+    vi.mocked(diagnoseImage).mockReturnValue(pending.promise);
+    const back = vi.spyOn(fakeRouter, "back");
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await waitFor(() => expect(title()).toBe("사진 분석 중"));
+
+    await userEvent.click(screen.getByRole("button", { name: "분석 취소" }));
+
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(diagnoseImage).mock.calls[0][2]?.signal?.aborted).toBe(true);
+    // 뒤로 가기로 진단 결과 화면 기록을 지우고 사진 확인으로 돌아간다
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
+    // 사진 확인의 제목으로 초점을 옮긴다 (사라진 취소 버튼에 남지 않는다)
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toBe(
+        screen.getByRole("heading", { level: 1 }).textContent,
+      ),
+    );
+    expect(document.activeElement?.tagName).toBe("H1");
+    expect(
+      (screen.getByRole("button", { name: "이 사진으로 진단하기" }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+
+    await act(async () => {
+      pending.resolve(response());
+    });
+    expect(fakeNavigation.pathname).toBe("/");
+    expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
+  });
+
+  it("데스크탑은 사진 카드·단계 카드와 화면 아래의 분석 취소다", async () => {
+    stubDesktop();
+    vi.mocked(diagnoseImage).mockReturnValue(pendingDiagnosis().promise);
+    const { container } = renderHome();
+    pickPhoto(container);
+
+    await userEvent.click(action("이 사진으로 진단하기"));
+
+    await waitFor(() => expect(title()).toBe("사진을 분석하고 있어요"));
+    expect(screen.getByRole("heading", { name: "조금만 기다려주세요" })).toBeTruthy();
+    expect(
+      within(screen.getByRole("list", { name: "분석 단계" })).getAllByRole("listitem"),
+    ).toHaveLength(3);
+    expect(action("분석 취소")).toBeTruthy();
+  });
+});
+
+describe("진단 결과 (M-03 · D-03)", () => {
+  it("요약·등급·신뢰도·할 일 개수·상세 정보를 같은 응답으로 보이고, 새 사진으로 진단하기는 처음으로 돌린다", async () => {
+    vi.mocked(diagnoseImage).mockResolvedValue(response());
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+
+    await screen.findByRole("heading", { name: "고추 탄저병" });
+    expect(title()).toBe("진단 결과");
+    const summary = screen.getByRole("region", { name: "진단 요약" });
+    expect(
+      within(summary).getByText("위험 등급", { exact: false }).parentElement?.textContent,
+    ).toBe("위험 등급 주의");
+    expect(within(summary).getByText("신뢰도 90%")).toBeTruthy();
+    expect(screen.getByText("2가지")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "상세 정보" })).toBeTruthy();
+    // Figma 에 없는 신뢰도 막대·다른 후보는 보이지 않는다
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByText("그 밖의 가능성")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "새 사진으로 진단하기" }));
+
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
+  });
+
+  it("데스크탑은 진단 시각 문장·사진 정보 카드·화면 아래의 새 진단이고, 없는 값은 확인 불가다", async () => {
+    stubDesktop();
+    vi.mocked(diagnoseImage).mockResolvedValue(
+      response({ crop_type: undefined, severity: undefined }),
+    );
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(action("이 사진으로 진단하기"));
+
+    await screen.findByRole("heading", { name: "고추 탄저병" });
+    expect(screen.getByText("2026년 10월 6일 오후 2:18에 확인한 결과예요.")).toBeTruthy();
+    const meta = screen.getByRole("region", { name: "진단에 사용한 사진과 정보" });
+    expect(within(meta).getByText("2026.10.06 · 14:18")).toBeTruthy();
+    expect(within(meta).getAllByText("확인 불가")).toHaveLength(2);
+    expect(within(meta).getByText("90%")).toBeTruthy();
+    expect(action("새 진단")).toBeTruthy();
+  });
+});
+
+describe("진단 결과 화면 새로고침", () => {
+  it("저장된 마지막 결과를 다시 불러와 보인다", async () => {
+    vi.mocked(diagnoseImage).mockResolvedValue(response());
+    const { container, unmount } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await screen.findByRole("heading", { name: "고추 탄저병" });
+    expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBe("d1");
+
+    // 새로고침: 앱이 처음부터 다시 그려지고 메모리의 결과는 사라진다
+    unmount();
+    vi.mocked(fetchDiagnosisDetail).mockResolvedValue(
+      response({ disease_name: "다시 불러온 병", image_url: "/media/d1.jpg" }),
+    );
+    fakeNavigation.reset("/diagnosis");
+    renderHome();
+
+    expect(screen.getByText("마지막 진단 결과를 불러오고 있어요")).toBeTruthy();
+    await screen.findByRole("heading", { name: "다시 불러온 병" });
+    expect(vi.mocked(fetchDiagnosisDetail).mock.calls[0][0]).toBe("d1");
+    expect(screen.getByAltText("진단한 작물").getAttribute("src")).toBe("/media/d1.jpg");
+  });
+
+  it("불러오지 못하면 진단 시작 안내를 보이고 저장한 id 를 지운다", async () => {
+    sessionStorage.setItem("cropy:lastDiagnosisId", "gone");
+    vi.mocked(fetchDiagnosisDetail).mockRejectedValue(new Error("없음"));
+    fakeNavigation.reset("/diagnosis");
+    renderHome();
+
+    await waitFor(() => expect(title()).toBe("진단 시작"));
+    expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBeNull();
+  });
+
+  it("저장한 결과가 없으면 불러오지 않고 진단 시작 안내다", async () => {
+    fakeNavigation.reset("/diagnosis");
+    renderHome();
+
+    expect(title()).toBe("진단 시작");
+    expect(fetchDiagnosisDetail).not.toHaveBeenCalled();
+  });
+});
+
+describe("진단 결과 화면 — 화면을 오갈 때", () => {
+  it("이력에 다녀온 뒤 분석 취소는 뒤로 가지 않고 촬영 화면으로 간다", async () => {
+    vi.mocked(diagnoseImage).mockReturnValue(pendingDiagnosis().promise);
+    const back = vi.spyOn(fakeRouter, "back");
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await waitFor(() => expect(title()).toBe("사진 분석 중"));
+    await goTo("/history");
+    await goTo("/diagnosis");
+
+    await userEvent.click(screen.getByRole("button", { name: "분석 취소" }));
+
+    expect(back).not.toHaveBeenCalled();
+    expect(fakeNavigation.pathname).toBe("/");
+    expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
+  });
+
+  it("새 사진을 고른 뒤에는 이전 결과를 되살리지 않고, 새 진단이 실패하면 실패 화면이다", async () => {
+    vi.mocked(diagnoseImage).mockResolvedValueOnce(response());
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await screen.findByRole("heading", { name: "고추 탄저병" });
+    await goTo("/");
+
+    pickPhoto(container);
+    expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBeNull();
+    await goTo("/diagnosis");
+    expect(fetchDiagnosisDetail).not.toHaveBeenCalled();
+    expect(title()).toBe("진단 시작");
+
+    await goTo("/");
+    vi.mocked(diagnoseImage).mockRejectedValueOnce(new Error("서버 오류"));
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+
+    await screen.findByText("서버 오류");
+    expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
+  });
+});
+
+describe("결과 표시 도우미", () => {
+  it("진단 시각을 문장으로 만든다 (자정·정오 포함)", () => {
+    expect(resultTimeSentence("2026-10-06T00:05:00")).toBe(
+      "2026년 10월 6일 오전 12:05에 확인한 결과예요.",
+    );
+    expect(resultTimeSentence("2026-10-06T12:30:00")).toBe(
+      "2026년 10월 6일 오후 12:30에 확인한 결과예요.",
+    );
+    expect(resultTimeSentence("날짜 아님")).toBeNull();
+  });
+
+  it("정상 판정은 정상, 등급이 없으면 null 이다", () => {
+    expect(gradeOf(response({ category: "normal" }))?.label).toBe("정상");
+    expect(gradeOf(response({ severity: "high" }))?.label).toBe("위험");
+    expect(gradeOf(response({ severity: undefined }))).toBeNull();
+  });
+});

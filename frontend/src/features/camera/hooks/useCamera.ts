@@ -7,6 +7,11 @@ import type { CameraErrorCode, CameraStatus, FacingMode } from "@/types/camera";
 interface UseCameraOptions {
   /** 기본 "environment"(후면). iOS에서 exact는 실패가 잦아 ideal로 요청한다 */
   facingMode?: FacingMode;
+  /**
+   * 마운트하자마자 카메라를 켤지. 기본 true(풀스크린 오버레이).
+   * false 면 쓰는 쪽이 사용자 동작(클릭) 안에서 start()를 부른다 — iOS 는 그래야 권한을 묻는다
+   */
+  autoStart?: boolean;
 }
 
 function errorName(err: unknown) {
@@ -38,7 +43,7 @@ async function openStream(facingMode: FacingMode) {
   }
 }
 
-export function useCamera({ facingMode = "environment" }: UseCameraOptions = {}) {
+export function useCamera({ facingMode = "environment", autoStart = true }: UseCameraOptions = {}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   // start/stop이 겹칠 때 늦게 도착한 스트림을 버리기 위한 요청 번호
@@ -147,9 +152,14 @@ export function useCamera({ facingMode = "environment" }: UseCameraOptions = {})
     setStatus("idle");
   }, [releaseStream, setStatus]);
 
+  // 첫 마운트 때만 본다. 켜는 시점을 바꾸려고 다시 마운트할 일은 없다
+  const autoStartRef = useRef(autoStart);
+
   useEffect(() => {
-    if (document.hidden) resumeOnVisibleRef.current = true;
-    else start();
+    if (autoStartRef.current) {
+      if (document.hidden) resumeOnVisibleRef.current = true;
+      else start();
+    }
 
     // 백그라운드로 가면 카메라(LED·배터리)를 끄고, 켜져 있었다면 돌아올 때 다시 연다
     const handleVisibilityChange = () => {

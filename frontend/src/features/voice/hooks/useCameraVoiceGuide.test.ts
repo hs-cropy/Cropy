@@ -67,4 +67,20 @@ describe("useCameraVoiceGuide", () => {
 
     expect(synth.speak).toHaveBeenCalledTimes(2);
   });
+
+  it("resetKey 가 바뀌면 다음에 영상이 나올 때 다시 읽는다 (화면 안 카메라의 새 진단)", () => {
+    const { rerender } = renderHook(
+      (props: { streaming: boolean; resetKey: number }) =>
+        useCameraVoiceGuide(props.streaming, undefined, props.resetKey),
+      { initialProps: { streaming: true, resetKey: 0 } },
+    );
+    rerender({ streaming: false, resetKey: 0 });
+    rerender({ streaming: true, resetKey: 0 });
+    expect(spokenTexts(synth)).toHaveLength(1);
+
+    rerender({ streaming: false, resetKey: 1 });
+    rerender({ streaming: true, resetKey: 1 });
+
+    expect(spokenTexts(synth)).toHaveLength(2);
+  });
 });

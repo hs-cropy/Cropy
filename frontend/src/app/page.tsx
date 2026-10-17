@@ -1,12 +1,7 @@
-import { DiagnosisPageShell } from "@/components/DiagnosisPageActions";
 import { DiagnoseForm } from "@/components/DiagnoseForm";
 
+// 화면 틀(DiagnosisPageShell)은 DiagnoseForm 이 그린다. 촬영 화면의 제목·버튼을
+// 틀의 고정 영역에 서버 렌더 때부터 넣어야 하기 때문이다
 export default function HomePage() {
-  return (
-    <DiagnosisPageShell scrollLabel="진단하기">
-      <div className="mx-auto w-full max-w-[27.5rem] pt-5 md:max-w-[44rem] md:pt-8 lg:max-w-[60rem]">
-        <DiagnoseForm />
-      </div>
-    </DiagnosisPageShell>
-  );
+  return <DiagnoseForm />;
 }
