@@ -378,6 +378,50 @@ describe("진단 결과 (M-03 · D-03)", () => {
     expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
   });
 
+  it("저신뢰 결과의 다시 촬영하기는 촬영 화면으로 옮겨 카메라를 켠다", async () => {
+    const getUserMedia = vi.fn(() => new Promise<MediaStream>(() => {}));
+    vi.stubGlobal("isSecureContext", true);
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia },
+    });
+    try {
+      vi.mocked(diagnoseImage).mockResolvedValue(
+        response({ confidence: 0.42, decision_reasons: ["low_confidence"] }),
+      );
+      const { container } = renderHome();
+      pickPhoto(container);
+      await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+      await screen.findByRole("heading", { name: "추가 확인이 필요해요" });
+      expect(getUserMedia).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByRole("button", { name: "다시 촬영하기" }));
+
+      await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+      await waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(1));
+      expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
+    } finally {
+      Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: undefined });
+    }
+  });
+
+  it("브라우저 카메라가 없으면 저신뢰 결과의 다시 촬영하기는 기기 카메라(파일 선택)를 연다", async () => {
+    vi.mocked(diagnoseImage).mockResolvedValue(
+      response({ confidence: 0.42, decision_reasons: ["low_confidence"] }),
+    );
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await screen.findByRole("heading", { name: "추가 확인이 필요해요" });
+    const deviceCamera = container.querySelectorAll<HTMLInputElement>('input[type="file"]')[1];
+    const click = vi.spyOn(deviceCamera, "click");
+
+    await userEvent.click(screen.getByRole("button", { name: "다시 촬영하기" }));
+
+    expect(click).toHaveBeenCalled();
+    expect(fakeNavigation.pathname).toBe("/diagnosis");
+  });
+
   it("데스크탑은 진단 시각 문장·사진 정보 카드·화면 아래의 새 진단이고, 없는 값은 확인 불가다", async () => {
     stubDesktop();
     vi.mocked(diagnoseImage).mockResolvedValue(

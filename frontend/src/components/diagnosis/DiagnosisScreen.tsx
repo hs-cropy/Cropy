@@ -93,11 +93,6 @@ export interface DiagnosisScreenParts {
 }
 
 export interface DiagnosisScreenHandle extends DiagnosisScreenParts {
-  /**
-   * 화면 아래 행동 영역에 버튼이 있는지 (토스트를 그 위에 띄운다). 예외 화면의 패널은 버튼을
-   * 행동 영역으로 보낸다
-   */
-  hasActions: boolean;
   /** 화면 제목으로 초점을 옮긴다 (촬영 화면에서 넘어왔을 때) */
   focusTitle: () => void;
 }
@@ -135,10 +130,6 @@ export function useDiagnosisScreen({
           : restoring
             ? "restoring"
             : "empty";
-  // 모바일의 분석 중·결과는 버튼을 본문 안에 둔다
-  const hasActions =
-    view === "exception" || view === "empty" || (desktopMatch === true && view !== "restoring");
-
   // 누른 버튼이 화면 전환으로 사라지면(이 사진으로 진단하기 → 분석 중 → 결과) 초점이 body 로
   // 빠진다. 그때는 새 화면의 제목으로 옮겨 바뀐 화면을 읽게 한다
   const previousViewRef = useRef(view);
@@ -264,9 +255,8 @@ export function useDiagnosisScreen({
   if (desktopMatch === null) {
     const mobile = renderParts(false, { actionsClassName: "lg:hidden", lazyMascot: true });
     const wide = renderParts(true, { actionsClassName: "hidden lg:flex", lazyMascot: true });
-    if (view === "exception") return { ...mobile, hasActions, focusTitle };
+    if (view === "exception") return { ...mobile, focusTitle };
     return {
-      hasActions,
       focusTitle,
       header: (
         <>
@@ -289,5 +279,5 @@ export function useDiagnosisScreen({
     };
   }
 
-  return { ...renderParts(desktopMatch), hasActions, focusTitle };
+  return { ...renderParts(desktopMatch), focusTitle };
 }

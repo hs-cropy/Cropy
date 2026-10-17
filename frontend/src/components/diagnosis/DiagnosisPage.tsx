@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { CameraCapture, isCameraSupported } from "@/features/camera";
+import { isCameraSupported } from "@/features/camera";
 import { CaseFeedback } from "@/features/feedback/CaseFeedback";
-import { FEEDBACK, type FeedbackCaseId } from "@/features/feedback/cases";
+import type { FeedbackCaseId } from "@/features/feedback/cases";
 import {
   PROMPT_DIAGNOSING,
   buildRecapturePrompt,
@@ -16,7 +16,6 @@ import { CropMismatchNotice } from "@/components/CropMismatchNotice";
 import { DiagnosisPageShell } from "@/components/DiagnosisPageActions";
 import { LowConfidencePanel } from "@/components/LowConfidencePanel";
 import { RecapturePanel } from "@/components/RecapturePanel";
-import { Toast, useToast } from "@/components/Toast";
 import { CAPTURE_PATH, DIAGNOSIS_PATH, useDiagnosisSession } from "./DiagnosisSession";
 import { useDiagnosisScreen } from "./DiagnosisScreen";
 
@@ -34,7 +33,6 @@ export function DiagnosisPage() {
 
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const deviceCameraInputRef = useRef<HTMLInputElement>(null);
-  const [cameraOpen, setCameraOpen] = useState(false);
   // "분석 취소"로 촬영 화면에 돌아가는 사이 빈 안내가 잠깐 보이지 않게 한다 (이 화면은 곧 사라진다)
   const [cancelling, setCancelling] = useState(false);
   // 진단 시작 안내에서 고른 사진을 쓸 수 없을 때의 안내 (Figma inline/photo-format·photo-size)
@@ -42,7 +40,6 @@ export function DiagnosisPage() {
   // 진단이 다시 시작되거나 끝나면 이전 사진 안내를 걷는다
   useEffect(() => setPhotoFeedback(null), [error]);
 
-  const { toast, showToast, clearToast } = useToast();
   const { speak, prime: primeSpeech, cancel: cancelSpeech } = useVoiceGuide();
 
   // 새로고침했다면 마지막 결과를 다시 불러온다
@@ -69,14 +66,11 @@ export function DiagnosisPage() {
   const pick = (file: File, source: PhotoSource) => {
     const rejected = session.selectFile(file, source);
     if (rejected) {
-      // 저신뢰 다시 촬영의 카메라 위에서는 안내 카드가 가려지니 토스트로 알린다
-      if (cameraOpen) showToast(FEEDBACK[rejected].title);
-      else setPhotoFeedback(rejected);
-      return false;
+      setPhotoFeedback(rejected);
+      return;
     }
     setPhotoFeedback(null);
     session.navigate(CAPTURE_PATH, "focus");
-    return true;
   };
 
   const handleFileChange = (source: PhotoSource) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,7 +94,7 @@ export function DiagnosisPage() {
     session.navigate(CAPTURE_PATH, "reset");
   };
 
-  /** 진단 시작 안내의 "사진 찍기"·"카메라로 촬영": 촬영 화면에서 카메라를 켠다 */
+  /** 진단 시작 안내의 "사진 찍기"·"카메라로 촬영", 저신뢰 결과의 "다시 촬영하기": 촬영 화면에서 카메라를 켠다 */
   const handleShoot = () => {
     if (!isCameraSupported()) {
       // 브라우저 카메라를 못 쓰면 기기 카메라(파일 선택)를 이 클릭 안에서 바로 연다
@@ -141,12 +135,7 @@ export function DiagnosisPage() {
           onRetake={() => {
             cancelSpeech();
             session.reset();
-            if (isCameraSupported()) {
-              primeSpeech();
-              setCameraOpen(true);
-            } else {
-              deviceCameraInputRef.current?.click();
-            }
+            handleShoot();
           }}
         />
       )}
@@ -220,30 +209,6 @@ export function DiagnosisPage() {
           aria-label="기기 카메라 촬영"
         />
 
-        {/* 풀스크린 카메라 (저신뢰 결과의 다시 촬영) */}
-        {cameraOpen && (
-          <CameraCapture
-            onCapture={(captured) => {
-              // 검증에 실패하면 카메라를 그대로 두어 다시 찍게 한다
-              if (pick(captured, "camera")) {
-                clearToast();
-                setCameraOpen(false);
-              }
-            }}
-            onClose={() => {
-              clearToast();
-              setCameraOpen(false);
-            }}
-            onCaptureError={showToast}
-            notice={toast}
-            onGallery={() => {
-              clearToast();
-              setCameraOpen(false);
-              galleryInputRef.current?.click();
-            }}
-          />
-        )}
-
         {/* 진단 시작 안내에서 고른 사진을 쓸 수 없을 때. 분석 중·결과 화면에서는 걷는다 */}
         {photoFeedback && !loading && !result && !error && (
           <CaseFeedback
@@ -255,11 +220,6 @@ export function DiagnosisPage() {
         )}
 
         {screen.body}
-
-        <Toast
-          toast={cameraOpen ? null : toast}
-          placement={screen.hasActions ? "aboveActions" : "bottom"}
-        />
       </div>
     </DiagnosisPageShell>
   );
