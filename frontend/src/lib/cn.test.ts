@@ -36,18 +36,22 @@ describe("cn — tailwind.config.js의 직접 추가한 키", () => {
     ["min-h", Object.keys(extend.minHeight), "min-h-0"],
     ["max-w", Object.keys(extend.maxWidth), "max-w-md"],
     ["shadow", Object.keys(extend.boxShadow), "shadow-md"],
+    ["animate", Object.keys(extend.animation), "animate-spin"],
   ] as const;
 
   it("위 목록에 없는 종류의 키가 설정에 생기면 cn.ts 등록과 이 테스트를 함께 고친다", () => {
     // colors: tailwind-merge가 색 이름은 무엇이든 받아 등록이 필요 없다
     // fontFamily: 기본 키(sans)만 재정의한다
+    // keyframes: 클래스가 아니라 animation 이 이름으로 부른다
     expect(Object.keys(extend).sort()).toEqual([
+      "animation",
       "borderRadius",
       "boxShadow",
       "colors",
       "fontFamily",
       "fontSize",
       "height",
+      "keyframes",
       "maxWidth",
       "minHeight",
     ]);

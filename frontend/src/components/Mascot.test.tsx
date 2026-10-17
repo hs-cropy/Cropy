@@ -103,12 +103,13 @@ describe("Mascot — 이름과 파일", () => {
   });
 });
 
-// Figma 가이드의 크기: 화면 96px, 데스크탑 피드백 80px, 모바일 피드백 64px, 토스트 50px.
-// rem 이라 큰글씨 모드에서 글자와 함께 커진다
+// Figma 가이드의 크기: 화면 96px, 데스크탑 피드백 80px, 카메라 꺼짐 72px, 모바일 피드백 64px,
+// 토스트 50px. rem 이라 큰글씨 모드에서 글자와 함께 커진다
 describe("Mascot — 디자인 사양", () => {
   it.each([
     [50, "size-[3.125rem]"],
     [64, "size-16"],
+    [72, "size-[4.5rem]"],
     [80, "size-20"],
     [96, "size-24"],
   ] as const)("size=%i 는 %s 다", (size, expected) => {

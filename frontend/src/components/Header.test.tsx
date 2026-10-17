@@ -114,6 +114,13 @@ describe("Header", () => {
     expect(icon?.classList.contains("icon-camera")).toBe(true);
   });
 
+  it("headerIcon 이 있으면 헤더에서는 그 아이콘을 쓴다 (20px 용 굵은 선)", () => {
+    render(<Header items={[{ ...ITEMS[0], headerIcon: "icon-camera-20" }]} current="capture" />);
+    const icon = within(nav()).getByRole("link", { name: "새 진단" }).querySelector("span");
+    expect(icon?.classList.contains("icon-camera-20")).toBe(true);
+    expect(icon?.classList.contains("icon-camera")).toBe(false);
+  });
+
   it("오른쪽 자리에 넘겨받은 것을 그대로 그린다", () => {
     render(
       <Header
