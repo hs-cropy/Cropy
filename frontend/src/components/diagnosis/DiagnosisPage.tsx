@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import { CameraCapture, isCameraSupported } from "@/features/camera";
+import { CaseFeedback } from "@/features/feedback/CaseFeedback";
+import { FEEDBACK, type FeedbackCaseId } from "@/features/feedback/cases";
 import {
   PROMPT_DIAGNOSING,
   buildRecapturePrompt,
@@ -11,7 +13,6 @@ import {
 } from "@/features/voice";
 import type { PhotoSource } from "@/components/capture/CaptureScreen";
 import { CropMismatchNotice } from "@/components/CropMismatchNotice";
-import { DiagnosisFailurePanel } from "@/components/DiagnosisFailurePanel";
 import { DiagnosisPageShell } from "@/components/DiagnosisPageActions";
 import { LowConfidencePanel } from "@/components/LowConfidencePanel";
 import { RecapturePanel } from "@/components/RecapturePanel";
@@ -36,6 +37,10 @@ export function DiagnosisPage() {
   const [cameraOpen, setCameraOpen] = useState(false);
   // "분석 취소"로 촬영 화면에 돌아가는 사이 빈 안내가 잠깐 보이지 않게 한다 (이 화면은 곧 사라진다)
   const [cancelling, setCancelling] = useState(false);
+  // 진단 시작 안내에서 고른 사진을 쓸 수 없을 때의 안내 (Figma inline/photo-format·photo-size)
+  const [photoFeedback, setPhotoFeedback] = useState<FeedbackCaseId | null>(null);
+  // 진단이 다시 시작되거나 끝나면 이전 사진 안내를 걷는다
+  useEffect(() => setPhotoFeedback(null), [error]);
 
   const { toast, showToast, clearToast } = useToast();
   const { speak, prime: primeSpeech, cancel: cancelSpeech } = useVoiceGuide();
@@ -62,11 +67,14 @@ export function DiagnosisPage() {
 
   /** 사진을 고르면 촬영 화면의 사진 확인으로 간다 */
   const pick = (file: File, source: PhotoSource) => {
-    const message = session.selectFile(file, source);
-    if (message) {
-      showToast(message);
+    const rejected = session.selectFile(file, source);
+    if (rejected) {
+      // 저신뢰 다시 촬영의 카메라 위에서는 안내 카드가 가려지니 토스트로 알린다
+      if (cameraOpen) showToast(FEEDBACK[rejected].title);
+      else setPhotoFeedback(rejected);
       return false;
     }
+    setPhotoFeedback(null);
     session.navigate(CAPTURE_PATH, "focus");
     return true;
   };
@@ -88,6 +96,7 @@ export function DiagnosisPage() {
   const handleNewDiagnosis = () => {
     cancelSpeech();
     session.reset();
+    setPhotoFeedback(null);
     session.navigate(CAPTURE_PATH, "reset");
   };
 
@@ -143,12 +152,17 @@ export function DiagnosisPage() {
       )}
     </div>
   ) : !result && error ? (
-    <div className="mx-auto w-full max-w-5xl pt-5 md:pt-8">
-      <DiagnosisFailurePanel
-        message={error}
-        loading={loading}
-        onRetry={session.submit}
-        onPickDifferent={() => galleryInputRef.current?.click()}
+    // 진단 실패: API 오류 코드에 맞는 Figma 지속형 안내 (사진 문제·서버에 닿지 못함·보내지 못함)
+    <div className="mx-auto w-full max-w-[30rem] pt-5 md:pt-8">
+      <CaseFeedback
+        // 실패 화면에서 다시 고른 사진도 쓸 수 없으면 그 안내로 바꿔 보인다
+        caseId={photoFeedback ?? error}
+        headingLevel={2}
+        {...failureActions(photoFeedback ?? error, {
+          retry: session.submit,
+          pickDifferent: () => galleryInputRef.current?.click(),
+          checkPhoto: () => session.navigate(CAPTURE_PATH, "focus"),
+        })}
       />
     </div>
   ) : null;
@@ -230,6 +244,16 @@ export function DiagnosisPage() {
           />
         )}
 
+        {/* 진단 시작 안내에서 고른 사진을 쓸 수 없을 때. 분석 중·결과 화면에서는 걷는다 */}
+        {photoFeedback && !loading && !result && !error && (
+          <CaseFeedback
+            caseId={photoFeedback}
+            headingLevel={2}
+            onPrimary={() => galleryInputRef.current?.click()}
+            className="mx-auto mt-5 md:mt-8 lg:max-w-[30rem]"
+          />
+        )}
+
         {screen.body}
 
         <Toast
@@ -239,6 +263,24 @@ export function DiagnosisPage() {
       </div>
     </DiagnosisPageShell>
   );
+}
+
+/**
+ * 실패 안내의 버튼이 할 일. 사진 문제(형식·용량·열기)는 다른 사진을 고르고, 보내지 못했으면 다시 보내거나
+ * 다른 사진을, 인터넷이 끊겼으면 다시 시도하거나 사진 확인(촬영 화면)으로 돌아간다
+ */
+function failureActions(
+  caseId: FeedbackCaseId,
+  actions: { retry: () => void; pickDifferent: () => void; checkPhoto: () => void },
+) {
+  switch (caseId) {
+    case "photo-upload":
+      return { onPrimary: actions.retry, onSecondary: actions.pickDifferent };
+    case "analysis-offline":
+      return { onPrimary: actions.retry, onSecondary: actions.checkPhoto };
+    default:
+      return { onPrimary: actions.pickDifferent };
+  }
 }
 
 function isLowConfidence(result: { decision_reasons?: string[] | null }) {

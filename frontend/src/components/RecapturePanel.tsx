@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 
 import { CameraCapture, isCameraSupported, validateImage, } from "@/features/camera";
 import { refineDiagnosis } from "@/lib/api";
@@ -9,7 +10,9 @@ import { Button } from "@/components/Button";
 import { DiagnosisPageActions } from "@/components/DiagnosisPageActions";
 import { Card } from "@/components/Card";
 import { Mascot } from "@/components/Mascot";
-import { DiagnosisFailurePanel } from "@/components/DiagnosisFailurePanel";
+import { CaseFeedback } from "@/features/feedback/CaseFeedback";
+import type { FeedbackCaseId } from "@/features/feedback/cases";
+import { feedbackForRejectedImage, feedbackForRequestError } from "@/features/feedback/errors";
 
 interface Props {
   diagnosisId: string;
@@ -20,6 +23,28 @@ interface Props {
 }
 
 type Step = "candidates" | "guide" | "preview" | "failure";
+
+/** 실패 안내의 버튼이 할 일 (재촬영 다시 분석) */
+function refineFailureActions(
+  caseId: FeedbackCaseId,
+  actions: {
+    retry: () => void;
+    pickDifferent: () => void;
+    checkPhoto: () => void;
+    openHistory: () => void;
+  },
+) {
+  switch (caseId) {
+    case "photo-upload":
+      return { onPrimary: actions.retry, onSecondary: actions.pickDifferent };
+    case "analysis-offline":
+      return { onPrimary: actions.retry, onSecondary: actions.checkPhoto };
+    case "record-unavailable":
+      return { onPrimary: actions.openHistory };
+    default:
+      return { onPrimary: actions.pickDifferent };
+  }
+}
 
 function objectParticle(value: string): string {
   const word = value.trim();
@@ -37,13 +62,17 @@ export function RecapturePanel({
 }: Props) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
   const requestRef = useRef<AbortController | null>(null);
   const [step, setStep] = useState<Step>("candidates");
   const [cameraOpen, setCameraOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // 카메라 촬영 실패 문구
   const [error, setError] = useState<string | null>(null);
+  // 고른 사진을 쓸 수 없거나 다시 분석이 실패한 까닭 (Figma 지속형 안내의 케이스 ID)
+  const [failure, setFailure] = useState<FeedbackCaseId | null>(null);
 
   useEffect(() => {
     return () => requestRef.current?.abort();
@@ -61,13 +90,15 @@ export function RecapturePanel({
     const check = validateImage(file);
 
     if (!check.ok) {
-      setError(check.message);
+      setError(null);
+      setFailure(feedbackForRejectedImage(check.reason));
       return false;
     }
 
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
     setError(null);
+    setFailure(null);
     setStep("preview");
 
     return true;
@@ -86,6 +117,7 @@ export function RecapturePanel({
     if (isCameraSupported()) {
       // 프로젝트에 구현된 카메라 화면 실행
       setError(null);
+      setFailure(null);
       setCameraOpen(true);
     } else {
       // 브라우저 카메라 API 미지원 시 기본 촬영 기능 사용
@@ -110,7 +142,7 @@ export function RecapturePanel({
     if (!file || requestRef.current) return;
     const check = validateImage(file);
     if (!check.ok) {
-      setError(check.message);
+      setFailure(feedbackForRejectedImage(check.reason));
       setStep("preview");
       return;
     }
@@ -118,6 +150,9 @@ export function RecapturePanel({
     const controller = new AbortController();
     requestRef.current = controller;
     setError(null);
+    setFailure(null);
+    // 실패 안내의 "다시 보내기"면 사진 확인으로 돌아가 분석 중임을 보인다
+    setStep("preview");
     setLoading(true);
 
     try {
@@ -131,11 +166,7 @@ export function RecapturePanel({
       onRefined(refined);
     } catch (caught) {
       if (controller.signal.aborted) return;
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "재분석에 실패했어요. 다시 시도해 주세요.",
-      );
+      setFailure(feedbackForRequestError(caught, "refine"));
       setStep("failure");
     } finally {
       if (requestRef.current === controller) requestRef.current = null;
@@ -280,7 +311,10 @@ export function RecapturePanel({
           <button
             type="button"
             className="self-start text-sm font-semibold text-cropy-text-secondary underline-offset-4 hover:underline"
-            onClick={() => setStep("candidates")}
+            onClick={() => {
+              setFailure(null);
+              setStep("candidates");
+            }}
           >
             후보 안내로 돌아가기
           </button>
@@ -337,17 +371,25 @@ export function RecapturePanel({
         </>
       )}
 
-      {step === "failure" && (
-        <DiagnosisFailurePanel
-          message={error}
-          loading={loading}
-          onRetry={() => void analyze(selectedFile)}
-          onPickDifferent={() => galleryRef.current?.click()}
-          actionsVisible={actionsVisible}
+      {/* 다시 분석 실패, 또는 고른 사진을 쓸 수 없을 때 (API 오류 코드에 맞는 Figma 지속형 안내) */}
+      {failure && (
+        <CaseFeedback
+          caseId={failure}
+          headingLevel={step === "failure" ? 2 : 3}
+          className="mx-auto lg:max-w-[30rem]"
+          {...refineFailureActions(failure, {
+            retry: () => void analyze(selectedFile),
+            pickDifferent: () => galleryRef.current?.click(),
+            checkPhoto: () => {
+              setFailure(null);
+              setStep("preview");
+            },
+            openHistory: () => router.push("/history"),
+          })}
         />
       )}
 
-      {error && step !== "failure" && (
+      {error && (
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
         </p>

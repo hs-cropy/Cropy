@@ -12,6 +12,8 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 
 import { validateImage } from "@/features/camera";
+import type { FeedbackCaseId } from "@/features/feedback/cases";
+import { feedbackForRejectedImage, feedbackForRequestError } from "@/features/feedback/errors";
 import { diagnoseImage, fetchDiagnosisDetail } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import type { PhotoSource } from "@/components/capture/CaptureScreen";
@@ -35,14 +37,15 @@ interface DiagnosisSession {
   preview: string | null;
   photoSource: PhotoSource | null;
   loading: boolean;
-  error: string | null;
+  /** 마지막 진단이 실패한 까닭 (Figma 지속형 안내의 케이스 ID, API 오류 코드로 고른다) */
+  error: FeedbackCaseId | null;
   result: DiagnoseResponse | null;
   /** 새로고침 뒤 마지막 결과를 서버에서 다시 불러오는 중 */
   restoring: boolean;
   /** 지금(또는 마지막) 진단을 시작한 때 (Date.now()). 분석 중 막대가 이 때부터 차오른다 */
   analysisStartedAt: number | null;
-  /** 사진을 고른다. 쓸 수 없는 사진이면 그 까닭(토스트 문구)을 돌려준다 */
-  selectFile: (file: File, source: PhotoSource) => string | null;
+  /** 사진을 고른다. 쓸 수 없는 사진이면 그 안내(photo-format·photo-size)를 돌려준다 */
+  selectFile: (file: File, source: PhotoSource) => FeedbackCaseId | null;
   clearPhoto: () => void;
   /** 진단을 시작한다. 촬영 화면에서 시작하면 진단 결과 화면으로 옮긴다 */
   submit: () => void;
@@ -99,7 +102,7 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
   const [preview, setPreview] = useState<string | null>(null);
   const [photoSource, setPhotoSource] = useState<PhotoSource | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FeedbackCaseId | null>(null);
   const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(null);
   const [result, setResult] = useState<DiagnoseResponse | null>(null);
   const [restoring, setRestoring] = useState(false);
@@ -167,7 +170,7 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
   const selectFile = (next: File, source: PhotoSource) => {
     if (loading) return null;
     const check = validateImage(next);
-    if (!check.ok) return check.message;
+    if (!check.ok) return feedbackForRejectedImage(check.reason);
 
     abortRestore();
     setFile(next);
@@ -234,9 +237,7 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
       if (controller.signal.aborted) return;
       await waitAnalyzingHold(startedAt, controller.signal);
       if (controller.signal.aborted) return;
-      setError(
-        err instanceof Error ? err.message : "진단에 실패했어요. 잠시 후 다시 시도해 주세요.",
-      );
+      setError(feedbackForRequestError(err, "diagnose"));
     } finally {
       if (requestRef.current === controller) requestRef.current = null;
       if (!controller.signal.aborted) {

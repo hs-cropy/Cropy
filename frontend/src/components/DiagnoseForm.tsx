@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { CaseFeedback } from "@/features/feedback/CaseFeedback";
+import type { FeedbackCaseId } from "@/features/feedback/cases";
 import { PROMPT_HOME, useVoiceGuide } from "@/features/voice";
 import { useLocationHash } from "@/hooks/useLocationHash";
 
@@ -29,6 +31,8 @@ export function DiagnoseForm() {
   const [focusAfterReset, setFocusAfterReset] = useState(false);
   // 새 진단 때마다 올려 촬영 화면의 카메라·권한 안내 상태를 처음으로 돌린다
   const [captureKey, setCaptureKey] = useState(0);
+  // 고른 사진을 쓸 수 없을 때의 안내 (Figma inline/photo-format·photo-size). 다른 사진을 고르면 걷는다
+  const [photoFeedback, setPhotoFeedback] = useState<FeedbackCaseId | null>(null);
 
   const { toast, showToast, clearToast } = useToast();
   const { speak, prime: primeSpeech, cancel: cancelSpeech } = useVoiceGuide();
@@ -40,11 +44,10 @@ export function DiagnoseForm() {
   }, [locationHash, router]);
 
   const selectFile = (next: File, source: PhotoSource): boolean => {
-    const message = session.selectFile(next, source);
-    if (message) {
-      showToast(message);
-      return false;
-    }
+    const rejected = session.selectFile(next, source);
+    setPhotoFeedback(rejected);
+    if (rejected) return false;
+    clearToast();
     cancelSpeech();
     return true;
   };
@@ -62,6 +65,7 @@ export function DiagnoseForm() {
   const reset = () => {
     session.reset();
     setCaptureKey((key) => key + 1);
+    setPhotoFeedback(null);
     clearToast();
     cancelSpeech();
     // 촬영 가이드에 있었다면 닫는다
@@ -152,7 +156,18 @@ export function DiagnoseForm() {
           aria-label="기기 카메라 촬영"
         />
 
-        <section aria-label="사진 촬영">{capture.body}</section>
+        <section aria-label="사진 촬영">
+          {/* 촬영 가이드에서는 감춘다. 가이드를 닫으면 다시 보인다 */}
+          {photoFeedback && locationHash !== "#guide" && (
+            <CaseFeedback
+              caseId={photoFeedback}
+              headingLevel={2}
+              onPrimary={() => galleryInputRef.current?.click()}
+              className="mx-auto mb-4 lg:mb-6 lg:max-w-[30rem]"
+            />
+          )}
+          {capture.body}
+        </section>
 
         {/* 촬영 화면은 버튼 두 개짜리 행동 영역이 늘 있어 그 위에 띄운다 */}
         <Toast toast={toast} placement="aboveActions" />

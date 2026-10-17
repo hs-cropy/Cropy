@@ -363,7 +363,7 @@ try {
   // 실패 화면 표시 확인
   await page
     .getByRole("heading", {
-      name: "분석을 완료하지 못했어요",
+      name: "사진을 보내지 못했어요",
     })
     .waitFor();
 
@@ -381,10 +381,10 @@ try {
   // TEST 5. 같은 사진으로 재시도
   // ======================================
 
-  // DiagnosisFailurePanel의 실제 버튼명
+  // 실패 안내(Figma inline/photo-upload)의 버튼명
   await page
     .getByRole("button", {
-      name: "다시 시도하기",
+      name: "다시 보내기",
     })
     .click();
 

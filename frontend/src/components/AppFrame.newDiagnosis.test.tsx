@@ -320,14 +320,14 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
     expect(navLink("주요 메뉴", "진단 결과").hasAttribute("aria-current")).toBe(false);
   });
 
-  it("떠 있던 토스트도 지운다", async () => {
+  it("떠 있던 사진 안내도 지운다", async () => {
     const { container } = renderHome();
     pickFile(container, new File(["x"], "memo.txt", { type: "text/plain" }));
-    expect(screen.getByText("JPEG·PNG만 올릴 수 있어요")).toBeTruthy();
+    expect(screen.getByText("지원하지 않는 사진 형식이에요")).toBeTruthy();
 
     await userEvent.click(navLink("주요 메뉴", "새 진단"));
 
-    expect(screen.queryByText("JPEG·PNG만 올릴 수 있어요")).toBeNull();
+    expect(screen.queryByText("지원하지 않는 사진 형식이에요")).toBeNull();
   });
 
   it.each(NEW_DIAGNOSIS)(

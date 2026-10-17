@@ -1,12 +1,13 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MAX_IMAGE_BYTES } from "@/features/camera";
 import { setVoiceEnabled } from "@/features/voice/hooks/useVoiceSetting";
 import { installFakeSpeech } from "@/features/voice/testing/fakeSpeech";
 import HomePage from "@/app/page";
 import DiagnosisRoute from "@/app/diagnosis/page";
 import { FakeRoutes, fakeNavigation, fakeRouter } from "@/testing/fakeNavigation";
-import { diagnoseImage, fetchDiagnosisDetail } from "@/lib/api";
+import { ApiError, diagnoseImage, fetchDiagnosisDetail } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { AppFrame } from "../AppFrame";
 import { ANALYZING_MS, analyzingHold } from "./analyzingHold";
@@ -292,14 +293,14 @@ describe("사진 분석 중 (M-02 · D-02)", () => {
     });
 
     it("실패해도 3초 뒤에 실패 화면으로 넘어간다", async () => {
-      vi.mocked(diagnoseImage).mockRejectedValue(new Error("서버에 연결하지 못했어요"));
+      vi.mocked(diagnoseImage).mockRejectedValue(new TypeError("Failed to fetch"));
       await startDiagnosis();
 
       await act(() => vi.advanceTimersByTimeAsync(2900));
       expect(title()).toBe("사진 분석 중");
 
       await act(() => vi.advanceTimersByTimeAsync(100));
-      expect(screen.getByText("서버에 연결하지 못했어요")).toBeTruthy();
+      expect(screen.getByRole("alert", { name: "인터넷 연결을 확인해주세요" })).toBeTruthy();
     });
 
     it("기다리는 동안 분석 취소를 누르면 받아 둔 결과를 보이지 않는다", async () => {
@@ -471,11 +472,120 @@ describe("진단 결과 화면 — 화면을 오갈 때", () => {
     expect(title()).toBe("진단 시작");
 
     await goTo("/");
-    vi.mocked(diagnoseImage).mockRejectedValueOnce(new Error("서버 오류"));
+    vi.mocked(diagnoseImage).mockRejectedValueOnce(
+      new ApiError("서버 오류", "MODEL_UNAVAILABLE", 503, true),
+    );
     await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
 
-    await screen.findByText("서버 오류");
+    await screen.findByRole("alert", { name: "사진을 보내지 못했어요" });
     expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
+  });
+});
+
+describe("진단 실패 안내 — API 오류 코드별 Figma 지속형 안내", () => {
+  async function failWith(error: unknown) {
+    vi.mocked(diagnoseImage).mockRejectedValueOnce(error);
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    return container;
+  }
+
+  it.each([
+    ["UNSUPPORTED_IMAGE_FORMAT", 400, "지원하지 않는 사진 형식이에요", ["다른 사진 선택"]],
+    ["IMAGE_TOO_LARGE", 413, "사진 용량이 너무 커요", ["다른 사진 선택"]],
+    ["IMAGE_RESOLUTION_TOO_LARGE", 413, "사진 용량이 너무 커요", ["다른 사진 선택"]],
+    ["REQUEST_TOO_LARGE", 413, "사진 용량이 너무 커요", ["다른 사진 선택"]],
+    ["EMPTY_IMAGE", 400, "사진을 열지 못했어요", ["다른 사진 선택"]],
+    ["INVALID_IMAGE", 400, "사진을 열지 못했어요", ["다른 사진 선택"]],
+    ["MODEL_UNAVAILABLE", 503, "사진을 보내지 못했어요", ["다시 보내기", "다른 사진 선택"]],
+    ["DATABASE_UNAVAILABLE", 503, "사진을 보내지 못했어요", ["다시 보내기", "다른 사진 선택"]],
+    ["HTTP_ERROR", 500, "사진을 보내지 못했어요", ["다시 보내기", "다른 사진 선택"]],
+  ])('%s(%i) 이면 "%s" 안내를 보인다', async (code, status, heading, buttons) => {
+    await failWith(new ApiError("서버 문구", code, status, false));
+
+    const alert = await screen.findByRole("alert", { name: heading });
+    expect(
+      within(alert)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(buttons);
+    // 서버의 문구 대신 Figma 문구를 보인다
+    expect(screen.queryByText("서버 문구")).toBeNull();
+  });
+
+  it("서버에 닿지 못하면 인터넷 연결 안내를 보이고, 사진 확인으로 돌아갈 수 있다", async () => {
+    await failWith(new TypeError("Failed to fetch"));
+
+    const alert = await screen.findByRole("alert", { name: "인터넷 연결을 확인해주세요" });
+    await userEvent.click(within(alert).getByRole("button", { name: "사진 확인으로" }));
+
+    expect(fakeNavigation.pathname).toBe("/");
+    expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
+  });
+
+  it("다시 보내기를 누르면 같은 사진으로 다시 진단한다", async () => {
+    await failWith(new ApiError("", "MODEL_UNAVAILABLE", 503, true));
+    vi.mocked(diagnoseImage).mockResolvedValueOnce(response());
+
+    const alert = await screen.findByRole("alert", { name: "사진을 보내지 못했어요" });
+    await userEvent.click(within(alert).getByRole("button", { name: "다시 보내기" }));
+
+    await screen.findByRole("heading", { name: "고추 탄저병" });
+    expect(diagnoseImage).toHaveBeenCalledTimes(2);
+  });
+
+  it("사진 문제면 다른 사진 선택이 사진 고르기 창을 연다", async () => {
+    await failWith(new ApiError("", "INVALID_IMAGE", 400, false));
+    const click = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
+
+    const alert = await screen.findByRole("alert", { name: "사진을 열지 못했어요" });
+    await userEvent.click(within(alert).getByRole("button", { name: "다른 사진 선택" }));
+
+    expect(click).toHaveBeenCalled();
+    expect((click.mock.contexts[0] as HTMLInputElement).getAttribute("aria-label")).toBe(
+      "갤러리 사진 선택",
+    );
+  });
+
+  it("촬영 화면에서 쓸 수 없는 사진을 고르면 안내를 보이고, 맞는 사진을 고르면 걷는다", async () => {
+    const { container } = renderHome();
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+    fireEvent.change(input, {
+      target: { files: [new File(["x"], "leaf.gif", { type: "image/gif" })] },
+    });
+    expect(screen.getByRole("alert", { name: "지원하지 않는 사진 형식이에요" })).toBeTruthy();
+
+    pickPhoto(container);
+    expect(screen.queryByRole("alert", { name: "지원하지 않는 사진 형식이에요" })).toBeNull();
+    expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
+  });
+
+  it("실패 화면에서 다시 고른 사진도 쓸 수 없으면 그 안내로 바꿔 보인다", async () => {
+    const container = await failWith(new ApiError("", "MODEL_UNAVAILABLE", 503, true));
+    await screen.findByRole("alert", { name: "사진을 보내지 못했어요" });
+
+    fireEvent.change(container.querySelector('input[type="file"]') as HTMLInputElement, {
+      target: { files: [new File(["x"], "leaf.gif", { type: "image/gif" })] },
+    });
+
+    expect(screen.getByRole("alert", { name: "지원하지 않는 사진 형식이에요" })).toBeTruthy();
+    expect(screen.queryByRole("alert", { name: "사진을 보내지 못했어요" })).toBeNull();
+  });
+
+  it("진단 시작 안내에서 너무 큰 사진을 고르면 용량 안내를 보인다", async () => {
+    const { container } = renderHome();
+    await goTo("/diagnosis");
+    const big = new File(["x"], "leaf.jpg", { type: "image/jpeg" });
+    Object.defineProperty(big, "size", { value: MAX_IMAGE_BYTES + 1 });
+
+    fireEvent.change(container.querySelector('input[type="file"]') as HTMLInputElement, {
+      target: { files: [big] },
+    });
+
+    expect(screen.getByRole("alert", { name: "사진 용량이 너무 커요" })).toBeTruthy();
+    expect(fakeNavigation.pathname).toBe("/diagnosis");
   });
 });
 
