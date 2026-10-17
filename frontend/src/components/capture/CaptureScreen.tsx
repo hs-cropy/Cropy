@@ -308,8 +308,13 @@ export function useCaptureScreen({
   }, [visible, stopCamera]);
 
   // 사진을 고르면 카메라는 끄되 스위치는 그대로 둔다. 사진을 취소하면 다시 켠다
+  // 사진이 새로 생길 때만 끈다. 개발 모드(StrictMode)가 효과를 다시 돌릴 때 이전 렌더의 사진으로
+  // 다시 끄면, 진단 시작 안내의 "사진 찍기"가 사진을 지우고 켠 카메라가 꺼진 채 남는다
+  const stoppedForPreviewRef = useRef<string | null>(null);
   useEffect(() => {
-    if (preview) stopCamera();
+    if (!preview || stoppedForPreviewRef.current === preview) return;
+    stoppedForPreviewRef.current = preview;
+    stopCamera();
   }, [preview, stopCamera]);
 
   // 기본 촬영 가이드(#guide): 링크로 열고 뒤로 가기로 닫는다. 화면을 오가도 고른 사진과

@@ -1,3 +1,4 @@
+import { StrictMode, useEffect, useRef } from "react";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCamera } from "./useCamera";
@@ -59,6 +60,44 @@ describe("useCamera", () => {
     });
     expect(getUserMedia).toHaveBeenCalledTimes(1);
     expect(result.current.status).toBe("streaming");
+  });
+
+  it("마운트 효과에서 켠 카메라는 개발 모드(StrictMode)의 정리·재실행 뒤에도 켜진다", async () => {
+    // 진단 시작 안내의 "사진 찍기"로 촬영 화면에 오면 처음 그릴 때 한 번만 start() 를 부른다
+    const first = fakeStream();
+    const second = fakeStream();
+    getUserMedia.mockResolvedValueOnce(first.stream).mockResolvedValueOnce(second.stream);
+    const { result } = renderHook(
+      () => {
+        const camera = useCamera({ autoStart: false });
+        const startedRef = useRef(false);
+        useEffect(() => {
+          if (startedRef.current) return;
+          startedRef.current = true;
+          void camera.start();
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, []);
+        return camera;
+      },
+      { wrapper: StrictMode },
+    );
+
+    await act(async () => {});
+
+    expect(result.current.status).toBe("streaming");
+    // 정리 때 연 첫 스트림은 버리고 다시 연 스트림을 쓴다
+    expect(first.track.stop).toHaveBeenCalled();
+    expect(second.track.stop).not.toHaveBeenCalled();
+  });
+
+  it("StrictMode 에서도 켜지 않은 카메라는 저절로 켜지 않는다", async () => {
+    getUserMedia.mockResolvedValue(fakeStream().stream);
+    const { result } = renderHook(() => useCamera({ autoStart: false }), { wrapper: StrictMode });
+
+    await act(async () => {});
+
+    expect(getUserMedia).not.toHaveBeenCalled();
+    expect(result.current.status).toBe("idle");
   });
 
   it("stop() 은 카메라 트랙을 끄고 idle 로 돌아간다", async () => {

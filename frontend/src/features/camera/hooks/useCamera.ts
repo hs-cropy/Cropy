@@ -155,8 +155,14 @@ export function useCamera({ facingMode = "environment", autoStart = true }: UseC
   // 첫 마운트 때만 본다. 켜는 시점을 바꾸려고 다시 마운트할 일은 없다
   const autoStartRef = useRef(autoStart);
 
+  // 정리(cleanup) 때 켜는 중·켜진 카메라가 있었는지. 개발 모드(StrictMode)는 마운트 직후 정리하고
+  // 다시 효과를 돌리는데, 그 사이 다른 화면에서 넘어오며 켠 카메라(start)가 꺼진 채 남지 않게 다시 연다
+  const restartOnRemountRef = useRef(false);
+
   useEffect(() => {
-    if (autoStartRef.current) {
+    const restart = restartOnRemountRef.current;
+    restartOnRemountRef.current = false;
+    if (autoStartRef.current || restart) {
       if (document.hidden) resumeOnVisibleRef.current = true;
       else start();
     }
@@ -193,6 +199,8 @@ export function useCamera({ facingMode = "environment", autoStart = true }: UseC
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       video?.removeEventListener("playing", handlePlaying);
+      restartOnRemountRef.current =
+        statusRef.current === "opening" || statusRef.current === "streaming";
       stop();
     };
   }, [start, stop, releaseStream, setStatus]);
