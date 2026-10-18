@@ -147,7 +147,7 @@ export function DiagnosisPage() {
       )}
     </div>
   ) : failed && error ? (
-    // 진단 실패: API 오류 코드에 맞는 Figma 지속형 안내 (사진 문제·서버에 닿지 못함·보내지 못함)
+    // 진단 실패: API 오류 코드에 맞는 Figma 지속형 안내 (사진 문제·서버에 닿지 못함·서버 장애·보내지 못함)
     <div className="mx-auto flex w-full max-w-[30rem] flex-col gap-4 pt-5 md:pt-8">
       <CaseFeedback
         // 실패 화면에서 다시 고른 사진도 쓸 수 없으면 그 안내로 바꿔 보인다
@@ -155,6 +155,7 @@ export function DiagnosisPage() {
         headingLevel={2}
         {...failureActions(photoFeedback ?? error, {
           retry: session.submit,
+          newDiagnosis: handleNewDiagnosis,
           pickDifferent: () => galleryInputRef.current?.click(),
           checkPhoto: () => session.navigate(CAPTURE_PATH, "focus"),
           openHistory: () => {
@@ -164,8 +165,9 @@ export function DiagnosisPage() {
           },
         })}
       />
-      {/* 다시 분석이 실패하면 원래 결과(재촬영 안내)로 돌아가는 길을 둔다 */}
-      {refineTarget && (
+      {/* 다시 분석이 실패하면 원래 결과(재촬영 안내)로 돌아가는 길을 둔다.
+          다시 분석할 수 없는 기록이면 돌아가도 같은 실패를 되풀이하므로 두지 않는다 */}
+      {refineTarget && error !== "refine-unavailable" && (
         <button
           type="button"
           onClick={() => {
@@ -252,13 +254,14 @@ export function DiagnosisPage() {
 
 /**
  * 실패 안내의 버튼이 할 일. 사진 문제(형식·용량·열기)는 다른 사진을 고르고, 보내지 못했으면 다시 보내거나
- * 다른 사진을, 인터넷이 끊겼으면 다시 시도하거나 사진 확인(촬영 화면)으로 돌아간다.
- * 다시 분석할 기록이 없어졌으면(추가 촬영) 이력으로 간다
+ * 다른 사진을, 인터넷이 끊겼거나 서버 장애면 다시 시도하거나 사진 확인(촬영 화면)으로 돌아간다.
+ * 다시 분석할 기록이 없어졌으면(추가 촬영) 이력으로, 다시 분석할 수 없는 기록이면 새 진단이나 이력으로 간다
  */
 function failureActions(
   caseId: FeedbackCaseId,
   actions: {
     retry: () => void;
+    newDiagnosis: () => void;
     pickDifferent: () => void;
     checkPhoto: () => void;
     openHistory: () => void;
@@ -270,7 +273,10 @@ function failureActions(
     case "photo-upload":
       return { onPrimary: actions.retry, onSecondary: actions.pickDifferent };
     case "analysis-offline":
+    case "service-unavailable":
       return { onPrimary: actions.retry, onSecondary: actions.checkPhoto };
+    case "refine-unavailable":
+      return { onPrimary: actions.newDiagnosis, onSecondary: actions.openHistory };
     default:
       return { onPrimary: actions.pickDifferent };
   }

@@ -60,6 +60,9 @@ const stopNavigation = (event: Event) => {
   if ((event.target as Element).closest("a")) event.preventDefault();
 };
 
+// 서버 장애 안내 (feedback/cases.ts service-unavailable)
+const SERVICE_DOWN = "일시적으로 진단 서비스를 사용할 수 없어요";
+
 // 앱의 app/ 폴더처럼 경로마다 화면을 바꿔 그린다
 function renderHome() {
   return render(
@@ -525,7 +528,7 @@ describe("진단 결과 화면 — 화면을 오갈 때", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
 
-    await screen.findByRole("alert", { name: "사진을 보내지 못했어요" });
+    await screen.findByRole("alert", { name: SERVICE_DOWN });
     expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
   });
 });
@@ -546,9 +549,12 @@ describe("진단 실패 안내 — API 오류 코드별 Figma 지속형 안내",
     ["REQUEST_TOO_LARGE", 413, "사진 용량이 너무 커요", ["다른 사진 선택"]],
     ["EMPTY_IMAGE", 400, "사진을 열지 못했어요", ["다른 사진 선택"]],
     ["INVALID_IMAGE", 400, "사진을 열지 못했어요", ["다른 사진 선택"]],
-    ["MODEL_UNAVAILABLE", 503, "사진을 보내지 못했어요", ["다시 보내기", "다른 사진 선택"]],
-    ["DATABASE_UNAVAILABLE", 503, "사진을 보내지 못했어요", ["다시 보내기", "다른 사진 선택"]],
-    ["HTTP_ERROR", 500, "사진을 보내지 못했어요", ["다시 보내기", "다른 사진 선택"]],
+    ["IDEMPOTENCY_CONFLICT", 409, "사진을 보내지 못했어요", ["다시 보내기", "다른 사진 선택"]],
+    ["HTTP_ERROR", 400, "사진을 보내지 못했어요", ["다시 보내기", "다른 사진 선택"]],
+    // 서버 장애는 사진·연결 문제로 오해하지 않게 서비스 안내로 보인다
+    ["MODEL_UNAVAILABLE", 503, SERVICE_DOWN, ["다시 시도하기", "사진 확인으로"]],
+    ["DATABASE_UNAVAILABLE", 503, SERVICE_DOWN, ["다시 시도하기", "사진 확인으로"]],
+    ["HTTP_ERROR", 500, SERVICE_DOWN, ["다시 시도하기", "사진 확인으로"]],
   ])('%s(%i) 이면 "%s" 안내를 보인다', async (code, status, heading, buttons) => {
     await failWith(new ApiError("서버 문구", code, status, false));
 
@@ -573,11 +579,22 @@ describe("진단 실패 안내 — API 오류 코드별 Figma 지속형 안내",
   });
 
   it("다시 보내기를 누르면 같은 사진으로 다시 진단한다", async () => {
-    await failWith(new ApiError("", "MODEL_UNAVAILABLE", 503, true));
+    await failWith(new ApiError("", "IDEMPOTENCY_CONFLICT", 409, false));
     vi.mocked(diagnoseImage).mockResolvedValueOnce(response());
 
     const alert = await screen.findByRole("alert", { name: "사진을 보내지 못했어요" });
     await userEvent.click(within(alert).getByRole("button", { name: "다시 보내기" }));
+
+    await screen.findByRole("heading", { name: "고추 탄저병" });
+    expect(diagnoseImage).toHaveBeenCalledTimes(2);
+  });
+
+  it("서버 장애에서 다시 시도하기를 누르면 같은 사진으로 다시 진단한다", async () => {
+    await failWith(new ApiError("", "MODEL_UNAVAILABLE", 503, true));
+    vi.mocked(diagnoseImage).mockResolvedValueOnce(response());
+
+    const alert = await screen.findByRole("alert", { name: SERVICE_DOWN });
+    await userEvent.click(within(alert).getByRole("button", { name: "다시 시도하기" }));
 
     await screen.findByRole("heading", { name: "고추 탄저병" });
     expect(diagnoseImage).toHaveBeenCalledTimes(2);
@@ -612,14 +629,14 @@ describe("진단 실패 안내 — API 오류 코드별 Figma 지속형 안내",
 
   it("실패 화면에서 다시 고른 사진도 쓸 수 없으면 그 안내로 바꿔 보인다", async () => {
     const container = await failWith(new ApiError("", "MODEL_UNAVAILABLE", 503, true));
-    await screen.findByRole("alert", { name: "사진을 보내지 못했어요" });
+    await screen.findByRole("alert", { name: SERVICE_DOWN });
 
     fireEvent.change(container.querySelector('input[type="file"]') as HTMLInputElement, {
       target: { files: [new File(["x"], "leaf.gif", { type: "image/gif" })] },
     });
 
     expect(screen.getByRole("alert", { name: "지원하지 않는 사진 형식이에요" })).toBeTruthy();
-    expect(screen.queryByRole("alert", { name: "사진을 보내지 못했어요" })).toBeNull();
+    expect(screen.queryByRole("alert", { name: SERVICE_DOWN })).toBeNull();
   });
 
   it("진단 시작 안내에서 너무 큰 사진을 고르면 용량 안내를 보인다", async () => {
@@ -717,7 +734,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
     expect(title()).not.toBe("잎 뒷면 추가 촬영");
   });
 
-  it("다시 분석이 실패하면 결과가 있어도 실패 안내를 보이고, 다시 보내기는 다시 분석으로 간다", async () => {
+  it("다시 분석이 실패하면 결과가 있어도 실패 안내를 보이고, 다시 시도하기는 다시 분석으로 간다", async () => {
     await showConfusion();
     await pickExtraPhoto();
     vi.mocked(refineDiagnosis).mockRejectedValueOnce(
@@ -726,11 +743,11 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
 
     await userEvent.click(action("이 사진으로 다시 분석"));
 
-    const alert = await screen.findByRole("alert", { name: "사진을 보내지 못했어요" });
+    const alert = await screen.findByRole("alert", { name: SERVICE_DOWN });
     expect(screen.queryByRole("heading", { name: "비슷한 증상이 보여요" })).toBeNull();
 
     vi.mocked(refineDiagnosis).mockResolvedValueOnce(response({ disease_name: "무 노균병" }));
-    await userEvent.click(within(alert).getByRole("button", { name: "다시 보내기" }));
+    await userEvent.click(within(alert).getByRole("button", { name: "다시 시도하기" }));
 
     await screen.findByRole("heading", { name: "무 노균병" });
     expect(refineDiagnosis).toHaveBeenCalledTimes(2);
@@ -750,6 +767,59 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
     await userEvent.click(within(alert).getByRole("button", { name: "이력으로" }));
 
     await waitFor(() => expect(fakeNavigation.pathname).toBe("/history"));
+  });
+
+  it.each([
+    ["MODEL_VERSION_CONFLICT", 409],
+    ["REFINEMENT_UNAVAILABLE", 400],
+  ])("%s(%i) 면 다시 보내지 않고 새 진단이나 이력으로 안내한다", async (code, status) => {
+    await showConfusion();
+    await pickExtraPhoto();
+    vi.mocked(refineDiagnosis).mockRejectedValueOnce(new ApiError("", code, status, false));
+
+    await userEvent.click(action("이 사진으로 다시 분석"));
+
+    const alert = await screen.findByRole("alert", { name: "이 사진으로 다시 분석할 수 없어요" });
+    expect(
+      within(alert)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["새 진단 시작", "이력으로"]);
+    // 재촬영 안내로 돌아가도 같은 실패를 되풀이하므로 추가 촬영 취소를 두지 않는다
+    expect(screen.queryByRole("button", { name: "추가 촬영 취소" })).toBeNull();
+
+    await userEvent.click(within(alert).getByRole("button", { name: "이력으로" }));
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/history"));
+  });
+
+  it("서버 장애에서 사진 확인으로는 고른 사진을 둔 채 촬영 화면으로 돌아간다", async () => {
+    vi.mocked(diagnoseImage).mockRejectedValueOnce(new ApiError("", "MODEL_UNAVAILABLE", 503, true));
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+
+    const alert = await screen.findByRole("alert", { name: SERVICE_DOWN });
+    await userEvent.click(within(alert).getByRole("button", { name: "사진 확인으로" }));
+
+    expect(fakeNavigation.pathname).toBe("/");
+    expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
+  });
+
+  it("다시 분석할 수 없을 때 새 진단 시작은 추가 촬영을 끝내고 촬영 화면 처음으로 간다", async () => {
+    await showConfusion();
+    await pickExtraPhoto();
+    vi.mocked(refineDiagnosis).mockRejectedValueOnce(
+      new ApiError("", "MODEL_VERSION_CONFLICT", 409, false),
+    );
+
+    await userEvent.click(action("이 사진으로 다시 분석"));
+    const alert = await screen.findByRole("alert", { name: "이 사진으로 다시 분석할 수 없어요" });
+    await userEvent.click(within(alert).getByRole("button", { name: "새 진단 시작" }));
+
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    expect(title()).not.toBe("잎 뒷면 추가 촬영");
+    expect(title()).not.toBe("추가 사진 확인");
+    expect(refineDiagnosis).toHaveBeenCalledTimes(1);
   });
 
   it("추가 촬영 취소는 사진을 비우고 재촬영 안내로 돌아간다", async () => {
@@ -800,12 +870,12 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
       new ApiError("", "MODEL_UNAVAILABLE", 503, true),
     );
     await userEvent.click(action("이 사진으로 다시 분석"));
-    await screen.findByRole("alert", { name: "사진을 보내지 못했어요" });
+    await screen.findByRole("alert", { name: SERVICE_DOWN });
 
     await userEvent.click(screen.getByRole("button", { name: "추가 촬영 취소" }));
 
     await screen.findByRole("heading", { name: "비슷한 증상이 보여요" });
-    expect(screen.queryByRole("alert", { name: "사진을 보내지 못했어요" })).toBeNull();
+    expect(screen.queryByRole("alert", { name: SERVICE_DOWN })).toBeNull();
   });
 
   it("재촬영 안내에서 쓸 수 없는 사진을 고르면 안내만 보이고 추가 촬영을 시작하지 않는다", async () => {

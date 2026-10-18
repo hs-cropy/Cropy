@@ -16,11 +16,17 @@ describe("feedbackForRequestError", () => {
     ["HTTP_ERROR", 400, "photo-upload"],
     ["IDEMPOTENCY_CONFLICT", 409, "photo-upload"],
     ["VALIDATION_ERROR", 422, "photo-upload"],
-    ["HTTP_ERROR", 500, "photo-upload"],
-    ["MODEL_UNAVAILABLE", 503, "photo-upload"],
-    ["DATABASE_UNAVAILABLE", 503, "photo-upload"],
-    ["IMAGE_STORAGE_UNAVAILABLE", 503, "photo-upload"],
-    ["RECOVERY_STORAGE_UNAVAILABLE", 503, "photo-upload"],
+    ["HTTP_ERROR", 500, "service-unavailable"],
+    ["HTTP_ERROR", 502, "service-unavailable"],
+    ["HTTP_ERROR", 503, "service-unavailable"],
+    ["MODEL_UNAVAILABLE", 503, "service-unavailable"],
+    ["DATABASE_UNAVAILABLE", 503, "service-unavailable"],
+    ["IMAGE_STORAGE_UNAVAILABLE", 503, "service-unavailable"],
+    ["RECOVERY_STORAGE_UNAVAILABLE", 503, "service-unavailable"],
+    ["SAVE_FAILED", 503, "service-unavailable"],
+    // 재촬영 다시 분석에서만 나오는 오류가 진단에 오면 일반 전송 실패로 둔다
+    ["MODEL_VERSION_CONFLICT", 409, "photo-upload"],
+    ["REFINEMENT_UNAVAILABLE", 400, "photo-upload"],
   ] as const)("진단: %s(%i) → %s", (code, status, caseId) => {
     expect(feedbackForRequestError(api(code, status), "diagnose")).toBe(caseId);
   });
@@ -28,9 +34,11 @@ describe("feedbackForRequestError", () => {
   it.each([
     ["DIAGNOSIS_NOT_FOUND", 404, "record-unavailable"],
     ["NOT_FOUND", 404, "record-unavailable"],
-    ["REFINEMENT_UNAVAILABLE", 400, "photo-upload"],
-    ["MODEL_VERSION_CONFLICT", 409, "photo-upload"],
+    ["REFINEMENT_UNAVAILABLE", 400, "refine-unavailable"],
+    ["MODEL_VERSION_CONFLICT", 409, "refine-unavailable"],
     ["INVALID_IMAGE", 400, "photo-read"],
+    ["MODEL_UNAVAILABLE", 503, "service-unavailable"],
+    ["HTTP_ERROR", 500, "service-unavailable"],
   ] as const)("재촬영 다시 분석: %s(%i) → %s", (code, status, caseId) => {
     expect(feedbackForRequestError(api(code, status), "refine")).toBe(caseId);
   });

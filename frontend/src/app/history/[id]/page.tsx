@@ -14,10 +14,18 @@ import { RecapturePanel } from "@/components/RecapturePanel";
 
 import { CropMismatchNotice } from "@/components/CropMismatchNotice";
 import { Button, buttonClassName } from "@/components/Button";
+import { CAPTURE_PATH, useDiagnosisSession } from "@/components/diagnosis/DiagnosisSession";
 
 export default function HistoryDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
+  const session = useDiagnosisSession();
+
+  // 이력에 다시 저장할 수 없는 결과의 "새 진단 시작": 진단 상태를 비우고 촬영 화면 처음으로 간다
+  const startNewDiagnosis = () => {
+    session.reset();
+    session.navigate(CAPTURE_PATH, "reset");
+  };
 
   const [result, setResult] = useState<DiagnoseResponse | null>(
     null
@@ -224,6 +232,7 @@ export default function HistoryDetailPage() {
               <DiagnosisResult
                 result={result}
                 onSaved={updateResult}
+                onNewDiagnosis={startNewDiagnosis}
                 isRecord
               />
             )}

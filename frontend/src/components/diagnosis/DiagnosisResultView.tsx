@@ -66,13 +66,15 @@ function GradeBadge({ result, desktop }: { result: DiagnoseResponse; desktop: bo
 function Notices({
   result,
   onSaved,
+  onNewDiagnosis,
 }: {
   result: DiagnoseResponse;
   onSaved?: (result: DiagnoseResponse) => void;
+  onNewDiagnosis: () => void;
 }) {
   return (
     <>
-      <SaveRecovery result={result} onSaved={onSaved} />
+      <SaveRecovery result={result} onSaved={onSaved} onNewDiagnosis={onNewDiagnosis} />
       {result.prediction_mode === "browser" && (
         <p
           role="status"
@@ -161,7 +163,7 @@ export function DiagnosisResultView({
     const grade = gradeOf(result);
     return (
       <div className="flex flex-col gap-5">
-        <Notices result={result} onSaved={onSaved} />
+        <Notices result={result} onSaved={onSaved} onNewDiagnosis={onNewDiagnosis} />
         <div className="flex items-start gap-8">
           <section
             aria-label="진단에 사용한 사진과 정보"
@@ -238,7 +240,7 @@ export function DiagnosisResultView({
 
   return (
     <div className="flex flex-col gap-4 pb-5">
-      <Notices result={result} onSaved={onSaved} />
+      <Notices result={result} onSaved={onSaved} onNewDiagnosis={onNewDiagnosis} />
 
       <section
         aria-label="진단 요약"

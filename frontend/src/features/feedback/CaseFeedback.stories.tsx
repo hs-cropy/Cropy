@@ -22,7 +22,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "문구 사전(`features/feedback/cases.ts`)의 지속형 안내 16종입니다. 케이스 ID 는 Figma 의 `Cropy/FeedbackV3/inline/{ID}` 와 같습니다. 낮은 신뢰도·카메라 권한 미허용·이력 없음 같은 안내는 여기 없고 각 화면이 따로 가집니다.",
+          "문구 사전(`features/feedback/cases.ts`)의 지속형 안내 19종입니다. 케이스 ID 는 Figma 의 `Cropy/FeedbackV3/inline/{ID}` 와 같습니다 (service-unavailable·refine-unavailable·save-unrecoverable 3종은 Figma 시안 대기). 낮은 신뢰도·카메라 권한 미허용·이력 없음 같은 안내는 여기 없고 각 화면이 따로 가집니다.",
       },
     },
   },
@@ -53,18 +53,18 @@ function AllCases() {
   );
 }
 
-/** 16종 모아보기 (모바일 폭) */
+/** 19종 모아보기 (모바일 폭) */
 export const All: Story = {
   render: () => <AllCases />,
 };
 
-/** 16종 모아보기 (데스크탑, 마스코트 80px) */
+/** 19종 모아보기 (데스크탑, 마스코트 80px) */
 export const AllDesktop: Story = {
   globals: { viewport: { value: "desktop" } },
   render: () => <AllCases />,
 };
 
-/** 16종 모아보기 (큰글씨 모드) */
+/** 19종 모아보기 (큰글씨 모드) */
 export const AllLargeText: Story = {
   globals: { viewport: { value: "mobile" }, textsize: "large" },
   render: () => <AllCases />,
