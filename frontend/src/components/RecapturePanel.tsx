@@ -96,8 +96,8 @@ export function RecapturePanel({
             <Mascot name="comparing" size={64} className="lg:size-20" />
           </header>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card radius="lg" padding="lg">
+          <div className="grid gap-4 lg:grid-cols-2 lg:gap-8 xl:grid-cols-[minmax(0,440px)_minmax(0,728px)] xl:max-w-[1200px]">
+            <Card radius="lg" padding="lg" className="lg:min-h-[314px] lg:p-6">
               <h3 className="text-lg font-bold text-cropy-text-primary">AI가 비교 중인 후보</h3>
               <div className="mt-4 space-y-3">
                 {guidance.candidates.map((candidate, index) => (
@@ -114,18 +114,18 @@ export function RecapturePanel({
               </p>
             </Card>
 
-            <Card radius="lg" padding="lg" className="space-y-4">
+            <Card radius="lg" padding="lg" className="flex flex-col gap-4 lg:min-h-[314px] lg:p-6">
               <h3 className="text-lg font-bold text-cropy-text-primary">
                 이번엔 {guidance.region}{objectParticle(guidance.region)} 찍어주세요
               </h3>
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl bg-cropy-surface-canvas px-4 py-6">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-xl bg-cropy-surface-canvas px-4 py-4 lg:flex-1 lg:py-0">
                 <div className="flex flex-col items-center gap-2">
-                  <span aria-hidden className="icon-[lucide--leaf] size-12 text-cropy-text-secondary" />
+                  <span aria-hidden className="icon-[lucide--leaf] size-12 text-cropy-text-secondary lg:size-[136px]" />
                   <span className="text-sm font-semibold text-cropy-text-secondary">앞면</span>
                 </div>
                 <span aria-hidden className="icon-[lucide--rotate-cw] size-6 text-cropy-text-secondary" />
                 <div className="flex flex-col items-center gap-2">
-                  <span aria-hidden className="icon-[lucide--leaf] size-12 text-cropy-action-primary" />
+                  <span aria-hidden className="icon-[lucide--leaf] size-12 text-cropy-action-primary lg:size-[136px]" />
                   <span className="text-sm font-semibold text-cropy-action-primary">{guidance.region}</span>
                 </div>
               </div>

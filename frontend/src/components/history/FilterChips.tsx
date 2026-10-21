@@ -45,7 +45,7 @@ export function FilterChips<T extends string>({
       <div
         className={
           isCrop
-            ? "grid w-full grid-cols-3 gap-2"
+            ? "grid w-full grid-cols-4 gap-2"
             : "flex w-full flex-nowrap gap-2"
         }
       >
