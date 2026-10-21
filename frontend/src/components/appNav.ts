@@ -6,7 +6,7 @@ import type { NavItem } from "./navItem";
 export const APP_NAV_ITEMS: NavItem[] = [
   {
     key: "capture",
-    href: "/",
+    href: "/home",
     label: "새 진단",
     mobileLabel: "촬영",
     icon: "icon-[lucide--camera]",
@@ -32,7 +32,7 @@ export const APP_NAV_ITEMS: NavItem[] = [
 
 /** 경로에 해당하는 내비 항목의 key. 어느 항목에도 속하지 않으면 undefined */
 export function currentNavKey(pathname: string | null): string | undefined {
-  if (pathname === "/") return "capture";
+  if (pathname === "/home") return "capture";
   if (pathname === "/diagnosis") return "result";
   if (pathname === "/history" || pathname?.startsWith("/history/")) return "history";
   return undefined;

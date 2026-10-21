@@ -1,0 +1,127 @@
+
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import styles from "./SplashScreen.module.css";
+
+const TAGLINE = "작물의 오늘을 살피고, 건강한 내일을 키워요";
+const TAGLINE_CHARS = Array.from(TAGLINE);
+
+export function SplashScreen() {
+  const [typedCount, setTypedCount] = useState(0);
+  const [isTypingComplete, setIsTypingComplete] = useState(false);
+
+  useEffect(() => {
+    // 애니메이션 감소 설정이 켜져 있으면 문구 바로 표시
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setTypedCount(TAGLINE_CHARS.length);
+      setIsTypingComplete(true);
+      return;
+    }
+
+    let count = 0;
+    let typingTimer: ReturnType<typeof setInterval> | undefined;
+
+    // 처음 1초: 커서만 깜빡임
+    const startTimer = setTimeout(() => {
+      // 이후 65ms마다 한 글자씩 표시
+      typingTimer = setInterval(() => {
+        count += 1;
+        setTypedCount(count);
+
+        if (count >= TAGLINE_CHARS.length) {
+          clearInterval(typingTimer);
+          setIsTypingComplete(true);
+        }
+      }, 65);
+    }, 1000);
+
+    return () => {
+      clearTimeout(startTimer);
+
+      if (typingTimer !== undefined) {
+        clearInterval(typingTimer);
+      }
+    };
+  }, []);
+
+  return (
+    <main className={styles.splash}>
+      {/* 농장 배경 */}
+      <div className={styles.background} aria-hidden="true" />
+
+      {/* Figma Shade */}
+      <div className={styles.shade} aria-hidden="true" />
+
+      {/* 햇빛 */}
+      <div className={styles.sunlight} aria-hidden="true" />
+
+      {/* 움직이는 구름 */}
+      <div className={styles.clouds} aria-hidden="true">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/splash/cloud-a.svg"
+          alt=""
+          className={`${styles.cloud} ${styles.cloudA}`}
+        />
+
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/splash/cloud-b.svg"
+          alt=""
+          className={`${styles.cloud} ${styles.cloudB}`}
+        />
+      </div>
+
+      {/* 로고와 브랜드 문구 */}
+      <div className={styles.brand}>
+        {/* 로고 + 금빛 섬광 */}
+        <div className={styles.logoWrap}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/cropy-splash-logo.png"
+            alt="Cropy"
+            className={styles.logo}
+          />
+
+          <span className={styles.logoShine} aria-hidden="true" />
+        </div>
+
+        {/* 타이핑 문구 */}
+        <p className={styles.tagline} aria-label={TAGLINE}>
+          <span className={styles.typingFrame} aria-hidden="true">
+            {/* 문구 전체 너비를 미리 확보해 위치가 흔들리지 않도록 함 */}
+            <span className={styles.typingPlaceholder}>
+              {TAGLINE}
+            </span>
+
+            {/* 실제로 입력되는 글자 + 따라가는 커서 */}
+            <span className={styles.typingText}>
+              {TAGLINE_CHARS.slice(0, typedCount).join("")}
+
+              {!isTypingComplete && (
+                <span className={styles.cursor} />
+              )}
+            </span>
+          </span>
+        </p>
+      </div>
+
+      {/* 하단 버튼 */}
+      <div className={styles.actions}>
+        <Link href="/home" className={styles.startButton}>
+          시작하기
+        </Link>
+
+        {/* PWA 설치 기능은 추후 연결 */}
+        <button
+          type="button"
+          className={styles.installButton}
+        >
+          앱 설치하기
+        </button>
+      </div>
+    </main>
+  );
+}

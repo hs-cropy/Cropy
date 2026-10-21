@@ -7,7 +7,7 @@ import {
   spokenTexts,
   type FakeSpeech,
 } from "@/features/voice/testing/fakeSpeech";
-import HomePage from "@/app/page";
+import HomePage from "@/app/home/page";
 import DiagnosisRoute from "@/app/diagnosis/page";
 import { FakeRoutes, fakeNavigation, fakeRouter } from "@/testing/fakeNavigation";
 

@@ -5,7 +5,7 @@ import { MAX_IMAGE_BYTES } from "@/features/camera";
 import { setVoiceEnabled } from "@/features/voice/hooks/useVoiceSetting";
 import { PROMPT_DIAGNOSING } from "@/features/voice";
 import { installFakeSpeech, spokenTexts } from "@/features/voice/testing/fakeSpeech";
-import HomePage from "@/app/page";
+import HomePage from "@/app/home/page";
 import DiagnosisRoute from "@/app/diagnosis/page";
 import HistoryDetailPage from "@/app/history/[id]/page";
 import { FakeRoutes, fakeNavigation, fakeRouter } from "@/testing/fakeNavigation";

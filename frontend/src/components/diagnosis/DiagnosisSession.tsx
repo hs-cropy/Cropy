@@ -22,7 +22,7 @@ import { waitAnalyzingHold } from "./analyzingHold";
 /** 새로고침 뒤 진단 결과 화면이 다시 불러올 마지막 결과의 id (저장된 진단만) */
 const LAST_RESULT_KEY = "cropy:lastDiagnosisId";
 
-export const CAPTURE_PATH = "/";
+export const CAPTURE_PATH = "/home";
 export const DIAGNOSIS_PATH = "/diagnosis";
 
 /**
