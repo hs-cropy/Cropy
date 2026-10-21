@@ -70,7 +70,7 @@ function renderApp() {
   return render(
     <AppFrame>
       <FakeRoutes
-        routes={{ "/": <HomePage />, "/diagnosis": <DiagnosisRoute />, "/history": <p>이력</p> }}
+        routes={{ "/home": <HomePage />, "/diagnosis": <DiagnosisRoute />, "/history": <p>이력</p> }}
       />
     </AppFrame>,
   );
@@ -117,7 +117,7 @@ beforeEach(() => {
   localStorage.clear();
   delete document.documentElement.dataset.textsize;
   setVoiceEnabled(false);
-  fakeNavigation.reset("/");
+  fakeNavigation.reset("/home");
   sessionStorage.clear();
   vi.mocked(diagnoseImage).mockReset();
   document.addEventListener("click", stopNavigation);
@@ -153,7 +153,7 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
       await userEvent.click(navLink(nav, name));
 
       await waitFor(() => {
-        expect(fakeNavigation.pathname).toBe("/");
+        expect(fakeNavigation.pathname).toBe("/home");
         expect(screen.getByRole("region", { name: "사진 촬영" })).toBeTruthy();
       });
 
@@ -267,7 +267,7 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
       await act(async () => {
         fakeRouterBack();
       });
-      expect(fakeNavigation.pathname).toBe("/");
+      expect(fakeNavigation.pathname).toBe("/home");
       expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
     },
   );
@@ -299,7 +299,7 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
 
     await userEvent.click(navLink("주요 메뉴", "새 진단"));
 
-    expect(fakeNavigation.pathname).toBe("/");
+    expect(fakeNavigation.pathname).toBe("/home");
     expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(firstControl()));
     await userEvent.click(navLink("주요 메뉴", "진단 결과"));
@@ -456,11 +456,11 @@ describe("AppFrame — 새 진단 신호를 보내는 때", () => {
 
     // 누르면 촬영 화면으로 옮겨 가므로 하나씩 이력 화면에서 누른다
     await userEvent.click(navLink("주요 메뉴", "새 진단"));
-    expect(fakeNavigation.pathname).toBe("/");
+    expect(fakeNavigation.pathname).toBe("/home");
     act(() => fakeNavigation.reset("/history"));
     await userEvent.click(navLink("하단 메뉴", "촬영"));
 
-    expect(fakeNavigation.pathname).toBe("/");
+    expect(fakeNavigation.pathname).toBe("/home");
     expect(listener).not.toHaveBeenCalled();
     unsubscribe();
   });

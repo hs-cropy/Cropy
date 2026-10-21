@@ -4,7 +4,7 @@ import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installFakeSpeech } from "@/features/voice/testing/fakeSpeech";
 import { DiagnosisSessionProvider } from "@/components/diagnosis/DiagnosisSession";
-import Page from "./page";
+import Page from "./home/page";
 
 vi.mock("next/navigation", async () => (await import("@/testing/fakeNavigation")).nextNavigation);
 
