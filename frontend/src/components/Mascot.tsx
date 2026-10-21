@@ -45,12 +45,13 @@ export const MASCOT_NAMES: readonly MascotName[] = [
 
 const IMAGE_SIZE = 288;
 
-// 50: 토스트 / 64: 모바일 피드백 카드 / 80: 데스크탑 피드백 카드 / 96: 화면
-type MascotSize = 50 | 64 | 80 | 96;
+// 50: 토스트 / 64: 모바일 피드백 카드·화면 제목 / 72: 카메라 꺼짐 / 80: 데스크탑 피드백 카드 / 96: 화면
+type MascotSize = 50 | 64 | 72 | 80 | 96;
 
 const SIZE: Record<MascotSize, string> = {
   50: "size-[3.125rem]",
   64: "size-16",
+  72: "size-[4.5rem]",
   80: "size-20",
   96: "size-24",
 };
@@ -69,7 +70,7 @@ interface MascotProps extends Omit<ComponentPropsWithRef<"img">, "src" | "width"
 /**
  * 상황을 돕는 마스코트 그림. 뜻은 제목·본문·버튼이 전하고 마스코트는 거들 뿐이므로
  * 기본은 장식(alt="")이라 스크린리더가 읽지 않는다. 옆에 글이 없을 때만 alt 를 준다.
- * 크기는 큰글씨 모드에서 글자와 함께 커진다. 정해진 4가지 밖의 크기는 className 에 size-* 로 준다.
+ * 크기는 큰글씨 모드에서 글자와 함께 커진다. 정해진 5가지 밖의 크기는 className 에 size-* 로 준다.
  */
 export function Mascot({ name, size = 96, alt = "", className, ...rest }: MascotProps) {
   return (

@@ -93,7 +93,10 @@ export function Header({
                 const active = item.key === current;
                 const content = (
                   <>
-                    <span aria-hidden className={cn(item.icon, "h-5 w-5 shrink-0")} />
+                    <span
+                      aria-hidden
+                      className={cn(item.headerIcon ?? item.icon, "h-5 w-5 shrink-0")}
+                    />
                     {item.label}
                   </>
                 );

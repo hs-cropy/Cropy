@@ -17,6 +17,8 @@ interface CaseFeedbackProps extends Omit<
    * 라벨은 바꾸지 않는다: alert 안의 글이 바뀌면 안내 전체가 다시 읽힐 수 있다
    */
   primaryLoading?: boolean;
+  /** 다시 해도 소용없을 때(예: 보관 시간이 지난 결과의 다시 저장) 버튼을 빼고 안내만 보인다 */
+  hideActions?: boolean;
 }
 
 /**
@@ -30,6 +32,7 @@ export function CaseFeedback({
   onPrimary,
   onSecondary,
   primaryLoading = false,
+  hideActions = false,
   ...rest
 }: CaseFeedbackProps) {
   const { mascot, title, message, primary, secondary, busy } = FEEDBACK[caseId];
@@ -41,7 +44,7 @@ export function CaseFeedback({
       title={title}
       tone={busy ? "status" : "alert"}
       actions={
-        primary ? (
+        primary && !hideActions ? (
           <>
             <Button size="compact" loading={primaryLoading} onClick={onPrimary}>
               {primary}

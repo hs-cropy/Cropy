@@ -1,4 +1,28 @@
 const { addDynamicIconSelectors } = require("@iconify/tailwind");
+const lucide = require("@iconify-json/lucide/icons.json");
+
+// lucide 는 24px 격자에 선 굵기 2 다. 20px 로 줄이면 선도 1.67px 로 얇아지는데, Figma 는 20px
+// 아이콘(데스크탑 헤더 내비)도 선을 2px 로 그린다. 그 크기에서 2px 가 되게 선만 2.4 로 키운 세트다.
+// icon-[lucide-20--camera] 처럼 쓰고, 20px 이 아닌 자리에는 그대로 icon-[lucide--…] 를 쓴다
+const lucide20 = {
+  ...lucide,
+  prefix: "lucide-20",
+  icons: Object.fromEntries(
+    Object.entries(lucide.icons).map(([name, icon]) => [
+      name,
+      { ...icon, body: icon.body.replaceAll('stroke-width="2"', 'stroke-width="2.4"') },
+    ]),
+  ),
+};
+// lucide 를 올렸을 때 body 모양이 바뀌면 위 치환이 조용히 아무것도 안 해 선이 다시 얇아진다.
+// 헤더에서 쓰는 아이콘으로 확인해 그런 일이 생기면 빌드를 멈춘다
+for (const name of ["camera", "scan-search", "history"]) {
+  if (!lucide20.icons[name]?.body.includes('stroke-width="2.4"')) {
+    throw new Error(
+      `lucide-20: "${name}" 아이콘의 선 굵기를 바꾸지 못했어요. lucide 형식을 확인하세요`,
+    );
+  }
+}
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -191,7 +215,19 @@ module.exports = {
       maxWidth: {
         app: "30rem",
       },
+      // 분석 중 진행 막대: 분석 중 화면을 보이는 3초 동안 0% 에서 100% 로 차오른다.
+      // 시간은 쓰는 쪽이 style 로 정한다 (ANALYZING_MS). 동작 줄이기 설정에서는 globals.css 가
+      // 애니메이션을 바로 끝내 가득 찬 막대만 보인다
+      keyframes: {
+        "cropy-progress-fill": {
+          "0%": { transform: "scaleX(0)" },
+          "100%": { transform: "scaleX(1)" },
+        },
+      },
+      animation: {
+        "cropy-progress-fill": "cropy-progress-fill 3s cubic-bezier(0.4, 0, 0.2, 1) both",
+      },
     },
   },
-  plugins: [addDynamicIconSelectors()],
+  plugins: [addDynamicIconSelectors({ iconSets: { "lucide-20": lucide20 } })],
 };

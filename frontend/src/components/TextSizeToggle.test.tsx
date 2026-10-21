@@ -12,8 +12,10 @@ afterEach(() => {
   delete document.documentElement.dataset.textsize;
 });
 
+// 화면 폭에 따라 "큰 글자"(모바일)·"글자 크게"(md 부터) 중 하나만 보인다.
+// jsdom 은 CSS 를 몰라 둘 다 이름에 들어가므로 앞부분으로 찾는다
 function toggle() {
-  return screen.getByRole("switch", { name: "큰 글자" });
+  return screen.getByRole("switch", { name: /큰 글자/ });
 }
 
 describe("TextSizeToggle", () => {
@@ -21,7 +23,14 @@ describe("TextSizeToggle", () => {
     render(<TextSizeToggle />);
 
     expect(toggle().getAttribute("aria-checked")).toBe("false");
-    expect(toggle().textContent).toBe("큰 글자");
+    expect(toggle().textContent).toBe("큰 글자글자 크게");
+  });
+
+  it('모바일은 "큰 글자", md 부터는 Figma 데스크탑 헤더의 "글자 크게"를 보인다', () => {
+    render(<TextSizeToggle />);
+
+    expect(screen.getByText("큰 글자").className).toBe("md:hidden");
+    expect(screen.getByText("글자 크게").className).toBe("hidden md:inline");
   });
 
   it("켜면 html 에 표시하고 저장한다", () => {
