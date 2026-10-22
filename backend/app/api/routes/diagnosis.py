@@ -1,15 +1,13 @@
-from io import BytesIO
 import logging
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, UploadFile
-from PIL import Image, UnidentifiedImageError
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
 from app.core.database import get_db, SessionLocal
-from app.core.uploads import IMAGE_EXTENSIONS
+from app.core.image_processing import prepare_image
 from app.schemas.diagnosis import CropType, Severity, DiagnoseResponse, PaginatedHistory
 from app.core.errors import APIError
 from app.api.documentation import DATABASE_ERROR, DIAGNOSIS_EXAMPLES, REFINEMENT_EXAMPLES, IMAGE_DESCRIPTION, KEY_DESCRIPTION, UPLOAD_ERRORS, error_response
@@ -30,7 +28,8 @@ async def _read_image_upload(file: UploadFile) -> tuple[bytes, str]:
     UploadFile은 이미 multipart 파싱된 상태다. 이 제한은 애플리케이션의
     추가 메모리 사용을 제한하며, 요청 수신 자체의 상한을 보장하지 않는다.
     """
-    if not file.content_type or not file.content_type.startswith("image/"):
+    media_type = (file.content_type or "").split(";", 1)[0].strip().lower()
+    if media_type not in ("", "application/octet-stream") and not media_type.startswith("image/"):
         raise APIError(400, "UNSUPPORTED_IMAGE_FORMAT", "이미지 파일만 업로드 가능합니다.")
 
     limit = settings.max_upload_bytes
@@ -46,32 +45,7 @@ async def _read_image_upload(file: UploadFile) -> tuple[bytes, str]:
         raise APIError(400, "EMPTY_IMAGE", "빈 파일입니다.")
 
     content = b"".join(chunks)
-    extension = await run_in_threadpool(_validate_image, content)
-    return content, extension
-
-
-def _validate_image(content: bytes) -> str:
-    # Content-Type은 클라이언트가 정하는 값이라 신뢰할 수 없다. 실제로 열리는
-    # 이미지인지 확인해 두지 않으면 추론 단계에서 500으로 터진다.
-    try:
-        with Image.open(BytesIO(content), formats=list(IMAGE_EXTENSIONS)) as image:
-            extension = IMAGE_EXTENSIONS[image.format]
-            if image.width * image.height > settings.max_image_pixels:
-                raise APIError(413, "IMAGE_RESOLUTION_TOO_LARGE", "이미지 해상도가 너무 큽니다. 크기를 줄여 주세요.")
-            image.verify()
-        # verify() alone does not decode JPEG pixel data. Reopen and fully decode
-        # before persistence/inference, preserving the original bytes and orientation.
-        with Image.open(BytesIO(content), formats=list(IMAGE_EXTENSIONS)) as image:
-            image.load()
-    except Image.DecompressionBombError:
-        raise APIError(413, "IMAGE_RESOLUTION_TOO_LARGE", "이미지 해상도가 너무 큽니다. 크기를 줄여 주세요.")
-    except UnidentifiedImageError:
-        # This includes unsupported formats AND damaged JPEG/PNG headers.
-        raise APIError(400, "INVALID_IMAGE", "이미지를 읽을 수 없습니다. JPEG 또는 PNG 형식인지, 파일이 손상되지 않았는지 확인해 주세요.")
-    except (OSError, ValueError, SyntaxError):
-        raise APIError(400, "INVALID_IMAGE", "이미지를 읽을 수 없습니다. 다른 사진으로 시도해 주세요.")
-
-    return extension
+    return await run_in_threadpool(prepare_image, content)
 
 
 def _with_session(operation, *args):

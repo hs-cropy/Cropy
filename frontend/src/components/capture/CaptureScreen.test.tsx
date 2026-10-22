@@ -609,7 +609,7 @@ describe("CaptureScreen — 리뷰에서 짚은 경로", () => {
 function dropzone() {
   return screen.getByRole("button", {
     name: "사진 선택하기",
-    description: "JPG, PNG · 최대 10 MB",
+    description: "JPG, PNG · 최대 100 MB",
   });
 }
 

@@ -22,6 +22,7 @@ import { useCameraVoiceGuide } from "@/features/voice";
 import { replaceHash, useLocationHash } from "@/hooks/useLocationHash";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/cn";
+import { PhotoPreview } from "@/components/PhotoPreview";
 
 import { CameraNoticeCard } from "./CameraNoticeCard";
 import { CameraPanel } from "./CameraPanel";
@@ -674,11 +675,15 @@ export function useCaptureScreen({
                       desktop ? "h-[24.25rem] max-h-[50dvh]" : "h-[20.1875rem] max-h-[50dvh]",
                     )}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- 기기에서 고른 사진의 blob URL */}
-                    <img
+                    {/* 브라우저가 HEIC·DNG 를 못 그리면 파일 이름 안내로 바꾼다.
+                      데스크탑은 아래에 파일 이름이 따로 있어 안내에서는 뺀다 */}
+                    <PhotoPreview
+                      key={preview}
+                      fileName={desktop ? undefined : photoName}
                       src={preview}
                       alt="촬영한 작물 미리보기"
                       className="max-h-full max-w-full object-contain"
+                      fallbackClassName="size-full"
                     />
                   </div>
                   {desktop ? (

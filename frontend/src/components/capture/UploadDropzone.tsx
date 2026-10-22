@@ -92,7 +92,7 @@ export function UploadDropzone({
               사진을 여기에 놓아주세요
             </span>
             <span id={formatId} className="text-cropy-helper text-cropy-text-secondary">
-              JPG, PNG · 최대 10 MB
+              JPG, PNG · 최대 100 MB
             </span>
           </>
         ) : (
@@ -100,12 +100,11 @@ export function UploadDropzone({
             <span className="break-keep text-cropy-feedback-title leading-7 text-cropy-text-primary">
               진단할 사진을 선택해주세요
             </span>
-            {/* Figma 는 "최대 100 MB"지만 실제 제한(validateImage)이 10 MB 라 그 값을 쓴다 */}
             <span
               id={formatId}
               className="whitespace-pre-line break-keep text-cropy-helper text-cropy-text-secondary"
             >
-              {"JPG, PNG 등 최대 10 MB\n(여기를 누르면 사진을 선택할 수 있어요)"}
+              {"JPG, PNG 등 최대 100 MB\n(여기를 누르면 사진을 선택할 수 있어요)"}
             </span>
           </>
         )}

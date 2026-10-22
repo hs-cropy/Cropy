@@ -2,7 +2,7 @@
 
 import { useRef, useState, type ChangeEvent } from "react";
 
-import { isCameraSupported } from "@/features/camera";
+import { isCameraSupported, PHOTO_ACCEPT } from "@/features/camera";
 import { useVoiceGuide } from "@/features/voice";
 import type { RecaptureGuidance } from "@/types/diagnosis";
 import { Button } from "@/components/Button";
@@ -370,7 +370,7 @@ export function RecapturePanel({
       <input
         ref={cameraRef}
         type="file"
-        accept="image/jpeg,image/png"
+        accept={PHOTO_ACCEPT}
         capture="environment"
         onChange={handleFileChange("camera")}
         aria-label="카메라로 추가 촬영"
@@ -380,7 +380,7 @@ export function RecapturePanel({
       <input
         ref={galleryRef}
         type="file"
-        accept="image/jpeg,image/png"
+        accept={PHOTO_ACCEPT}
         onChange={handleFileChange("gallery")}
         aria-label="갤러리에서 추가 사진 선택"
         className="sr-only"
