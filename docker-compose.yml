@@ -16,7 +16,8 @@ services:
       UPLOAD_DIR: /data/uploads
       ML_MODEL_PATH: /models/best_model.pth
       OFFLINE_BUNDLE_DIR: /offline-assets
-      MAX_UPLOAD_MB: "10"
+      MAX_UPLOAD_MB: "100"
+      MAX_IMAGE_PIXELS: "210000000"
       APP_ENV: production
       ALLOW_MOCK_PREDICTIONS: "false"
       ENABLE_PAIR_MODEL: "false"

@@ -4,6 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.database import engine
 
 from app.core.config import settings
+from app.core.image_processing import SUPPORTED_FORMATS
 from app.schemas.diagnosis import HealthResponse, ReadinessResponse
 from app.api.documentation import CapabilitiesResponse
 from app.services.ml_service import (
@@ -23,7 +24,7 @@ router = APIRouter()
             responses={200: {"model": CapabilitiesResponse}})
 def capabilities():
     return {
-        "upload": {"formats": ["JPEG", "PNG"], "max_bytes": settings.max_upload_bytes,
+        "upload": {"formats": SUPPORTED_FORMATS, "max_bytes": settings.max_upload_bytes,
                    "max_pixels": settings.max_image_pixels},
         "crops": ["고추", "무", "배추"],
         "decision": {"version": POLICY_VERSION, "low_confidence_threshold": settings.low_confidence_threshold,

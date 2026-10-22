@@ -35,7 +35,7 @@ DESCRIPTION = """AI 기반 농작물 병해충 진단 및 스마트 방제 지�
 ## 사용 순서
 1. `/api/v1/capabilities`에서 지원 작물·업로드 한도·기능을 확인합니다.
 2. `/api/v1/ready`로 실제 모델의 추론 준비 상태를 확인합니다. `/health`는 생존 확인입니다.
-3. `/api/v1/diagnose`에 JPEG/PNG 사진을 multipart로 전송합니다.
+3. `/api/v1/diagnose`에 JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진을 multipart로 전송합니다.
 4. 재촬영 안내가 있으면 `/api/v1/diagnose/{diagnosis_id}/refine`을 사용합니다.
 5. HTTP 200이어도 `save_status=failed`이면 `recovery_token`으로 결과 저장을 재시도합니다.
 
@@ -46,8 +46,9 @@ DESCRIPTION = """AI 기반 농작물 병해충 진단 및 스마트 방제 지�
   `detail`, `code`, `retryable`, `request_id`를 반환합니다.
   단, `/ready`의 503은 준비 상태 객체입니다. 응답의 `X-Request-ID`로 요청을 추적합니다.
   처리되지 않은 서버 예외의 500 응답은 일반 텍스트일 수 있으며 공통 JSON 형식을 보장하지 않습니다.
-- 사진 파일 파트에는 `image/jpeg` 또는 `image/png` Content-Type을 사용합니다.
-  서버는 `image/*` MIME과 실제 JPEG/PNG 파일 내용을 모두 확인합니다.
+- 사진 파일 파트에는 해당 형식의 `image/*` Content-Type을 사용합니다.
+  모바일에서 MIME을 알 수 없는 경우 누락 또는 `application/octet-stream`도 허용하되 실제 파일을 디코딩해 검사합니다.
+  HEIC/HEIF·DNG·WebP·AVIF 및 긴 변 4096픽셀 초과 사진은 JPEG로 변환합니다.
   전체 요청 본문 한도는 `upload.max_bytes + 65536`바이트이며,
   `/api/v1/offline/records`는 `upload.max_bytes * 2 + 65536`바이트입니다.
 - `Idempotency-Key`는 진단·재촬영 요청에서 선택 사항입니다. 같은 키로 동일 요청을 재전송하면
@@ -90,13 +91,12 @@ UPLOAD_ERRORS = {
     409: error_response("같은 요청 키로 다른 사진이나 작물을 보낼 수 없습니다.", "IDEMPOTENCY_CONFLICT"),
     503: error_response("모델(MODEL_UNAVAILABLE), DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가", "MODEL_UNAVAILABLE", True, example_detail="모델 진단 결과를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요."),
 }
-IMAGE_DESCRIPTION = "JPEG/PNG 원본 사진. 파일 파트의 Content-Type은 image/jpeg 또는 image/png 사용(image/* 필수). 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조."
+IMAGE_DESCRIPTION = "JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진. image/* 또는 application/octet-stream(MIME 누락 가능). 실제 디코딩으로 검증하며 새 형식·고해상도 사진은 긴 변 4096픽셀 이하 JPEG로 변환합니다. 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조. RAW 지원은 서버 디코더가 읽을 수 있는 압축 방식에 한합니다."
 KEY_DESCRIPTION = "동일 요청 재전송용 키(1~128자). 사진/작물이 달라지면 새 키를 사용합니다."
 
 
-
 class UploadCapabilities(BaseModel):
-    formats: list[str] = Field(description="허용 이미지 형식", examples=[["JPEG", "PNG"]])
+    formats: list[str] = Field(description="허용 이미지 형식(RAW 압축 방식은 디코더 지원에 따름)", examples=[["JPEG", "PNG", "HEIC", "HEIF", "DNG", "WEBP", "AVIF"]])
     max_bytes: int = Field(description="파일 하나의 최대 바이트 수")
     max_pixels: int = Field(description="이미지 가로×세로 픽셀 수 상한")
 
@@ -118,7 +118,7 @@ class ExecutionCapabilities(BaseModel):
 
 class CapabilitiesResponse(BaseModel):
     model_config = {"json_schema_extra": {"examples": [{
-        "upload": {"formats": ["JPEG", "PNG"], "max_bytes": 10485760, "max_pixels": 40000000},
+        "upload": {"formats": ["JPEG", "PNG", "HEIC", "HEIF", "DNG", "WEBP", "AVIF"], "max_bytes": 104857600, "max_pixels": 210000000},
         "crops": ["고추", "무", "배추"],
         "decision": {"version": "decision-v1", "low_confidence_threshold": .5,
                      "confusion_margin": .2, "second_photo_weight": .6, "confusion_pairs": [[2, 3], [4, 5]]},

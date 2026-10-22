@@ -198,12 +198,12 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
     expect(
       screen.getAllByText("먼저 사진을 촬영하거나 선택하세요.").length
     ).toBeGreaterThan(0);
-    expect(screen.getByText("JPEG·PNG만 올릴 수 있어요")).toBeTruthy();
+    expect(screen.getByText("JPG·PNG·HEIC/HEIF·DNG·WebP·AVIF 사진을 선택해 주세요")).toBeTruthy();
 
     await userEvent.click(navLink("주요 메뉴", "새 진단"));
 
     expect(screen.queryByText("먼저 사진을 촬영하거나 선택하세요.")).toBeNull();
-    expect(screen.queryByText("JPEG·PNG만 올릴 수 있어요")).toBeNull();
+    expect(screen.queryByText("JPG·PNG·HEIC/HEIF·DNG·WebP·AVIF 사진을 선택해 주세요")).toBeNull();
   });
 
   it.each(NEW_DIAGNOSIS)(
