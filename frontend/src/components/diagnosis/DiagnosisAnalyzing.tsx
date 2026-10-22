@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/Button";
 import { cardClassName } from "@/components/Card";
+import { PhotoPreview } from "@/components/PhotoPreview";
 import { cn } from "@/lib/cn";
 import { ANALYZING_MS } from "./analyzingHold";
 
@@ -25,9 +26,15 @@ interface DiagnosisAnalyzingProps {
 function Photo({ photo, className }: { photo: string | null; className: string }) {
   return (
     <div className={className}>
+      {/* 기기 안의 사진(blob) 미리보기. 브라우저가 HEIC·DNG 를 못 그리면 안내로 바꾼다 */}
       {photo && (
-        // eslint-disable-next-line @next/next/no-img-element -- 기기 안의 사진(blob) 미리보기
-        <img src={photo} alt="분석 중인 사진" className="size-full object-cover" />
+        <PhotoPreview
+          key={photo}
+          src={photo}
+          alt="분석 중인 사진"
+          className="size-full object-cover"
+          fallbackClassName="size-full"
+        />
       )}
     </div>
   );

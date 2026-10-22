@@ -12,11 +12,15 @@ export type ImageValidation = { ok: true } | { ok: false; reason: ImageRejection
 
 /** 업로드 전에 형식·크기를 검사한다 (기능명세서 M02-F6, 문구는 카메라 기획서 7절) */
 export function validateImage(file: File): ImageValidation {
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return { ok: false, reason: "format", message: "JPEG·PNG만 올릴 수 있어요" };
+  const type = file.type.toLowerCase();
+  const unknownType = type === "" || type === "application/octet-stream";
+  const photoExtension = /\.(jpe?g|png|heic|heif|dng|webp|avif)$/i.test(file.name);
+  // 일부 모바일 사진 선택기는 HEIC/RAW 에 MIME 을 붙이지 않는다. 실제 내용은 서버가 검증한다
+  if (!ALLOWED_TYPES.includes(type) && !(unknownType && photoExtension)) {
+    return { ok: false, reason: "format", message: "JPG·PNG·HEIC/HEIF·DNG·WebP·AVIF 사진을 선택해 주세요" };
   }
   if (file.size > MAX_IMAGE_BYTES) {
-    return { ok: false, reason: "size", message: "10MB 이하로 올려주세요" };
+    return { ok: false, reason: "size", message: "100MB 이하로 올려주세요" };
   }
   return { ok: true };
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { isCameraSupported } from "@/features/camera";
+import { isCameraSupported, PHOTO_ACCEPT } from "@/features/camera";
 import { CaseFeedback } from "@/features/feedback/CaseFeedback";
 import type { FeedbackCaseId } from "@/features/feedback/cases";
 import {
@@ -219,7 +219,7 @@ export function DiagnosisPage() {
         <input
           ref={galleryInputRef}
           type="file"
-          accept="image/jpeg,image/png"
+          accept={PHOTO_ACCEPT}
           onChange={handleFileChange("gallery")}
           disabled={loading}
           className="hidden"
@@ -228,7 +228,7 @@ export function DiagnosisPage() {
         <input
           ref={deviceCameraInputRef}
           type="file"
-          accept="image/jpeg,image/png"
+          accept={PHOTO_ACCEPT}
           capture="environment"
           onChange={handleFileChange("camera")}
           disabled={loading}

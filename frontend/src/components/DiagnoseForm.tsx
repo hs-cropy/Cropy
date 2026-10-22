@@ -1,11 +1,9 @@
 "use client";
 
-import { PhotoPreview } from "./PhotoPreview";
-import { PHOTO_ACCEPT } from "@/features/camera/lib/validateImage";
-
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { PHOTO_ACCEPT } from "@/features/camera";
 import { CaseFeedback } from "@/features/feedback/CaseFeedback";
 import type { FeedbackCaseId } from "@/features/feedback/cases";
 import { PROMPT_HOME, useVoiceGuide } from "@/features/voice";
@@ -149,7 +147,7 @@ export function DiagnoseForm() {
         <input
           ref={galleryInputRef}
           type="file"
-          accept="image/jpeg,image/png"
+          accept={PHOTO_ACCEPT}
           onChange={handleFileChange("gallery")}
           disabled={loading}
           className="hidden"
@@ -160,7 +158,7 @@ export function DiagnoseForm() {
         <input
           ref={fallbackInputRef}
           type="file"
-          accept="image/jpeg,image/png"
+          accept={PHOTO_ACCEPT}
           capture="environment"
           onChange={handleFileChange("camera")}
           disabled={loading}

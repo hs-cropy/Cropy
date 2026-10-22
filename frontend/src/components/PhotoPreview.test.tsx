@@ -11,3 +11,12 @@ it("keeps a selected mobile photo visible as a filename when the browser cannot 
   expect(screen.getByRole("img").getAttribute("src")).toBe("blob:two");
   expect(screen.queryByRole("status")).toBeNull();
 });
+
+it("sizes the notice with fallbackClassName and omits a missing filename", () => {
+  render(<PhotoPreview src="blob:one" alt="사진" fallbackClassName="size-full" />);
+  fireEvent.error(screen.getByAltText("사진"));
+  const status = screen.getByRole("status");
+  expect(status.className).toContain("size-full");
+  expect(status.className).not.toContain("pb-12");
+  expect(status.children).toHaveLength(2);
+});
