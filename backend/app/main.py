@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import diagnosis, diseases, health, offline
+from app.api.documentation import COMMON_ERRORS, DESCRIPTION, TAGS
 from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine, ensure_columns
 from app.core.uploads import ImageStaticFiles
@@ -35,7 +36,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description="AI 기반 농작물 병해충 진단 및 스마트 방제 지원 플랫폼",
+    description=DESCRIPTION,
+    openapi_tags=TAGS,
+    responses=COMMON_ERRORS,
+    swagger_ui_parameters={"displayRequestDuration": True, "filter": True},
     lifespan=lifespan,
 )
 
@@ -57,3 +61,20 @@ app.include_router(diagnosis.router, prefix="/api/v1", tags=["diagnosis"])
 app.include_router(diseases.router, prefix="/api/v1/diseases", tags=["diseases"])
 app.include_router(offline.router, prefix="/api/v1/offline", tags=["offline"])
 app.mount("/uploads", ImageStaticFiles(directory=str(settings.upload_dir)), name="uploads")
+
+# metadata is JSON text inside multipart, so FastAPI cannot discover its inner
+# Pydantic model automatically. Keep that schema tied to the runtime validator.
+_default_openapi = app.openapi
+
+
+def openapi_with_local_record():
+    document = _default_openapi()
+    schemas = document["components"]["schemas"]
+    if "LocalRecord" not in schemas:
+        record = offline.LocalRecord.model_json_schema(ref_template="#/components/schemas/{model}")
+        schemas.update(record.pop("$defs", {}))
+        schemas["LocalRecord"] = record
+    return document
+
+
+app.openapi = openapi_with_local_record

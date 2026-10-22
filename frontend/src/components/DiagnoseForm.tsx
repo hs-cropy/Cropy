@@ -1,5 +1,8 @@
 "use client";
 
+import { PhotoPreview } from "./PhotoPreview";
+import { PHOTO_ACCEPT } from "@/features/camera/lib/validateImage";
+
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 

@@ -241,7 +241,7 @@ export function RecapturePanel({
       <input
         ref={cameraRef}
         type="file"
-        accept="image/jpeg,image/png"
+        accept={PHOTO_ACCEPT}
         capture="environment"
         onChange={handleFileChange("camera")}
         aria-label="카메라로 추가 촬영"

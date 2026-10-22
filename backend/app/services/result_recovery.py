@@ -25,7 +25,11 @@ def request_context(operation, key, content, crop=None):
 
 def _root():
     root = settings.upload_dir / ".pending"
-    root.mkdir(parents=True, exist_ok=True)
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise APIError(503, "RECOVERY_STORAGE_UNAVAILABLE",
+                       "결과를 보관할 공간을 확보하지 못했습니다. 다시 시도해 주세요.", True) from exc
     return root
 
 

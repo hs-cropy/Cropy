@@ -80,7 +80,7 @@ def test_low_confidence_and_crop_mismatch_are_distinct_reasons(db, sample_image,
 def test_shared_upload_policy_and_machine_readable_errors(client, sample_image):
     policy = client.get("/api/v1/capabilities")
     assert policy.status_code == 200
-    assert policy.json()["upload"]["formats"] == ["JPEG", "PNG"]
+    assert policy.json()["upload"]["formats"] == ["JPEG", "PNG", "HEIC", "HEIF", "DNG", "WEBP", "AVIF"]
     bad = client.post("/api/v1/diagnose", files={"file": ("x.txt", b"bad", "text/plain")})
     assert bad.status_code == 400
     assert bad.json()["code"] == "UNSUPPORTED_IMAGE_FORMAT"
