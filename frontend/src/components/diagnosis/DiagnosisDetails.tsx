@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import {
@@ -12,6 +12,11 @@ import {
 interface DiagnosisDetailsProps {
   result: DiagnoseResponse;
   isRecord?: boolean;
+  /**
+   * screen: 진단 결과 화면(Figma M-03·D-03)의 제목만 둔다. 모바일 14/22px Bold 회색,
+   * lg 부터 18/26px Bold. 기본(card)은 이력 상세의 제목과 설명이다
+   */
+  variant?: "card" | "screen";
 }
 
 type DetailKey =
@@ -38,9 +43,11 @@ function MissingInformation({
 export function DiagnosisDetails({
   result,
   isRecord = false,
+  variant = "card",
 }: DiagnosisDetailsProps) {
   // 공통 Accordion의 펼침 상태 제어
   const [openKey, setOpenKey] = useState<DetailKey | null>(null);
+  const titleId = useId();
 
   // 이력 상세에서는 현재 카탈로그 정보와
   // 저장 당시 조회 제품을 구분한다.
@@ -265,6 +272,25 @@ export function DiagnosisDetails({
       ),
     },
   ];
+
+  if (variant === "screen") {
+    return (
+      <section aria-labelledby={titleId} className="flex flex-col gap-2 lg:gap-3">
+        <h2
+          id={titleId}
+          className="text-cropy-helper font-bold text-cropy-text-secondary lg:text-cropy-feedback-title lg:text-cropy-text-primary"
+        >
+          상세 정보
+        </h2>
+        <Accordion
+          items={items}
+          value={openKey}
+          onValueChange={(value) => setOpenKey(value as DetailKey | null)}
+          headingLevel={3}
+        />
+      </section>
+    );
+  }
 
   return (
     <section aria-label="진단 상세 정보" className="space-y-3">

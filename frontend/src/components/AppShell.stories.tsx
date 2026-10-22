@@ -12,6 +12,7 @@ import { MobileNav } from "./MobileNav";
 import type { NavItem } from "./navItem";
 import { PageHeader } from "./PageHeader";
 import { Switch } from "./Switch";
+import { HEADER_TOGGLE } from "./AppFrame";
 
 // 실제 경로는 화면에 붙일 때 정한다. 여기서는 모양만 본다
 const ITEMS: NavItem[] = [
@@ -21,6 +22,7 @@ const ITEMS: NavItem[] = [
     label: "새 진단",
     mobileLabel: "촬영",
     icon: "icon-[lucide--camera]",
+    headerIcon: "icon-[lucide-20--camera]",
   },
   {
     key: "result",
@@ -28,6 +30,7 @@ const ITEMS: NavItem[] = [
     label: "진단 결과",
     mobileLabel: "진단",
     icon: "icon-[lucide--scan-search]",
+    headerIcon: "icon-[lucide-20--scan-search]",
   },
   {
     key: "history",
@@ -35,6 +38,7 @@ const ITEMS: NavItem[] = [
     label: "진단 이력",
     mobileLabel: "이력",
     icon: "icon-[lucide--history]",
+    headerIcon: "icon-[lucide-20--history]",
   },
 ];
 
@@ -43,14 +47,15 @@ function Switches() {
   const [voice, setVoice] = useState(false);
   return (
     <>
-      <Switch checked={large} onCheckedChange={setLarge} className="xl:w-28">
-        큰 글자
+      <Switch checked={large} onCheckedChange={setLarge} className={HEADER_TOGGLE}>
+        <span className="md:hidden">큰 글자</span>
+        <span className="hidden md:inline">글자 크게</span>
       </Switch>
       <Switch
         checked={voice}
         onCheckedChange={setVoice}
         aria-label="음성 안내"
-        className="xl:w-[8.25rem]"
+        className={HEADER_TOGGLE}
       >
         <span className="md:hidden">음성</span>
         <span className="hidden md:inline">음성 안내</span>

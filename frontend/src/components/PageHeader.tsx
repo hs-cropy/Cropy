@@ -23,6 +23,8 @@ interface PageHeaderProps extends Omit<ComponentPropsWithRef<"div">, "title"> {
   headingLevel?: 1 | 2 | 3;
   /** 화면이 바뀐 뒤 초점을 제목으로 옮길 때 쓴다 (titleRef.current.focus()) */
   titleRef?: Ref<HTMLHeadingElement>;
+  /** 마스코트 이미지를 받는 때. 숨겨져 있을 수 있는 제목이면 "lazy" 로 둬 받지 않게 한다 */
+  mascotLoading?: "lazy" | "eager";
 }
 
 /**
@@ -36,6 +38,7 @@ export function PageHeader({
   mascot,
   headingLevel = 1,
   titleRef,
+  mascotLoading,
   className,
   ...rest
 }: PageHeaderProps) {
@@ -55,7 +58,14 @@ export function PageHeader({
           )}
         </div>
         {/* Figma 에서 마스코트는 제목 영역 위에서 14px 내려와 있다 (상하 여백 8px + 6px) */}
-        {mascot && <Mascot name={mascot} size={64} className="mt-1.5 lg:mt-0 lg:size-[5.5rem]" />}
+        {mascot && (
+          <Mascot
+            name={mascot}
+            size={64}
+            loading={mascotLoading}
+            className="mt-1.5 lg:mt-0 lg:size-[5.5rem]"
+          />
+        )}
       </div>
     </div>
   );

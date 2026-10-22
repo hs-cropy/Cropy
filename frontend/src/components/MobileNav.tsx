@@ -48,11 +48,18 @@ export function MobileNav({
           return (
             <li key={item.key} className="min-w-0 flex-1">
               {item.disabled ? (
-                // 갈 화면이 없는 항목: 모양은 선택되지 않은 항목과 같고 링크가 아니다
+                // 갈 화면이 없는 항목: 링크가 아니다. current 로 지정되면
+                // 선택된 모양으로 보이고 현재 위치로 읽힌다
                 <span
                   role="link"
                   aria-disabled="true"
-                  className={cn(ITEM, "font-medium text-cropy-text-secondary")}
+                  aria-current={active ? "step" : undefined}
+                  className={cn(
+                    ITEM,
+                    active
+                      ? "font-bold text-cropy-action-primary"
+                      : "font-medium text-cropy-text-secondary",
+                  )}
                 >
                   {content}
                 </span>

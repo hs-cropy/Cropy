@@ -27,6 +27,8 @@ page.on("pageerror", (error) => {
 
 let diagnosisCalls = 0;
 let refineCalls = 0;
+// 재분석 요청마다 실린 추가 사진의 파일 이름
+const refineFileNames = [];
 let imageUrl = "";
 
 // ======================================
@@ -131,6 +133,8 @@ await page.route(
 
     if (isRefine) {
       refineCalls += 1;
+      const body = request.postDataBuffer()?.toString("latin1") ?? "";
+      refineFileNames.push(/filename="([^"]+)"/.exec(body)?.[1] ?? null);
 
       // 재분석 요청은 최초 진단과 같은 ID여야 한다.
       assert.match(
@@ -138,14 +142,14 @@ await page.route(
         /\/diagnose\/recapture-test-001\/refine(?:\?.*)?$/
       );
 
-      // 첫 번째 재분석은 실패
+      // 첫 번째 재분석은 서버 장애로 실패
       if (refineCalls === 1) {
         await route.fulfill({
           status: 503,
           contentType: "application/json",
           headers,
           body: JSON.stringify({
-            code: "TEST_REFINE_FAILED",
+            code: "MODEL_UNAVAILABLE",
             detail:
               "재촬영 분석 서버가 응답하지 않았어요.",
             retryable: true,
@@ -240,6 +244,9 @@ try {
     buffer: Buffer.from(pngBase64, "base64"),
   };
 
+  // 추가 촬영 사진. 처음 사진과 이름을 달리해 재분석에 추가 사진이 실렸는지 가린다
+  const extraPhoto = { ...photo, name: "test-leaf-back.png" };
+
   // ======================================
   // TEST 1. 최초 진단 및 혼동 후보 표시
   // ======================================
@@ -250,7 +257,7 @@ try {
 
   await page
     .getByRole("button", {
-      name: /AI 진단 시작/,
+      name: "이 사진으로 진단하기",
     })
     .click();
 
@@ -341,12 +348,12 @@ try {
     .locator(
       'input[aria-label="갤러리에서 추가 사진 선택"]'
     )
-    .setInputFiles(photo);
+    .setInputFiles(extraPhoto);
 
-  // 먼저 미리보기 화면이 표시되어야 한다.
+  // 먼저 촬영 화면의 추가 사진 확인이 표시되어야 한다 (모바일·데스크톱 제목)
   await page
     .getByRole("heading", {
-      name: "추가 사진을 확인해 주세요",
+      name: /^(추가 사진 확인|이 사진으로 다시 분석할까요\?)$/,
     })
     .waitFor();
 
@@ -360,10 +367,10 @@ try {
     })
     .click();
 
-  // 실패 화면 표시 확인
+  // 서버 장애 안내 표시 확인 (사진·연결 문제 안내가 아니다)
   await page
     .getByRole("heading", {
-      name: "분석을 완료하지 못했어요",
+      name: "일시적으로 진단 서비스를 사용할 수 없어요",
     })
     .waitFor();
 
@@ -381,7 +388,7 @@ try {
   // TEST 5. 같은 사진으로 재시도
   // ======================================
 
-  // DiagnosisFailurePanel의 실제 버튼명
+  // 서버 장애 안내(inline/service-unavailable)의 버튼명
   await page
     .getByRole("button", {
       name: "다시 시도하기",
@@ -398,12 +405,8 @@ try {
   // refine 요청이 정확히 두 번 발생해야 한다.
   assert.equal(refineCalls, 2);
 
-  // 재촬영 결과 확인
-  await page
-    .getByText("사진 2장 분석", {
-      exact: true,
-    })
-    .waitFor();
+  // 두 번 모두 고른 추가 사진을 실어 보냈어야 한다
+  assert.deepEqual(refineFileNames, [extraPhoto.name, extraPhoto.name]);
 
   // 성공 후 혼동 후보 화면이 사라져야 한다.
   assert.equal(

@@ -17,8 +17,10 @@ interface TextSizeToggleProps {
  * (globals.css 참고). 선택은 localStorage에 남겨 한 번만 찾으면 되게 하고,
  * 첫 페인트 전에 layout.tsx의 인라인 스크립트가 같은 값을 미리 적용한다.
  *
- * 어르신이 이 스위치를 못 찾으면 의미가 없으므로, 아이콘만 두지 않고 "큰 글자"
- * 라벨을 항상 함께 노출하며 헤더에서 가장 눈에 띄는 자리에 둔다.
+ * 어르신이 이 스위치를 못 찾으면 의미가 없으므로, 아이콘만 두지 않고 라벨(모바일 "큰 글자",
+ * md 부터 "글자 크게")을 항상 함께 노출하며 헤더에서 가장 눈에 띄는 자리에 둔다.
+ * 두 라벨은 서로를 포함하지 않아 음성 스위치처럼 aria-label 로 이름을 고정하지 않는다
+ * (고정하면 한쪽 폭에서 보이는 글자가 이름에 없어 WCAG 2.5.3 을 어긴다).
  */
 export function TextSizeToggle({ className }: TextSizeToggleProps) {
   const [large, setLarge] = useState(false);
@@ -39,8 +41,11 @@ export function TextSizeToggle({ className }: TextSizeToggleProps) {
   };
 
   return (
+    // Figma 모바일 헤더는 "큰 글자", 데스크탑 헤더는 "글자 크게"다. 음성 스위치와 같은 md 에서 바꾼다.
+    // 숨긴 쪽은 display:none 이라 스크린리더는 보이는 글자만 이름으로 읽는다 (위 설명 참고)
     <Switch checked={large} onCheckedChange={change} className={className}>
-      큰 글자
+      <span className="md:hidden">큰 글자</span>
+      <span className="hidden md:inline">글자 크게</span>
     </Switch>
   );
 }

@@ -14,6 +14,8 @@ import { CropMismatchNotice } from "./CropMismatchNotice";
 interface Props {
   result: DiagnoseResponse;
   onSaved?: (result: DiagnoseResponse) => void;
+  /** 이력에 다시 저장할 수 없을 때의 "새 진단 시작" */
+  onNewDiagnosis?: () => void;
   isRecord?: boolean;
 }
 
@@ -79,6 +81,7 @@ function Shot({
 export function DiagnosisResult({
   result,
   onSaved,
+  onNewDiagnosis,
   isRecord = false,
 }: Props) {
   const isHealthy = result.category === "normal";
@@ -108,6 +111,7 @@ export function DiagnosisResult({
       <SaveRecovery
         result={result}
         onSaved={onSaved}
+        onNewDiagnosis={onNewDiagnosis}
       />
 
       {/* 브라우저 진단 출처 */}

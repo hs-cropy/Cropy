@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FEEDBACK, FEEDBACK_CASE_IDS } from "./cases";
 
 // 버튼 수는 Figma 의 Cropy/FeedbackV3/inline/* 16종과 같아야 한다.
+// service-unavailable·refine-unavailable·save-unrecoverable 은 Figma 시안 대기 중인 안내다 (cases.ts).
 // 문구 원문은 여기에 베끼지 않는다 (같은 문자열을 두 번 적는 것이라 오타를 잡지 못한다)
 const BUTTON_COUNT: Record<string, 0 | 1 | 2> = {
   "photo-format": 1,
@@ -20,10 +21,13 @@ const BUTTON_COUNT: Record<string, 0 | 1 | 2> = {
   "history-failed": 1,
   "record-unavailable": 1,
   "record-load-failed": 2,
+  "service-unavailable": 2,
+  "refine-unavailable": 2,
+  "save-unrecoverable": 1,
 };
 
 describe("피드백 문구 사전", () => {
-  it("Figma 의 지속형 안내 16종이 빠짐없이 있다", () => {
+  it("Figma 의 지속형 안내 16종과 시안 대기 3종이 빠짐없이 있다", () => {
     expect([...FEEDBACK_CASE_IDS].sort()).toEqual(Object.keys(BUTTON_COUNT).sort());
   });
 

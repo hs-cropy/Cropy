@@ -8,7 +8,10 @@ import { AppShellPage } from "./AppShell";
 import { APP_NAV_ITEMS, currentNavKey } from "./appNav";
 
 const navigation = vi.hoisted(() => ({ pathname: "/" }));
-vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => navigation.pathname,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+}));
 vi.mock("@/lib/api", () => ({ fetchHistory: vi.fn() }));
 
 beforeEach(() => {
@@ -31,6 +34,7 @@ function currentLinks() {
 describe("currentNavKey", () => {
   it.each([
     ["/", "capture"],
+    ["/diagnosis", "result"],
     ["/history", "history"],
     ["/history/abc", "history"],
     ["/historyx", undefined],
@@ -40,10 +44,10 @@ describe("currentNavKey", () => {
     expect(currentNavKey(pathname)).toBe(key);
   });
 
-  it("내비 항목은 Figma 의 세 개다. 자기 화면이 없는 진단 결과는 누를 수 없다", () => {
+  it("내비 항목은 Figma 의 세 개다. 진단 결과는 진단 결과 화면(/diagnosis)으로 간다", () => {
     expect(APP_NAV_ITEMS.map((item) => [item.key, item.disabled ? null : item.href])).toEqual([
       ["capture", "/"],
-      ["result", null],
+      ["result", "/diagnosis"],
       ["history", "/history"],
     ]);
   });
@@ -51,6 +55,13 @@ describe("currentNavKey", () => {
   it("헤더와 모바일 하단의 라벨이 Figma 와 같다", () => {
     expect(APP_NAV_ITEMS.map((item) => item.label)).toEqual(["새 진단", "진단 결과", "진단 이력"]);
     expect(APP_NAV_ITEMS.map((item) => item.mobileLabel)).toEqual(["촬영", "진단", "이력"]);
+  });
+
+  it("헤더 아이콘은 모바일과 같은 아이콘의 20px 용 굵은 선 세트다 (이름이 어긋나면 아이콘이 사라진다)", () => {
+    for (const item of APP_NAV_ITEMS) {
+      expect(item.icon).toMatch(/^icon-\[lucide--[a-z0-9-]+\]$/);
+      expect(item.headerIcon).toBe(item.icon.replace("lucide--", "lucide-20--"));
+    }
   });
 
   it("자기 화면이 없는 진단 결과는 어느 경로에서도 현재 화면이 아니다", () => {
@@ -108,7 +119,11 @@ describe("AppFrame", () => {
 
     for (const name of ["주요 메뉴", "하단 메뉴"]) {
       const links = within(screen.getByRole("navigation", { name })).getAllByRole("link");
-      expect(links.map((link) => link.getAttribute("href"))).toEqual(["/", null, "/history"]);
+      expect(links.map((link) => link.getAttribute("href"))).toEqual([
+        "/",
+        "/diagnosis",
+        "/history",
+      ]);
     }
   });
 
@@ -123,29 +138,34 @@ describe("AppFrame", () => {
     const header = within(screen.getByRole("banner"));
 
     expect(header.getAllByRole("switch")).toHaveLength(2);
-    expect(header.getByRole("switch", { name: "큰 글자" })).toBeTruthy();
+    expect(header.getByRole("switch", { name: /큰 글자/ })).toBeTruthy();
     expect(header.getByRole("switch", { name: "음성 안내" })).toBeTruthy();
     expect(header.queryByRole("button")).toBeNull();
     // 로고와 내비 항목 말고는 링크가 없다 (기기 진단 링크는 진단 화면 본문으로 옮겼다)
     expect(header.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
       "/",
       "/",
-      null,
+      "/diagnosis",
       "/history",
     ]);
   });
 
-  it("넓은 데스크탑에서 스위치는 Figma 의 고정 폭을 쓴다", () => {
+  it("헤더 스위치는 Figma 크기를 쓴다: 모바일 90px, 넓은 데스크탑 132px·좌우 15px·양끝 정렬", () => {
     render(<AppFrame>화면</AppFrame>);
 
-    expect(Array.from(screen.getByRole("switch", { name: "큰 글자" }).classList)).toContain(
-      "xl:w-28",
-    );
-    expect(Array.from(screen.getByRole("switch", { name: "음성 안내" }).classList)).toContain(
-      "xl:w-[8.25rem]",
-    );
+    for (const name of [/큰 글자/, "음성 안내"]) {
+      expect(Array.from(screen.getByRole("switch", { name }).classList)).toEqual(
+        expect.arrayContaining([
+          "min-w-[5.625rem]",
+          "[[data-textsize=large]_&]:min-w-0",
+          "xl:w-[8.25rem]",
+          "xl:justify-between",
+          "xl:gap-3",
+          "xl:px-[0.9375rem]",
+        ]),
+      );
+    }
   });
-
 
   it("실제 화면을 넣어도 main 은 하나다", async () => {
     vi.mocked(fetchHistory).mockResolvedValue({

@@ -5,7 +5,10 @@ import { installFakeSpeech, spokenTexts, type FakeSpeech } from "../testing/fake
 import { VoiceToggle } from "./VoiceToggle";
 
 const navigation = vi.hoisted(() => ({ pathname: "/" }));
-vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => navigation.pathname,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+}));
 
 let synth: FakeSpeech;
 

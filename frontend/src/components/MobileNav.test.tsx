@@ -169,13 +169,16 @@ describe("MobileNav — 갈 화면이 없는 항목", () => {
     expect(disabled.hasAttribute("tabindex")).toBe(false);
   });
 
-  it("current 로 지정해도 현재 화면으로 표시하지 않는다", () => {
+  it("current 로 지정하면 지금 단계로 선택해 보인다 (결과 화면의 진단)", () => {
     render(<MobileNav items={WITH_DISABLED} current="result" />);
     const nav = within(screen.getByRole("navigation"));
+    const step = nav.getByRole("link", { name: "진단" });
 
-    expect(nav.getByRole("link", { name: "진단" }).hasAttribute("aria-current")).toBe(false);
-    expect(nav.getAllByRole("link").filter((link) => link.hasAttribute("aria-current"))).toEqual(
-      [],
+    // 갈 화면(페이지)은 아니므로 page 가 아니라 step 으로 알린다. 여전히 누를 수 없다
+    expect(step.getAttribute("aria-current")).toBe("step");
+    expect(step.getAttribute("aria-disabled")).toBe("true");
+    expect(Array.from(step.classList)).toEqual(
+      expect.arrayContaining(["font-bold", "text-cropy-action-primary"]),
     );
   });
 

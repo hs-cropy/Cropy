@@ -141,6 +141,32 @@ const CASES = {
     primary: "다시 불러오기",
     secondary: "이력으로",
   },
+  // 아래 3종은 Figma 시안 대기: PR #85 리뷰로 나눈 안내라 Figma 에 아직 없다.
+  // 시안이 나오면 ID·문구를 맞춘다
+  "service-unavailable": {
+    kind: "inline",
+    mascot: "connection",
+    title: "일시적으로 진단 서비스를 사용할 수 없어요",
+    message: "선택한 사진은 유지돼요.\n잠시 후 다시 시도해주세요.",
+    primary: "다시 시도하기",
+    secondary: "사진 확인으로",
+  },
+  "refine-unavailable": {
+    kind: "inline",
+    mascot: "warning",
+    title: "이 사진으로 다시 분석할 수 없어요",
+    message: "처음 진단을 이어서 분석할 수 없는 상태예요.\n새 진단을 시작하거나 이력에서 결과를 확인해주세요.",
+    primary: "새 진단 시작",
+    secondary: "이력으로",
+  },
+  "save-unrecoverable": {
+    kind: "inline",
+    mascot: "warning",
+    title: "이 결과는 다시 저장할 수 없어요",
+    // 이미 저장된 기록이 있어도(DIAGNOSIS_CHANGED) 틀리지 않게 이유를 단정하지 않는다
+    message: "진단 결과는 지금 화면에서 확인할 수 있어요.\n이력에서 확인하거나 새로 진단해주세요.",
+    primary: "새 진단 시작",
+  },
 } satisfies Record<string, InlineFeedbackCase>;
 
 export type FeedbackCaseId = keyof typeof CASES;

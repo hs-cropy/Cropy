@@ -1,28 +1,29 @@
 "use client";
 
-import { PhotoPreview } from "./PhotoPreview";
-import { PHOTO_ACCEPT } from "@/features/camera/lib/validateImage";
+import { useRef, useState, type ChangeEvent } from "react";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
-
-import { CameraCapture, isCameraSupported, validateImage, } from "@/features/camera";
-import { refineDiagnosis } from "@/lib/api";
-import type { DiagnoseResponse, RecaptureGuidance } from "@/types/diagnosis";
+import { isCameraSupported, PHOTO_ACCEPT } from "@/features/camera";
+import { useVoiceGuide } from "@/features/voice";
+import type { RecaptureGuidance } from "@/types/diagnosis";
 import { Button } from "@/components/Button";
 import { DiagnosisPageActions } from "@/components/DiagnosisPageActions";
 import { Card } from "@/components/Card";
 import { Mascot } from "@/components/Mascot";
-import { DiagnosisFailurePanel } from "@/components/DiagnosisFailurePanel";
+import type { PhotoSource } from "@/components/capture/CaptureScreen";
+import { CAPTURE_PATH, useDiagnosisSession } from "@/components/diagnosis/DiagnosisSession";
+import { CaseFeedback } from "@/features/feedback/CaseFeedback";
+import type { FeedbackCaseId } from "@/features/feedback/cases";
 
 interface Props {
   diagnosisId: string;
   guidance: RecaptureGuidance;
-  onRefined: (result: DiagnoseResponse) => void;
+  /** 추가 촬영을 취소하면 돌아올 이 화면의 경로 (진단 결과·이력 상세) */
+  origin: string;
   /** CSS로 숨겨진 진단 탭에서는 고정 버튼도 숨긴다. */
   actionsVisible?: boolean;
 }
 
-type Step = "candidates" | "guide" | "preview" | "failure";
+type Step = "candidates" | "guide";
 
 function objectParticle(value: string): string {
   const word = value.trim();
@@ -32,118 +33,51 @@ function objectParticle(value: string): string {
   return (code - 0xac00) % 28 === 0 ? "를" : "을";
 }
 
+/**
+ * 후보 혼동 결과의 재촬영 안내 (후보·촬영 방법). 다시 촬영·갤러리로 고른 사진은 촬영 화면(/)의
+ * 카메라·사진 확인에서 보고, "이 사진으로 다시 분석"으로 이 진단을 다시 분석한다 (추가 촬영)
+ */
 export function RecapturePanel({
   diagnosisId,
   guidance,
-  onRefined,
+  origin,
   actionsVisible = true,
 }: Props) {
+  const session = useDiagnosisSession();
+  const { prime: primeSpeech } = useVoiceGuide();
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
-  const requestRef = useRef<AbortController | null>(null);
   const [step, setStep] = useState<Step>("candidates");
-  const [cameraOpen, setCameraOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // 고른 사진을 쓸 수 없을 때의 안내 (Figma 지속형 안내의 케이스 ID)
+  const [failure, setFailure] = useState<FeedbackCaseId | null>(null);
 
-  useEffect(() => {
-    return () => requestRef.current?.abort();
-  }, [diagnosisId]);
+  const target = { id: diagnosisId, guidance, origin };
 
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
-  const selectPhoto = (file: File): boolean => {
-    if (loading) return false;
-
-    const check = validateImage(file);
-
-    if (!check.ok) {
-      setError(check.message);
-      return false;
-    }
-
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-    setError(null);
-    setStep("preview");
-
-    return true;
+  /** 고른 사진을 이 진단의 추가 사진으로 두고 촬영 화면의 사진 확인으로 간다 */
+  const pick = (file: File, source: PhotoSource) => {
+    // 다른 진단이 분석 중이면 사진을 받지 않는다 (버튼도 막혀 있다)
+    if (session.loading) return;
+    const rejected = session.selectFile(file, source, target);
+    setFailure(rejected);
+    if (!rejected) session.navigate(CAPTURE_PATH, "focus");
   };
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (source: PhotoSource) => (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (file) selectPhoto(file);
+    if (file) pick(file, source);
   };
 
-  
+  /** 다시 촬영: 촬영 화면에서 카메라를 켠다. 브라우저 카메라를 못 쓰면 기기 카메라를 이 클릭 안에서 연다 */
   const openCamera = () => {
-    if (loading) return;
-
-    if (isCameraSupported()) {
-      // 프로젝트에 구현된 카메라 화면 실행
-      setError(null);
-      setCameraOpen(true);
-    } else {
-      // 브라우저 카메라 API 미지원 시 기본 촬영 기능 사용
+    if (session.loading) return;
+    if (!isCameraSupported()) {
       cameraRef.current?.click();
-    }
-  };
-
-  const handleCameraCapture = (captured: File) => {
-    // 촬영한 사진 검증 및 미리보기 표시
-    if (selectPhoto(captured)) {
-      setCameraOpen(false);
-    }
-  };
-
-  const handleCameraGallery = () => {
-    setCameraOpen(false);
-    galleryRef.current?.click();
-  };
-
-
-  const analyze = async (file: File | null) => {
-    if (!file || requestRef.current) return;
-    const check = validateImage(file);
-    if (!check.ok) {
-      setError(check.message);
-      setStep("preview");
       return;
     }
-
-    const controller = new AbortController();
-    requestRef.current = controller;
-    setError(null);
-    setLoading(true);
-
-    try {
-      const refined = await refineDiagnosis(diagnosisId, file, {
-        signal: controller.signal,
-      });
-      if (controller.signal.aborted) return;
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      setStep("candidates");
-      onRefined(refined);
-    } catch (caught) {
-      if (controller.signal.aborted) return;
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "재분석에 실패했어요. 다시 시도해 주세요.",
-      );
-      setStep("failure");
-    } finally {
-      if (requestRef.current === controller) requestRef.current = null;
-      if (!controller.signal.aborted) setLoading(false);
-    }
+    primeSpeech();
+    session.startRefine(target);
+    session.navigate(CAPTURE_PATH, "camera");
   };
 
   return (
@@ -207,6 +141,7 @@ export function RecapturePanel({
             <Button
               variant="secondary"
               onClick={openCamera}
+              disabled={session.loading}
             >
               바로 다시 촬영
             </Button>
@@ -269,13 +204,13 @@ export function RecapturePanel({
             </Card>
           </div>
           <DiagnosisPageActions visible={actionsVisible}>
-            <Button onClick={openCamera} disabled={loading}>
+            <Button onClick={openCamera} disabled={session.loading}>
               {guidance.region} 다시 촬영
             </Button>
             <Button
               variant="secondary"
               onClick={() => galleryRef.current?.click()}
-              disabled={loading}
+              disabled={session.loading}
             >
               갤러리에서 선택
             </Button>
@@ -283,85 +218,23 @@ export function RecapturePanel({
           <button
             type="button"
             className="self-start text-sm font-semibold text-cropy-text-secondary underline-offset-4 hover:underline"
-            onClick={() => setStep("candidates")}
+            onClick={() => {
+              setFailure(null);
+              setStep("candidates");
+            }}
           >
             후보 안내로 돌아가기
           </button>
         </>
       )}
 
-      {step === "preview" && selectedFile && (
-        <>
-          <header className="space-y-2">
-            <h2 className="text-2xl font-bold text-cropy-text-primary lg:text-3xl">
-              추가 사진을 확인해 주세요
-            </h2>
-            <p className="text-base text-cropy-text-secondary">
-              선택한 사진을 확인한 후 다시 분석할 수 있어요.
-            </p>
-          </header>
-          <Card radius="lg" padding="lg" className="flex flex-col items-center gap-4">
-            {previewUrl && (
-              <PhotoPreview key={previewUrl} fileName={selectedFile.name}
-                src={previewUrl}
-                alt="새로 촬영한 작물 사진 미리보기"
-                className="max-h-[24rem] w-full rounded-xl object-contain"
-              />
-            )}
-            <p className="max-w-full break-all text-sm text-cropy-text-secondary">
-              {selectedFile.name}
-            </p>
-          </Card>
-          {loading && <p role="status" className="text-center text-base text-cropy-text-secondary">재촬영 사진을 분석하고 있어요.</p>}
-          <DiagnosisPageActions visible={actionsVisible}>
-            <Button
-              loading={loading}
-              onClick={() => void analyze(selectedFile)}
-            >
-              {loading ? "재분석 중…" : "이 사진으로 다시 분석"}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={openCamera}
-              disabled={loading}
-            >
-              다시 촬영하기
-            </Button>
-          </DiagnosisPageActions>
-          <button
-            type="button"
-            disabled={loading}
-            className="self-start text-sm font-semibold text-cropy-text-secondary underline-offset-4 hover:underline disabled:opacity-50"
-            onClick={() => galleryRef.current?.click()}
-          >
-            다른 사진을 갤러리에서 선택
-          </button>
-        </>
-      )}
-
-      {step === "failure" && (
-        <DiagnosisFailurePanel
-          message={error}
-          loading={loading}
-          onRetry={() => void analyze(selectedFile)}
-          onPickDifferent={() => galleryRef.current?.click()}
-          actionsVisible={actionsVisible}
-        />
-      )}
-
-      {error && step !== "failure" && (
-        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </p>
-      )}
-
-      {cameraOpen && (
-        <CameraCapture
-          onCapture={handleCameraCapture}
-          onClose={() => setCameraOpen(false)}
-          onCaptureError={setError}
-          onGallery={handleCameraGallery}
-          notice={null}
+      {/* 고른 사진을 쓸 수 없을 때 (Figma 지속형 안내) */}
+      {failure && (
+        <CaseFeedback
+          caseId={failure}
+          headingLevel={3}
+          className="mx-auto lg:max-w-[30rem]"
+          onPrimary={() => galleryRef.current?.click()}
         />
       )}
 
@@ -370,8 +243,7 @@ export function RecapturePanel({
         type="file"
         accept={PHOTO_ACCEPT}
         capture="environment"
-        onChange={handleFileChange}
-        disabled={loading}
+        onChange={handleFileChange("camera")}
         aria-label="카메라로 추가 촬영"
         className="sr-only"
         tabIndex={-1}
@@ -380,8 +252,7 @@ export function RecapturePanel({
         ref={galleryRef}
         type="file"
         accept={PHOTO_ACCEPT}
-        onChange={handleFileChange}
-        disabled={loading}
+        onChange={handleFileChange("gallery")}
         aria-label="갤러리에서 추가 사진 선택"
         className="sr-only"
         tabIndex={-1}
