@@ -19,6 +19,8 @@ class Disease(Base):
     prevention = Column(JSON, default=list)
     severity = Column(String(20), default="medium")
     management_actions = Column(JSON, default=list)
+    summary_message = Column(Text)
+    management_action_details = Column(JSON, default=list)
     model_class_id = Column(Integer, unique=True, index=True)
 
     pesticides = relationship(

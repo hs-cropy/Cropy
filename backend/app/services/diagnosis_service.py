@@ -161,6 +161,8 @@ def _response(db: Session, diagnosis: Diagnosis) -> DiagnoseResponse:
         pesticides=content["pesticides"], prevention=content["prevention"],
         current_pesticides=pesticide_infos(db, disease.id),
         management_actions=content["management_actions"], content_version=content["version"],
+        summary_message=content.get("summary_message") if diagnosis.content_snapshot else None,
+        management_action_details=(content.get("management_action_details") or []) if diagnosis.content_snapshot else [],
         content_status="snapshot" if diagnosis.content_snapshot else "current_reference",
         is_refined=bool(diagnosis.refined_image_path),
         initial_predictions=[PredictionItem(name=mapping[c], confidence=p) for c, p in initial[:3] if c in mapping],
@@ -176,6 +178,8 @@ def _content(db, disease):
                    category=disease.category, severity=disease.severity,
                    description=disease.description, causes=disease.causes or [],
                    prevention=disease.prevention or [], management_actions=disease.management_actions or [],
+                   summary_message=disease.summary_message,
+                   management_action_details=disease.management_action_details or [],
                    pesticides=[p.model_dump(mode="json") for p in pesticide_infos(db, disease.id)])
     content["version"] = hashlib.sha256(json.dumps(content, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     return content

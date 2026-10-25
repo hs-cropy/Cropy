@@ -19,6 +19,9 @@ DIAGNOSIS_EXAMPLE = {
     "recapture": None, "is_refined": False, "content_status": "snapshot",
     "decision_status": "disease", "decision_reasons": [], "policy_version": "decision-v1:low=0.5",
     "save_status": "saved", "recovery_token": None,
+    "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
+    "management_actions": ["감염 부위 제거"],
+    "management_action_details": [{"title": "감염 부위 제거", "description": "병든 과실과 잔재를 주변에 남기지 마세요."}],
 }
 
 
@@ -71,6 +74,11 @@ class PesticideInfo(TimestampedResponse):
     synced_at: datetime | None = None
 
 
+class ManagementActionDetail(BaseModel):
+    title: str = Field(description="management_actions의 같은 위치에 있는 할 일 제목")
+    description: str = Field(description="할 일의 짧은 설명")
+
+
 class DiagnoseResponse(TimestampedResponse):
     model_config = {"json_schema_extra": {"examples": [DIAGNOSIS_EXAMPLE]}}
     id: str = Field(description="진단 기록 ID. 이력 조회·재촬영에 사용")
@@ -97,6 +105,8 @@ class DiagnoseResponse(TimestampedResponse):
     updated_at: datetime | None = Field(None, description="최종 갱신 시각(시간대 포함)")
     recapture: RecaptureGuidance | None = Field(None, description="혼동쌍 판별을 위한 재촬영 부위·안내. 없으면 null")
     management_actions: list[str] = Field(default_factory=list, description="관리·방제 행동 안내")
+    summary_message: str | None = Field(None, description="결과 카드의 고정 한 줄 참고 안내. 이전 기록에 없으면 null; 진단 확정을 뜻하지 않음")
+    management_action_details: list[ManagementActionDetail] = Field(default_factory=list, description="management_actions와 순서·개수가 같은 제목·설명. 이전 기록에 없으면 []")
     content_status: Literal["snapshot", "current_reference"] = Field("current_reference", description="snapshot: 당시 참고 정보 보존, current_reference: 현재 정보로 보완한 이전 기록")
     content_version: str | None = Field(None, description="참고 정보 버전")
     current_pesticides: list[PesticideInfo] = Field(default_factory=list, description="현재 DB 기준 농약 참고 정보")

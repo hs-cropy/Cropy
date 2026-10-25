@@ -96,6 +96,8 @@ def import_record(db, metadata, content, extension, refined_content, refined_ext
     snapshot = dict(disease_name=source["name"], predicted_crop=source["crop_type"], category=source["category"],
                     severity=source["severity"], description=source.get("description"), causes=source.get("causes", []),
                     prevention=source.get("prevention", []), management_actions=source.get("management_actions", []),
+                    summary_message=source.get("summary_message"),
+                    management_action_details=source.get("management_action_details", []),
                     pesticides=source.get("pesticides", []), version=bundle["version"])
     id = str(m.client_record_id)
     if db.get(Diagnosis, id):
