@@ -310,7 +310,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 | 이력 요약 `category`, `severity`, `is_refined`, `content_status` | 정상/병해·등급·재촬영·과거 안내 상태 표시 |
 | 진단 `management_actions`, `content_version`, `content_status` | 관리 안내와 당시 콘텐츠 버전. 이전 스냅샷 없는 기록은 `current_reference` |
 | `current_pesticides` | 당시 `pesticides`와 구분한 현재 카탈로그. 과거 이력의 최신 조건 확인에 사용 |
-| `decision_status`, `decision_reasons`, `policy_version` | 작물 불일치 → 혼동 → 낮은 신뢰도 우선순위와 모든 해당 이유 |
+| `decision_status`, `decision_reasons`, `policy_version` | `decision-v2`. 판별 불가(`not_crop`, 단독) → 작물 불일치 → 혼동 → 낮은 신뢰도 우선순위와 모든 해당 이유 |
 | `initial_predictions`, `is_refined` | 최초 상위 후보와 재촬영 여부 |
 | `save_status`, `recovery_token` | `saved` 또는 DB 저장 실패의 `failed`. 실패해도 보관 성공한 경우 결과를 반환 |
 | `POST /api/v1/results/{token}/save` | 서버에 보관된 결과만 재저장. 임의 진단 JSON은 받지 않으며 재추론하지 않음 |

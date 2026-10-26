@@ -17,7 +17,7 @@ DIAGNOSIS_EXAMPLE = {
     "created_at": "2026-10-15T00:00:00Z", "updated_at": "2026-10-15T00:00:00Z",
     "image_url": "/uploads/4da54046-bae9-4249-a4b3-85d17b83ee40.jpg",
     "recapture": None, "is_refined": False, "content_status": "snapshot",
-    "decision_status": "disease", "decision_reasons": [], "policy_version": "decision-v1:low=0.5",
+    "decision_status": "disease", "decision_reasons": [], "policy_version": "decision-v2:low=0.5",
     "save_status": "saved", "recovery_token": None,
 }
 
@@ -83,7 +83,7 @@ class DiagnoseResponse(TimestampedResponse):
     model_version: str | None = Field(None, description="추론 모델 버전/체크포인트 해시")
     preprocessing_version: str | None = Field(None, description="이미지 전처리 버전")
     pair_model_version: str | None = Field(None, description="사용한 혼동쌍 보조 모델 버전")
-    category: str = Field("disease", description="클래스 분류: disease, pest, normal 등")
+    category: str = Field("disease", description="클래스 분류: disease, normal, other(판별 불가)")
     severity: str = Field("medium", description="참고 정보의 심각도: high/medium/low")
     confidence: float = Field(description="최상위 예측 확률(0~1)", examples=[0.87])
     top_predictions: list[PredictionItem] = Field(description="상위 예측 후보")
@@ -100,7 +100,7 @@ class DiagnoseResponse(TimestampedResponse):
     content_status: Literal["snapshot", "current_reference"] = Field("current_reference", description="snapshot: 당시 참고 정보 보존, current_reference: 현재 정보로 보완한 이전 기록")
     content_version: str | None = Field(None, description="참고 정보 버전")
     current_pesticides: list[PesticideInfo] = Field(default_factory=list, description="현재 DB 기준 농약 참고 정보")
-    decision_status: str = Field("disease", description="판단 상태: crop_mismatch, confusion, low_confidence, normal, disease")
+    decision_status: str = Field("disease", description="판단 상태: not_crop(작물 잎으로 알아볼 수 없음), crop_mismatch, confusion, low_confidence, normal, disease")
     decision_reasons: list[str] = Field(default_factory=list, description="판단 보류·재촬영 등의 사유")
     policy_version: str | None = Field(None, description="판단 정책 버전")
     is_refined: bool = Field(False, description="재촬영 반영 여부")
