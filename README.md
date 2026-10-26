@@ -139,6 +139,9 @@ curl http://localhost:3000/api/v1/ready   # HTTP 200이어야 실제 진단 준�
 진단 이력(SQLite)과 업로드 이미지는 `cropcare-data` 볼륨에 남아 컨테이너를
 다시 만들어도 보존됩니다.
 
+서버 한 대에 HTTPS로 올리는 절차(Caddy, `docker-compose.prod.yml`)는
+[AWS Lightsail 배포 가이드](docs/AWS_LIGHTSAIL_DEPLOY.md)를 참고하세요.
+
 ### 다른 도메인에 배포할 때
 
 `BACKEND_ORIGIN`은 **빌드 시점**에 주입됩니다. Next.js standalone 산출물은
