@@ -104,6 +104,31 @@ def test_non_supported_image_format_rejected(client):
 
 
 @pytest.mark.parametrize("refine", [False, True])
+def test_mpo_jpeg_primary_image_can_be_diagnosed(client, refine):
+    # Some phones save multi-picture JPEGs that Pillow reports as MPO.
+    output = BytesIO()
+    Image.new("RGB", (64, 64), "green").save(
+        output, format="MPO", save_all=True,
+        append_images=[Image.new("RGB", (64, 64), "red")],
+    )
+    content = output.getvalue()
+    with Image.open(BytesIO(content), formats=["JPEG"]) as image:
+        assert image.format == "MPO"
+    endpoint = "/api/v1/diagnose"
+    field = "image_url"
+    if refine:
+        first = upload(client, encoded_image("JPEG")).json()
+        endpoint += f"/{first['id']}/refine"
+        field = "refined_image_url"
+    response = upload(client, content, "phone.jpg", endpoint)
+    assert response.status_code == 200, response.text
+    served = client.get(response.json()[field])
+    assert served.headers["content-type"] == "image/jpeg"
+    with Image.open(BytesIO(served.content)) as image:
+        assert image.getpixel((32, 32))[1] > 100  # primary (green) frame
+
+
+@pytest.mark.parametrize("refine", [False, True])
 def test_png_checksum_error_rejected_before_saving(client, refine):
     endpoint = "/api/v1/diagnose"
     if refine:

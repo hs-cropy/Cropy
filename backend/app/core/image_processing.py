@@ -56,7 +56,9 @@ def prepare_image(content: bytes) -> tuple[bytes, str]:
         if content[:4] in (b"II*\x00", b"MM\x00*"):
             return _raw(content)
         with Image.open(BytesIO(content), formats=["JPEG", "PNG", "HEIF", "WEBP", "AVIF"]) as image:
-            fmt = image.format
+            # Some phones save multi-picture JPEGs (MPO). Pillow opens the primary
+            # JPEG frame, which is what browsers display and the model reads.
+            fmt = "JPEG" if image.format == "MPO" else image.format
             if fmt not in {"JPEG", "PNG", "HEIF", "WEBP", "AVIF"}:
                 raise APIError(400, "UNSUPPORTED_IMAGE_FORMAT", "JPG, PNG, HEIC/HEIF, DNG, WebP, AVIF 사진을 선택해 주세요.")
             _check_pixels(image.width, image.height)
