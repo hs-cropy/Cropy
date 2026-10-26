@@ -138,6 +138,11 @@ jobs:
           node-version: '22'
       - name: Test result validation
         run: node --test .github/scripts/*.test.mjs
+      # 배포 스크립트·설정은 frontend/backend 잡이 건드리지 않고, develop 에 들어가면 바로 서버에서 실행된다
+      - name: Validate deploy scripts and compose config
+        run: |
+          shellcheck deploy/*.sh
+          SITE_ADDRESS=ci.example docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q
       - name: Require successful checks
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
@@ -152,7 +157,8 @@ jobs:
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       vars.DEPLOY_HOST != ''
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # 잠금 대기(최대 20분) + 빌드 + 준비 대기·롤백까지 들어가도록 넉넉히 둔다
+    timeout-minutes: 60
     # 배포가 겹치지 않게 하나씩. 진행 중인 배포는 끊지 않는다
     concurrency:
       group: deploy-lightsail
@@ -166,6 +172,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      # 서버를 바꾼 뒤에야 실패하지 않도록 접속·확인에 쓰는 변수를 먼저 본다
+      - name: Check deploy variables
+        run: |
+          for v in DEPLOY_USER SITE_ADDRESS; do
+            [ -n "${!v}" ] || { echo "::error::$v 변수가 비어 있다"; exit 1; }
+          done
       # 예전 실행을 다시 돌려도 구버전이 배포되지 않게 develop 최신 커밋일 때만 배포한다
       - name: Check latest develop
         id: latest

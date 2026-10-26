@@ -140,5 +140,7 @@ fi
 
 remove_dir "$OLD" || echo "경고: $OLD 를 지우지 못했다. 다음 배포 전에 정리해야 한다"
 docker image prune -f >/dev/null || true
+# 의존성이 바뀔 때마다 BuildKit 캐시가 쌓여 디스크 점검에 걸리지 않도록 7일 지난 캐시는 지운다
+docker builder prune -f --filter until=168h >/dev/null || true
 echo "== $(date -u +%FT%TZ) 배포 완료 ${sha:0:7}"
 docker compose ps --format '{{.Service}} {{.Status}}'

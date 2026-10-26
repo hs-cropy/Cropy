@@ -20,10 +20,11 @@ if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
   exit 2
 fi
 
-# 배포가 겹치면 디렉터리 교체가 꼬인다. 잠금(fd 9)은 아래에서 띄운 배포 프로세스가 끝날 때까지 유지된다
+# 배포가 겹치면 디렉터리 교체가 꼬인다. 잠금(fd 9)은 아래에서 띄운 배포 프로세스가 끝날 때까지 유지된다.
+# 러너가 취소·타임아웃돼도 서버에서는 이전 배포가 계속 돌 수 있어, 바로 실패하지 않고 최대 20분 기다린다
 exec 9>"$HOME/.cropy-deploy.lock"
-if ! flock -n 9; then
-  echo "다른 배포가 진행 중입니다" >&2
+if ! flock -w 1200 9; then
+  echo "다른 배포가 20분 넘게 끝나지 않습니다" >&2
   exit 75
 fi
 
@@ -33,8 +34,8 @@ tar xz -C "$HOME/Cropy.new"
 
 mkdir -p "$HOME/deploy-logs"
 log="$HOME/deploy-logs/$(date -u +%Y%m%dT%H%M%SZ)-${sha:0:7}-$mode.log"
-# 로그는 최근 20개만 남긴다
-find "$HOME/deploy-logs" -name '*.log' -printf '%T@ %p\n' | sort -rn | tail -n +21 | cut -d' ' -f2- | xargs -r rm -f
+# 로그는 이번 것을 포함해 최근 20개만 남긴다
+find "$HOME/deploy-logs" -name '*.log' -printf '%T@ %p\n' | sort -rn | tail -n +20 | cut -d' ' -f2- | xargs -r rm -f
 
 # SSH 연결이 끊겨도(러너 취소·타임아웃·네트워크) 교체 도중에 죽지 않도록 배포를 세션에서 떼어 내
 # 파일로만 출력하게 하고, 여기서는 그 로그를 보여 주며 끝나기를 기다린다
