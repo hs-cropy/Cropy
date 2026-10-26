@@ -830,7 +830,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
 
     await screen.findByRole("heading", { name: "비슷한 증상이 보여요" });
     expect(fakeNavigation.pathname).toBe("/diagnosis");
-    await goTo("/");
+    await goTo("/home");
     expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
     expect(screen.queryByRole("button", { name: "추가 촬영 취소" })).toBeNull();
   });
@@ -890,7 +890,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
       await screen.findByRole("alert", { name: "지원하지 않는 사진 형식이에요" }),
     ).toBeTruthy();
     expect(fakeNavigation.pathname).toBe("/diagnosis");
-    await goTo("/");
+    await goTo("/home");
     expect(screen.queryByRole("button", { name: "추가 촬영 취소" })).toBeNull();
   });
 
