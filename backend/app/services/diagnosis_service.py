@@ -62,54 +62,11 @@ def _diseases_for_classes(db: Session, class_ids: set[int]) -> dict[int, Disease
     return diseases
 
 
-class PredictionContractError(RuntimeError):
-    """Model output cannot safely be mapped to disease records."""
-
-
-def _prediction_classes(predictions: list[tuple[int, float]]) -> set[int]:
-    if not isinstance(predictions, (list, tuple)) or not predictions:
-        raise PredictionContractError("Invalid prediction: expected a nonempty distribution")
-
-    class_ids: set[int] = set()
-    for item in predictions:
-        if not isinstance(item, (list, tuple)) or len(item) != 2:
-            raise PredictionContractError("Invalid prediction: expected class/score pairs")
-        class_id, confidence = item
-        if not isinstance(class_id, int) or isinstance(class_id, bool) or class_id in class_ids:
-            raise PredictionContractError("Invalid prediction: class IDs must be unique integers")
-        if (
-            not isinstance(confidence, (int, float))
-            or isinstance(confidence, bool)
-            or not 0.0 <= confidence <= 1.0
-            or not math.isfinite(confidence)
-        ):
-            raise PredictionContractError("Invalid prediction: scores must be finite and within [0, 1]")
-        class_ids.add(class_id)
-    return class_ids
-
-
-def _diseases_for_classes(db: Session, class_ids: set[int]) -> dict[int, Disease]:
-    diseases = {
-        disease.model_class_id: disease
-        for disease in db.query(Disease).filter(Disease.model_class_id.in_(class_ids)).all()
-    }
-    if class_ids != diseases.keys():
-        raise PredictionContractError("Invalid prediction: a model class has no disease mapping")
-    return diseases
-
-
 logger = logging.getLogger(__name__)
+
 
 class ModelVersionConflict(RuntimeError):
     pass
-
-def _file_key(value: str | None) -> str | None:
-    if not value:
-        return None
-    # Old rows contain Windows absolute/relative paths; use the current storage root.
-    key = PurePosixPath(value.replace("\\", "/")).name
-    return key if key not in ("", ".", "..") else None
-
 
 
 def _file_key(value: str | None) -> str | None:
