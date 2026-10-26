@@ -37,6 +37,13 @@ PRESET_CONTEXTS = {
 }
 
 
+def clean(text):
+    """v11 rule: no punctuation. Also drops the generator's doubled word (작업을 작업을)."""
+    text = re.sub(r"[?.!,~]", "", text)
+    text = re.sub(r"(\S+)( \1)+(?= |$)", r"\1", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def stable(*parts):
     return int(hashlib.sha256("\0".join(map(str, parts)).encode()).hexdigest()[:12], 16)
 
@@ -57,9 +64,11 @@ def load_v11(path):
             continue
         meta = splits[r["conversation_id"]]
         function, arguments = spec_v2.from_v11(r["llm_output"])
+        # v11 was written for the result screen; its contexts omit ui_stage.
+        context = {"ui_stage": "result", **contexts.get(r["context_id"], {})}
         rows.append(dict(case_id=f"v11:{r['conversation_id']}:{r['turn_index']}", split=meta["split"], source="v11",
                          group=f"v11:{meta['scenario_group_id']}", function=function, arguments=arguments,
-                         user_text=r["user_text"], context=contexts.get(r["context_id"], {}),
+                         user_text=clean(r["user_text"]), context=context,
                          review_status=f"{meta['review_status']} by {meta['reviewer']}"))
     return rows
 
@@ -69,7 +78,7 @@ def load_usage(path):
     for line in Path(path).read_text(encoding="utf-8").splitlines():
         r = json.loads(line)
         rows.append(dict(case_id=f"v12:{r['case_id']}", split=r["split"], source="v12_usage", group=f"v12:{r['group']}",
-                         function=r["function"], arguments=r["arguments"], user_text=r["user_text"],
+                         function=r["function"], arguments=r["arguments"], user_text=clean(r["user_text"]),
                          context=r["context"], review_status="draft (v12 synthetic)"))
     return rows
 

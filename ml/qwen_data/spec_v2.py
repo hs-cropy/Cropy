@@ -23,8 +23,8 @@ FUNCTIONS = [
         ("food_safety", "먹어도 되는지"), ("change", "이전 결과와 달라진 점")]},
      "현재 진단 결과를 설명한다. 분류 결과를 확진이나 현장 측정으로 바꾸지 않는다."),
     ("get_prediction_metrics", {"topic": [
-        ("confidence", "점수 수치"), ("ranking", "후보 순위"), ("distribution", "점수 분포·합계"),
-        ("limits", "점수의 의미와 한계(발병 확률·피해율로 해석하는 질문)"), ("comparison", "후보끼리 점수 비교")]},
+        ("confidence", "점수 수치와 그 숫자가 무슨 점수인지"), ("ranking", "후보 순위"), ("distribution", "점수 분포·합계"),
+        ("limits", "점수로 알 수 없는 것(발병 확률·피해율·확진으로 해석하는 질문)"), ("comparison", "후보끼리 점수 비교")]},
      "모델 점수와 후보를 설명한다. 점수를 실제 발병 확률로 해석하지 않는다."),
     ("get_recapture_guidance", {"topic": [
         ("where", "결과 화면에서 다시 찍을 부위와 방법"), ("why", "다시 찍어야 하는 이유"),
@@ -71,6 +71,7 @@ RULES = [
     "서로 다른 요청을 한꺼번에 하면 clarify_request(target=topic), 여러 제품 중 대상이 모호하면 clarify_request(target=product).",
     "점수 수치를 물으면 get_prediction_metrics(topic=confidence), 점수를 발병 확률·피해율로 해석하는 질문은 topic=limits.",
     "처음 사진 찍는 방법은 get_usage_guidance(topic=capture), 결과 화면에서 다시 찍을 부위는 get_recapture_guidance(topic=where).",
+    "대상 없이 다시 말해 달라고 하면 get_usage_guidance(topic=repeat), '그 사진·그때 결과'처럼 어느 기록인지 모호하면 clarify_request(target=record).",
     "고추·무·배추가 아닌 작물, 실행할 수 없는 요청, 작물 사진이 아닌 입력은 handle_scope_limit.",
     "작물 진단·농약·앱 사용과 무관한 인사·날씨·일상 대화는 chit_chat.",
 ]

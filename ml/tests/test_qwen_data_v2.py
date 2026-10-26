@@ -117,3 +117,9 @@ def test_assembly_keeps_spacing_variants_out_of_the_other_split():
         assert r["labels_human_validated"] is False
         if r["source_case_id"] == "a":  # every variant of a validation seed stays in validation
             assert r["split"] == "validation"
+
+
+def test_clean_removes_punctuation_and_generator_doubled_words():
+    assert build.clean("요청한 농약을 주문하는 작업을 작업을 지금 완료해주세요") == "요청한 농약을 주문하는 작업을 지금 완료해주세요"
+    assert build.clean("병 이름 설명하고 예방 안내를 한 번에 해 주시겠어요?") == "병 이름 설명하고 예방 안내를 한 번에 해 주시겠어요"
+    assert build.clean("됐다 됐어") == "됐다 됐어"

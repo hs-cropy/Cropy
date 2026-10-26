@@ -12,52 +12,52 @@
     "<hs_8>",
     "<hs_end>"
   ],
-  "rows": 5881,
+  "rows": 5992,
   "split": {
-    "train": 4736,
-    "validation": 1145
+    "train": 4830,
+    "validation": 1162
   },
   "train_function": {
-    "handle_scope_limit": 620,
-    "get_recapture_guidance": 595,
-    "clarify_request": 592,
-    "get_diagnosis": 555,
-    "get_prediction_metrics": 551,
-    "get_care_information": 538,
-    "chit_chat": 517,
-    "get_pesticide_information": 503,
-    "get_usage_guidance": 265
+    "handle_scope_limit": 626,
+    "clarify_request": 603,
+    "get_recapture_guidance": 601,
+    "get_diagnosis": 561,
+    "get_prediction_metrics": 560,
+    "get_care_information": 548,
+    "chit_chat": 513,
+    "get_pesticide_information": 506,
+    "get_usage_guidance": 312
   },
   "validation_function": {
-    "handle_scope_limit": 148,
-    "get_pesticide_information": 139,
-    "clarify_request": 138,
-    "get_diagnosis": 136,
-    "get_prediction_metrics": 135,
-    "get_care_information": 133,
-    "get_recapture_guidance": 127,
+    "handle_scope_limit": 150,
+    "get_pesticide_information": 141,
+    "clarify_request": 140,
+    "get_diagnosis": 138,
+    "get_prediction_metrics": 137,
+    "get_care_information": 135,
+    "get_recapture_guidance": 128,
     "chit_chat": 121,
-    "get_usage_guidance": 68
+    "get_usage_guidance": 72
   },
   "source": {
     "v11": 4858,
-    "seed_chit_chat": 638,
-    "seed_get_usage_guidance": 294,
-    "v12_usage": 91
+    "seed_chit_chat": 634,
+    "seed_get_usage_guidance": 293,
+    "v12_usage": 207
   },
   "augmentation": {
-    "original": 2972,
-    "banmal": 1973,
-    "spacing": 467,
-    "dialect_chungcheong": 291,
-    "dialect_jeolla": 95,
-    "dialect_gyeongsang": 83
+    "original": 2968,
+    "banmal": 2054,
+    "spacing": 465,
+    "dialect_chungcheong": 302,
+    "dialect_jeolla": 106,
+    "dialect_gyeongsang": 97
   },
-  "honorific_share": 0.405,
+  "honorific_share": 0.411,
   "dropped": {
-    "duplicate": 500,
+    "duplicate": 502,
     "train_text_in_validation": 2
   },
-  "system_prompt_chars": 2458,
+  "system_prompt_chars": 2592,
   "human_validated": 0
 }
