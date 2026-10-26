@@ -49,6 +49,7 @@ _ADDED_COLUMNS: list[tuple[str, str, str]] = [
     ("diagnoses", "recapture", "JSON"),
     ("diagnoses", "updated_at", "TIMESTAMP"),
     ("diagnoses", "revision", "INTEGER NOT NULL DEFAULT 1"),
+    ("diagnoses", "device_id", "VARCHAR(64)"),
 ]
 
 

@@ -333,7 +333,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 
 REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_type`은 query로 전송한다. 오류는 `detail`을 가진 JSON이며 일반 HTTP 오류는 문자열, FastAPI 입력 검증 422는 오류 항목 배열일 수 있다.
 
-현재 앱에는 로그인·API 인증·사용자별 이력 분리가 없다. CORS는 허용 출처 설정이며 인증이 아니다. 이미지 정적 URL도 사용자별 보호가 없다. HTTPS는 배포 프록시에서 설정하며 Compose 기본 구성 자체는 TLS를 제공하지 않는다. 카메라·마이크를 통합할 때 대상 브라우저의 보안 컨텍스트를 확인한다.
+현재 앱에는 로그인·API 인증이 없다. 대신 서버가 첫 요청에 익명 기기 쿠키 `cropy_device`(무작위 값, 1년, `HttpOnly; SameSite=Lax`, HTTPS 프록시 뒤에서는 `Secure`)를 발급하고, 진단 기록을 그 기기 단위로 분리한다. `GET /history`, `GET /history/{id}`, `POST /diagnose/{id}/refine`, `POST /results/{token}/save`는 같은 기기의 기록만 다루며, 다른 기기의 기록은 404다. `Idempotency-Key`와 복구 토큰도 기기별로 구분된다. 기기 분리 이전의 기록(`device_id` 없음)은 어느 기기에도 보이지 않는다. 쿠키를 지우거나 다른 브라우저를 쓰면 다른 기기로 취급되며, 이는 기록 분리일 뿐 인증이 아니다. 브라우저는 같은 출처(Next.js rewrite)로 호출하므로 쿠키가 자동으로 전송된다. `NEXT_PUBLIC_API_URL`로 다른 출처를 직접 호출하면 쿠키가 전송되지 않는다. CORS는 허용 출처 설정이며 인증이 아니다. 이미지 정적 URL(`/uploads/...`)은 추측하기 어려운 UUID 파일명이지만 기기별 접근 검사는 하지 않는다. HTTPS는 배포 프록시에서 설정하며 Compose 기본 구성 자체는 TLS를 제공하지 않는다. 카메라·마이크를 통합할 때 대상 브라우저의 보안 컨텍스트를 확인한다.
 
 ## 내부·예정 인터페이스
 

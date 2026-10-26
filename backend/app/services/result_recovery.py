@@ -15,10 +15,11 @@ from app.models.entities import Diagnosis, DiagnosisRequest
 from app.schemas.diagnosis import DiagnoseResponse
 
 
-def request_context(operation, key, content, crop=None):
+def request_context(operation, key, content, crop=None, device_id=None):
     if key is None:
         return None
-    digest = hashlib.sha256((operation + "\0" + key).encode()).hexdigest()
+    # Keys are per device so one device never receives another device's cached result.
+    digest = hashlib.sha256((operation + "\0" + key + "\0" + (device_id or "")).encode()).hexdigest()
     fingerprint = hashlib.sha256((crop or "").encode() + b"\0" + content).hexdigest()
     return {"key": digest, "fingerprint": fingerprint}
 
@@ -80,8 +81,8 @@ def _stage(db, context, response):
                                 response=response.model_dump(mode="json")))
 
 
-def _recovery_context(token):
-    return request_context("recovery", token, b"")
+def _recovery_context(token, device_id=None):
+    return request_context("recovery", token, b"", device_id=device_id)
 
 
 def commit_result(db, diagnosis, result, request=None, recover=False, expected_revision=None):
@@ -114,7 +115,7 @@ def commit_result(db, diagnosis, result, request=None, recover=False, expected_r
             raise APIError(503, "RECOVERY_STORAGE_UNAVAILABLE", "결과를 보관할 공간을 확보하지 못했습니다. 다시 시도해 주세요.", True) from exc
     _stage(db, request, result)
     if recover:
-        _stage(db, _recovery_context(token), result)
+        _stage(db, _recovery_context(token, diagnosis.device_id), result)
     try:
         db.flush()
         db.commit()
@@ -162,8 +163,8 @@ def commit_result(db, diagnosis, result, request=None, recover=False, expected_r
     return result
 
 
-def save_result(db, token):
-    recovery = _recovery_context(token)
+def save_result(db, token, device_id=None):
+    recovery = _recovery_context(token, device_id)
     path = _path(token)
     existing = _cached(db, recovery)
     if existing:
@@ -172,6 +173,8 @@ def save_result(db, token):
         raise APIError(404, "RESULT_NOT_FOUND", "저장할 결과를 찾을 수 없습니다.")
     data = _read(path)
     fields = data["fields"]
+    if fields.get("device_id") != device_id:
+        raise APIError(404, "RESULT_NOT_FOUND", "저장할 결과를 찾을 수 없습니다.")
     for key in ("created_at", "updated_at"):
         if fields.get(key):
             fields[key] = datetime.fromisoformat(fields[key])

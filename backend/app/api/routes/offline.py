@@ -4,11 +4,12 @@ import json
 from datetime import datetime, timezone, timedelta
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from pydantic import BaseModel, Field, StrictInt, ValidationError, model_validator
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
+from app.core.device import device_id as current_device
 from app.core.errors import APIError
 from app.core.uploads import write_image
 from app.api.documentation import IMAGE_DESCRIPTION, ManifestResponse, OFFLINE_EXAMPLES, UPLOAD_ERRORS, error_response
@@ -72,11 +73,11 @@ class LocalRecord(BaseModel):
         return self
 
 
-def import_record(db, metadata, content, extension, refined_content, refined_extension):
+def import_record(db, metadata, content, extension, refined_content, refined_extension, device_id=None):
     m = LocalRecord.model_validate_json(metadata)
     canonical = m.model_dump_json()
     payload = content + b"\0" + (refined_content or b"") + b"\0" + canonical.encode()
-    context = request_context("browser-sync", str(m.client_record_id), payload)
+    context = request_context("browser-sync", str(m.client_record_id), payload, device_id=device_id)
     existing = lookup(db, context)
     if existing:
         return existing
@@ -122,7 +123,8 @@ def import_record(db, metadata, content, extension, refined_content, refined_ext
             crop_type=m.selected_crop or source["crop_type"], prediction_mode="browser",
             model_version=m.model_version, preprocessing_version=m.preprocessing_version,
             recapture=guidance.model_dump() if guidance else None, content_snapshot=snapshot,
-            severity_snapshot=source["severity"], created_at=m.created_at, updated_at=datetime.now(timezone.utc))
+            severity_snapshot=source["severity"], created_at=m.created_at, updated_at=datetime.now(timezone.utc),
+            device_id=device_id)
         db.add(record)
         with db.no_autoflush:
             result = service._response(db, record)
@@ -149,7 +151,8 @@ async def sync_record(request: Request, metadata: str = Form(..., max_length=200
                                             "bundle_version": "a" * 64, "created_at": "2026-10-15T09:00:00+09:00",
                                             "predictions": [{"class_id": i, "confidence": .6 if i == 0 else .05} for i in range(9)]}, ensure_ascii=False)]}),
                       file: UploadFile = File(..., description=IMAGE_DESCRIPTION),
-                      refined_file: UploadFile | None = File(None, description="재촬영 사진. metadata.refined_predictions와 함께 전송")):
+                      refined_file: UploadFile | None = File(None, description="재촬영 사진. metadata.refined_predictions와 함께 전송"),
+                      device: str = Depends(current_device)):
     try:
         LocalRecord.model_validate_json(metadata)
     except ValidationError:
@@ -157,4 +160,4 @@ async def sync_record(request: Request, metadata: str = Form(..., max_length=200
     async with request.app.state.diagnosis_limiter:
         content, extension = await _read_image_upload(file)
         second, second_extension = await _read_image_upload(refined_file) if refined_file else (None, None)
-        return await run_in_threadpool(_with_session, import_record, metadata, content, extension, second, second_extension)
+        return await run_in_threadpool(_with_session, import_record, metadata, content, extension, second, second_extension, device)
