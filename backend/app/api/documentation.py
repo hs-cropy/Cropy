@@ -90,7 +90,7 @@ UPLOAD_ERRORS = {
     413: error_response("이미지 용량(IMAGE_TOO_LARGE), 해상도(IMAGE_RESOLUTION_TOO_LARGE), 전체 요청(REQUEST_TOO_LARGE) 한도 초과", "IMAGE_RESOLUTION_TOO_LARGE", example_detail="이미지 해상도가 너무 큽니다. 크기를 줄여 주세요."),
     409: error_response("같은 요청 키로 다른 사진이나 작물을 보낼 수 없습니다.", "IDEMPOTENCY_CONFLICT"),
     408: error_response("사진 전송이 멈췄거나(UPLOAD_IDLE_TIMEOUT_SECONDS, 기본 20초) 전체 전송 시간(UPLOAD_TIMEOUT_SECONDS, 기본 300초)을 넘음", "UPLOAD_TIMEOUT", True, example_detail="사진 전송 시간이 초과되었습니다. 연결 상태를 확인하고 다시 시도해 주세요."),
-    503: error_response("모델(MODEL_UNAVAILABLE), DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가", "MODEL_UNAVAILABLE", True, example_detail="모델 진단 결과를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요."),
+    503: error_response("진단 대기 시간 초과(SERVER_BUSY), 모델(MODEL_UNAVAILABLE), DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가", "MODEL_UNAVAILABLE", True, example_detail="모델 진단 결과를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요."),
 }
 IMAGE_DESCRIPTION = "JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진. image/* 또는 application/octet-stream(MIME 누락 가능). 실제 디코딩으로 검증하며 새 형식·고해상도 사진은 긴 변 4096픽셀 이하 JPEG로 변환합니다. 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조. RAW 지원은 서버 디코더가 읽을 수 있는 압축 방식에 한합니다."
 KEY_DESCRIPTION = "동일 요청 재전송용 키(1~128자). 사진/작물이 달라지면 새 키를 사용합니다."
