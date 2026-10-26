@@ -63,7 +63,7 @@ PSIS 제품 식별 정보. 기존 시드에는 23행이 있다. 제품의 사용
 | usage_method | TEXT | 사용법 (살포 시기·방법) |
 | phi_days | INTEGER | 안전사용기준 — 수확 전 마지막 살포일 |
 | reentry_hours | INTEGER | 재입장 시간 (PSIS 미제공, 현재 전부 NULL) |
-| safety_notes | TEXT | 안전사용기준·사용횟수 원문 |
+| safety_notes | TEXT | 안전사용기준·사용횟수 원문. PSIS 동기화 사용 조건에는 독성·어독성도 포함 |
 
 ### disease_pesticides
 

@@ -1,6 +1,8 @@
 """Registration conditions belong to each crop/disease use, never the product."""
 
 import json
+import logging
+import sys
 from datetime import datetime, timezone
 from xml.sax.saxutils import escape
 
@@ -38,8 +40,34 @@ def xml(items=(), total=None, code=None):
     return f"<service>{status}<totalCount>{len(items) if total is None else total}</totalCount><list>{records}</list></service>"
 
 
-def client_for(payload):
-    return httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(200, text=payload(request) if callable(payload) else payload)))
+DETAIL_FIELDS = ("pestiKorName", "pestiBrandName", "cropName", "diseaseWeedName", "pestiUse", "dilutUnit", "useSuittime", "useNum")
+
+
+def detail_xml(row=None, **changes):
+    fields = {**{key: row[key] for key in DETAIL_FIELDS if key in row}, **changes} if row else changes
+    return "<service>" + "".join(f"<{key}>{escape(value)}</{key}>" for key, value in fields.items()) + "</service>"
+
+
+def client_for(payload, detail=None):
+    """SVC01 answers with ``payload``; SVC02 mirrors the listed item unless ``detail`` overrides it."""
+    listed = {}
+    def reply(request):
+        params = request.url.params
+        if params["serviceCode"] == "SVC02":
+            row = listed[(params["pestiCode"], params["diseaseUseSeq"])]
+            return detail(request, row) if detail else detail_xml(row)
+        text = payload(request) if callable(payload) else payload
+        try:
+            listed.update({(row["pestiCode"], row["diseaseUseSeq"]): row for row in sync._parse_page(text)[1]})
+        except ValueError:
+            pass  # Error payloads are exercised by the code under test.
+        return text
+    return httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(200, text=reply(request))))
+
+
+@pytest.fixture(autouse=True)
+def no_rate_limit_delay(monkeypatch):
+    monkeypatch.setattr(sync, "MIN_REQUEST_INTERVAL", 0)
 
 
 def catalog(products=None, usages=None):
@@ -95,6 +123,16 @@ def test_explicit_zero_is_a_valid_empty_result():
         assert sync.fetch_items(client, "fake-test-key", "무", "노균병") == []
 
 
+def test_live_svc01_envelope_with_build_time_and_paging_echo_is_accepted():
+    # The live service (2026-10-20) adds buildTime/displayCount/startPoint, absent from the v1.0 guide.
+    row = item()
+    records = "<item>" + "".join(f"<{key}>{escape(value)}</{key}>" for key, value in row.items()) + "</item>"
+    payload = (f"<service><totalCount>1</totalCount><buildTime>23:20:04[981]</buildTime><list>{records}</list>"
+               "<displayCount>50</displayCount><startPoint>1</startPoint></service>")
+    with client_for(payload) as client:
+        assert [r["pestiCode"] for r in sync.fetch_items(client, "fake-test-key", "무", "노균병")] == ["123"]
+
+
 def test_fetches_later_pages_without_assuming_a_short_page_is_complete():
     first = item()
     later = item(sequence="2", phi="수확21일전")
@@ -111,21 +149,125 @@ def test_repeated_or_truncated_pages_fail_closed():
         sync.fetch_items(client, "fake-test-key", "무", "노균병")
 
 
-def test_pagination_uses_page_number_not_record_offset():
-    first = [item(sequence=str(index)) for index in range(1, 51)]
+def _offset_service(rows, total=None):
+    """Live PSIS behaviour (2026-10-20): startPoint is a 1-based record offset, not a page number."""
     def reply(request):
-        page = request.url.params["startPoint"]
-        assert page in {"1", "2"}
-        return xml(first if page == "1" else [item(sequence="51")], total=51)
+        start = int(request.url.params["startPoint"])
+        size = int(request.url.params["displayCount"])
+        return xml(rows[start - 1:start - 1 + size], total=len(rows) if total is None else total)
+    return reply
+
+
+def test_pagination_sends_record_offsets_like_the_live_service():
+    rows = [item(sequence=str(index)) for index in range(1, 86)]
+    starts = []
+    service = _offset_service(rows)
+    def reply(request):
+        starts.append(request.url.params["startPoint"])
+        return service(request)
     with client_for(reply) as client:
         result = sync.fetch_items(client, "fake-test-key", "무", "노균병")
-    assert len(result) == 51
-    assert result[-1]["diseaseUseSeq"] == "51"
+    assert starts == ["1", "51"]
+    assert [row["diseaseUseSeq"] for row in result] == [str(index) for index in range(1, 86)]
 
 
-@pytest.mark.parametrize("changes", [{"pestiCode": ""}, {"diseaseUseSeq": ""}, {"cropName": "배추"}, {"diseaseWeedName": "탄저병"}])
-def test_missing_identity_or_wrong_query_match_is_rejected(changes):
+def test_page_number_semantics_would_be_caught_as_repeated_records():
+    # If startPoint were sent as 2 against an offset service, page 2 would repeat 49 records.
+    rows = [item(sequence=str(index)) for index in range(1, 86)]
+    service = _offset_service(rows)
+    def page_number_reply(request):
+        page = int(request.url.params["startPoint"])
+        request.url = request.url.copy_merge_params({"startPoint": "2" if page > 1 else "1"})
+        return service(request)
+    with client_for(page_number_reply) as client, pytest.raises(ValueError):
+        sync.fetch_items(client, "fake-test-key", "무", "노균병")
+
+
+@pytest.mark.parametrize("changes", [{"pestiCode": ""}, {"diseaseUseSeq": ""}, {"cropName": "배추"}, {"diseaseWeedName": ""}])
+def test_missing_identity_or_wrong_crop_is_rejected(changes):
     with client_for(xml([item(**changes)])) as client, pytest.raises(ValueError):
+        sync.fetch_items(client, "fake-test-key", "무", "노균병")
+
+
+def test_substring_disease_matches_are_excluded_and_recorded_not_fatal():
+    # Live: "검은무늬병" with similarFlag=N also returns "세균검은무늬병"; "탄저병" returns "전착효과(탄저병)".
+    rows = [item(sequence="1"), item(sequence="2", diseaseWeedName="세균노균병"),
+            item(sequence="3", diseaseWeedName="전착효과(노균병)"), item(sequence="4", diseaseWeedName="세균노균병")]
+    with client_for(xml(rows)) as client:
+        matched, excluded, total = sync.fetch_registrations(client, "fake-test-key", "무", "노균병")
+        catalog = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")})
+    assert [row["diseaseUseSeq"] for row in matched] == ["1"]
+    assert excluded == {"세균노균병": 2, "전착효과(노균병)": 1}
+    assert total == 4
+    assert catalog["queries"] == [{"disease_key": "radish_downy_mildew", "crop": "무", "disease": "노균병", "count": 1,
+                                   "source_total": 4, "excluded_disease_names": {"세균노균병": 2, "전착효과(노균병)": 1},
+                                   "excluded_aerial_usages": 0}]
+    assert [usage["source_usage_key"] for usage in catalog["usages"]] == ["123:1"]
+
+
+@pytest.mark.parametrize("method,aerial", [
+    ("발병 초부터 경엽처리(무인항공)", True),   # live value (캐스팅, 무 노균병)
+    ("무인헬기 살포", True), ("드론 방제", True), ("항공방제", True),
+    ("경엽처리(항공)", True), ("항공살포", True), ("항공 살포", True), ("무인 항공 방제", True), ("무인기 살포", True),
+    ("발병 초부터 경엽처리", False), ("관주처리", False), ("토양혼화", False), ("", False), (None, False),
+])
+def test_aerial_use_detection(method, aerial):
+    assert sync.is_aerial_use(method) is aerial
+
+
+@pytest.mark.parametrize("where", ["list", "detail"])
+def test_plain_aerial_wording_is_excluded_from_list_or_detail(where):
+    # 리뷰: "(항공)"·"항공살포"가 걸러지지 않아 항공 사용량이 verified로 저장됐다.
+    listed = item(pestiUse="경엽처리(항공)" if where == "list" else "발병 초부터 경엽처리", dilutUnit="- 100㎖/10a")
+    def detail(request, row):
+        return detail_xml(row, pestiUse="경엽처리(항공)", dilutUnit="- 100㎖/10a")
+    with client_for(xml([listed]), detail) as client:
+        catalog = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")})
+    assert catalog["usages"] == [] and catalog["products"] == []
+    assert catalog["queries"][0]["excluded_aerial_usages"] == 1
+
+
+def test_product_excluded_by_its_detail_does_not_use_up_a_slot():
+    # 리뷰: 상세에서 제외된 A가 슬롯을 차지해 정상 제품 B가 선택되지 않았다.
+    rows = [item(code="A", pestiKorName="성분A"), item(code="B", pestiKorName="성분B")]
+    def detail(request, row):
+        aerial = request.url.params["pestiCode"] == "A"
+        return detail_xml(row, pestiUse="경엽처리(무인항공)" if aerial else "발병 초부터 경엽처리")
+    with client_for(xml(rows), detail) as client:
+        catalog = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")},
+                                     max_per_disease=1)
+    assert [(u["pesticide_key"], u["priority"]) for u in catalog["usages"]] == [("psis_B", 1)]
+    assert [p["key"] for p in catalog["products"]] == ["psis_B"]
+
+
+def test_aerial_usages_are_excluded_and_never_take_a_product_slot():
+    # Live: 캐스팅 has a ground use (2000배) and an aerial use (- 100㎖/10a).
+    rows = [
+        item(code="1", sequence="1", pestiKorName="성분A", pestiUse="경엽처리(무인항공)", dilutUnit="- 100㎖/10a"),
+        item(code="2", sequence="1", pestiKorName="성분B", pestiUse="발병 초부터 경엽처리", dilutUnit="2000배 -"),
+        item(code="2", sequence="2", pestiKorName="성분B", pestiUse="발병 초부터 경엽처리(무인항공)"),
+        item(code="3", sequence="1", pestiKorName="성분C"),
+    ]
+    with client_for(xml(rows)) as client:
+        catalog = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")},
+                                     max_per_disease=2)
+    assert [(u["source_usage_key"], u["dilution"]) for u in catalog["usages"]] == [("2:1", "2000배"), ("3:1", "1000배")]
+    assert sorted(p["key"] for p in catalog["products"]) == ["psis_2", "psis_3"]  # aerial-only product 1 is absent
+    assert catalog["queries"][0]["excluded_aerial_usages"] == 2
+
+
+def test_aerial_use_revealed_only_by_the_detail_is_also_excluded():
+    def detail(request, row):
+        return detail_xml(row, pestiUse="발병 초부터 경엽처리(무인항공)")
+    with client_for(xml([item()]), detail) as client:
+        catalog = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")})
+    assert catalog["usages"] == [] and catalog["products"] == []
+    assert catalog["queries"][0]["excluded_aerial_usages"] == 1
+
+
+def test_duplicates_are_rejected_even_among_excluded_names():
+    rows = [item(sequence="1"), item(sequence="2", diseaseWeedName="세균노균병"), item(sequence="2", diseaseWeedName="세균노균병")]
+    with client_for(xml(rows)) as client, pytest.raises(ValueError):
         sync.fetch_items(client, "fake-test-key", "무", "노균병")
 
 
@@ -181,6 +323,166 @@ def test_all_queries_explicitly_empty_can_publish_one_complete_catalog(tmp_path)
 @pytest.mark.parametrize("value,want", [("수확3일전", 3), ("수확 21 일 전", 21), ("수확 3~7일전", None), ("수확3일전 또는 수확21일전", None)])
 def test_phi_does_not_guess_a_number_from_ambiguous_source(value, want):
     assert sync.parse_phi_days(value) == want
+
+
+@pytest.mark.parametrize("raw,want", [
+    ("1000배 -", "1000배"),            # live ground-spray value
+    ("- 100㎖/10a", "100㎖/10a"),       # live aerial-spray value
+    ("60배 3ℓ/10a", "60배 3ℓ/10a"),     # guide example
+    ("-", None), ("", None), (None, None),
+])
+def test_dilution_values_are_cleaned_like_live_psis_data(raw, want):
+    assert sync.clean_dilution(raw) == want
+
+
+def test_dash_placeholders_are_treated_as_missing_not_shown():
+    # Live: microbial products have useNum "-" and a non-PHI rule such as "발생초기".
+    def detail(request, row):
+        return detail_xml(row, useSuittime="발생초기", useNum="-", toxicName="저독성", fishToxicGubun="Ⅲ급", dilutUnit="-")
+    with client_for(xml([item(useNum="-", dilutUnit="-")]), detail) as client:
+        usage = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")})["usages"][0]
+    assert usage["safety_notes"] == "안전사용기준: 발생초기 / 독성: 저독성 / 어독성: Ⅲ급"
+    assert usage["phi_days"] is None
+    assert usage["dilution"] is None
+
+
+def test_same_ingredient_product_takes_the_slot_when_the_first_is_excluded_by_detail():
+    rows = [item(code="A", pestiKorName="같은성분"), item(code="B", pestiKorName="같은성분")]
+    def detail(request, row):
+        aerial = request.url.params["pestiCode"] == "A"
+        return detail_xml(row, pestiUse="경엽처리(무인항공)" if aerial else "발병 초부터 경엽처리")
+    with client_for(xml(rows), detail) as client:
+        catalog = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")})
+    assert [(u["pesticide_key"], u["priority"]) for u in catalog["usages"]] == [("psis_B", 1)]
+
+
+def test_partly_excluded_product_keeps_its_ground_uses_and_priorities_stay_consecutive():
+    rows = [item(code="A", sequence="1", pestiKorName="성분A"), item(code="A", sequence="2", pestiKorName="성분A"),
+            item(code="B", sequence="1", pestiKorName="성분B")]
+    def detail(request, row):
+        aerial = (request.url.params["pestiCode"], request.url.params["diseaseUseSeq"]) == ("A", "2")
+        return detail_xml(row, pestiUse="경엽처리(무인항공)" if aerial else "발병 초부터 경엽처리")
+    with client_for(xml(rows), detail) as client:
+        catalog = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")})
+    assert [(u["source_usage_key"], u["priority"]) for u in catalog["usages"]] == [("A:1", 1), ("B:1", 2)]
+    assert catalog["queries"][0]["excluded_aerial_usages"] == 1
+
+
+def test_detail_values_win_when_list_and_detail_disagree():
+    listed = item(dilutUnit="1000배", useSuittime="수확3일전", useNum="3회")
+    def detail(request, row):
+        return detail_xml(row, dilutUnit="2000배", useSuittime="수확7일전", useNum="2회")
+    with client_for(xml([listed]), detail) as client:
+        usage = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")})["usages"][0]
+    assert (usage["dilution"], usage["phi_days"]) == ("2000배", 7)
+    assert usage["safety_notes"].startswith("안전사용기준: 수확7일전 / 사용횟수: 2회")
+
+
+def test_cli_never_logs_the_api_key_even_when_info_logging_is_on(tmp_path, monkeypatch, caplog):
+    secret = "secret-psis-key-0000"
+    monkeypatch.setenv("PSIS_API_KEY", secret)
+    monkeypatch.setattr(sys, "argv", ["sync_pesticides.py", "--output", str(tmp_path / "catalog.json")])
+    monkeypatch.setattr(sync, "DISEASE_QUERIES", {"radish_downy_mildew": ("무", "노균병")})
+    fake = client_for(xml([item()]))
+    monkeypatch.setattr(sync.httpx, "Client", lambda *args, **kwargs: fake)
+    caplog.set_level(logging.INFO)
+    try:
+        sync.main()
+    finally:
+        for name in ("httpx", "httpcore"):
+            logging.getLogger(name).setLevel(logging.NOTSET)
+    assert (tmp_path / "catalog.json").exists()
+    assert secret not in caplog.text
+
+
+@pytest.mark.parametrize("blank", ["-", "", None])
+def test_blank_detail_fields_are_never_back_filled_from_the_list(blank):
+    # 리뷰: 상세가 "-"·빈 값·누락인데 목록의 1000배·수확3일전·3회로 채워 verified로 저장했다.
+    listed = item(dilutUnit="1000배", useSuittime="수확3일전", useNum="3회", pestiUse="경엽처리")
+    def detail(request, row):
+        fields = {"pestiKorName": row["pestiKorName"], "pestiBrandName": row["pestiBrandName"],
+                  "cropName": row["cropName"], "diseaseWeedName": row["diseaseWeedName"]}
+        if blank is not None:
+            fields.update(dilutUnit=blank, useSuittime=blank, useNum=blank, pestiUse=blank)
+        return detail_xml(**fields)
+    with client_for(xml([listed]), detail) as client:
+        usage = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")})["usages"][0]
+    assert (usage["dilution"], usage["usage_method"], usage["phi_days"], usage["safety_notes"]) == (None, None, None, None)
+
+
+def test_usage_conditions_and_toxicity_come_from_svc02_detail():
+    # The SVC01 response spec has no dilution/safety fields; SVC02 documents them.
+    listed = {key: value for key, value in item().items() if key not in {"dilutUnit", "useSuittime", "useNum", "pestiUse"}}
+    requests = []
+    def detail(request, row):
+        requests.append(dict(request.url.params))
+        return detail_xml(row, pestiUse="발병초 경엽처리", dilutUnit="2000배 -", useSuittime="수확 7일 전까지",
+                          useNum="3회 이내", toxicName="저독성", fishToxicGubun="Ⅲ급")
+    with client_for(xml([listed]), detail) as client:
+        result = sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")})
+    assert requests == [{"apiKey": "fake-test-key", "serviceCode": "SVC02", "pestiCode": "123", "diseaseUseSeq": "1"}]
+    usage = result["usages"][0]
+    assert (usage["dilution"], usage["usage_method"], usage["phi_days"]) == ("2000배", "발병초 경엽처리", 7)
+    assert usage["safety_notes"] == "안전사용기준: 수확 7일 전까지 / 사용횟수: 3회 이내 / 독성: 저독성 / 어독성: Ⅲ급"
+    assert usage["source_payload"]["detail"]["toxicName"] == "저독성"
+    assert usage["source_usage_key"] == "123:1"
+
+
+def test_detail_is_requested_only_for_selected_products():
+    rows = [item(code="1", pestiKorName="성분A"), item(code="2", pestiKorName="성분B")]
+    codes = []
+    def detail(request, row):
+        codes.append(request.url.params["pestiCode"])
+        return detail_xml(row)
+    with client_for(xml(rows), detail) as client:
+        sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")}, max_per_disease=1)
+    assert codes == ["1"]
+
+
+@pytest.mark.parametrize("make_detail", [
+    lambda row: "<service><errorCode>ERR_201</errorCode></service>",
+    lambda row: "<service><errorMsg>temporarily unavailable</errorMsg></service>",
+    lambda row: detail_xml(row, pestiBrandName="다른제품"),
+    lambda row: detail_xml(row, cropName="배추"),
+    lambda row: detail_xml(row, diseaseWeedName="탄저병"),
+    lambda row: "<service><pestiKorName><b>nested</b></pestiKorName></service>",
+    lambda row: "<html><body>maintenance</body></html>",
+])
+def test_bad_or_mismatched_detail_preserves_previous_catalog(tmp_path, make_detail):
+    target = tmp_path / "pesticide_catalog.json"
+    target.write_text("old complete snapshot", encoding="utf-8")
+    with client_for(xml([item()]), lambda request, row: make_detail(row)) as client, pytest.raises(ValueError):
+        sync.sync_catalog(client, "fake-test-key", target, queries={"radish_downy_mildew": ("무", "노균병")})
+    assert target.read_text(encoding="utf-8") == "old complete snapshot"
+
+
+def test_requests_are_spaced_to_the_documented_rate_limit(monkeypatch):
+    monkeypatch.setattr(sync, "MIN_REQUEST_INTERVAL", 0.12)
+    monkeypatch.setattr(sync, "_last_request_at", float("-inf"))
+    clock, sleeps = [100.0], []
+    monkeypatch.setattr(sync.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(sync.time, "sleep", lambda seconds: (sleeps.append(seconds), clock.__setitem__(0, clock[0] + seconds)))
+    with client_for(xml([item()])) as client:
+        sync.build_catalog(client, "fake-test-key", queries={"radish_downy_mildew": ("무", "노균병")})
+    # One SVC01 page, then one SVC02 detail issued without any time passing.
+    assert sleeps == [pytest.approx(0.12)]
+
+
+def test_synced_catalog_loads_into_database_as_verified(store, tmp_path):
+    db, directory = store
+    def reply(request):
+        crop = request.url.params["cropName"]
+        return xml([item(crop=crop, sequence="1" if crop == "무" else "2")])
+    def detail(request, row):
+        return detail_xml(row, toxicName="저독성")
+    with client_for(reply, detail) as client:
+        sync.sync_catalog(client, "fake-test-key", directory / "pesticide_catalog.json", queries=QUERIES)
+    seed_module.seed_database(db)
+    from app.services.pesticide_service import pesticide_infos
+    radish = db.query(Disease).filter_by(model_class_id=3).one()
+    info = pesticide_infos(db, radish.id)[0]
+    assert (info.verification_status, info.source, info.dilution, info.safety.phi_days) == ("verified", "PSIS", "1000배", 3)
+    assert "독성: 저독성" in info.safety_notes
 
 
 def test_catalog_conditions_are_scoped_to_disease_and_idempotent(store):
