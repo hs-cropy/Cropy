@@ -32,9 +32,13 @@ def test_all_registered_apis_have_documented_success_contracts(client):
         ("/api/v1/diseases", "get"), ("/api/v1/diseases/{disease_id}", "get"),
         ("/api/v1/offline/manifest", "get"), ("/api/v1/offline/records", "post"),
     }
+    no_content = {("/api/v1/history/{diagnosis_id}", "delete")}
     documented = {(path, method) for path, item in document["paths"].items() for method in item}
-    assert registered == documented
-    for path, method in registered:
+    assert registered | no_content == documented
+    for path, method in registered | no_content:
         operation = document["paths"][path][method]
         assert operation.get("description"), path
-        assert operation["responses"]["200"]["content"]["application/json"]["schema"], path
+        if (path, method) in no_content:
+            assert "204" in operation["responses"], path
+        else:
+            assert operation["responses"]["200"]["content"]["application/json"]["schema"], path

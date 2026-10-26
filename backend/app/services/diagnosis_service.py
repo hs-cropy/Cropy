@@ -11,7 +11,7 @@ from sqlalchemy import func
 
 from app.core.config import settings
 from app.core.uploads import write_image
-from app.models.entities import Disease, Diagnosis
+from app.models.entities import Disease, Diagnosis, DiagnosisRequest
 from app.schemas.diagnosis import (
     DiagnoseResponse,
     DiagnosisSummary,
@@ -309,6 +309,23 @@ def get_history(db: Session, page: int, size: int, crop_type: str | None = None,
 def get_diagnosis_detail(db: Session, diagnosis_id: str, device_id: str | None = None) -> DiagnoseResponse | None:
     diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id, Diagnosis.device_id == device_id).first()
     return _response(db, diagnosis) if diagnosis else None
+
+
+def delete_diagnosis(db: Session, diagnosis_id: str, device_id: str | None = None) -> bool:
+    """Delete one of this device's records with its photos and cached responses."""
+    diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id, Diagnosis.device_id == device_id).first()
+    if diagnosis is None:
+        return False
+    photos = {_upload_path(diagnosis.image_path), _upload_path(diagnosis.refined_image_path)}
+    db.delete(diagnosis)
+    # A replayed request key must not resurrect the deleted result.
+    db.query(DiagnosisRequest).filter(DiagnosisRequest.response["id"].as_string() == diagnosis_id) \
+        .delete(synchronize_session=False)
+    db.commit()
+    # Files go only after the rows are gone, so a failed commit keeps the record intact.
+    for photo in photos:
+        _remove_file(photo)
+    return True
 
 
 def list_diseases(db: Session, q: str | None, crop_type: str | None) -> list[DiseaseDetail]:

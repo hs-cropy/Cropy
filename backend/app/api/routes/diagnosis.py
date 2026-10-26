@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 from starlette.concurrency import run_in_threadpool
@@ -143,3 +143,12 @@ def history_detail(diagnosis_id: str, db: Session = Depends(get_db), device: str
     if not result:
         raise APIError(404, "DIAGNOSIS_NOT_FOUND", "진단 기록을 찾을 수 없습니다.")
     return result
+
+
+@router.delete("/history/{diagnosis_id}", status_code=204, summary="내 진단 기록 삭제",
+               description="이 기기(익명 기기 쿠키)의 진단 기록 하나를 사진과 함께 삭제합니다. 성공하면 본문 없이 204입니다. 다른 기기의 기록이나 없는 기록은 404이며 되돌릴 수 없습니다.",
+               responses={404: error_response("진단 기록을 찾을 수 없습니다.", "DIAGNOSIS_NOT_FOUND"), 503: DATABASE_ERROR})
+def delete_history(diagnosis_id: str, db: Session = Depends(get_db), device: str = Depends(current_device)):
+    if not diagnosis_service.delete_diagnosis(db, diagnosis_id, device):
+        raise APIError(404, "DIAGNOSIS_NOT_FOUND", "진단 기록을 찾을 수 없습니다.")
+    return Response(status_code=204)
