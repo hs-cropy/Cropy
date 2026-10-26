@@ -42,8 +42,9 @@ def test_actual_image_format_controls_storage_and_serving(client, fmt, suffix, m
     served = client.get(image_url)
     assert served.headers["content-type"] == mime
     assert served.headers["x-content-type-options"] == "nosniff"
-    # Preserve model input bytes: no re-encoding or implicit rotation.
-    assert served.content == content
+    # Preserve model input bytes: no re-encoding or implicit rotation. Data
+    # appended after the image is dropped with the metadata.
+    assert served.content == encoded_image(fmt)
 
 
 def test_legacy_html_upload_is_not_served_as_document(client):
