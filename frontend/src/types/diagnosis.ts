@@ -44,7 +44,7 @@ export interface DiagnoseResponse {
   model_version?: string | null;
   preprocessing_version?: string | null;
   pair_model_version?: string | null;
-  category?: "disease" | "normal";
+  category?: "disease" | "normal" | "other";
   severity?: Severity;
   confidence: number;
   top_predictions: PredictionItem[];
@@ -80,7 +80,7 @@ export interface DiagnosisSummary {
   prediction_mode?: "model" | "mock" | "legacy" | "browser";
   created_at: string;
   severity?: Severity;
-  category?: "normal" | "disease";
+  category?: "normal" | "disease" | "other";
   is_refined?: boolean;
   content_status?: string;
 }

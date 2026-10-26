@@ -21,6 +21,7 @@ import { useDiagnosisScreen } from "./DiagnosisScreen";
 
 const LOW_CONFIDENCE_PROMPT =
   "추가 확인이 필요해요. 현재 사진만으로는 병해를 확정하기 어려워요. 사진을 다시 촬영해 주세요.";
+const NOT_CROP_PROMPT = "작물 잎을 찾지 못했어요. 고추, 무, 배추 잎이 잘 보이게 다시 찍어 주세요.";
 
 /**
  * 진단 결과 화면 (/diagnosis, Figma 03): 진단 시작 안내, 사진 분석 중, 진단 결과와 예외 화면
@@ -57,7 +58,8 @@ export function DiagnosisPage() {
   // 결과 낭독. 다시 분석은 분석 중에도 원래 결과를 두므로 분석이 끝난 뒤에만 읽는다
   useEffect(() => {
     if (!result || loading) return;
-    if (result.recapture) speak(buildRecapturePrompt(result.recapture));
+    if (isNotCrop(result)) speak(NOT_CROP_PROMPT);
+    else if (result.recapture) speak(buildRecapturePrompt(result.recapture));
     else if (isLowConfidence(result)) speak(LOW_CONFIDENCE_PROMPT);
     else speak(buildResultPrompt(result));
     // 분석이 끝났다고 같은 결과를 다시 읽지 않는다 (다시 분석 실패 뒤 등)
@@ -120,7 +122,7 @@ export function DiagnosisPage() {
     !failed &&
     result?.save_status === "saved" &&
     result.prediction_mode !== "browser" &&
-    Boolean(result.recapture || isLowConfidence(result));
+    Boolean(result.recapture || isLowConfidence(result) || isNotCrop(result));
 
   // 예외 화면(재촬영·저신뢰·실패)은 각 패널이 제목과 버튼을 갖는다
   const exception = exceptionVisible ? (
@@ -138,6 +140,7 @@ export function DiagnosisPage() {
       ) : (
         <LowConfidencePanel
           confidence={result.confidence}
+          notCrop={isNotCrop(result)}
           onRetake={() => {
             cancelSpeech();
             session.reset();
@@ -284,4 +287,9 @@ function failureActions(
 
 function isLowConfidence(result: { decision_reasons?: string[] | null }) {
   return result.decision_reasons?.includes("low_confidence") ?? false;
+}
+
+/** 판별 불가: 작물 잎을 알아보지 못한 사진 (decision-v2) */
+function isNotCrop(result: { decision_status?: string | null }) {
+  return result.decision_status === "not_crop";
 }

@@ -18,3 +18,10 @@ test('crop mismatch and ambiguity retain separate reasons', () => {
   assert.equal(result.decision_status,'crop_mismatch'); assert.deepEqual(result.decision_reasons,['crop_mismatch','confusion']);
   assert.equal(result.recapture.region,'잎 뒷면');
 });
+test('판별 불가 overrides mismatch, confusion and low score', () => {
+  const withOther = { ...bundle, diseases: [...bundle.diseases, {model_class_id: 9, name: '판별 불가', crop_type: '기타', category: 'other'}] };
+  const result = summarize(withOther, [{class_id:9,confidence:.4},{class_id:2,confidence:.35},{class_id:3,confidence:.25}], '고추');
+  assert.equal(result.decision_status, 'not_crop'); assert.deepEqual(result.decision_reasons, ['not_crop']);
+  assert.equal(result.recapture, null); assert.equal(result.crop_mismatch, false); assert.equal(result.crop_type, '고추');
+  assert.equal(summarize(withOther, [{class_id:9,confidence:.9}], '').crop_type, null);
+});

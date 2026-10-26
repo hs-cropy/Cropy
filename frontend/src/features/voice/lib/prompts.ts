@@ -40,6 +40,7 @@ function isHealthy(result: DiagnoseResponse): boolean {
 /** M04-F9 결과 낭독. 정상·농약 없음(M04-F6)은 화면 문구와 같은 말로 읽는다. */
 export function buildResultPrompt(result: DiagnoseResponse): string[] {
   if (isHealthy(result)) return ["건강한 상태예요"];
+  if (result.category === "other") return ["작물 잎을 찾지 못했어요", "잎이 잘 보이게 다시 찍어 주세요"];
 
   const pct = Math.round(result.confidence * 100);
   const head = `${result.disease_name}, 신뢰도 ${pct}%`;
