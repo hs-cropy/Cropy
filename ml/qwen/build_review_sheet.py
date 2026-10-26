@@ -12,7 +12,7 @@ from pathlib import Path
 
 import spec_v2
 
-DATA = Path("마음ai/Qwen35_데이터시트/v2_호출형식")
+DATA = Path(__file__).resolve().parent / "data_v2"
 VERDICTS = '"ok,수정,삭제"'
 
 # Policy questions found while pre-reviewing the validation set. Rows touching them are flagged.

@@ -181,7 +181,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--v11", type=Path, default=Path("마음ai/Qwen35_데이터시트/Cropy_Qwen35_기능별400_검수대기_v11.xlsx"))
     p.add_argument("--usage", type=Path, default=HERE / "inputs/usage_v12.jsonl")
-    p.add_argument("--out", type=Path, default=Path("마음ai/Qwen35_데이터시트/v2_호출형식"))
+    p.add_argument("--out", type=Path, default=HERE / "data_v2")
     p.add_argument("--review-sample", type=int, default=300)
     a = p.parse_args()
     base = (load_v11(a.v11) + load_usage(a.usage) + load_seeds(HERE / "usage_seed.tsv", "get_usage_guidance")

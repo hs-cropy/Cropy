@@ -40,10 +40,10 @@ v11 데이터를 마음AI HomeIoT 예시(`[AI Expo] 2025 AI Expo HomeIoT 데이�
 
 ```bash
 # openpyxl 필요 (v11 엑셀 읽기용)
-python ml/qwen_data/build_dataset_v2.py
+python ml/qwen/build_dataset_v2.py
 ```
 
-결과: `마음ai/Qwen35_데이터시트/v2_호출형식/`
+결과: `ml/qwen/data_v2/`
 
 | 파일 | 내용 |
 |---|---|
@@ -102,5 +102,5 @@ python ml/qwen_data/build_dataset_v2.py
 설명 수정: `confidence`를 "점수 수치와 그 숫자가 무슨 점수인지"로(v11 라벨이 일관되게 이렇게 붙어 있음), "다시 말해 줘" 구분 규칙 추가.
 시드 수정: 실행 요청인 "택시 불러 줘·문자 보내 줘·라디오 틀어 줘"를 잡담에서 제외(v11 action 라벨과 충돌).
 
-사람 검수표: `python ml/qwen_data/build_review_sheet.py` → `v2_호출형식/검수표_v2.xlsx`
+사람 검수표: `python ml/qwen/build_review_sheet.py` → `data_v2/검수표_v2.xlsx`
 (정책 결정 8건, validation 대표 303행 중 확인필요 20행, 변형 300행)
