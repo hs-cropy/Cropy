@@ -61,14 +61,14 @@ export function SplashScreen() {
       <div className={styles.clouds} aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/splash/cloud-a.svg"
+          src="/splash/cloud-a.webp"
           alt=""
           className={`${styles.cloud} ${styles.cloudA}`}
         />
 
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/splash/cloud-b.svg"
+          src="/splash/cloud-b.webp"
           alt=""
           className={`${styles.cloud} ${styles.cloudB}`}
         />
