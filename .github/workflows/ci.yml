@@ -5,6 +5,11 @@ on:
   push:
     branches: [develop, main]
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'develop 에서 실행할 때 서버 배포를 점검만 하고 교체하지 않는다'
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -137,3 +142,66 @@ jobs:
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: node .github/scripts/ci-gate.mjs
+
+  # develop 이 CI 를 통과하면 Lightsail 데모 서버에 배포한다 (docs/AWS_LIGHTSAIL_DEPLOY.md 6절)
+  deploy:
+    needs: ci-required
+    # DEPLOY_HOST 변수를 지우면 배포를 건너뛴다 (서버 종료 후 등)
+    if: >-
+      github.ref == 'refs/heads/develop' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      vars.DEPLOY_HOST != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # 배포가 겹치지 않게 하나씩. 진행 중인 배포는 끊지 않는다
+    concurrency:
+      group: deploy-lightsail
+      cancel-in-progress: false
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+      SITE_ADDRESS: ${{ vars.SITE_ADDRESS }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      # 예전 실행을 다시 돌려도 구버전이 배포되지 않게 develop 최신 커밋일 때만 배포한다
+      - name: Check latest develop
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head="$(gh api "repos/$GITHUB_REPOSITORY/commits/develop" --jq .sha)"
+          if [ "$head" = "$GITHUB_SHA" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::develop 에 더 새 커밋($head)이 있어 이 실행은 배포하지 않는다"
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Prepare SSH key
+        if: steps.latest.outputs.deploy == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      # 서버의 배포 키는 cropy-deploy-entry 만 실행한다. 묶음은 표준입력으로 보낸다
+      - name: Deploy to server
+        if: steps.latest.outputs.deploy == 'true'
+        run: |
+          request="$GITHUB_SHA"
+          if [ "$DRY_RUN" = true ]; then request="check:$GITHUB_SHA"; fi
+          git archive --format=tar.gz HEAD |
+            ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 \
+              "$DEPLOY_USER@$DEPLOY_HOST" "$request"
+      - name: Check service is ready
+        if: steps.latest.outputs.deploy == 'true' && env.DRY_RUN != 'true'
+        run: curl -fsS --retry 10 --retry-delay 15 --retry-all-errors "https://$SITE_ADDRESS/api/v1/ready"
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

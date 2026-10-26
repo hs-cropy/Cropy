@@ -112,8 +112,50 @@ docker compose logs --tail=100 backend   # 로그 (컨테이너별 10MB × 3개�
 docker image prune -f                    # 재빌드가 쌓이면 디스크 정리
 ```
 
+### 자동 배포
+
+develop 에 push(머지)되어 CI 가 모두 통과하면 `.github/workflows/ci.yml`의 `deploy` 잡이 서버에 배포한다.
+
+1. develop 최신 커밋인지 확인한다. 예전 실행을 다시 돌려도 구버전이 배포되지 않는다.
+2. `git archive HEAD` 묶음을 SSH 표준입력으로 서버에 보낸다.
+3. 서버의 `~/bin/cropy-deploy-entry`(`deploy/cropy-deploy-entry.sh`)가 요청을 검증하고 잠금을 건 뒤 `~/Cropy.new`에 묶음을 푼다.
+4. 묶음 안의 `deploy/remote-update.sh`가 아래 "코드 업데이트"와 같은 절차로 교체한다. 빌드가 실패하면 교체하지 않는다. 새 버전이 5분 안에 준비되지 않으면 지금 실행 중이던 이미지(`:prev`)와 이전 디렉터리로 되돌리고 잡을 실패로 끝낸다. 배포는 SSH 세션과 떨어져 돌아서, 러너가 취소되거나 연결이 끊겨도 서버에서 끝까지 진행된다. DB 는 되돌리지 않는다.
+5. 외부에서 `https://<주소>/api/v1/ready` 200 을 확인한다.
+
+배포는 한 번에 하나씩 돈다. 서버 로그는 `~/deploy-logs/`에 최근 20개가 남는다. 문서만 바뀐 머지도 배포되며, 컨테이너를 다시 만들 때 몇 초 끊긴다.
+
+수동 실행: Actions → CI → Run workflow 에서 develop 을 고른다. `dry_run`(기본 켜짐)은 묶음 전송·설정 검증·디스크 확인까지만 하고 교체하지 않는다. 끄면 실제로 배포한다.
+
+**설정 (한 번만)**
+
+- 배포 전용 키를 만든다. 개인 접속 키와 따로 둔다.
+  ```bash
+  ssh-keygen -t ed25519 -N "" -C gha-cropy-deploy -f cropy-deploy
+  ```
+- 서버에 진입 스크립트를 설치하고 공개키를 등록한다. `command=`로 이 키는 진입 스크립트만 실행할 수 있다.
+  ```bash
+  # 로컬 PC
+  scp deploy/cropy-deploy-entry.sh ubuntu@<고정IP>:~/cropy-deploy-entry
+  # 서버
+  mkdir -p ~/bin && mv ~/cropy-deploy-entry ~/bin/ && chmod 755 ~/bin/cropy-deploy-entry
+  echo 'restrict,command="/home/ubuntu/bin/cropy-deploy-entry" <cropy-deploy.pub 내용>' >> ~/.ssh/authorized_keys
+  ```
+- 호스트 키를 구해 서버에서 본 지문과 맞는지 대조한다.
+  ```bash
+  ssh-keyscan -t ed25519 <고정IP> > deploy_known_hosts && ssh-keygen -lf deploy_known_hosts   # 로컬 PC
+  ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub                                         # 서버
+  ```
+- GitHub 저장소 설정에 등록하고, 로컬의 비밀키 파일은 지운다.
+  - Secrets: `DEPLOY_SSH_KEY`(cropy-deploy 비밀키 전체), `DEPLOY_KNOWN_HOSTS`(deploy_known_hosts 내용)
+  - Variables: `DEPLOY_HOST`(고정 IP. 호스트 키를 IP 로 받았으므로 sslip.io 이름이 아니라 같은 IP 를 넣는다), `DEPLOY_USER`(`ubuntu`), `SITE_ADDRESS`(`<고정IP>.sslip.io`)
+
+**주의:** 비공개 저장소 무료 플랜이라 브랜치 보호와 Environment 제한을 쓸 수 없어 Secret 은 저장소 전체에 열려 있다. push 권한이 있는 사람은 워크플로를 고쳐 배포 키를 꺼낼 수 있고, docker 를 다룰 수 있는 배포 키는 사실상 서버 root 권한이다. 데모 기간에만 쓰고 종료할 때 바로 폐기한다.
+
+진입 스크립트(`deploy/cropy-deploy-entry.sh`)를 고쳤다면 서버의 `~/bin/cropy-deploy-entry`도 다시 설치해야 한다. `remote-update.sh`는 묶음에 들어 있어 자동으로 최신이 쓰인다.
+
 ### 코드 업데이트
 
+자동 배포가 쓰는 절차이며, 자동 배포가 안 될 때는 손으로 한다. 손으로 할 때는 자동 배포와 겹치지 않게 먼저 잠금을 잡는다(`exec 9>~/.cropy-deploy.lock && flock 9`, 셸을 닫으면 풀린다).
 새 디렉터리에 풀어 빌드한 뒤 디렉터리를 바꿔 끼운다. 빌드하는 동안 기존 서비스는 그대로 돈다.
 프로젝트 이름이 `cropy`로 고정되어 있어 디렉터리를 바꿔도 DB·업로드 사진 볼륨은 그대로 이어진다.
 
@@ -163,11 +205,14 @@ docker compose start backend
 
 Lightsail 은 인스턴스를 정지해도 요금이 나간다. 그만 쓸 때는 **삭제**한다.
 
-1. 6절의 방법으로 데이터를 백업해 로컬로 받는다.
-2. 인스턴스를 삭제한다.
-3. 고정 IP를 해제한다.
-4. 스냅샷을 만들었다면 함께 삭제한다.
-5. 다음 날 Cost Explorer 에서 Lightsail 사용량이 0인지 확인한다.
+1. 자동 배포를 먼저 끈다. 서버가 없으면 develop 머지마다 deploy 잡이 실패한다.
+   - Variables 의 `DEPLOY_HOST`를 지우면 deploy 잡이 건너뛰어진다. 이후 `ci.yml`의 `deploy` 잡을 지우는 PR 을 올린다
+   - Secrets `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`와 Variables 를 삭제한다
+2. 6절의 방법으로 데이터를 백업해 로컬로 받는다.
+3. 인스턴스를 삭제한다.
+4. 고정 IP를 해제한다.
+5. 스냅샷을 만들었다면 함께 삭제한다.
+6. 다음 날 Cost Explorer 에서 Lightsail 사용량이 0인지 확인한다.
 
 ## 알려진 제약
 
