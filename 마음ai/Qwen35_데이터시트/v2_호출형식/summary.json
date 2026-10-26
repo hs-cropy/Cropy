@@ -1,0 +1,63 @@
+{
+  "format": "hs-call-v2",
+  "new_tokens": [
+    "<hs_0>",
+    "<hs_1>",
+    "<hs_2>",
+    "<hs_3>",
+    "<hs_4>",
+    "<hs_5>",
+    "<hs_6>",
+    "<hs_7>",
+    "<hs_8>",
+    "<hs_end>"
+  ],
+  "rows": 5881,
+  "split": {
+    "train": 4736,
+    "validation": 1145
+  },
+  "train_function": {
+    "handle_scope_limit": 620,
+    "get_recapture_guidance": 595,
+    "clarify_request": 592,
+    "get_diagnosis": 555,
+    "get_prediction_metrics": 551,
+    "get_care_information": 538,
+    "chit_chat": 517,
+    "get_pesticide_information": 503,
+    "get_usage_guidance": 265
+  },
+  "validation_function": {
+    "handle_scope_limit": 148,
+    "get_pesticide_information": 139,
+    "clarify_request": 138,
+    "get_diagnosis": 136,
+    "get_prediction_metrics": 135,
+    "get_care_information": 133,
+    "get_recapture_guidance": 127,
+    "chit_chat": 121,
+    "get_usage_guidance": 68
+  },
+  "source": {
+    "v11": 4858,
+    "seed_chit_chat": 638,
+    "seed_get_usage_guidance": 294,
+    "v12_usage": 91
+  },
+  "augmentation": {
+    "original": 2972,
+    "banmal": 1973,
+    "spacing": 467,
+    "dialect_chungcheong": 291,
+    "dialect_jeolla": 95,
+    "dialect_gyeongsang": 83
+  },
+  "honorific_share": 0.405,
+  "dropped": {
+    "duplicate": 500,
+    "train_text_in_validation": 2
+  },
+  "system_prompt_chars": 2458,
+  "human_validated": 0
+}

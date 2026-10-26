@@ -1,0 +1,227 @@
+category	utterance
+greeting	안녕하세요
+greeting	안녕
+greeting	좋은 아침이에요
+greeting	좋은 아침
+greeting	반가워요
+greeting	반갑다
+greeting	오랜만이에요
+greeting	오랜만이네
+greeting	잘 지냈어요
+greeting	잘 지냈어
+greeting	밥은 먹었어요
+greeting	점심 먹었어
+greeting	수고 많으세요
+greeting	오늘도 잘 부탁해요
+greeting	또 왔어
+thanks	고마워요
+thanks	고마워
+thanks	감사합니다
+thanks	정말 도움이 됐어요
+thanks	덕분에 살았다
+thanks	친절하게 알려줘서 고마워
+thanks	수고했어
+thanks	잘 들었어요
+farewell	잘 있어요
+farewell	다음에 또 올게
+farewell	이제 끌게요
+farewell	그만할게
+farewell	나중에 다시 물어볼게요
+farewell	오늘은 여기까지 할게
+farewell	들어가 볼게요
+farewell	잘 자
+weather	오늘 날씨 어때요
+weather	오늘 날씨 어때
+weather	내일 비 온대요
+weather	내일 비 온다더라
+weather	요즘 너무 덥네요
+weather	오늘 엄청 춥다
+weather	바람이 많이 부네
+weather	장마가 언제 끝날까요
+weather	이번 주말에 날씨 좋을까
+weather	햇볕이 너무 뜨거워요
+weather	가뭄이 계속되네
+weather	아침부터 안개가 꼈어요
+time	지금 몇 시야
+time	지금 몇 시예요
+time	오늘 무슨 요일이에요
+time	오늘 며칠이야
+time	벌써 저녁이네
+time	시간 참 빨리 간다
+smalltalk	요즘 어떻게 지내요
+smalltalk	심심하다
+smalltalk	심심한데 얘기 좀 해 줘
+smalltalk	오늘 좀 피곤하네요
+smalltalk	허리가 너무 아파
+smalltalk	오늘 일 많이 했다
+smalltalk	배고프다
+smalltalk	커피 한 잔 하고 싶네
+smalltalk	오늘 기분이 좋아요
+smalltalk	요즘 잠을 못 자겠어
+smalltalk	손주가 놀러 온대요
+smalltalk	텔레비전에서 뭐 재밌는 거 해
+smalltalk	노래 좀 불러 줘
+smalltalk	재밌는 얘기 해 줘
+smalltalk	농담 하나 해 봐
+smalltalk	오늘 저녁 뭐 먹지
+smalltalk	점심 메뉴 추천해 줄래
+smalltalk	요즘 물가가 너무 올랐어요
+smalltalk	오늘 장날이에요
+smalltalk	읍내 나가야 하는데 귀찮다
+smalltalk	오늘 마을 회관에 모임이 있어요
+smalltalk	이웃집 할머니가 떡을 주셨어
+self	너는 누구야
+self	이름이 뭐예요
+self	너 몇 살이야
+self	너 사람이야
+self	넌 어디서 왔어
+self	너 똑똑하구나
+self	너랑 얘기하니까 좋다
+self	혼자 일하니까 외롭네
+self	목소리가 참 좋네요
+self	너 말 잘한다
+offtopic	주식 지금 사도 돼
+offtopic	오늘 뉴스 뭐 있어요
+offtopic	야구 누가 이겼어
+offtopic	로또 번호 알려 줘
+offtopic	김치찌개 맛있게 끓이는 법 알려 줘
+offtopic	부산까지 몇 시간 걸려
+offtopic	병원은 몇 시까지 해요
+offtopic	혈압약은 언제 먹어야 돼
+offtopic	손자 생일 선물 뭐가 좋을까
+offtopic	영어로 사과가 뭐야
+offtopic	노인 일자리 신청은 어떻게 해요
+offtopic	버스 시간표 좀 알려 줄래
+offtopic	트로트 가수 누가 제일 인기 많아
+offtopic	운동은 하루에 얼마나 해야 돼
+offtopic	요즘 유행하는 드라마 뭐예요
+farmlife	올해 고추 농사가 잘 됐으면 좋겠다
+farmlife	올해 배추값이 좋으면 좋겠네요
+farmlife	요즘 밭일이 힘들어
+farmlife	무가 잘 자라서 기분 좋다
+farmlife	이번 김장은 언제 할까
+farmlife	작년엔 고추가 참 많이 열렸었지
+farmlife	아들이 내년부터 농사 같이 짓는대요
+farmlife	새벽부터 밭에 나왔어
+farmlife	오늘은 일찍 들어가서 쉬어야겠다
+farmlife	이번 주는 수확하느라 바빠요
+farmlife	경운기 소리가 시끄럽네
+farmlife	옆집은 벌써 배추를 다 심었더라
+farmlife	농사는 하늘이 반은 짓는다잖아
+farmlife	요즘은 젊은 사람이 농사를 안 지어
+farmlife	고추 말리기 딱 좋은 날씨네
+reaction	아 그렇구나
+reaction	알겠어요
+reaction	응 알았어
+reaction	그래
+reaction	좋아요
+reaction	괜찮아
+reaction	음
+reaction	그렇군요
+reaction	진짜야
+reaction	와 신기하다
+reaction	됐어
+reaction	아니야 아무것도
+reaction	별거 아니야
+reaction	그냥 해 본 말이야
+reaction	잘못 눌렀어요
+reaction	아 깜짝이야
+greeting	안녕하십니까
+greeting	어 왔어
+greeting	여보세요
+greeting	거기 누구 있어요
+greeting	오늘 하루 잘 보내요
+greeting	주말 잘 보냈어
+greeting	새해 복 많이 받아요
+greeting	추석 잘 보내세요
+thanks	고생했어요
+thanks	너 덕분에 편하다
+thanks	이렇게 알려 주니 좋네요
+thanks	매번 고마워
+farewell	이만 갈게요
+farewell	내일 또 봐
+farewell	이제 밭에 나가 봐야겠다
+farewell	오늘은 그만 물어볼게요
+weather	오늘 미세먼지 심해요
+weather	비가 언제 그칠까
+weather	오늘 서리 내렸어요
+weather	태풍 온다는데 걱정이네
+weather	요즘 일교차가 크네요
+weather	오늘 습도가 높다
+weather	눈 온다는데 진짜야
+weather	하늘이 맑아서 좋네
+time	해가 몇 시에 져요
+time	오늘이 음력으로 며칠이야
+time	이번 달이 몇 월이지
+time	점심시간 다 됐나
+smalltalk	오늘 일찍 일어났어요
+smalltalk	요즘 무릎이 쑤셔
+smalltalk	비 오니까 삭신이 쑤시네
+smalltalk	막걸리 한잔 하고 싶다
+smalltalk	오늘 저녁은 국수 먹을까
+smalltalk	요즘 기름값이 비싸네요
+smalltalk	오늘 경로당에 가야 돼
+smalltalk	딸이 전화를 안 하네
+smalltalk	강아지가 자꾸 짖어
+smalltalk	고양이가 밭에 들어왔어
+smalltalk	라디오 좀 틀어 줘
+smalltalk	재미있는 노래 알아요
+smalltalk	요즘 볼만한 프로그램 있어
+smalltalk	오늘따라 기운이 없네요
+smalltalk	이따 읍내 장 보러 갈 거야
+smalltalk	밥 맛이 없다
+smalltalk	요즘 잠이 많아졌어요
+smalltalk	운동 좀 해야 하는데
+smalltalk	이 핸드폰 너무 어려워
+smalltalk	글씨가 너무 작아서 안 보여
+self	너 일 잘한다
+self	너 말귀를 잘 알아듣네
+self	너 사투리도 알아들어
+self	너는 쉬지도 않아
+self	너 밥은 먹었니
+self	너 고향이 어디야
+self	너는 무슨 일을 해요
+self	네가 제일 낫다
+offtopic	오늘 금값 얼마야
+offtopic	면사무소 전화번호 알려 줘
+offtopic	다음 주 장날이 언제야
+offtopic	택시 좀 불러 줘
+offtopic	오늘 저녁 반찬 뭐 하지
+offtopic	감기 걸렸을 때는 뭘 먹어야 돼요
+offtopic	손주한테 문자 보내 줘
+offtopic	계좌 이체는 어떻게 해
+offtopic	요즘 쌀값 얼마예요
+offtopic	노래방 가고 싶다
+offtopic	선거는 언제야
+offtopic	백신 맞으러 가야 해요
+offtopic	농협 몇 시에 문 열어
+offtopic	서울 가는 기차 몇 시에 있어
+offtopic	시장에 사과 얼마 해요
+farmlife	올해는 비가 너무 많이 왔어
+farmlife	올해 수확이 작년보다 낫네요
+farmlife	밭이 넓어서 일이 끝이 없다
+farmlife	다음 주에 고추 따러 가야 해요
+farmlife	요즘 일손이 너무 부족해
+farmlife	품앗이 하러 가야 돼
+farmlife	비닐하우스 고치느라 힘들었어
+farmlife	고라니가 또 밭에 왔더라
+farmlife	멧돼지 때문에 걱정이에요
+farmlife	이번에 새로 산 장화가 편하네
+farmlife	아침에 물 대고 왔어
+farmlife	배추 절일 소금 사야겠다
+farmlife	무 말랭이 만들어야겠어
+farmlife	고추 다 따면 좀 쉬어야지
+farmlife	올해는 김장을 조금만 할 거예요
+farmlife	농사지은 지 벌써 사십 년이야
+reaction	아이고
+reaction	그래 그렇게 하자
+reaction	아 몰라
+reaction	됐다 됐어
+reaction	잠깐만
+reaction	어디 보자
+reaction	음 그렇지
+reaction	흠 글쎄
+reaction	아이고 힘들다
+reaction	하하 웃기네
+reaction	아니 그게 아니고
+reaction	에이 설마

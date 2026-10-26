@@ -1,0 +1,96 @@
+# Qwen 기능 선택 데이터 v2 (`hs-call-v2`)
+
+v11 데이터를 마음AI HomeIoT 예시(`[AI Expo] 2025 AI Expo HomeIoT 데이터 시트.xlsx`) 형식에 맞춰 다시 구성한 학습 데이터다. **기능 이름과 인자 의미는 v11/v12 계약을 그대로 유지**하고, 출력 형식과 데이터 구성만 바꿨다. 모든 행은 아직 사람 승인 전(`labels_human_validated: false`)이다.
+
+## 왜 바꿨나
+
+| 문제 (v11) | 근거 | v2 |
+|---|---|---|
+| 인자 값마다 새 특수 토큰 (49개, 최신 계획 58개) | 10/15 파일럿(pilot50) 평가 24건 중 기능 정답 10건, 그 10건이 모두 새로 추가한 한 기능. 나머지 7개 기능은 0건 | 기능 토큰 9개 + 종료 1개. 인자는 일반 텍스트 숫자 |
+| 시스템 프롬프트에 계약 JSON 통째로 | 예시는 함수별 docstring에 정수 의미를 설명 | 함수마다 `def` + docstring, 규칙 8줄 |
+| 범위 밖 발화 14% (`handle_scope_limit`)뿐, 일반 잡담 없음 | 예시는 ChitChat이 42% | `chit_chat()` 추가 |
+| 존칭 어미 75%, 사투리 약 1.5% | 주 사용자는 고령 농업인 | 반말·사투리 변형 추가, 존칭 40% |
+| 사용 안내(`get_usage_guidance`) 39행 | v12 초안이 작음 | 화면 상태별 시드 추가 |
+
+## 출력 형식
+
+```
+<hs_번호>(인자=값, ...)<hs_end>
+<hs_4>(topic=2, product=1)<hs_end>   # get_pesticide_information(dilution, current)
+<hs_8>()<hs_end>                     # chit_chat()
+```
+
+| 번호 | 함수 | 인자 |
+|---|---|---|
+| 0 | get_diagnosis | topic 1~7 |
+| 1 | get_prediction_metrics | topic 1~5 |
+| 2 | get_recapture_guidance | topic 1~4 |
+| 3 | get_care_information | topic 1~3 |
+| 4 | get_pesticide_information | topic 1~11, product 1~2 |
+| 5 | clarify_request | target 1~8 |
+| 6 | handle_scope_limit | reason 1~3 |
+| 7 | get_usage_guidance | topic 1~6, delivery 1~2 |
+| 8 | chit_chat | (없음) |
+
+정수는 v11 계약의 값 순서(1부터)라 v11 ↔ v2 변환은 손실이 없다(`spec_v2.from_v11`). 값의 뜻은 `spec_v2.py`의 `FUNCTIONS`와 생성된 `system_prompt.txt`에 있다.
+
+`handle_scope_limit`와 `chit_chat`의 경계: 진단 기능과 관련 있지만 지원하지 않는 요청(다른 작물, 물 주기 같은 실행 요청, 작물이 아닌 사진)은 `handle_scope_limit`. 진단·농약·앱 사용과 무관한 대화(인사, 날씨, 일상, 다른 분야 질문, 농사 일상 잡담)는 `chit_chat`.
+
+## 만들기
+
+```bash
+# openpyxl 필요 (v11 엑셀 읽기용)
+python ml/qwen_data/build_dataset_v2.py
+```
+
+결과: `마음ai/Qwen35_데이터시트/v2_호출형식/`
+
+| 파일 | 내용 |
+|---|---|
+| `train.jsonl`, `validation.jsonl` | 행마다 `user_text`, `context`(압축), `function`, `arguments`, `output`(v2 문자열), 출처·변형 종류·원본 행 ID |
+| `summary.json` | 분포와 제외 건수 |
+| `system_prompt.txt` | 학습·추론에 쓰는 시스템 프롬프트 |
+| `review_sample.csv` | 생성된 변형 300건 검수표 |
+
+모델 입력은 `spec_v2.build_messages(user_text, context)`로 만든다. context는 기능 선택에 필요한 필드만 남기고 긴 설명문은 뺀다(`compact_context`).
+
+## 데이터 구성 (현재)
+
+| | train | validation |
+|---|---|---|
+| 전체 | 4,736 | 1,145 |
+| 기존 7개 기능 | 각 503~620 | 각 117~148 |
+| chit_chat | 517 | 121 |
+| get_usage_guidance | 265 | 68 |
+
+| 출처 | 내용 |
+|---|---|
+| v11 | 엑셀의 활성 singleton 행(사람 승인 0, AI 검수). 기존 split 유지. STT 띄어쓰기 오류 행 포함 |
+| v12_usage | WIP 브랜치의 사용 흐름 초안 중 단일 턴 행(`inputs/usage_v12.jsonl`). 대화 기록이 필요한 26행은 제외 |
+| seed | `usage_seed.tsv`(화면 상태별 사용 안내), `chitchat_seed.tsv`(잡담). 시드 단위로 80/20 분할 |
+
+| 변형 | 규칙 |
+|---|---|
+| banmal | 존칭 어미를 반말로(문장 중간 절 포함). 규칙에 정확히 맞지 않으면 만들지 않음 |
+| dialect_jeolla / gyeongsang | 반말 끝을 거여·제·혀 / 의문사 질문의 고·하노·되노로. 의문사가 없으면 경상 변형 없음 |
+| dialect_chungcheong | 요 → 유. 규칙이 넓어서 해당 행의 12%만 생성 |
+| spacing | 시드만 공백 하나 삭제·추가(v11에는 이미 STT 행 있음) |
+
+변형은 원본과 같은 split·그룹에 둔다. 공백만 다른 문장이 train과 validation에 나뉘지 않게 검사한다.
+
+## 사람이 할 일
+
+1. **변형 검수**: `review_sample.csv`의 300건에 ok/수정/삭제 표시. 어색한 규칙이 보이면 `style.py`를 고친 뒤 다시 만든다.
+2. **validation 검수**: 학습 전에 최소한 validation 행의 정답을 사람이 확인한다(현재 전부 AI 검수).
+3. **사람 작성 평가셋**: `eval_human_template.csv`에 팀원이 직접 쓴다. 학습 데이터를 보지 않고 쓴다.
+   - 목표: 9개 함수 × 25 = 225행
+   - 간접 발화 40% 이상(예: "이 약 물에 얼마나 타서 뿌려"가 아니라 "한 말 통에 얼마나 넣어"), 반말 40% 이상, 사투리 15% 이상
+   - 문장부호 없이, 숫자는 읽는 형태로(영 점 팔 칠)
+   - 화면 상태는 `eval_context_presets.json`의 ID로 고른다
+4. 평가셋은 학습에 넣지 않는다. 학습 후 이 평가셋으로 기능·인자 정확도를 따로 잰다.
+
+## 아직 하지 않은 것
+
+- 대화 기록이 필요한 멀티턴(반복·다음 단계 흐름)은 1차 범위에서 제외
+- 토픽 세분화 정리(예: 농약 summary·checklist 통합)는 handler 변경이 필요해서 보류
+- 이 형식으로 학습하는 Colab 노트북은 다음 단계

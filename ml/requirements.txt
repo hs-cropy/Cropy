@@ -2,3 +2,4 @@ torch>=2.13.0
 torchvision>=0.28.0
 pillow>=12.3.0
 numpy>=2.1.0
+openpyxl>=3.1  # ml/qwen_data: v11 엑셀 읽기
