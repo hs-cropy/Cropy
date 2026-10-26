@@ -1,0 +1,537 @@
+
+/* ========================================
+   0. 브랜드 폰트
+======================================== */
+
+@font-face {
+  font-family: "tvN Enjoystories";
+  src: url("/fonts/tvNEnjoystoriesMedium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ========================================
+   1. 스플래시 전체 영역
+======================================== */
+
+.splash {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  isolation: isolate;
+  color: white;
+}
+
+/* ========================================
+   2. 농장 배경
+======================================== */
+
+.background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+
+  background: url("/background/farm-mobile.webp")
+    center / cover no-repeat;
+
+  pointer-events: none;
+}
+
+/* ========================================
+   3. Figma Shade
+======================================== */
+
+.shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-color: #1f3b2661;
+  pointer-events: none;
+}
+
+/* ========================================
+   4. 햇빛 SVG - 모바일
+======================================== */
+
+.sunlight {
+  position: absolute;
+  top: -35%;
+  right: -60%;
+  width: 180%;
+  height: 140%;
+  z-index: 2;
+  pointer-events: none;
+
+  filter: saturate(0.45);
+
+  background-image: url("/splash/sunlight-mobile.svg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+
+  opacity: 0;
+  animation: sunlightEnter 1200ms ease-out forwards;
+}
+
+@keyframes sunlightEnter {
+  from {
+    opacity: 0;
+    transform: translate3d(24px, -24px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* ========================================
+   5. 구름 레이어
+======================================== */
+
+.clouds {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cloud {
+  position: absolute;
+  display: block;
+  height: auto;
+  max-width: none;
+  opacity: 0.6;
+  will-change: transform;
+}
+
+/* 모바일 Cloud A */
+.cloudA {
+  top: 18%;
+  left: -200px;
+  width: 200px;
+  animation: cloudMoveA 48s linear infinite;
+}
+
+/* 모바일 Cloud B */
+.cloudB {
+  top: 48%;
+  left: -160px;
+  width: 160px;
+  animation: cloudMoveB 72s linear infinite;
+}
+
+/* Cloud A: 좌 → 우 → 좌 */
+@keyframes cloudMoveA {
+  0% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(calc(100vw + 200px));
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* Cloud B: 좌 → 우 → 좌 */
+@keyframes cloudMoveB {
+  0% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(calc(100vw + 160px));
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* ========================================
+   6. 로고와 브랜드 문구
+======================================== */
+
+.brand {
+  position: relative;
+  z-index: 4;
+
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 1px;
+  padding: 0 24px;
+
+  transform: translateY(-35px);
+  text-align: center;
+}
+
+/* 로고 영역: 기존 모바일 위치 유지 */
+.logoWrap {
+  position: relative;
+  top: -40px;
+  width: min(72vw, 280px);
+}
+
+/* 로고 이미지 */
+.logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+
+  opacity: 0;
+  animation: logoEnter 650ms ease-out forwards;
+}
+
+/* 로고 등장 애니메이션 */
+@keyframes logoEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ========================================
+   7. 로고 금빛 섬광
+   로고 등장 후 약 0.3초
+======================================== */
+
+.logoShine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 205, 90, 0.20) 45%,
+    rgba(255, 220, 120, 0.90) 50%,
+    rgba(255, 205, 90, 0.20) 55%,
+    transparent 62%
+  );
+
+  background-size: 300% 100%;
+  background-position: 100% center;
+
+  /* PNG 로고 모양 안에서만 섬광 표시 */
+  -webkit-mask-image: url("/brand/cropy-splash-logo.png");
+  mask-image: url("/brand/cropy-splash-logo.png");
+
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+
+  opacity: 0;
+  animation: logoShine 500ms ease-in-out 650ms forwards;
+}
+
+@keyframes logoShine {
+  0% {
+    opacity: 0;
+    background-position: 100% center;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    background-position: 0% center;
+  }
+}
+
+/* ========================================
+   8. Tagline
+======================================== */
+
+.tagline {
+  margin: 0;
+
+  font-family: "tvN Enjoystories", sans-serif;
+  font-weight: 500;
+  font-size: clamp(20px, 4.5vw, 22px);
+  line-height: 1.7;
+  white-space: nowrap;
+
+  /* 기존 모바일 문구 위치 유지 */
+  transform: translateY(-80px);
+}
+
+/* 문구 전체 너비 유지 */
+.typingFrame {
+  position: relative;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* 보이지 않는 원본 문구 */
+.typingPlaceholder {
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+/* 실제 입력되는 문구 */
+.typingText {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  display: inline-flex;
+  align-items: baseline;
+  white-space: pre;
+}
+
+/* ========================================
+   9. 타이핑 커서
+======================================== */
+
+.cursor {
+  display: inline-block;
+  flex-shrink: 0;
+
+  width: 2px;
+  height: 0.9em;
+  margin-left: 3px;
+
+  background-color: white;
+  vertical-align: middle;
+
+  animation: cursorBlink 500ms steps(1, end) infinite;
+}
+
+@keyframes cursorBlink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ========================================
+   10. 하단 버튼
+======================================== */
+
+.actions {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: max(44px, env(safe-area-inset-bottom));
+
+  display: flex;
+  width: min(calc(100% - 48px), 280px);
+  flex-direction: column;
+  gap: 12px;
+
+  transform: translateX(-50%);
+}
+
+/* 시작하기 */
+.startButton {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 12px;
+
+  background-color: rgba(39, 132, 78, 0.58);
+
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+
+  transition: background-color 200ms ease;
+}
+
+.startButton:hover {
+  background-color: rgba(39, 132, 78, 0.75);
+}
+
+.startButton:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+
+/* 앱 설치하기 */
+.installButton {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 12px;
+
+  background-color: rgba(255, 255, 255, 0.58);
+
+  color: #1a1a1a;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease;
+}
+
+.installButton:hover {
+  background-color: rgba(255, 255, 255, 0.75);
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+/* ========================================
+   11. 데스크톱 (768px 이상)
+======================================== */
+
+@media (min-width: 768px) {
+  .background {
+    background-image: url("/background/farm-desktop.webp");
+  }
+
+  /* 기존 데스크톱 햇빛 위치 유지 */
+  .sunlight {
+    top: -45%;
+    right: -30%;
+    width: 150%;
+    height: 150%;
+    background-image: url("/splash/sunlight-desktop.svg");
+    filter: saturate(0.40);
+  }
+
+  .brand {
+    gap: 12px;
+    transform: translateY(-24px);
+  }
+
+  /* 기존 데스크톱 로고 크기와 위치 유지 */
+  .logoWrap {
+    top: -55px;
+    width: clamp(280px, 29.17vw, 420px);
+  }
+
+  .tagline {
+    font-size: 28px;
+    transform: translateY(-70px);
+  }
+
+  .actions {
+    bottom: 8%;
+    width: 400px;
+    max-width: calc(100% - 48px);
+  }
+
+  /* 데스크톱 구름 크기 */
+  .cloudA {
+    top: 20%;
+    left: -300px;
+    width: 300px;
+    animation-name: cloudMoveADesktop;
+  }
+
+  .cloudB {
+    top: 58%;
+    left: -240px;
+    width: 240px;
+    animation-name: cloudMoveBDesktop;
+  }
+}
+
+/* 데스크톱 Cloud A */
+@keyframes cloudMoveADesktop {
+  0% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(calc(100vw + 300px));
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* 데스크톱 Cloud B */
+@keyframes cloudMoveBDesktop {
+  0% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(calc(100vw + 240px));
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* ========================================
+   12. 애니메이션 줄이기 설정
+======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .sunlight,
+  .logo,
+  .logoShine,
+  .cloudA,
+  .cloudB,
+  .cursor {
+    animation: none;
+  }
+
+  .sunlight,
+  .logo {
+    opacity: 1;
+    transform: none;
+  }
+
+  .logoShine {
+    opacity: 0;
+  }
+
+  .cloudA {
+    transform: translateX(0);
+    left: 10%;
+  }
+
+  .cloudB {
+    transform: translateX(0);
+    left: 70%;
+  }
+
+  .cursor {
+    display: none;
+  }
+}

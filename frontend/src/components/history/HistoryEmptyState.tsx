@@ -5,6 +5,7 @@ import {
   Button,
   buttonClassName,
 } from "@/components/Button";
+import { CAPTURE_PATH } from "@/components/diagnosis/DiagnosisSession";
 
 interface HistoryEmptyStateProps {
   mode: "no-history" | "filtered";
@@ -42,7 +43,7 @@ export function HistoryEmptyState({
         </p>
 
         <Link
-          href="/"
+          href={CAPTURE_PATH}
           className={[
             buttonClassName({
               variant: "primary",

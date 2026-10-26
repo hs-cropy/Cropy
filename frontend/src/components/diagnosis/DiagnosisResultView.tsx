@@ -62,19 +62,64 @@ function GradeBadge({ result, desktop }: { result: DiagnoseResponse; desktop: bo
   );
 }
 
+/** 재촬영 후 두 사진을 함께 보여준다. 기존 이력 상세의 사진 구분과 안내를 유지한다. */
+function RefinedPhotos({ result, photo }: { result: DiagnoseResponse; photo: string | null }) {
+  if (!photo || !result.refined_image_url) return null;
+  const uncertain = result.decision_reasons?.includes("low_confidence") ?? false;
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { src: photo, alt: "처음 촬영한 작물", label: "1차 촬영" },
+          { src: result.refined_image_url, alt: "판별부위를 다시 촬영한 사진", label: "판별부위 재촬영" },
+        ].map((item) => (
+          <figure key={item.label} className="min-w-0 overflow-hidden rounded-xl bg-cropy-surface-canvas">
+            {/* eslint-disable-next-line @next/next/no-img-element -- 서버·기기 안의 사진 */}
+            <img src={item.src} alt={item.alt} className="h-28 w-full object-cover" />
+            <figcaption className="break-keep px-2 py-2 text-cropy-caption font-bold text-cropy-text-secondary">
+              {item.label}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+      <p
+        className={cn(
+          "break-keep rounded-xl p-3 text-cropy-caption",
+          uncertain
+            ? "bg-signal-med-tint text-signal-med-ink"
+            : "bg-cropy-action-subtle text-cropy-action-hover",
+        )}
+      >
+        {uncertain
+          ? "두 장의 사진을 함께 분석했지만 아직 결과가 확실하지 않아요. 병징이 뚜렷한 부위를 다시 확인해 주세요."
+          : "판별부위 사진까지 함께 분석한 결과예요."}
+      </p>
+    </div>
+  );
+}
+
 /** 저장 상태·시연·출처 안내. 결과 카드보다 먼저 읽혀야 하는 상태라 위에 둔다 */
 function Notices({
   result,
   onSaved,
   onNewDiagnosis,
+  isRecord,
 }: {
   result: DiagnoseResponse;
   onSaved?: (result: DiagnoseResponse) => void;
-  onNewDiagnosis: () => void;
+  onNewDiagnosis?: () => void;
+  isRecord: boolean;
 }) {
   return (
     <>
       <SaveRecovery result={result} onSaved={onSaved} onNewDiagnosis={onNewDiagnosis} />
+      {isRecord && (
+        <p role="status" className="rounded-xl bg-cropy-action-subtle p-4 text-cropy-body-lg text-cropy-text-primary">
+          {result.content_status === "snapshot"
+            ? "진단 당시 제공된 병해 정보와 관리 방법을 확인할 수 있어요."
+            : "이전 기록에는 당시 안내가 없어 현재 참고 안내를 표시해요."}
+        </p>
+      )}
       {result.prediction_mode === "browser" && (
         <p
           role="status"
@@ -136,8 +181,9 @@ interface DiagnosisResultViewProps {
   photo: string | null;
   onSaved?: (result: DiagnoseResponse) => void;
   /** 모바일 본문 끝의 "새 사진으로 진단하기" (데스크탑은 화면 아래 행동 영역의 "새 진단") */
-  onNewDiagnosis: () => void;
+  onNewDiagnosis?: () => void;
   desktop?: boolean;
+  isRecord?: boolean;
 }
 
 /**
@@ -154,8 +200,10 @@ export function DiagnosisResultView({
   onSaved,
   onNewDiagnosis,
   desktop = false,
+  isRecord = false,
 }: DiagnosisResultViewProps) {
   const photo = photoOf(result, fallbackPhoto);
+  const isRefined = Boolean(photo && result.refined_image_url);
   const actions = result.management_actions ?? [];
   const confidence = percent(result.confidence);
 
@@ -163,7 +211,7 @@ export function DiagnosisResultView({
     const grade = gradeOf(result);
     return (
       <div className="flex flex-col gap-5">
-        <Notices result={result} onSaved={onSaved} onNewDiagnosis={onNewDiagnosis} />
+        <Notices result={result} onSaved={onSaved} onNewDiagnosis={onNewDiagnosis} isRecord={isRecord} />
         <div className="flex items-start gap-8">
           <section
             aria-label="진단에 사용한 사진과 정보"
@@ -175,12 +223,16 @@ export function DiagnosisResultView({
             <h2 className="text-cropy-body-lg font-bold text-cropy-text-primary">
               진단에 사용한 사진
             </h2>
-            <div className="h-52 overflow-hidden rounded-xl bg-cropy-surface-canvas">
-              {photo && (
-                // eslint-disable-next-line @next/next/no-img-element -- 서버·기기 안의 사진
-                <img src={photo} alt="진단한 작물" className="size-full object-cover" />
-              )}
-            </div>
+            {isRefined ? (
+              <RefinedPhotos result={result} photo={photo} />
+            ) : (
+              <div className="h-52 overflow-hidden rounded-xl bg-cropy-surface-canvas">
+                {photo && (
+                  // eslint-disable-next-line @next/next/no-img-element -- 서버·기기 안의 사진
+                  <img src={photo} alt="진단한 작물" className="size-full object-cover" />
+                )}
+              </div>
+            )}
             <dl className="flex flex-col gap-4">
               <MetaRow label="작물">{result.crop_type || MISSING}</MetaRow>
               <MetaRow label="진단 시각">{recentDate(result.created_at) ?? MISSING}</MetaRow>
@@ -215,23 +267,27 @@ export function DiagnosisResultView({
                   id="diagnosis-actions-desktop"
                   className="text-cropy-feedback-title text-cropy-text-primary"
                 >
-                  지금 해야 할 일
+                  {isRecord ? "진단 당시 관리 안내" : "지금 해야 할 일"}
                 </h2>
-                <ol className="grid grid-cols-3 gap-3">
+                <ol className="grid grid-cols-3 items-stretch gap-3">
                   {actions.map((action, index) => (
                     <li
                       key={index}
-                      className="flex gap-2 break-keep rounded-xl bg-cropy-surface-canvas p-3 text-cropy-helper font-bold text-cropy-text-primary"
+                      className="grid min-h-[94px] min-w-0 grid-rows-[18px_1fr] gap-y-3 break-keep rounded-xl bg-cropy-surface-canvas p-3 text-cropy-helper font-bold text-cropy-text-primary"
                     >
-                      <span className="tnum shrink-0">{String(index + 1).padStart(2, "0")}</span>
-                      <span className="min-w-0">{action}</span>
+                      <span className="tnum">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <span className="min-w-0 [overflow-wrap:break-word]">
+                        {action}
+                      </span>
                     </li>
                   ))}
                 </ol>
               </section>
             )}
 
-            <DiagnosisDetails result={result} variant="screen" />
+            <DiagnosisDetails result={result} variant="screen" isRecord={isRecord} />
           </div>
         </div>
       </div>
@@ -240,7 +296,7 @@ export function DiagnosisResultView({
 
   return (
     <div className="flex flex-col gap-4 pb-5">
-      <Notices result={result} onSaved={onSaved} onNewDiagnosis={onNewDiagnosis} />
+      <Notices result={result} onSaved={onSaved} onNewDiagnosis={onNewDiagnosis} isRecord={isRecord} />
 
       <section
         aria-label="진단 요약"
@@ -272,6 +328,7 @@ export function DiagnosisResultView({
           </div>
         </div>
         <UncertainNote result={result} />
+        {isRefined && <RefinedPhotos result={result} photo={photo} />}
       </section>
 
       {actions.length > 0 && (
@@ -284,7 +341,7 @@ export function DiagnosisResultView({
               id="diagnosis-actions-mobile"
               className="text-cropy-feedback-title text-cropy-text-primary"
             >
-              지금 해야 할 일
+              {isRecord ? "진단 당시 관리 안내" : "지금 해야 할 일"}
             </h2>
             <p className="shrink-0 text-cropy-label-xs text-cropy-action-primary">
               {actions.length}가지
@@ -308,15 +365,17 @@ export function DiagnosisResultView({
         </section>
       )}
 
-      <DiagnosisDetails result={result} variant="screen" />
+      <DiagnosisDetails result={result} variant="screen" isRecord={isRecord} />
 
-      <button
-        type="button"
-        onClick={onNewDiagnosis}
-        className="flex min-h-11 w-full items-center justify-center rounded-cropy-14 px-4 text-cropy-helper font-medium text-cropy-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cropy-action-primary active:bg-cropy-surface-canvas [@media(hover:hover)]:hover:bg-cropy-surface-canvas"
-      >
-        새 사진으로 진단하기
-      </button>
+      {onNewDiagnosis && (
+        <button
+          type="button"
+          onClick={onNewDiagnosis}
+          className="flex min-h-11 w-full items-center justify-center rounded-cropy-14 px-4 text-cropy-helper font-medium text-cropy-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cropy-action-primary active:bg-cropy-surface-canvas [@media(hover:hover)]:hover:bg-cropy-surface-canvas"
+        >
+          새 사진으로 진단하기
+        </button>
+      )}
     </div>
   );
 }

@@ -162,13 +162,11 @@ describe("Chip — 디자인 사양", () => {
     expect(classes("고추")).toEqual(
       expect.arrayContaining([
         "min-h-12",
-        "w-32",
-        "py-1",
+        "w-full",
         "rounded-xl",
         "border",
         "text-cropy-body-lg",
-        "lg:w-[9.25rem]",
-        "lg:flex-none",
+        "lg:w-full",
         "lg:border-0",
         "lg:p-3",
       ]),

@@ -55,6 +55,11 @@ export function DiagnosisDetails({
     ? result.current_pesticides ?? []
     : result.pesticides;
 
+  // 검증된 사용 조건이 있는 농약만 상세 카드에 표시
+  const verifiedPesticides = pesticides.filter(
+    (p) => p.verification_status === "verified"
+  );
+
   const items: AccordionItem[] = [
     // 1. 증상
     {
@@ -136,7 +141,7 @@ export function DiagnosisDetails({
           {isRecord && result.pesticides.length > 0 && (
             <div className="rounded-xl bg-cropy-surface-canvas p-4">
               <p className="text-cropy-helper font-semibold text-cropy-text-primary">
-                저장 당시 조회한 제품
+                저장 당시 조회된 제품 목록 (사용 가능 여부 미확인)
               </p>
 
               <p className="mt-1 break-words text-cropy-body-lg text-cropy-text-secondary">
@@ -152,17 +157,13 @@ export function DiagnosisDetails({
             </div>
           )}
 
-          {pesticides.length === 0 ? (
+          {verifiedPesticides.length === 0 ? (
             <MissingInformation
-              message={
-                isRecord
-                  ? "현재 카탈로그에서 확인할 수 있는 등록 농약 정보가 없어요. 최신 등록정보와 제품 라벨을 확인해 주세요."
-                  : "현재 연결된 등록 농약 정보가 없어요. 확인되지 않은 제품명이나 사용량은 표시하지 않습니다."
-              }
+              message="현재 검증된 농약 사용 조건을 확인할 수 없어요. 농약 사용 전 최신 등록정보와 제품 라벨을 확인해 주세요."
             />
           ) : (
             <div className="space-y-3">
-              {pesticides.map((p, index) => {
+              {verifiedPesticides.map((p, index) => {
                 const verified =
                   p.verification_status === "verified";
 

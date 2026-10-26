@@ -21,6 +21,7 @@ const PAGE_SIZE = 20;
 const STORAGE_KEY = "cropy:history-view";
 
 const CROP_OPTIONS = [
+  { value: "", label: "전체" },
   { value: "고추", label: "고추" },
   { value: "무", label: "무" },
   { value: "배추", label: "배추" },
@@ -59,7 +60,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [crop, setCrop] = useState("고추");
+  const [crop, setCrop] = useState("");
   const [grade, setGrade] = useState<Severity | "">("");
   const [page, setPage] = useState(1);
 
@@ -171,8 +172,12 @@ export default function HistoryPage() {
     const controller = new AbortController();
 
     async function loadCropCounts() {
+      const options = CROP_OPTIONS.filter(
+        (option) => option.value !== ""
+      );
+
       const totals = await Promise.all(
-        CROP_OPTIONS.map(async (option) => {
+        options.map(async (option) => {
           try {
             const data = await fetchHistory(
               1,
@@ -182,20 +187,16 @@ export default function HistoryPage() {
               controller.signal
             );
 
-            return data.total;
+            return [option.value, data.total] as const;
           } catch {
-            return null;
+            return [option.value, null] as const;
           }
         })
       );
 
       if (controller.signal.aborted) return;
 
-      setCropCounts({
-        고추: totals[0],
-        무: totals[1],
-        배추: totals[2],
-      });
+      setCropCounts(Object.fromEntries(totals));
     }
 
     void loadCropCounts();
@@ -414,7 +415,7 @@ export default function HistoryPage() {
         {!isNoHistory && (
           <section
             aria-label="진단 이력 필터"
-            className="mb-5 max-w-[26.25rem] space-y-5"
+            className="mb-5 w-full max-w-[26.25rem] space-y-5 lg:max-w-[34rem]"
           >
             <FilterChips
               title="작물"

@@ -132,9 +132,9 @@ for (const change of ["crop", "page"]) {
         (args) => args[1] === 20
       );      
     expect(listCalls[2].slice(0, 4)).toEqual(
-        change === "crop"
-            ? [1, 20, "배추", undefined]
-            : [2, 20, "고추", undefined] );
+      change === "crop"
+        ? [1, 20, "배추", undefined]
+        : [2, 20, undefined, undefined] );
     }
   );
 }

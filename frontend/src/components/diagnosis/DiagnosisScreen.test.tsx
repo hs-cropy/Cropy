@@ -5,7 +5,7 @@ import { MAX_IMAGE_BYTES } from "@/features/camera";
 import { setVoiceEnabled } from "@/features/voice/hooks/useVoiceSetting";
 import { PROMPT_DIAGNOSING } from "@/features/voice";
 import { installFakeSpeech, spokenTexts } from "@/features/voice/testing/fakeSpeech";
-import HomePage from "@/app/page";
+import HomePage from "@/app/home/page";
 import DiagnosisRoute from "@/app/diagnosis/page";
 import HistoryDetailPage from "@/app/history/[id]/page";
 import { FakeRoutes, fakeNavigation, fakeRouter } from "@/testing/fakeNavigation";
@@ -68,7 +68,7 @@ function renderHome() {
   return render(
     <AppFrame>
       <FakeRoutes
-        routes={{ "/": <HomePage />, "/diagnosis": <DiagnosisRoute />, "/history": <p>이력</p> }}
+        routes={{ "/home": <HomePage />, "/diagnosis": <DiagnosisRoute />, "/history": <p>이력</p> }}
       />
     </AppFrame>,
   );
@@ -113,7 +113,7 @@ beforeEach(() => {
   installFakeSpeech();
   localStorage.clear();
   setVoiceEnabled(false);
-  fakeNavigation.reset("/");
+  fakeNavigation.reset("/home");
   sessionStorage.clear();
   vi.mocked(fetchDiagnosisDetail).mockReset();
   vi.mocked(diagnoseImage).mockReset();
@@ -141,7 +141,7 @@ describe("진단 시작 안내 (M-03-1 · D-03-1)", () => {
     expect(screen.getByRole("heading", { name: /사진으로 작물 상태를/ })).toBeTruthy();
     // 가이드는 촬영 화면에 있어 그 주소를 둔다 (새 탭으로 열어도 가이드가 나온다)
     expect(screen.getByRole("link", { name: "촬영 방법 보기" }).getAttribute("href")).toBe(
-      "/#guide",
+      "/home#guide",
     );
     expect(action("사진 찍기")).toBeTruthy();
     expect(action("갤러리에서 선택")).toBeTruthy();
@@ -164,7 +164,7 @@ describe("진단 시작 안내 (M-03-1 · D-03-1)", () => {
 
     pickPhoto(container);
 
-    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/home"));
     expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
   });
 
@@ -176,7 +176,7 @@ describe("진단 시작 안내 (M-03-1 · D-03-1)", () => {
     await userEvent.click(screen.getByRole("link", { name: "촬영 방법 보기" }));
 
     await waitFor(() => expect(title()).toBe("촬영 방법"));
-    expect(fakeNavigation.pathname).toBe("/");
+    expect(fakeNavigation.pathname).toBe("/home");
     expect(window.location.hash).toBe("#guide");
 
     // 브라우저 카메라가 없으면 가이드를 닫고 기기 카메라를 연다. 뒤로 가기로 진단 결과 화면에 가지 않는다
@@ -187,7 +187,7 @@ describe("진단 시작 안내 (M-03-1 · D-03-1)", () => {
     expect(click).toHaveBeenCalled();
     expect(back).not.toHaveBeenCalled();
     expect(window.location.hash).toBe("#capture");
-    expect(fakeNavigation.pathname).toBe("/");
+    expect(fakeNavigation.pathname).toBe("/home");
   });
 
   it("Ctrl 을 누르고 연 촬영 방법 보기(새 탭)는 이 화면을 옮기지 않는다", async () => {
@@ -251,7 +251,7 @@ describe("사진 분석 중 (M-02 · D-02)", () => {
     expect(back).toHaveBeenCalledTimes(1);
     expect(vi.mocked(diagnoseImage).mock.calls[0][2]?.signal?.aborted).toBe(true);
     // 뒤로 가기로 진단 결과 화면 기록을 지우고 사진 확인으로 돌아간다
-    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/home"));
     expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
     // 사진 확인의 제목으로 초점을 옮긴다 (사라진 취소 버튼에 남지 않는다)
     await waitFor(() =>
@@ -267,7 +267,7 @@ describe("사진 분석 중 (M-02 · D-02)", () => {
     await act(async () => {
       pending.resolve(response());
     });
-    expect(fakeNavigation.pathname).toBe("/");
+    expect(fakeNavigation.pathname).toBe("/home");
     expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
   });
 
@@ -318,7 +318,7 @@ describe("사진 분석 중 (M-02 · D-02)", () => {
       fireEvent.click(screen.getByRole("button", { name: "분석 취소" }));
       await act(() => vi.advanceTimersByTimeAsync(2000));
 
-      expect(fakeNavigation.pathname).toBe("/");
+      expect(fakeNavigation.pathname).toBe("/home");
       expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
       expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBeNull();
     });
@@ -335,7 +335,7 @@ describe("사진 분석 중 (M-02 · D-02)", () => {
       );
       await act(() => vi.advanceTimersByTimeAsync(2000));
 
-      expect(fakeNavigation.pathname).toBe("/");
+      expect(fakeNavigation.pathname).toBe("/home");
       expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
       expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
       expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBeNull();
@@ -381,7 +381,7 @@ describe("진단 결과 (M-03 · D-03)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "새 사진으로 진단하기" }));
 
-    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/home"));
     expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
   });
 
@@ -404,7 +404,7 @@ describe("진단 결과 (M-03 · D-03)", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "다시 촬영하기" }));
 
-      await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+      await waitFor(() => expect(fakeNavigation.pathname).toBe("/home"));
       await waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(1));
       expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
     } finally {
@@ -504,7 +504,7 @@ describe("진단 결과 화면 — 화면을 오갈 때", () => {
     await userEvent.click(screen.getByRole("button", { name: "분석 취소" }));
 
     expect(back).not.toHaveBeenCalled();
-    expect(fakeNavigation.pathname).toBe("/");
+    expect(fakeNavigation.pathname).toBe("/home");
     expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
   });
 
@@ -514,7 +514,7 @@ describe("진단 결과 화면 — 화면을 오갈 때", () => {
     pickPhoto(container);
     await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
     await screen.findByRole("heading", { name: "고추 탄저병" });
-    await goTo("/");
+    await goTo("/home");
 
     pickPhoto(container);
     expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBeNull();
@@ -522,7 +522,7 @@ describe("진단 결과 화면 — 화면을 오갈 때", () => {
     expect(fetchDiagnosisDetail).not.toHaveBeenCalled();
     expect(title()).toBe("진단 시작");
 
-    await goTo("/");
+    await goTo("/home");
     vi.mocked(diagnoseImage).mockRejectedValueOnce(
       new ApiError("서버 오류", "MODEL_UNAVAILABLE", 503, true),
     );
@@ -574,7 +574,7 @@ describe("진단 실패 안내 — API 오류 코드별 Figma 지속형 안내",
     const alert = await screen.findByRole("alert", { name: "인터넷 연결을 확인해주세요" });
     await userEvent.click(within(alert).getByRole("button", { name: "사진 확인으로" }));
 
-    expect(fakeNavigation.pathname).toBe("/");
+    expect(fakeNavigation.pathname).toBe("/home");
     expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
   });
 
@@ -685,7 +685,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
     fireEvent.change(screen.getByLabelText("갤러리에서 추가 사진 선택"), {
       target: { files: [new File(["y"], "back.jpg", { type: "image/jpeg" })] },
     });
-    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/home"));
   }
 
   it("바로 다시 촬영은 촬영 화면으로 옮겨 카메라를 켜고, 찍을 부위를 제목에 둔다", async () => {
@@ -700,7 +700,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
 
       await userEvent.click(screen.getByRole("button", { name: "바로 다시 촬영" }));
 
-      await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+      await waitFor(() => expect(fakeNavigation.pathname).toBe("/home"));
       await waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(1));
       expect(title()).toBe("잎 뒷면 추가 촬영");
       // 옛 풀스크린 카메라를 띄우지 않는다
@@ -730,7 +730,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
 
     // 다시 분석이 끝나면 추가 촬영도 끝난다. 다음 사진은 새 진단이다
     await userEvent.click(screen.getByRole("button", { name: "새 사진으로 진단하기" }));
-    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/home"));
     expect(title()).not.toBe("잎 뒷면 추가 촬영");
   });
 
@@ -801,7 +801,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
     const alert = await screen.findByRole("alert", { name: SERVICE_DOWN });
     await userEvent.click(within(alert).getByRole("button", { name: "사진 확인으로" }));
 
-    expect(fakeNavigation.pathname).toBe("/");
+    expect(fakeNavigation.pathname).toBe("/home");
     expect(screen.getByAltText("촬영한 작물 미리보기")).toBeTruthy();
   });
 
@@ -816,7 +816,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
     const alert = await screen.findByRole("alert", { name: "이 사진으로 다시 분석할 수 없어요" });
     await userEvent.click(within(alert).getByRole("button", { name: "새 진단 시작" }));
 
-    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/home"));
     expect(title()).not.toBe("잎 뒷면 추가 촬영");
     expect(title()).not.toBe("추가 사진 확인");
     expect(refineDiagnosis).toHaveBeenCalledTimes(1);
@@ -830,7 +830,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
 
     await screen.findByRole("heading", { name: "비슷한 증상이 보여요" });
     expect(fakeNavigation.pathname).toBe("/diagnosis");
-    await goTo("/");
+    await goTo("/home");
     expect(screen.queryByAltText("촬영한 작물 미리보기")).toBeNull();
     expect(screen.queryByRole("button", { name: "추가 촬영 취소" })).toBeNull();
   });
@@ -844,7 +844,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
     await waitFor(() => expect(fakeNavigation.pathname).toBe("/diagnosis"));
     await userEvent.click(screen.getByRole("button", { name: "분석 취소" }));
 
-    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/home"));
     expect(title()).toBe("추가 사진 확인");
     expect(action("이 사진으로 다시 분석")).toBeTruthy();
   });
@@ -890,7 +890,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
       await screen.findByRole("alert", { name: "지원하지 않는 사진 형식이에요" }),
     ).toBeTruthy();
     expect(fakeNavigation.pathname).toBe("/diagnosis");
-    await goTo("/");
+    await goTo("/home");
     expect(screen.queryByRole("button", { name: "추가 촬영 취소" })).toBeNull();
   });
 
@@ -902,7 +902,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
     await screen.findByRole("heading", { name: "무 노균병" });
 
     await userEvent.click(screen.getByRole("button", { name: "새 사진으로 진단하기" }));
-    await waitFor(() => expect(fakeNavigation.pathname).toBe("/"));
+    await waitFor(() => expect(fakeNavigation.pathname).toBe("/home"));
     vi.mocked(diagnoseImage).mockResolvedValueOnce(response());
     pickPhoto(container);
     await userEvent.click(action("이 사진으로 진단하기"));
@@ -918,7 +918,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
       <AppFrame>
         <FakeRoutes
           routes={{
-            "/": <HomePage />,
+            "/home": <HomePage />,
             "/diagnosis": <DiagnosisRoute />,
             "/history/d1": <HistoryDetailPage />,
           }}
@@ -949,7 +949,7 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
     await pickExtraPhoto();
 
     await goTo("/history");
-    await goTo("/");
+    await goTo("/home");
 
     expect(screen.queryByRole("button", { name: "추가 촬영 취소" })).toBeNull();
     expect(action("이 사진으로 진단하기")).toBeTruthy();

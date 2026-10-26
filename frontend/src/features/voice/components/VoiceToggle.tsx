@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Switch } from "@/components/Switch";
+import { CAPTURE_PATH } from "@/components/diagnosis/DiagnosisSession";
 import { PROMPT_HOME, PROMPT_VOICE_ON } from "../lib/prompts";
 import { cancelSpeech, isSpeechSupported, speak } from "../lib/speech";
 import { setVoiceEnabled, useVoiceSetting } from "../hooks/useVoiceSetting";
@@ -35,7 +36,7 @@ export function VoiceToggle({ className }: VoiceToggleProps) {
     setVoiceEnabled(next);
     // 홈 진입 안내(M01-F6)는 상호작용 전이라 브라우저가 막는 경우가 많아,
     // 홈에서 켜면 이 탭 안에서 홈 안내까지 이어 읽는다
-    if (next) speak(pathname === "/" ? [PROMPT_VOICE_ON, PROMPT_HOME] : PROMPT_VOICE_ON);
+    if (next) speak(pathname === CAPTURE_PATH ? [PROMPT_VOICE_ON, PROMPT_HOME] : PROMPT_VOICE_ON);
     else cancelSpeech();
   };
 

@@ -82,7 +82,7 @@ export default function HistoryDetailPage() {
 
   return (
     <AppShellPage scrollLabel="진단 기록">
-      <div className="mx-auto w-full max-w-3xl pt-5 pb-8 md:pt-8">
+      <div className="mx-auto w-full max-w-[1200px] pt-5 pb-8 md:pt-8">
 
         {/* ======================================
             상단: 진단 이력 목록으로 돌아가기
