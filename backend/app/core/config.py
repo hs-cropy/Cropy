@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
     max_upload_mb: int = Field(default=100, gt=0)
     max_image_pixels: int = Field(default=210_000_000, gt=0)
+    # 요청 본문 수신: 데이터가 끊긴 채 기다리는 시간 / 전체 수신 상한 (초)
+    upload_idle_timeout_seconds: float = Field(default=30, gt=0, le=600)
+    upload_timeout_seconds: float = Field(default=300, gt=0, le=3600)
     low_confidence_threshold: float = Field(default=0.5, ge=0, le=1)
     recovery_ttl_hours: int = Field(default=24, ge=1, le=168)
     offline_bundle_dir: Path = Path("../frontend/public/offline-assets")
