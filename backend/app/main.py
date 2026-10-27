@@ -45,7 +45,9 @@ app = FastAPI(
 )
 
 app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=lambda: settings.max_request_bytes,
-                   route_limits={"/api/v1/offline/records": lambda: 2 * settings.max_upload_bytes + 64 * 1024})
+                   route_limits={"/api/v1/offline/records": lambda: 2 * settings.max_upload_bytes + 64 * 1024},
+                   idle_timeout=lambda: settings.upload_idle_timeout_seconds,
+                   total_timeout=lambda: settings.upload_timeout_seconds)
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(DeviceMiddleware)
 install_error_handlers(app)

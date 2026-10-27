@@ -23,10 +23,17 @@ class RequestBodyLimitMiddleware:
     """
 
     def __init__(self, app: ASGIApp, max_body_bytes: int | Callable[[], int],
-                 route_limits: dict[str, Callable[[], int]] | None = None) -> None:
+                 route_limits: dict[str, Callable[[], int]] | None = None,
+                 idle_timeout: float | Callable[[], float] = 30,
+                 total_timeout: float | Callable[[], float] = 300) -> None:
         self.app = app
         self.max_body_bytes = max_body_bytes
         self.route_limits = route_limits or {}
+        # A client that stalls (or trickles bytes) would otherwise hold a
+        # connection and spool file forever. The idle limit catches stalls; the
+        # total limit is generous so slow rural uplinks can still send large photos.
+        self.idle_timeout = idle_timeout
+        self.total_timeout = total_timeout
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -51,23 +58,37 @@ class RequestBodyLimitMiddleware:
                     await too_large(scope, receive, send)
                     return
 
+        idle = self.idle_timeout() if callable(self.idle_timeout) else self.idle_timeout
+        deadline = self.total_timeout() if callable(self.total_timeout) else self.total_timeout
         buffer = SpooledTemporaryFile(max_size=_MEMORY_SPOOL_BYTES, mode="w+b")
         try:
             total = 0
-            while True:
-                message = await receive()
-                if message["type"] == "http.disconnect":
-                    return
-                chunk = message.get("body", b"")
-                total += len(chunk)
-                if total > limit:
-                    # Do not drain the rest or invoke any route/parser side effects.
-                    await too_large(scope, receive, send)
-                    return
-                if chunk:
-                    await run_in_threadpool(buffer.write, chunk)
-                if not message.get("more_body", False):
-                    break
+            rejection = None
+            try:
+                with anyio.fail_after(deadline):
+                    while True:
+                        with anyio.fail_after(idle):
+                            message = await receive()
+                        if message["type"] == "http.disconnect":
+                            return
+                        chunk = message.get("body", b"")
+                        total += len(chunk)
+                        if total > limit:
+                            # Do not drain the rest or invoke any route/parser side effects.
+                            rejection = too_large
+                            break
+                        if chunk:
+                            await run_in_threadpool(buffer.write, chunk)
+                        if not message.get("more_body", False):
+                            break
+            except TimeoutError:
+                rejection = JSONResponse(
+                    error_body(scope, "UPLOAD_TIMEOUT", "사진 전송 시간이 초과되었습니다. 연결 상태를 확인하고 다시 시도해 주세요.", True),
+                    status_code=408,
+                )
+            if rejection is not None:
+                await rejection(scope, receive, send)
+                return
 
             await run_in_threadpool(buffer.seek, 0)
             remaining = total
