@@ -68,7 +68,9 @@ async def diagnosis_slot(request: Request):
     try:
         await asyncio.wait_for(limiter.acquire(), settings.diagnosis_queue_timeout_seconds)
     except TimeoutError:
-        raise APIError(503, "SERVER_BUSY", "진단 요청이 많아 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.", True)
+        # 추론 한 번이 약 1초라 5초 뒤면 대기열이 줄었을 가능성이 높다
+        raise APIError(503, "SERVER_BUSY", "진단 요청이 많아 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.", True,
+                       headers={"Retry-After": "5"})
     try:
         yield
     finally:

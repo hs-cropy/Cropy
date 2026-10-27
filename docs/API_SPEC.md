@@ -332,6 +332,8 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 
 오류 응답은 `detail`, `code`, `retryable`, `request_id`를 제공하며 응답 헤더에도 `X-Request-ID`가 있다. 대표 코드: `UNSUPPORTED_IMAGE_FORMAT`(Content-Type 누락 또는 이미지 외 형식), `INVALID_IMAGE`, `EMPTY_IMAGE`, `IMAGE_TOO_LARGE`, `IMAGE_RESOLUTION_TOO_LARGE`, `REQUEST_TOO_LARGE`, `UPLOAD_TIMEOUT`, `SERVER_BUSY`, `MODEL_UNAVAILABLE`, `MODEL_VERSION_CONFLICT`, `DIAGNOSIS_NOT_FOUND`, `DATABASE_UNAVAILABLE`, `SAVE_FAILED`, `RECOVERY_STORAGE_UNAVAILABLE`.
 
+`503 SERVER_BUSY`는 진단 자리를 `DIAGNOSIS_QUEUE_TIMEOUT_SECONDS`(기본 20초) 안에 얻지 못한 경우다. 진단·재촬영·저장 복구·오프라인 기록 동기화에 적용하며, `Retry-After: 5` 헤더를 함께 보낸다.
+
 오프라인 metadata는 UUID `client_record_id`, 선택적 `selected_crop`, timezone이 있는 `created_at`, `model_version`, `preprocessing_version`, `bundle_version`, 9개 고유 클래스의 합계 1인 `predictions`를 요구한다. `refined_predictions`가 있으면 재촬영 사진도 있어야 한다. 동일 UUID의 동일 본문 재전송은 중복 저장하지 않는다. 기기 확률은 클라이언트 생성값이며 서버 검증을 병해 정확도 검증으로 해석하지 않는다. 상세 준비·배포·검증 범위는 [오프라인 실행 가이드](OFFLINE_WEB.md)를 참조한다.
 
 ### GET /ready
