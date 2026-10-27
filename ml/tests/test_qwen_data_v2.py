@@ -123,3 +123,39 @@ def test_clean_removes_punctuation_and_generator_doubled_words():
     assert build.clean("요청한 농약을 주문하는 작업을 작업을 지금 완료해주세요") == "요청한 농약을 주문하는 작업을 지금 완료해주세요"
     assert build.clean("병 이름 설명하고 예방 안내를 한 번에 해 주시겠어요?") == "병 이름 설명하고 예방 안내를 한 번에 해 주시겠어요"
     assert build.clean("됐다 됐어") == "됐다 됐어"
+
+
+def test_review_applies_decisions_verdicts_and_variant_edits():
+    import apply_review as review
+
+    rows, _ = build.assemble([
+        row("p", "validation", "보이는 상품이 검증됐는지 확인해 줘요", "get_pesticide_information",
+            {"topic": "verification", "product": "all"}, "v12"),
+        row("q", "validation", "재품 에이랑 비중 어떤게 더 효과쩌긴가요", "get_pesticide_information",
+            {"topic": "comparison", "product": "all"}, "v11"),
+        row("r", "validation", "주식 지금 사도 돼"),
+        row("s", "train", "이 약은 몇 배로 타나요", "get_pesticide_information", {"topic": "dilution", "product": "all"}),
+    ])
+    for r in rows:
+        r["group"] = {"p": "v12:eval-dialogue-product_review"}.get(r["source_case_id"], "g_" + r["source_case_id"])
+    verdicts = [dict(group="v12:eval-dialogue-product_review", text="보이는 상품이 검증됐는지 확인해 줘요", verdict="ok", label=""),
+                dict(group="g_q", text="재품 에이랑 비중 어떤게 더 효과쩌긴가요", verdict="삭제", label=""),
+                dict(group="g_r", text="주식 지금 사도 돼", verdict="수정", label="handle_scope_limit(reason=action)")]
+    variant = next(r for r in rows if r["source_case_id"] == "s" and r["augmentation"] == "banmal")
+    variants = [dict(case_id=variant["case_id"], verdict="수정", text="이 약은 몇 배로 타?")]
+
+    out, report = review.apply(rows, {"D1": "A", "D4": "B"}, verdicts, variants)
+    by_source = {}
+    for r in out:
+        by_source.setdefault(r["source_case_id"], []).append(r)
+    assert "q" not in by_source and report["deleted"] >= 1  # the row and its variants
+    assert {r["output"] for r in by_source["p"]} == {"<hs_4>(topic=6, product=1)<hs_end>"}
+    assert {r["function"] for r in by_source["r"]} == {"handle_scope_limit"}
+    assert "이 약은 몇 배로 타" in [r["user_text"] for r in by_source["s"]]
+    assert all(r["labels_human_validated"] == (r["split"] == "validation") for r in out)
+    assert review.apply(out, {"D4": "B"}, verdicts, variants)[1] == dict(report, deleted=0, relabeled=0, retexted=0)
+
+    with pytest.raises(ValueError):
+        review.apply(rows, {"D7": "B"}, [], [])  # rule changes are not relabels
+    with pytest.raises(ValueError):
+        review.parse_label("handle_scope_limit(reason=weather)")

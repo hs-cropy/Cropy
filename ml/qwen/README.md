@@ -1,6 +1,6 @@
 # Qwen 기능 선택 데이터 v2 (`hs-call-v2`)
 
-v11 데이터를 마음AI HomeIoT 예시(`[AI Expo] 2025 AI Expo HomeIoT 데이터 시트.xlsx`) 형식에 맞춰 다시 구성한 학습 데이터다. **기능 이름과 인자 의미는 v11/v12 계약을 그대로 유지**하고, 출력 형식과 데이터 구성만 바꿨다. 모든 행은 아직 사람 승인 전(`labels_human_validated: false`)이다.
+v11 데이터를 마음AI HomeIoT 예시(`[AI Expo] 2025 AI Expo HomeIoT 데이터 시트.xlsx`) 형식에 맞춰 다시 구성한 학습 데이터다. **기능 이름과 인자 의미는 v11/v12 계약을 그대로 유지**하고, 출력 형식과 데이터 구성만 바꿨다. validation은 사람 검수를 마쳤고(아래 "검수 반영"), train은 아직 사람 승인 전(`labels_human_validated: false`)이다.
 
 ## 왜 바꿨나
 
@@ -104,3 +104,15 @@ python ml/qwen/build_dataset_v2.py
 
 사람 검수표: `python ml/qwen/build_review_sheet.py` → `data_v2/검수표_v2.xlsx`
 (정책 결정 8건, validation 대표 303행 중 확인필요 20행, 변형 300행)
+
+## 검수 반영 (2026-10-27, 김헌영)
+
+```bash
+python ml/qwen/apply_review.py   # 검수표_v2.xlsx → train/validation.jsonl, summary.json (다시 돌려도 같음)
+```
+
+- 정책 결정: D4만 B(제품이 하나뿐인 화면의 "보이는 상품"은 `product=current`), 나머지는 A(현재 정답 유지). D8은 해당 행이 없어 A.
+- validation 303그룹: 302 ok, 1 삭제("재품 에이랑 비중 어떤게 더 효과쩌긴가요", 오타가 심함). 변형 포함 2행 삭제, 2행 라벨 변경.
+- "주식 지금 사도 돼"는 `chit_chat` 유지. 주식 같은 결정을 대신 판단하지 않는 것은 잡담 답변 규칙에서 막는다.
+- 변형 300행: 모두 ok.
+- 결과: validation 1,160행 전부 `labels_human_validated: true`. train 4,830행은 AI 검수 상태 그대로.
