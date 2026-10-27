@@ -14,20 +14,22 @@ export function fuse(first, second, weight) {
 }
 export function summarize(bundle, predictions, crop) {
   const disease = bundle.diseases.find(d => d.model_class_id === predictions[0].class_id);
+  const other = disease.category === 'other';
   const [first, second] = predictions;
-  const pair = second && bundle.policy.pairs.find(p => p.ids.includes(first.class_id) && p.ids.includes(second.class_id));
+  const pair = !other && second && bundle.policy.pairs.find(p => p.ids.includes(first.class_id) && p.ids.includes(second.class_id));
   const margin = second ? first.confidence - second.confidence : 1;
   const recapture = pair && margin < bundle.policy.confusion_margin ? {
     region: pair.region, instruction: pair.instruction, margin,
     candidates: pair.ids.map(id => ({ name: bundle.diseases.find(d => d.model_class_id === id).name, cue: pair.cues[id] })),
   } : null;
-  const reasons = [];
-  if (crop && crop !== disease.crop_type) reasons.push('crop_mismatch');
+  // 판별 불가: no crop leaf was recognized, so mismatch/confusion/score do not apply.
+  const reasons = other ? ['not_crop'] : [];
+  if (!other && crop && crop !== disease.crop_type) reasons.push('crop_mismatch');
   if (recapture) reasons.push('confusion');
-  if (first.confidence < bundle.policy.low_confidence_threshold) reasons.push('low_confidence');
+  if (!other && first.confidence < bundle.policy.low_confidence_threshold) reasons.push('low_confidence');
   return {
     disease_name: disease.name, predicted_crop: disease.crop_type, selected_crop: crop || null,
-    crop_type: crop || disease.crop_type, crop_mismatch: reasons.includes('crop_mismatch'),
+    crop_type: crop || (other ? null : disease.crop_type), crop_mismatch: reasons.includes('crop_mismatch'),
     prediction_mode: 'browser', model_version: bundle.model_version, preprocessing_version: bundle.preprocessing_version,
     category: disease.category, severity: disease.severity, confidence: first.confidence,
     top_predictions: predictions.slice(0, 3).map(p => ({ name: bundle.diseases.find(d => d.model_class_id === p.class_id).name, confidence: p.confidence })),

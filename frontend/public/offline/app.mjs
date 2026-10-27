@@ -105,10 +105,12 @@ async function predict(file) {
 function result(record) {
   if (current?.id !== record.id) $('second').value = '';
   current = record; const r = record.result;
-  $('result').innerHTML = `<h2>${escape(r.disease_name)} · ${Math.round(r.confidence*100)}%</h2>
+  // 판별 불가는 병해 확률이 아니므로 점수와 후보를 보이지 않는다
+  const other = r.category === 'other';
+  $('result').innerHTML = `<h2>${escape(r.disease_name)}${other ? '' : ` · ${Math.round(r.confidence*100)}%`}</h2>
     <p class="status">${record.refined_predictions ? '두 사진으로 결과를 갱신했어요. ' : ''}${record.saved ? '이 기기에 저장했어요.' : '기기 저장에 실패했어요. 화면의 결과는 유지돼요.'}</p>
-    ${r.decision_reasons.length ? `<p class="status danger">${r.decision_reasons.map(x => ({crop_mismatch:'선택한 작물과 사진 분류가 달라요',confusion:'후보가 비슷해 추가 확인이 필요해요',low_confidence:'사진만으로 판단이 어려워요'}[x])).map(escape).join(' · ')}</p>` : ''}
-    <ul>${r.top_predictions.map(p => `<li>${escape(p.name)} ${Math.round(p.confidence*100)}%</li>`).join('')}</ul>
+    ${r.decision_reasons.length ? `<p class="status danger">${r.decision_reasons.map(x => ({not_crop:'고추·무·배추 잎으로 알아보기 어려워요. 잎이 잘 보이게 다시 찍어 주세요',crop_mismatch:'선택한 작물과 사진 분류가 달라요',confusion:'후보가 비슷해 추가 확인이 필요해요',low_confidence:'사진만으로 판단이 어려워요'}[x])).map(escape).join(' · ')}</p>` : ''}
+    ${other ? '' : `<ul>${r.top_predictions.map(p => `<li>${escape(p.name)} ${Math.round(p.confidence*100)}%</li>`).join('')}</ul>`}
     <p>${escape(r.description)}</p><details><summary>원인·예방·관리 안내</summary>
     <ul>${[...r.causes,...r.prevention].map(x => `<li>${escape(x)}</li>`).join('')}</ul></details>
     ${!record.saved ? '<button id="retry-local">이 기기에 다시 저장</button>' : ''}`;

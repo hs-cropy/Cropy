@@ -22,7 +22,7 @@ from app.schemas.diagnosis import (
 from app.services.ml_service import predict_all, predict_pair, get_prediction_context
 from app.services.pesticide_service import pesticide_infos
 from app.services.recapture import apply_pair_specialist, check_recapture, fuse_predictions
-from app.services.decision import decision
+from app.services.decision import crop_mismatch, decision
 from app.services.result_recovery import lookup, commit_result
 
 
@@ -103,7 +103,7 @@ def _remove_file(path: Path | None) -> None:
 def _response(db: Session, diagnosis: Diagnosis) -> DiagnoseResponse:
     disease = diagnosis.disease
     content = diagnosis.content_snapshot or _content(db, disease)
-    mismatch = bool(diagnosis.selected_crop and diagnosis.selected_crop != content["predicted_crop"])
+    mismatch = crop_mismatch(diagnosis.selected_crop, content["predicted_crop"], content["category"])
     initial = diagnosis.original_predictions or []
     mapping = {d.model_class_id: d.name for d in db.query(Disease).all()}
     return DiagnoseResponse(
@@ -138,6 +138,17 @@ def _content(db, disease):
     return content
 
 
+def _crop(disease: Disease) -> str | None:
+    # "판별 불가" has no crop; keep "기타" out of history crop filters.
+    return None if disease.category == "other" else disease.crop_type
+
+
+def _recapture(primary: Disease, predictions, diseases: dict[int, Disease]):
+    if primary.category == "other":
+        return None
+    return check_recapture(predictions, {c: d.name for c, d in diseases.items()})
+
+
 def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str | None,
                    request_context=None, recover_save_failure=False) -> DiagnoseResponse:
     cached = lookup(db, request_context)
@@ -151,12 +162,12 @@ def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str
         diseases = _diseases_for_classes(db, _prediction_classes(predictions))
         primary = diseases[predictions[0][0]]
         top = [PredictionItem(name=diseases[c].name, confidence=p) for c, p in predictions[:3]]
-        guidance = check_recapture(predictions, {c: d.name for c, d in diseases.items()})
+        guidance = _recapture(primary, predictions, diseases)
         now = datetime.now(timezone.utc)
         diagnosis = Diagnosis(
             id=str(uuid.uuid4()),
             disease=primary, confidence=predictions[0][1], top_predictions=[p.model_dump() for p in top],
-            image_path=saved_path.name, crop_type=crop_type or primary.crop_type, selected_crop=crop_type,
+            image_path=saved_path.name, crop_type=crop_type or _crop(primary), selected_crop=crop_type,
             original_predictions=[list(p) for p in predictions],
             recapture=guidance.model_dump() if guidance else None, created_at=now, updated_at=now,
             content_snapshot=_content(db, primary), severity_snapshot=primary.severity,
@@ -215,11 +226,11 @@ def refine_diagnosis(db: Session, diagnosis_id: str, file_bytes: bytes, filename
         diagnosis.disease = primary
         diagnosis.confidence = fused[0][1]
         diagnosis.top_predictions = [dict(name=diseases[c].name, confidence=p) for c, p in fused[:3]]
-        diagnosis.crop_type = diagnosis.selected_crop or primary.crop_type
+        diagnosis.crop_type = diagnosis.selected_crop or _crop(primary)
         diagnosis.image_path = original_path.name
         diagnosis.refined_image_path = second_path.name
         diagnosis.original_predictions = [list(p) for p in dist1]
-        guidance = check_recapture(fused, {c: d.name for c, d in diseases.items()})
+        guidance = _recapture(primary, fused, diseases)
         diagnosis.recapture = guidance.model_dump() if guidance else None
         diagnosis.content_snapshot = _content(db, primary)
         diagnosis.severity_snapshot = primary.severity

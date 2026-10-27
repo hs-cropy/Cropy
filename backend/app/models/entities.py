@@ -17,7 +17,7 @@ class Disease(Base):
     description = Column(Text)
     causes = Column(JSON, default=list)
     prevention = Column(JSON, default=list)
-    severity = Column(String(20), default="medium")
+    severity = Column(String(20))  # 판별 불가(category other)는 NULL. seed가 항상 값을 준다
     management_actions = Column(JSON, default=list)
     model_class_id = Column(Integer, unique=True, index=True)
 

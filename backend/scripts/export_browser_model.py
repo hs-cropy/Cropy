@@ -35,11 +35,12 @@ def export(checkpoint, target):
     import onnx
     import onnxruntime as ort
     import torch
-    from app.services.ml_service import _read_checkpoint, IMAGENET_MEAN, IMAGENET_STD
+    from app.services.ml_service import MODEL_CLASS_IDS, OPTIONAL_CLASS_IDS, _read_checkpoint, IMAGENET_MEAN, IMAGENET_STD
+    from app.services.decision import POLICY_VERSION
     from app.core.config import settings
     from app.services.recapture import CONFUSION_PAIRS, DEFAULT_MARGIN, FUSE_WEIGHT_SECOND
 
-    loaded, digest = _read_checkpoint(checkpoint, set(range(9)))
+    loaded, digest = _read_checkpoint(checkpoint, set(MODEL_CLASS_IDS), OPTIONAL_CLASS_IDS)
     model, class_ids, device, size = loaded
     model = model.cpu().eval()
     target.mkdir(parents=True, exist_ok=True)
@@ -66,7 +67,7 @@ def export(checkpoint, target):
         name = f"cnn-{file_hash[:16]}.onnx"
         _publish_model(model_path, target / name)
     seed = Path(__file__).resolve().parents[1] / "app/data/seed/diseases.json"
-    diseases = json.loads(seed.read_text(encoding="utf-8"))
+    diseases = [d for d in json.loads(seed.read_text(encoding="utf-8")) if d["model_class_id"] in class_ids]
     for d in diseases:
         d["pesticides"] = []
     manifest = {
@@ -76,7 +77,7 @@ def export(checkpoint, target):
         "preprocessing_version": f"browser-canvas-{size}-imagenet-v1",
         "server_preprocessing_version": f"resize-{size}-imagenet-v1",
         "content_source": "manual_seed", "pesticide_status": "not_bundled",
-        "diseases": diseases, "policy": {"version": "decision-v1", "low_confidence_threshold": settings.low_confidence_threshold,
+        "diseases": diseases, "policy": {"version": POLICY_VERSION, "low_confidence_threshold": settings.low_confidence_threshold,
           "confusion_margin": DEFAULT_MARGIN, "second_photo_weight": FUSE_WEIGHT_SECOND,
           "pairs": [{"ids": sorted(ids), **entry} for ids, entry in CONFUSION_PAIRS.items()]},
         "validation": {"identical_tensor_max_logit_error": max_error, "cases": 3,

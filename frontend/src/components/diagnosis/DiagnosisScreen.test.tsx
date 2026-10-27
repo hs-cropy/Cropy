@@ -412,6 +412,39 @@ describe("진단 결과 (M-03 · D-03)", () => {
     }
   });
 
+  it.each([
+    ["저장에 실패해도", { save_status: "failed" as const }],
+    ["브라우저 진단이어도", { prediction_mode: "browser" as const }],
+  ])("판별 불가는 %s 재촬영 안내로 간다", async (_, extra) => {
+    vi.mocked(diagnoseImage).mockResolvedValue(
+      response({ disease_name: "판별 불가", category: "other", severity: null, decision_status: "not_crop",
+        decision_reasons: ["not_crop"], ...extra }),
+    );
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await screen.findByRole("heading", { name: "작물 잎을 찾지 못했어요" });
+    expect(screen.queryByText("지금 해야 할 일")).toBeNull();
+  });
+
+  it("판별 불가 결과는 신뢰도 대신 작물 잎을 다시 찍도록 안내한다", async () => {
+    vi.mocked(diagnoseImage).mockResolvedValue(
+      response({
+        disease_name: "판별 불가",
+        category: "other",
+        confidence: 0.91,
+        decision_status: "not_crop",
+        decision_reasons: ["not_crop"],
+      }),
+    );
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await screen.findByRole("heading", { name: "작물 잎을 찾지 못했어요" });
+    expect(screen.queryByText(/AI 진단 신뢰도/)).toBeNull();
+    expect(screen.getByRole("button", { name: "다시 촬영하기" })).toBeTruthy();
+  });
+
   it("브라우저 카메라가 없으면 저신뢰 결과의 다시 촬영하기는 기기 카메라(파일 선택)를 연다", async () => {
     vi.mocked(diagnoseImage).mockResolvedValue(
       response({ confidence: 0.42, decision_reasons: ["low_confidence"] }),

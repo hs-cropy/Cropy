@@ -7,6 +7,7 @@ import { CropMismatchNotice } from "@/components/CropMismatchNotice";
 import { SaveRecovery } from "@/components/SaveRecovery";
 import { recentDate } from "@/components/capture/RecentDiagnosisCard";
 import { cn } from "@/lib/cn";
+import { isNotCrop } from "@/lib/diagnosis";
 import type { DiagnoseResponse, Severity } from "@/types/diagnosis";
 import { DiagnosisDetails } from "./DiagnosisDetails";
 
@@ -20,8 +21,9 @@ const SEVERITY: Record<Severity, { label: string; tone: "attention" | "low" }> =
   low: { label: "낮음", tone: "low" },
 };
 
-/** 등급 라벨과 색. 정상 판정이면 "정상", 등급이 없으면 null */
+/** 등급 라벨과 색. 정상 판정이면 "정상", 판별 불가나 등급이 없으면 null */
 export function gradeOf(result: DiagnoseResponse) {
+  if (isNotCrop(result)) return null;
   // 백엔드가 정상을 "healthy" 로 줄 때도 있다 (features/voice/lib/prompts.ts)
   const category: string | undefined = result.category;
   if (category === "normal" || category === "healthy") {
@@ -205,7 +207,8 @@ export function DiagnosisResultView({
   const photo = photoOf(result, fallbackPhoto);
   const isRefined = Boolean(photo && result.refined_image_url);
   const actions = result.management_actions ?? [];
-  const confidence = percent(result.confidence);
+  // 판별 불가의 점수는 "알아볼 수 없음"의 확률이라 병해 신뢰도처럼 보이지 않게 숨긴다
+  const confidence = isNotCrop(result) ? MISSING : percent(result.confidence);
 
   if (desktop) {
     const grade = gradeOf(result);
@@ -321,9 +324,11 @@ export function DiagnosisResultView({
             </h2>
             <div className="flex flex-wrap items-center gap-2">
               <GradeBadge result={result} desktop={false} />
-              <p className="text-cropy-label-xs font-medium text-cropy-text-secondary">
-                신뢰도 {confidence}
-              </p>
+              {!isNotCrop(result) && (
+                <p className="text-cropy-label-xs font-medium text-cropy-text-secondary">
+                  신뢰도 {confidence}
+                </p>
+              )}
             </div>
           </div>
         </div>
