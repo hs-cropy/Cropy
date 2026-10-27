@@ -17,7 +17,7 @@ DIAGNOSIS_EXAMPLE = {
     "created_at": "2026-10-15T00:00:00Z", "updated_at": "2026-10-15T00:00:00Z",
     "image_url": "/uploads/4da54046-bae9-4249-a4b3-85d17b83ee40.jpg",
     "recapture": None, "is_refined": False, "content_status": "snapshot",
-    "decision_status": "disease", "decision_reasons": [], "policy_version": "decision-v2:low=0.5",
+    "decision_status": "disease", "decision_reasons": [], "policy_version": "decision-v2:low=0.8",
     "save_status": "saved", "recovery_token": None,
 }
 

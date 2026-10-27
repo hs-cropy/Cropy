@@ -121,7 +121,7 @@ class CapabilitiesResponse(BaseModel):
     model_config = {"json_schema_extra": {"examples": [{
         "upload": {"formats": ["JPEG", "PNG", "HEIC", "HEIF", "DNG", "WEBP", "AVIF"], "max_bytes": 104857600, "max_pixels": 210000000},
         "crops": ["고추", "무", "배추"],
-        "decision": {"version": "decision-v2", "low_confidence_threshold": .5,
+        "decision": {"version": "decision-v2", "low_confidence_threshold": .8,
                      "confusion_margin": .2, "second_photo_weight": .6, "confusion_pairs": [[2, 3], [4, 5]]},
         "execution": {"server_inference": False, "browser_bundle_available": False,
                       "browser_inference": "device_validation_required", "voice_commands": False},

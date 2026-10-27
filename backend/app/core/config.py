@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Next.js rewrite 프록시가 약 30초 무응답이면 끊으므로 그보다 짧게 두어 408이 먼저 도착하게 한다
     upload_idle_timeout_seconds: float = Field(default=20, gt=0, le=600)
     upload_timeout_seconds: float = Field(default=300, gt=0, le=3600)
-    low_confidence_threshold: float = Field(default=0.5, ge=0, le=1)
+    low_confidence_threshold: float = Field(default=0.8, ge=0, le=1)
     recovery_ttl_hours: int = Field(default=24, ge=1, le=168)
     offline_bundle_dir: Path = Path("../frontend/public/offline-assets")
 
