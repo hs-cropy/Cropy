@@ -87,3 +87,47 @@ def test_records_from_before_device_scoping_are_hidden(devices, sample_image):
         legacy = service.diagnose_image(db, sample_image, "legacy.jpg", None)  # device_id=None
     assert legacy.id not in [i["id"] for i in a.get("/api/v1/history").json()["items"]]
     assert a.get(f"/api/v1/history/{legacy.id}").status_code == 404
+
+
+def test_device_cookie_survives_malformed_cookie_before_it(devices):
+    a, _ = devices
+    token = a.get("/api/v1/history").cookies[COOKIE_NAME]
+    for header in (f'theme={{"x":1}}; {COOKIE_NAME}={token}', f"x=a b; {COOKIE_NAME}={token}"):
+        with TestClient(app) as fresh:
+            response = fresh.get("/api/v1/history", headers={"Cookie": header})
+            assert "set-cookie" not in response.headers
+
+
+@pytest.fixture
+def offline_bundle(tmp_path, monkeypatch):
+    import json
+    from pathlib import Path
+    from app.core.config import settings
+    diseases = json.loads((Path(__file__).resolve().parents[1] / "app/data/seed/diseases.json").read_text(encoding="utf-8"))
+    manifest = {"version": "a" * 64, "model_version": "b" * 64, "preprocessing_version": "browser-test", "diseases": diseases}
+    for name in ("manifest.json", "manifest-" + "a" * 16 + ".json"):
+        (tmp_path / name).write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(settings, "offline_bundle_dir", tmp_path)
+    return manifest
+
+
+def test_offline_resend_after_lost_cookie_returns_record_to_new_cookie(devices, sample_image, offline_bundle):
+    import json
+    from datetime import datetime, timezone
+    a, b = devices
+    meta = json.dumps(dict(client_record_id="0b9d1c7e-2f4a-4c61-9a3e-5d2f8e7b6a10", selected_crop="고추",
+        model_version=offline_bundle["model_version"], preprocessing_version=offline_bundle["preprocessing_version"],
+        bundle_version=offline_bundle["version"], created_at=datetime.now(timezone.utc).isoformat(),
+        predictions=[{"class_id": i, "confidence": .92 if i == 0 else .01} for i in range(9)]))
+    def sync(c, metadata, image):
+        return c.post("/api/v1/offline/records", data={"metadata": metadata}, files={"file": ("x.jpg", image, "image/jpeg")})
+    first = sync(a, meta, sample_image)
+    assert first.status_code == 200, first.text
+    # The response (and its Set-Cookie) never reached the phone: the resend arrives as a new device.
+    resend = sync(b, meta, sample_image)
+    assert resend.status_code == 200, resend.text
+    assert resend.json()["id"] == first.json()["id"]
+    assert first.json()["id"] in [i["id"] for i in b.get("/api/v1/history").json()["items"]]
+    assert sync(b, meta, sample_image).json()["id"] == first.json()["id"]  # cached for the new device now
+    # Same record ID with different content is still a conflict.
+    assert sync(a, meta, sample_image + b"\0").status_code == 409

@@ -7,9 +7,8 @@ devices; it is not authentication.
 import hashlib
 import re
 import secrets
-from http.cookies import SimpleCookie
-
 from fastapi import Request
+from starlette.requests import cookie_parser
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 COOKIE_NAME = "cropy_device"
@@ -20,9 +19,11 @@ _TOKEN = re.compile(r"^[A-Za-z0-9_-]{32,64}$")
 def _cookie_token(scope: Scope) -> str | None:
     for name, value in scope.get("headers", []):
         if name == b"cookie":
-            morsel = SimpleCookie(value.decode("latin-1")).get(COOKIE_NAME)
-            if morsel and _TOKEN.match(morsel.value):
-                return morsel.value
+            # SimpleCookie drops every cookie after a malformed one (JSON, spaces);
+            # Starlette's lenient parser is what request.cookies uses.
+            value = cookie_parser(value.decode("latin-1")).get(COOKIE_NAME)
+            if value and _TOKEN.match(value):
+                return value
     return None
 
 
