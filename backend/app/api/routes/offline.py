@@ -13,7 +13,7 @@ from app.core.device import device_id as current_device
 from app.core.errors import APIError
 from app.core.uploads import write_image
 from app.api.documentation import IMAGE_DESCRIPTION, ManifestResponse, OFFLINE_EXAMPLES, UPLOAD_ERRORS, error_response
-from app.models.entities import Diagnosis
+from app.models.entities import Diagnosis, DiagnosisRequest
 from app.schemas.diagnosis import CropType, DiagnoseResponse, RecaptureGuidance
 from app.services import diagnosis_service as service
 from app.services.recapture import fuse_predictions
@@ -73,6 +73,25 @@ class LocalRecord(BaseModel):
         return self
 
 
+def _adopt_resent(db, record_id, context, device_id):
+    """A resend whose first response (and new device cookie) was lost.
+
+    The same client UUID with byte-identical photos and metadata proves it is the
+    same phone, so the record moves to the current device instead of a 409.
+    """
+    cached = [row for row in db.query(DiagnosisRequest).filter(DiagnosisRequest.fingerprint == context["fingerprint"])
+              if row.response.get("id") == record_id]
+    if not cached:
+        return None
+    record = db.get(Diagnosis, record_id)
+    record.device_id = device_id
+    with db.no_autoflush:
+        result = service._response(db, record)
+    db.add(DiagnosisRequest(key=context["key"], fingerprint=context["fingerprint"], response=result.model_dump(mode="json")))
+    db.commit()
+    return result
+
+
 def import_record(db, metadata, content, extension, refined_content, refined_extension, device_id=None):
     m = LocalRecord.model_validate_json(metadata)
     canonical = m.model_dump_json()
@@ -100,6 +119,9 @@ def import_record(db, metadata, content, extension, refined_content, refined_ext
                     pesticides=source.get("pesticides", []), version=bundle["version"])
     id = str(m.client_record_id)
     if db.get(Diagnosis, id):
+        adopted = _adopt_resent(db, id, context, device_id)
+        if adopted:
+            return adopted
         raise APIError(409, "DIAGNOSIS_CHANGED", "동기화된 기록이 이미 존재합니다. 새 진단으로 저장해 주세요.")
     original = settings.upload_dir / f"{uuid4()}{extension}"
     second = settings.upload_dir / f"{uuid4()}{refined_extension}" if refined_content else None

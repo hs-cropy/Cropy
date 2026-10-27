@@ -92,6 +92,15 @@ def _backup_sqlite_database(connection: Connection) -> None:
 
 def ensure_columns() -> None:
     """Preserve legacy rows with backed-up, atomic additive schema changes."""
+    _add_missing_columns()
+    # index=True only applies to new tables; existing DBs got device_id via ALTER.
+    # A new database has no table yet; create_all() then builds the index itself.
+    with engine.begin() as connection:
+        if inspect(connection).has_table("diagnoses"):
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_diagnoses_device_id ON diagnoses (device_id)"))
+
+
+def _add_missing_columns() -> None:
     with engine.connect() as connection:
         sqlite = connection.dialect.name == "sqlite"
         if sqlite:
