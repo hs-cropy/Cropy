@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine, ensure_columns
 from app.core.uploads import ImageStaticFiles
 from app.core.request_limits import RequestBodyLimitMiddleware
+from app.core.device import DeviceMiddleware
 from app.core.errors import RequestIdMiddleware, install_error_handlers
 from app.models.entities import Disease
 from app.services.ml_service import load_model
@@ -46,6 +47,7 @@ app = FastAPI(
 app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=lambda: settings.max_request_bytes,
                    route_limits={"/api/v1/offline/records": lambda: 2 * settings.max_upload_bytes + 64 * 1024})
 app.add_middleware(RequestIdMiddleware)
+app.add_middleware(DeviceMiddleware)
 install_error_handlers(app)
 
 app.add_middleware(

@@ -150,7 +150,7 @@ def _recapture(primary: Disease, predictions, diseases: dict[int, Disease]):
 
 
 def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str | None,
-                   request_context=None, recover_save_failure=False) -> DiagnoseResponse:
+                   request_context=None, recover_save_failure=False, device_id=None) -> DiagnoseResponse:
     cached = lookup(db, request_context)
     if cached:
         return cached
@@ -171,7 +171,7 @@ def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str
             original_predictions=[list(p) for p in predictions],
             recapture=guidance.model_dump() if guidance else None, created_at=now, updated_at=now,
             content_snapshot=_content(db, primary), severity_snapshot=primary.severity,
-            **context,
+            device_id=device_id, **context,
         )
         db.add(diagnosis)
         with db.no_autoflush:
@@ -185,11 +185,11 @@ def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str
 
 
 def refine_diagnosis(db: Session, diagnosis_id: str, file_bytes: bytes, filename: str,
-                     request_context=None, recover_save_failure=False) -> DiagnoseResponse | None:
+                     request_context=None, recover_save_failure=False, device_id=None) -> DiagnoseResponse | None:
     cached = lookup(db, request_context)
     if cached:
         return cached
-    diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id).first()
+    diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id, Diagnosis.device_id == device_id).first()
     if not diagnosis:
         return None
     expected_revision = diagnosis.revision
@@ -251,8 +251,10 @@ def refine_diagnosis(db: Session, diagnosis_id: str, file_bytes: bytes, filename
     return result
 
 
-def get_history(db: Session, page: int, size: int, crop_type: str | None = None, severity: str | None = None) -> PaginatedHistory:
-    query = db.query(Diagnosis)
+def get_history(db: Session, page: int, size: int, crop_type: str | None = None, severity: str | None = None,
+                device_id: str | None = None) -> PaginatedHistory:
+    # device_id=None matches only unscoped (pre-device) rows; the API always passes a device.
+    query = db.query(Diagnosis).filter(Diagnosis.device_id == device_id)
     unfiltered_total = query.count()
     if crop_type:
         query = query.filter(Diagnosis.crop_type == crop_type)
@@ -272,8 +274,8 @@ def get_history(db: Session, page: int, size: int, crop_type: str | None = None,
     )
 
 
-def get_diagnosis_detail(db: Session, diagnosis_id: str) -> DiagnoseResponse | None:
-    diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id).first()
+def get_diagnosis_detail(db: Session, diagnosis_id: str, device_id: str | None = None) -> DiagnoseResponse | None:
+    diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id, Diagnosis.device_id == device_id).first()
     return _response(db, diagnosis) if diagnosis else None
 
 

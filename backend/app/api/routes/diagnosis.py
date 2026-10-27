@@ -7,6 +7,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
 from app.core.database import get_db, SessionLocal
+from app.core.device import device_id as current_device
 from app.core.image_processing import prepare_image
 from app.schemas.diagnosis import CropType, Severity, DiagnoseResponse, PaginatedHistory
 from app.core.errors import APIError
@@ -62,13 +63,14 @@ async def diagnose(
     file: UploadFile = File(..., description=IMAGE_DESCRIPTION),
     crop_type: CropType | None = Query(None, description="사용자가 선택한 작물. 미지정 시 모델 예측을 사용합니다.", examples=["고추"]),
     idempotency_key: str | None = Header(None, min_length=1, max_length=128, description=KEY_DESCRIPTION),
+    device: str = Depends(current_device),
 ):
     try:
         async with request.app.state.diagnosis_limiter:
             content, extension = await _read_image_upload(file)
             return await run_in_threadpool(
                 _with_session, diagnosis_service.diagnose_image, content, f"image{extension}", crop_type,
-                request_context("diagnose", idempotency_key, content, crop_type), True
+                request_context("diagnose", idempotency_key, content, crop_type, device), True, device
             )
     except (diagnosis_service.PredictionContractError, ModelUnavailableError):
         logger.exception("Model prediction contract validation failed")
@@ -86,6 +88,7 @@ async def refine(
     request: Request,
     file: UploadFile = File(..., description=IMAGE_DESCRIPTION),
     idempotency_key: str | None = Header(None, min_length=1, max_length=128, description=KEY_DESCRIPTION),
+    device: str = Depends(current_device),
 ):
     """혼동쌍 판별부위 2차 촬영으로 진단을 재확정 (구성 E: 다시점 융합)."""
     try:
@@ -93,7 +96,7 @@ async def refine(
             content, extension = await _read_image_upload(file)
             result = await run_in_threadpool(
                 _with_session, diagnosis_service.refine_diagnosis, diagnosis_id, content, f"image{extension}",
-                request_context(f"refine:{diagnosis_id}", idempotency_key, content), True
+                request_context(f"refine:{diagnosis_id}", idempotency_key, content, device_id=device), True, device
             )
     except (diagnosis_service.PredictionContractError, ModelUnavailableError):
         logger.exception("Model prediction contract validation failed during refinement")
@@ -113,9 +116,9 @@ async def refine(
                         409: error_response("기록이 변경되어 이전 결과를 저장할 수 없습니다.", "DIAGNOSIS_CHANGED"),
                         410: error_response("결과 보관 시간이 지났습니다.", "RESULT_EXPIRED"),
                         503: error_response("저장 실패(SAVE_FAILED), DB 사용 불가(DATABASE_UNAVAILABLE), 복구 저장소 사용 불가(RECOVERY_STORAGE_UNAVAILABLE)", "SAVE_FAILED", True, example_detail="이력에 저장하지 못했습니다. 결과는 보관 중이니 다시 저장해 주세요.")})
-async def recover_result(token: str, request: Request):
+async def recover_result(token: str, request: Request, device: str = Depends(current_device)):
     async with request.app.state.diagnosis_limiter:
-        return await run_in_threadpool(_with_session, save_result, token)
+        return await run_in_threadpool(_with_session, save_result, token, device)
 
 
 @router.get("/history", response_model=PaginatedHistory, summary="진단 이력 목록 조회",
@@ -127,15 +130,16 @@ def history(
     crop_type: CropType | None = Query(None, description="작물 필터"),
     severity: Severity | None = Query(None, description="심각도 필터: high/medium/low"),
     db: Session = Depends(get_db),
+    device: str = Depends(current_device),
 ):
-    return diagnosis_service.get_history(db, page, size, crop_type, severity)
+    return diagnosis_service.get_history(db, page, size, crop_type, severity, device)
 
 
 @router.get("/history/{diagnosis_id}", response_model=DiagnoseResponse, summary="진단 이력 상세 조회",
             description="진단 응답의 id로 저장된 결과를 조회합니다. 당시 참고 정보의 스냅샷 유무는 content_status로, 현재 농약 참고 정보는 current_pesticides로 확인합니다.",
             responses={404: error_response("진단 기록을 찾을 수 없습니다.", "DIAGNOSIS_NOT_FOUND"), 503: DATABASE_ERROR})
-def history_detail(diagnosis_id: str, db: Session = Depends(get_db)):
-    result = diagnosis_service.get_diagnosis_detail(db, diagnosis_id)
+def history_detail(diagnosis_id: str, db: Session = Depends(get_db), device: str = Depends(current_device)):
+    result = diagnosis_service.get_diagnosis_detail(db, diagnosis_id, device)
     if not result:
         raise APIError(404, "DIAGNOSIS_NOT_FOUND", "진단 기록을 찾을 수 없습니다.")
     return result
