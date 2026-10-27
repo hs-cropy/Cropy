@@ -74,3 +74,25 @@ def test_records_without_a_device_cannot_be_deleted(devices, sample_image):
     assert a.delete(f"/api/v1/history/{legacy.id}").status_code == 404
     with SessionLocal() as db:
         assert db.get(Diagnosis, legacy.id) is not None
+
+
+def test_refinement_committed_first_makes_delete_409_and_keeps_record(devices, sample_image, monkeypatch):
+    a, _ = devices
+    created = diagnose(a, sample_image)
+    photo = stored(created["image_url"])
+    original_delete = service.Session.delete
+
+    def refine_wins(session, instance):
+        # Another request (a refinement) commits between our read and our commit.
+        with SessionLocal() as other:
+            row = other.get(Diagnosis, instance.id)
+            row.confidence = .5
+            other.commit()
+        original_delete(session, instance)
+
+    monkeypatch.setattr(service.Session, "delete", refine_wins)
+    response = a.delete(f"/api/v1/history/{created['id']}")
+    assert response.status_code == 409 and response.json()["code"] == "DIAGNOSIS_CHANGED"
+    monkeypatch.undo()
+    assert a.get(f"/api/v1/history/{created['id']}").status_code == 200
+    assert photo.is_file()

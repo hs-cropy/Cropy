@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm.exc import StaleDataError
 
 from app.core.config import settings
 from app.core.uploads import write_image
@@ -321,7 +322,12 @@ def delete_diagnosis(db: Session, diagnosis_id: str, device_id: str | None = Non
     # A replayed request key must not resurrect the deleted result.
     db.query(DiagnosisRequest).filter(DiagnosisRequest.response["id"].as_string() == diagnosis_id) \
         .delete(synchronize_session=False)
-    db.commit()
+    try:
+        db.commit()
+    except StaleDataError:
+        # A refinement committed after this record was read (revision changed).
+        db.rollback()
+        raise
     # Files go only after the rows are gone, so a failed commit keeps the record intact.
     for photo in photos:
         _remove_file(photo)

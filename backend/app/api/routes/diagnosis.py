@@ -146,9 +146,15 @@ def history_detail(diagnosis_id: str, db: Session = Depends(get_db), device: str
 
 
 @router.delete("/history/{diagnosis_id}", status_code=204, summary="내 진단 기록 삭제",
-               description="이 기기(익명 기기 쿠키)의 진단 기록 하나를 사진과 함께 삭제합니다. 성공하면 본문 없이 204입니다. 다른 기기의 기록이나 없는 기록은 404이며 되돌릴 수 없습니다.",
-               responses={404: error_response("진단 기록을 찾을 수 없습니다.", "DIAGNOSIS_NOT_FOUND"), 503: DATABASE_ERROR})
+               description="이 기기(익명 기기 쿠키)의 진단 기록 하나를 사진과 함께 삭제합니다. 성공하면 본문 없이 204입니다. 다른 기기의 기록이나 없는 기록은 404이며 되돌릴 수 없습니다. 같은 기록의 재촬영이 먼저 저장되면 409이고 기록은 그대로 남습니다.",
+               responses={404: error_response("진단 기록을 찾을 수 없습니다.", "DIAGNOSIS_NOT_FOUND"),
+                          409: error_response("기록이 방금 변경되었습니다. 기록을 다시 확인해 주세요.", "DIAGNOSIS_CHANGED"),
+                          503: DATABASE_ERROR})
 def delete_history(diagnosis_id: str, db: Session = Depends(get_db), device: str = Depends(current_device)):
-    if not diagnosis_service.delete_diagnosis(db, diagnosis_id, device):
+    try:
+        deleted = diagnosis_service.delete_diagnosis(db, diagnosis_id, device)
+    except StaleDataError:
+        raise APIError(409, "DIAGNOSIS_CHANGED", "기록이 방금 변경되었습니다. 기록을 다시 확인해 주세요.")
+    if not deleted:
         raise APIError(404, "DIAGNOSIS_NOT_FOUND", "진단 기록을 찾을 수 없습니다.")
     return Response(status_code=204)
