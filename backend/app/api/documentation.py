@@ -143,7 +143,7 @@ class ManifestDisease(BaseModel):
     description: str
     causes: list[str]
     prevention: list[str]
-    severity: str
+    severity: str | None = Field(description="판별 불가(category other)는 null")
     management_actions: list[str]
     pesticides: list[PesticideInfo] = Field(description="현재 내보내기에서는 빈 배열(not_bundled)")
 

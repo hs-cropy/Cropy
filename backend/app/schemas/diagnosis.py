@@ -84,7 +84,7 @@ class DiagnoseResponse(TimestampedResponse):
     preprocessing_version: str | None = Field(None, description="이미지 전처리 버전")
     pair_model_version: str | None = Field(None, description="사용한 혼동쌍 보조 모델 버전")
     category: str = Field("disease", description="클래스 분류: disease, normal, other(판별 불가)")
-    severity: str = Field("medium", description="참고 정보의 심각도: high/medium/low")
+    severity: str | None = Field("medium", description="참고 정보의 심각도: high/medium/low. 판별 불가(category other)는 null")
     confidence: float = Field(description="최상위 예측 확률(0~1)", examples=[0.87])
     top_predictions: list[PredictionItem] = Field(description="상위 예측 후보")
     description: str | None = Field(None, description="병해·정상 클래스 설명")
@@ -118,7 +118,7 @@ class DiagnosisSummary(TimestampedResponse):
     created_at: datetime
     refined_image_url: str | None = None
     prediction_mode: str = "legacy"
-    severity: Severity = "medium"
+    severity: Severity | None = "medium"
     category: str = "disease"
     is_refined: bool = False
     content_status: str = "current_reference"
@@ -150,7 +150,7 @@ class DiseaseDetail(BaseModel):
     description: str | None = None
     causes: list[str] = []
     prevention: list[str] = []
-    severity: str
+    severity: str | None
     pesticides: list[PesticideInfo] = []
 
 

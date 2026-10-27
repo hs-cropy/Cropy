@@ -25,6 +25,7 @@ _mapping_error = False
 # stays valid so code can ship before the model file is replaced.
 OTHER_CLASS_ID = 9
 MODEL_CLASS_IDS = frozenset(range(10))
+OPTIONAL_CLASS_IDS = frozenset({OTHER_CLASS_ID})
 
 
 class ModelUnavailableError(RuntimeError):
@@ -96,7 +97,7 @@ def _load_model():
     _mapping_error = False
     path = _model_path()
     try:
-        loaded, _model_version = _read_checkpoint(path, set(MODEL_CLASS_IDS), frozenset({OTHER_CLASS_ID}))
+        loaded, _model_version = _read_checkpoint(path, set(MODEL_CLASS_IDS), OPTIONAL_CLASS_IDS)
         return loaded
     except FileNotFoundError:
         logger.warning("Diagnosis model checkpoint is missing: %s", path)
@@ -127,7 +128,7 @@ def validate_model_mapping(expected_class_ids: set[int]) -> bool:
     """Check the seeded DB IDs against the loaded checkpoint before readiness."""
     global _mapping_validated, _mapping_error
     loaded = _load_model()
-    _mapping_validated = loaded is not None and set(loaded[1]) in (expected_class_ids, expected_class_ids - {OTHER_CLASS_ID})
+    _mapping_validated = loaded is not None and set(loaded[1]) in (expected_class_ids, expected_class_ids - OPTIONAL_CLASS_IDS)
     _mapping_error = loaded is not None and not _mapping_validated
     if _mapping_error:
         logger.error("Model classes do not match database model_class_id values")

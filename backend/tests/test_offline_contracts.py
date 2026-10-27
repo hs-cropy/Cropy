@@ -84,3 +84,10 @@ def test_ten_class_bundle_syncs_other_and_rejects_nine_class_records(client, sam
     body = other.json()
     assert (body["decision_status"], body["crop_mismatch"], body["crop_type"]) == ("not_crop", False, "배추")
     assert sync("5f0c2a57-3d1e-4f43-9a8a-2b8f3c1d9e02", 9, 0).status_code == 422
+    meta = dict(client_record_id="5f0c2a57-3d1e-4f43-9a8a-2b8f3c1d9e03", model_version=manifest["model_version"],
+        preprocessing_version=manifest["preprocessing_version"], bundle_version=manifest["version"],
+        created_at=datetime.now(timezone.utc).isoformat(),
+        predictions=[{"class_id": 42 if i == 9 else i, "confidence": .1} for i in range(10)])
+    response = client.post("/api/v1/offline/records", data={"metadata": json.dumps(meta)},
+                           files={"file": ("x.jpg", sample_image, "image/jpeg")})
+    assert response.status_code == 422

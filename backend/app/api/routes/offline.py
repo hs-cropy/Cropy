@@ -16,7 +16,8 @@ from app.models.entities import Diagnosis
 from app.schemas.diagnosis import CropType, DiagnoseResponse, RecaptureGuidance
 from app.services import diagnosis_service as service
 from app.services.recapture import fuse_predictions
-from app.services.decision import decision
+from app.services.decision import crop_mismatch, decision
+from app.services.ml_service import OTHER_CLASS_ID
 from app.services.result_recovery import lookup, request_context, commit_result
 from app.api.routes.diagnosis import _read_image_upload, _with_session
 
@@ -47,7 +48,7 @@ def manifest():
 
 
 class LocalPrediction(BaseModel):
-    class_id: StrictInt = Field(description="클래스 ID. 묶음 manifest의 class_ids를 각각 한 번씩 포함")
+    class_id: StrictInt = Field(ge=0, le=OTHER_CLASS_ID, description="클래스 ID. 묶음 manifest의 class_ids를 각각 한 번씩 포함")
     confidence: float = Field(ge=0, le=1, allow_inf_nan=False, description="확률(0~1). 전체 합계는 1±0.001")
 
 
@@ -110,11 +111,10 @@ def import_record(db, metadata, content, extension, refined_content, refined_ext
     guidance = None
     pair = next((pair for pair in policy.get("pairs", []) if set(pair["ids"]) == {i for i, _ in dist[:2]}), None)
     margin = dist[0][1] - dist[1][1]
-    if pair and margin < policy.get("confusion_margin", .2) and source["category"] != "other":
+    if pair and margin < policy.get("confusion_margin", .2) and primary.category != "other":
         guidance = RecaptureGuidance(region=pair["region"], instruction=pair["instruction"], margin=round(margin, 4),
             candidates=[dict(name=names[i], cue=pair["cues"][str(i)]) for i in pair["ids"]])
-    snapshot["decision"] = decision(dist[0][1], bool(m.selected_crop and m.selected_crop != source["crop_type"]
-                                                     and source["category"] != "other"),
+    snapshot["decision"] = decision(dist[0][1], crop_mismatch(m.selected_crop, source["crop_type"], source["category"]),
                                     guidance, source["category"], policy.get("low_confidence_threshold", .5))
     try:
         write_image(original, content)
@@ -124,7 +124,7 @@ def import_record(db, metadata, content, extension, refined_content, refined_ext
             top_predictions=[dict(name=names[i], confidence=p) for i, p in dist[:3]],
             original_predictions=[list(p) for p in dist1], image_path=original.name,
             refined_image_path=second.name if second else None, selected_crop=m.selected_crop,
-            crop_type=m.selected_crop or (None if source["category"] == "other" else source["crop_type"]), prediction_mode="browser",
+            crop_type=m.selected_crop or service._crop(primary), prediction_mode="browser",
             model_version=m.model_version, preprocessing_version=m.preprocessing_version,
             recapture=guidance.model_dump() if guidance else None, content_snapshot=snapshot,
             severity_snapshot=source["severity"], created_at=m.created_at, updated_at=datetime.now(timezone.utc))

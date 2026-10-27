@@ -22,7 +22,7 @@ from app.schemas.diagnosis import (
 from app.services.ml_service import predict_all, predict_pair, get_prediction_context
 from app.services.pesticide_service import pesticide_infos
 from app.services.recapture import apply_pair_specialist, check_recapture, fuse_predictions
-from app.services.decision import decision
+from app.services.decision import crop_mismatch, decision
 from app.services.result_recovery import lookup, commit_result
 
 
@@ -103,8 +103,7 @@ def _remove_file(path: Path | None) -> None:
 def _response(db: Session, diagnosis: Diagnosis) -> DiagnoseResponse:
     disease = diagnosis.disease
     content = diagnosis.content_snapshot or _content(db, disease)
-    mismatch = bool(diagnosis.selected_crop and diagnosis.selected_crop != content["predicted_crop"]
-                    and content["category"] != "other")
+    mismatch = crop_mismatch(diagnosis.selected_crop, content["predicted_crop"], content["category"])
     initial = diagnosis.original_predictions or []
     mapping = {d.model_class_id: d.name for d in db.query(Disease).all()}
     return DiagnoseResponse(

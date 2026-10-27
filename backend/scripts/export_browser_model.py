@@ -35,12 +35,12 @@ def export(checkpoint, target):
     import onnx
     import onnxruntime as ort
     import torch
-    from app.services.ml_service import MODEL_CLASS_IDS, OTHER_CLASS_ID, _read_checkpoint, IMAGENET_MEAN, IMAGENET_STD
+    from app.services.ml_service import MODEL_CLASS_IDS, OPTIONAL_CLASS_IDS, _read_checkpoint, IMAGENET_MEAN, IMAGENET_STD
     from app.services.decision import POLICY_VERSION
     from app.core.config import settings
     from app.services.recapture import CONFUSION_PAIRS, DEFAULT_MARGIN, FUSE_WEIGHT_SECOND
 
-    loaded, digest = _read_checkpoint(checkpoint, set(MODEL_CLASS_IDS), frozenset({OTHER_CLASS_ID}))
+    loaded, digest = _read_checkpoint(checkpoint, set(MODEL_CLASS_IDS), OPTIONAL_CLASS_IDS)
     model, class_ids, device, size = loaded
     model = model.cpu().eval()
     target.mkdir(parents=True, exist_ok=True)

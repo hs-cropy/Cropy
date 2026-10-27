@@ -242,7 +242,7 @@
       "초점이 맞을 때까지 잠깐 멈췄다가 촬영하기",
       "밝은 곳에서 그림자 없이 찍기"
     ],
-    "severity": "low",
+    "severity": null,
     "model_class_id": 9,
     "management_actions": [
       "잎 한 장이 화면을 가득 채우도록 가까이에서 찍기",

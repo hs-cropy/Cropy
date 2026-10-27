@@ -16,6 +16,7 @@ import { CropMismatchNotice } from "@/components/CropMismatchNotice";
 import { DiagnosisPageShell } from "@/components/DiagnosisPageActions";
 import { LowConfidencePanel } from "@/components/LowConfidencePanel";
 import { RecapturePanel } from "@/components/RecapturePanel";
+import { isNotCrop } from "@/lib/diagnosis";
 import { CAPTURE_PATH, DIAGNOSIS_PATH, useDiagnosisSession } from "./DiagnosisSession";
 import { useDiagnosisScreen } from "./DiagnosisScreen";
 
@@ -118,11 +119,14 @@ export function DiagnosisPage() {
   // 진단 실패. 추가 촬영(다시 분석)은 실패해도 원래 결과를 두므로 결과가 있어도 실패 안내를 먼저 보인다
   const failed = Boolean(error) && (!result || Boolean(refineTarget));
 
+  // 판별 불가 안내는 저장된 기록이 없어도 되므로 저장·서버 진단 조건과 분리한다
   const exceptionVisible =
     !failed &&
-    result?.save_status === "saved" &&
-    result.prediction_mode !== "browser" &&
-    Boolean(result.recapture || isLowConfidence(result) || isNotCrop(result));
+    result != null &&
+    (isNotCrop(result) ||
+      (result.save_status === "saved" &&
+        result.prediction_mode !== "browser" &&
+        Boolean(result.recapture || isLowConfidence(result))));
 
   // 예외 화면(재촬영·저신뢰·실패)은 각 패널이 제목과 버튼을 갖는다
   const exception = exceptionVisible ? (
@@ -287,9 +291,4 @@ function failureActions(
 
 function isLowConfidence(result: { decision_reasons?: string[] | null }) {
   return result.decision_reasons?.includes("low_confidence") ?? false;
-}
-
-/** 판별 불가: 작물 잎을 알아보지 못한 사진 (decision-v2) */
-function isNotCrop(result: { decision_status?: string | null }) {
-  return result.decision_status === "not_crop";
 }

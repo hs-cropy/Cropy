@@ -49,6 +49,13 @@ def test_other_overrides_mismatch_confusion_and_crop(db, sample_image, crop, sto
     assert service.get_diagnosis_detail(db, result.id).decision_status == "not_crop"
 
 
+def test_other_has_no_severity_and_stays_out_of_severity_filters(db, sample_image):
+    result = service.diagnose_image(db, sample_image, "leaf.jpg", None)
+    assert result.severity is None
+    assert service.get_history(db, 1, 10).items[0].severity is None
+    assert service.get_history(db, 1, 10, severity="low").total == 0
+
+
 def test_crop_results_keep_previous_decisions():
     assert decision(.3, True, {"region": "잎 뒷면"}, "disease", .5)["decision_reasons"] == \
         ["crop_mismatch", "confusion", "low_confidence"]
