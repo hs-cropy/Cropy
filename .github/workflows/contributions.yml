@@ -1,0 +1,45 @@
+name: README contributions
+
+on:
+  schedule:
+    - cron: '0 15 * * *' # 매일 00:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: readme-contributions
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: develop
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+      - name: Collect merged PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr list --repo "$GITHUB_REPOSITORY" --state merged --limit 1000 --json author > "$RUNNER_TEMP/prs.json"
+      - name: Update README
+        run: node .github/scripts/contributions.mjs README.md "$RUNNER_TEMP/prs.json" HEAD
+      # 날짜만 바뀐 날은 커밋하지 않는다. GITHUB_TOKEN 푸시는 CI·배포 워크플로를 다시 실행하지 않는다.
+      - name: Commit when numbers changed
+        run: |
+          if ! git diff -U0 README.md | grep -qE '^[-+]\|'; then
+            git checkout -- README.md
+            echo "No contribution change."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
+          git commit -am 'docs: README 팀원별 기여 현황 갱신 [skip ci]'
+          git push origin HEAD:develop
