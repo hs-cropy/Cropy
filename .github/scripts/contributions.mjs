@@ -56,7 +56,12 @@ export function render(rows, date) {
 
 export function replaceSection(readme, section) {
   const start = readme.indexOf(START), end = readme.indexOf(END);
-  if (start === -1 || end === -1) return readme.trimEnd() + '\n\n## 팀원별 기여\n\n' + section + '\n';
+  if (start === -1 || end === -1) {
+    // 처음에는 제목 바로 아래, 첫 번째 ## 절 앞에 넣는다.
+    const at = readme.search(/^## /m);
+    const block = '## 팀원별 기여\n\n' + section + '\n\n';
+    return at === -1 ? readme.trimEnd() + '\n\n' + block : readme.slice(0, at) + block + readme.slice(at);
+  }
   return readme.slice(0, start) + section + readme.slice(end + END.length);
 }
 

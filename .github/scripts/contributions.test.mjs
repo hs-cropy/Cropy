@@ -20,4 +20,6 @@ test('existing section is replaced in place', () => {
   const readme = `# A\n\n${START}\nold\n${END}\n\ntail\n`;
   assert.equal(replaceSection(readme, `${START}\nnew\n${END}`), `# A\n\n${START}\nnew\n${END}\n\ntail\n`);
 });
-test('missing section is appended under a heading', () => assert.match(replaceSection('# A\n', 'X'), /## 팀원별 기여\n\nX\n$/));
+test('missing section goes above the first section', () =>
+  assert.equal(replaceSection('# A\n\nintro\n\n## 기능\n\nbody\n', 'X'), '# A\n\nintro\n\n## 팀원별 기여\n\nX\n\n## 기능\n\nbody\n'));
+test('readme without sections gets the block at the end', () => assert.match(replaceSection('# A\n', 'X'), /## 팀원별 기여\n\nX\n\n$/));
