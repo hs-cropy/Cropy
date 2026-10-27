@@ -163,7 +163,7 @@ Content-Type이 없거나 `image/`로 시작하지 않으면 `400 UNSUPPORTED_IM
 저장한다. 원본 바이트는 유지하며 재인코딩이나 EXIF 회전을 자동 적용하지 않는다.
 ASGI 계층에서 multipart 파싱 전에 전체 요청을 `MAX_UPLOAD_MB`에 64KiB를 더한 한도로 제한한다.
 Content-Length가 크면 본문을 읽기 전에 413, 헤더가 없거나 거짓이면 실제 수신량으로 제한한다.
-본문 수신이 `UPLOAD_IDLE_TIMEOUT_SECONDS`(기본 30초) 동안 멈추거나 전체 수신이
+본문 수신이 `UPLOAD_IDLE_TIMEOUT_SECONDS`(기본 20초, Next.js 프록시 약 30초보다 짧게) 동안 멈추거나 전체 수신이
 `UPLOAD_TIMEOUT_SECONDS`(기본 300초)를 넘으면 라우트를 실행하지 않고 408 `UPLOAD_TIMEOUT`(retryable)을 반환한다.
 허용된 요청은 제한된 임시 버퍼에서 다시 읽고, 개별 파일에는 별도로 `MAX_UPLOAD_MB`를 적용한다.
 이는 저속 업로드 타임아웃이나 연결 개수 제한을 대체하지 않는다.
