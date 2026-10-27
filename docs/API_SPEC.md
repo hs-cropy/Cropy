@@ -341,8 +341,7 @@ REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_typ
 
 Qwen 기능 토큰/handler와 STT 통합은 계획 단계다. 브라우저 카메라 촬영과 Web Speech API TTS 안내는 구현되어 있으며 보드 음성 통합과 구분한다. 데이터 시트의 get_diagnosis 등 기능명을 현재 REST 엔드포인트로 간주하지 않는다. 실제 호출·인자·오류·시간 제한은 [LLM 계획](LLM_FINETUNING_PLAN.md)에 따라 통합 시 확정한다.
 
-
-### 진단 결과 카드 안내 필드
+## 진단 결과 카드 안내 필드
 
 `POST /api/v1/diagnose`, `POST /api/v1/diagnose/{diagnosis_id}/refine`,
 `GET /api/v1/history/{diagnosis_id}`, `POST /api/v1/results/{token}/save` 및
@@ -376,3 +375,13 @@ DB는 diseases 테이블에 TEXT/JSON 컬럼을 추가한다. 시작 시 기존 
 백엔드 병합 후 `hs-cropy/locallife-api-docs` 저장소의 `docs/api-docs.json`,
 `docs/api-docs.html`에 각각 복사하고 해당 저장소 PR로 배포한다.
 이 저장소 변경만으로 외부 문서 사이트가 갱신되지는 않는다.
+
+현재 `summary_message`는 병해 6종에 공통 문구 1종, 정상 3종에 공통 문구 1종을 제공한다. 클래스마다 서로 다른 요약 문구를 제공하는 것은 아니다.
+
+이 안내 필드는 진단 시점의 콘텐츠 스냅샷에 저장된다. 기존 스냅샷에 새 안내를 소급 적용하지 않으며, 안내 필드가 없는 이전 기록은 `summary_message=null`, `management_action_details=[]`로 반환될 수 있다.
+
+### 후속 프론트엔드 작업
+
+- `frontend/types/diagnosis.ts`에 새 안내 필드의 타입을 반영한다.
+- `frontend/public/offline/core.mjs`의 오프라인 결과 객체에 `summary_message`와 `management_action_details`를 전달한다.
+- `management_action_details`가 비어 있으면 기존 `management_actions`의 제목을 표시한다.
