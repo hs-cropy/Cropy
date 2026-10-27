@@ -111,7 +111,7 @@ def offline_bundle(tmp_path, monkeypatch):
     return manifest
 
 
-def test_offline_resend_after_lost_cookie_returns_record_to_new_cookie(devices, sample_image, offline_bundle):
+def test_offline_resend_after_lost_cookie_returns_record_to_new_cookie(devices, sample_image, second_image, offline_bundle):
     import json
     from datetime import datetime, timezone
     a, b = devices
@@ -130,4 +130,4 @@ def test_offline_resend_after_lost_cookie_returns_record_to_new_cookie(devices, 
     assert first.json()["id"] in [i["id"] for i in b.get("/api/v1/history").json()["items"]]
     assert sync(b, meta, sample_image).json()["id"] == first.json()["id"]  # cached for the new device now
     # Same record ID with different content is still a conflict.
-    assert sync(a, meta, sample_image + b"\0").status_code == 409
+    assert sync(a, meta, second_image).status_code == 409
