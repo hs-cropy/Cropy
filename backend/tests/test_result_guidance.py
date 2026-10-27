@@ -161,8 +161,8 @@ def test_offline_bundle_preserves_its_copy(
 
     if old_bundle:
         for row in rows:
-            row.pop("summary_message")
-            row.pop("management_action_details")
+            row.pop("summary_message", None)
+            row.pop("management_action_details", None)
 
     bundle = dict(
         version="a" * 64,
