@@ -1,6 +1,8 @@
 """TTS 서비스: 엔진 호출, wav 검증, 캐시."""
 
 import io
+import os
+import threading
 import wave
 from pathlib import Path
 
@@ -168,3 +170,87 @@ def test_temp_cleanup_failure_keeps_the_original_error(monkeypatch, tmp_path):
     _refuse_unlink(monkeypatch, tmp_path)
     with pytest.raises(tts_service.TTSUnavailableError, match="저장하지 못했습니다"):
         tts_service.synthesize("안녕하세요")
+
+
+# ── 보관 개수 상한과 동시 접근 ────────────────────────────────────────────────
+
+
+def test_cache_keeps_only_the_most_recently_used_files(monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "tts_cache_dir", tmp_path)
+    monkeypatch.setattr(settings, "tts_cache_max_files", 2)
+    for index, text in enumerate(["하나", "둘", "셋"]):
+        tts_service.synthesize(text)
+        os.utime(tts_service._cache_path(text), (1000 + index, 1000 + index))
+    assert tts_service.cached_audio("하나") is None  # 가장 오래 안 쓴 파일이 지워졌다
+    assert len(list(tmp_path.glob("*.wav"))) == 2
+
+
+def test_cache_lookup_marks_the_file_as_recently_used(monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "tts_cache_dir", tmp_path)
+    monkeypatch.setattr(settings, "tts_cache_max_files", 2)
+    for index, text in enumerate(["하나", "둘"]):
+        tts_service.synthesize(text)
+        os.utime(tts_service._cache_path(text), (1000 + index, 1000 + index))
+    assert tts_service.cached_audio("하나") is not None  # 다시 들었으니 최근 사용
+    tts_service.synthesize("셋")
+    assert tts_service.cached_audio("하나") is not None
+    assert tts_service.cached_audio("둘") is None
+
+
+def test_prune_failure_still_returns_the_new_audio(monkeypatch, tmp_path):
+    # 오래된 캐시를 못 지워도(Windows에서 다른 요청이 열어 둔 파일 등) 새 음성은 돌려준다
+    monkeypatch.setattr(settings, "tts_cache_dir", tmp_path)
+    monkeypatch.setattr(settings, "tts_cache_max_files", 1)
+    tts_service.synthesize("하나")
+    os.utime(tts_service._cache_path("하나"), (1000, 1000))
+    _refuse_unlink(monkeypatch, tmp_path)
+    assert tts_service.synthesize("둘").startswith(b"RIFF")
+
+
+class _WatchedLock:
+    """다른 요청이 잠금에 막히는 순간을 알린다 — 시간 대기 없이 실행 순서를 확인하기 위함."""
+
+    def __init__(self, lock, blocked):
+        self.lock, self.blocked = lock, blocked
+
+    def __enter__(self):
+        if not self.lock.acquire(blocking=False):
+            self.blocked.set()
+            self.lock.acquire()
+
+    def __exit__(self, *exc):
+        self.lock.release()
+
+
+def test_late_broken_cache_cleanup_keeps_a_newly_saved_wav(monkeypatch, tmp_path):
+    # 깨진 파일을 읽은 요청이 늦게 지우면서, 그사이 다른 요청이 저장한 정상 파일을 지우면 안 된다
+    monkeypatch.setattr(settings, "tts_cache_dir", tmp_path)
+    path = tts_service._cache_path("안녕하세요")
+    path.write_bytes(b"broken")
+    # 다른 요청이 잠금에 막혔거나(정상) 저장까지 끝냈을 때(잠금이 없을 때) 이 요청이 판정을 이어간다
+    progress = threading.Event()
+    real_lock, real_validate = tts_service._file_lock, tts_service._validate_wav
+    monkeypatch.setattr(tts_service, "_file_lock", lambda p: _WatchedLock(real_lock(p), progress))
+
+    def other_request():
+        try:
+            tts_service.synthesize("안녕하세요")
+        finally:
+            progress.set()
+
+    other = threading.Thread(target=other_request)
+
+    def validate_while_other_request_saves(audio):
+        if audio == b"broken" and threading.current_thread() is not other and not other.ident:
+            other.start()
+            assert progress.wait(5)
+        real_validate(audio)
+
+    monkeypatch.setattr(tts_service, "_validate_wav", validate_while_other_request_saves)
+    try:
+        assert tts_service.cached_audio("안녕하세요") is None
+    finally:
+        if other.ident:
+            other.join(5)
+    assert not other.is_alive()
+    assert path.read_bytes().startswith(b"RIFF")

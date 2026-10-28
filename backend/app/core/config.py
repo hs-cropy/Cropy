@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     tts_engine: Literal["off", "mock", "http"] = "off"
     tts_server_url: str = "http://127.0.0.1:8100"
     tts_timeout_seconds: float = Field(default=60, gt=0)
+    # 캐시 wav 최대 개수(0이면 제한 없음). 오래 안 쓴 파일부터 지운다
+    tts_cache_max_files: int = Field(default=500, ge=0)
     # 캐시 키에 들어간다. 학습한 목소리로 바꾸면 이 값도 바꿔야 옛 음성이 재사용되지 않는다
     tts_voice: str = "melo-kr-pretrained"
     # 고령 사용자 기준으로 기본보다 약간 느리게 읽는다

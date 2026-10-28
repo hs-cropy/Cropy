@@ -13,6 +13,7 @@ import hashlib
 import io
 import logging
 import os
+import threading
 import wave
 from pathlib import Path
 from uuid import uuid4
@@ -39,26 +40,59 @@ def _cache_path(text: str) -> Path:
     return settings.tts_cache_dir / f"{_cache_key(text)}.wav"
 
 
+# 같은 캐시 파일의 읽기·손상 판정·삭제·교체를 한 번에 하나씩 한다. 손상 파일을 늦게 처리한
+# 요청이 그사이 다른 요청이 저장한 정상 파일을 지우지 않게 하기 위함이다.
+# 백엔드는 워커 1개로 실행되므로(backend/Dockerfile) 프로세스 안 잠금으로 충분하다
+_FILE_LOCKS = [threading.Lock() for _ in range(64)]
+
+
+def _file_lock(path: Path) -> threading.Lock:
+    return _FILE_LOCKS[int(path.stem[:8], 16) % len(_FILE_LOCKS)]
+
+
 def cached_audio(text: str) -> bytes | None:
     """검증된 캐시 wav의 내용. 전원 차단 등으로 깨진 파일은 지워서 다음 요청이 다시 합성하게 한다.
 
-    경로가 아니라 이미 읽은 바이트를 돌려준다 — 응답을 보내는 사이 파일이 지워지거나
-    바뀌어도 영향을 받지 않게 하기 위함이다.
+    경로가 아니라 이미 읽은 바이트를 돌려준다 — 응답이 파일을 다시 열기 전에 다른 요청의
+    보관 개수 정리가 그 파일을 지울 수 있기 때문이다.
     """
     path = _cache_path(text)
-    try:
-        audio = path.read_bytes()
-        _validate_wav(audio)
-    except FileNotFoundError:
-        return None
-    except (OSError, TTSUnavailableError):
+    with _file_lock(path):
         try:
-            path.unlink(missing_ok=True)
-        except OSError as exc:
-            # 지우지 못한 깨진 파일을 정상 음성으로 돌려줄 수는 없다
-            raise TTSUnavailableError(f"깨진 음성 캐시를 지우지 못했습니다: {exc}") from exc
-        return None
+            audio = path.read_bytes()
+            _validate_wav(audio)
+        except FileNotFoundError:
+            return None
+        except (OSError, TTSUnavailableError):
+            try:
+                path.unlink(missing_ok=True)
+            except OSError as exc:
+                # 지우지 못한 깨진 파일을 정상 음성으로 돌려줄 수는 없다
+                raise TTSUnavailableError(f"깨진 음성 캐시를 지우지 못했습니다: {exc}") from exc
+            return None
+        try:
+            os.utime(path)  # 보관 개수 제한은 오래 안 쓴 파일부터 지운다
+        except OSError:
+            pass
     return audio
+
+
+def _prune_cache(keep: Path) -> None:
+    limit = settings.tts_cache_max_files
+    if not limit:
+        return
+    try:
+        files = sorted(settings.tts_cache_dir.glob("*.wav"), key=lambda p: p.stat().st_mtime, reverse=True)
+    except OSError:
+        return
+    for old in files[limit:]:
+        if old == keep:
+            continue
+        try:
+            old.unlink(missing_ok=True)
+        except OSError as exc:
+            # 정리는 다음 저장 때 다시 한다. 이미 만든 음성은 그대로 돌려준다
+            logger.warning("TTS cache prune failed for %s: %s", old.name, exc)
 
 
 def _mock_wav() -> bytes:
@@ -121,7 +155,8 @@ def synthesize(text: str) -> bytes:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp.write_bytes(audio)
-        os.replace(tmp, path)  # 동시 요청이 반쯤 쓰인 파일을 읽지 않도록 원자적으로 교체
+        with _file_lock(path):
+            os.replace(tmp, path)  # 동시 요청이 반쯤 쓰인 파일을 읽지 않도록 원자적으로 교체
     except OSError as exc:
         # 디스크 부족·권한 문제. 문서화한 503으로 알려 프론트가 브라우저 음성으로 대신 읽게 한다
         try:
@@ -129,4 +164,5 @@ def synthesize(text: str) -> bytes:
         except OSError as cleanup_exc:
             logger.warning("TTS temp file cleanup failed for %s: %s", tmp.name, cleanup_exc)
         raise TTSUnavailableError(f"음성 캐시에 저장하지 못했습니다: {exc}") from exc
+    _prune_cache(keep=path)
     return audio
