@@ -112,3 +112,6 @@ backend/app/data/seed/*
 
 /ml/test-results/
 /마음ai/test-results/
+
+# TTS 합성 캐시
+backend/tts_cache/
