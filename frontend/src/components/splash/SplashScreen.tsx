@@ -80,7 +80,7 @@ export function SplashScreen() {
         <div className={styles.logoWrap}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/cropy-splash-logo.png"
+            src="/brand/cropy-splash-logo.svg"
             alt="Cropy"
             className={styles.logo}
           />
