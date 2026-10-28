@@ -22,6 +22,9 @@ if _is_sqlite:
         cursor = dbapi_connection.cursor()
         try:
             cursor.execute("PRAGMA foreign_keys=ON")
+            # Readers no longer block the writer (and vice versa) while a diagnosis is saved.
+            # Persistent per DB file; in-memory databases report "memory" and are unaffected.
+            cursor.execute("PRAGMA journal_mode=WAL")
         finally:
             cursor.close()
 
