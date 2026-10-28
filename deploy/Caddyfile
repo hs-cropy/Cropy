@@ -1,0 +1,33 @@
+# CropCare AI - HTTPS 리버스 프록시 (docker-compose.prod.yml 에서 사용)
+#
+# SITE_ADDRESS 는 .env 에서 들어온다 (예: 203.0.113.10.sslip.io).
+# 브라우저는 이 주소 하나만 호출하고, /api 와 /uploads 는 frontend(Next.js)가
+# backend 로 다시 프록시한다. 그래서 여기서는 frontend 로만 넘긴다.
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# 업로드 한도는 backend 가 강제한다(MAX_UPLOAD_MB=100). 여기서는 그보다 넉넉하게 둔다.
+	# 오프라인 기록 동기화는 파일 한도의 2배까지 받는다 (docs/operations/MOBILE_PHOTOS.md)
+	request_body {
+		max_size 250MB
+	}
+
+	reverse_proxy frontend:3000 {
+		# 업로드가 끝난 뒤 응답을 기다리는 시간만 제한한다. CPU 추론이 느릴 수 있어 넉넉히 둔다.
+		# read_timeout 은 두지 않는다. 느린 회선에서 큰 사진을 올리는 동안에도 시간이 흘러
+		# 업로드 도중 502 가 날 수 있다. Next.js rewrite 프록시에는 별도의 기본 30초 제한이 있다
+		transport http {
+			response_header_timeout 120s
+		}
+	}
+
+	header {
+		# 데모 서버라 하루만 건다. sslip.io 주소는 IP를 반납하면 다른 사람에게 넘어가므로
+		# 길게 걸면 그 사람의 서버에도 브라우저가 https 를 강제한다
+		Strict-Transport-Security "max-age=86400"
+		X-Content-Type-Options nosniff
+		-Server
+		-X-Powered-By
+	}
+}

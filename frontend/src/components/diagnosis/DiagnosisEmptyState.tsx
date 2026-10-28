@@ -53,7 +53,7 @@ export function DiagnosisEmptyState({
           }
         </p>
         <Link
-          href="/#guide"
+          href="/home#guide"
           onClick={handleGuideClick}
           className={cn(
             "inline-flex min-h-12 w-60 items-center justify-center gap-2 rounded-lg px-3 text-cropy-helper font-medium text-cropy-text-primary hover:text-cropy-action-hover",
@@ -79,7 +79,7 @@ export function DiagnosisEmptyState({
         </p>
       </div>
       <Link
-        href="/#guide"
+        href="/home#guide"
         onClick={handleGuideClick}
         className={cn(
           "flex min-h-11 w-full items-center justify-center rounded-lg text-cropy-helper font-bold text-cropy-text-secondary",

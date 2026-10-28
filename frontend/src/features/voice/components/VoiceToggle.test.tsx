@@ -4,7 +4,7 @@ import { setVoiceEnabled, VOICE_SETTING_KEY } from "../hooks/useVoiceSetting";
 import { installFakeSpeech, spokenTexts, type FakeSpeech } from "../testing/fakeSpeech";
 import { VoiceToggle } from "./VoiceToggle";
 
-const navigation = vi.hoisted(() => ({ pathname: "/" }));
+const navigation = vi.hoisted(() => ({ pathname: "/home" }));
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
@@ -16,7 +16,7 @@ beforeEach(() => {
   synth = installFakeSpeech();
   setVoiceEnabled(false);
   localStorage.clear();
-  navigation.pathname = "/";
+  navigation.pathname = "/home";
 });
 
 function toggleButton() {

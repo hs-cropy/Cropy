@@ -90,14 +90,14 @@ export function RecapturePanel({
                 비슷한 증상이 보여요
               </h2>
               <p className="break-keep text-base leading-7 text-cropy-text-secondary">
-                두 병해를 구분하기 위해 같은 잎의 특정 부위를 한 장 더 찍어주세요.
+                후보를 구분하기 위해 같은 잎의 특정 부위를 한 장 더 찍어주세요.
               </p>
             </div>
             <Mascot name="comparing" size={64} className="lg:size-20" />
           </header>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Card radius="lg" padding="lg">
+          <div className="grid gap-4 lg:grid-cols-2 lg:gap-8 xl:grid-cols-[minmax(0,440px)_minmax(0,728px)] xl:max-w-[1200px]">
+            <Card radius="lg" padding="lg" className="lg:min-h-[314px] lg:p-6">
               <h3 className="text-lg font-bold text-cropy-text-primary">AI가 비교 중인 후보</h3>
               <div className="mt-4 space-y-3">
                 {guidance.candidates.map((candidate, index) => (
@@ -114,19 +114,38 @@ export function RecapturePanel({
               </p>
             </Card>
 
-            <Card radius="lg" padding="lg" className="space-y-4">
+            <Card radius="lg" padding="lg" className="flex flex-col gap-4 lg:min-h-[314px] lg:p-6">
               <h3 className="text-lg font-bold text-cropy-text-primary">
                 이번엔 {guidance.region}{objectParticle(guidance.region)} 찍어주세요
               </h3>
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl bg-cropy-surface-canvas px-4 py-6">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-xl bg-cropy-surface-canvas px-4 py-4 lg:flex-1 lg:py-0">
                 <div className="flex flex-col items-center gap-2">
-                  <span aria-hidden className="icon-[lucide--leaf] size-12 text-cropy-text-secondary" />
-                  <span className="text-sm font-semibold text-cropy-text-secondary">앞면</span>
+                  <img
+                    src="/guide/leaf.svg"
+                    alt=""
+                    aria-hidden="true"
+                    className="size-20 object-contain lg:size-[136px]"
+                  />
+                  <span className="text-sm font-semibold text-cropy-text-secondary">
+                    앞면
+                  </span>
                 </div>
-                <span aria-hidden className="icon-[lucide--rotate-cw] size-6 text-cropy-text-secondary" />
+
+                <span
+                  aria-hidden="true"
+                  className="icon-[lucide--rotate-cw] size-6 text-cropy-text-secondary"
+                />
+
                 <div className="flex flex-col items-center gap-2">
-                  <span aria-hidden className="icon-[lucide--leaf] size-12 text-cropy-action-primary" />
-                  <span className="text-sm font-semibold text-cropy-action-primary">{guidance.region}</span>
+                  <img
+                    src="/guide/leaf-underside.svg"
+                    alt=""
+                    aria-hidden="true"
+                    className="size-20 object-contain lg:size-[136px]"
+                  />
+                  <span className="text-sm font-semibold text-cropy-action-primary">
+                    뒷면
+                  </span>
                 </div>
               </div>
               <p className="break-keep text-base leading-7 text-cropy-text-secondary">
@@ -157,7 +176,7 @@ export function RecapturePanel({
                 추가 사진은 이렇게 찍어주세요
               </h2>
               <p className="break-keep text-base leading-7 text-cropy-text-secondary">
-                크게, 밝게, 흔들리지 않게 찍어주세요.
+                크기·밝기·초점, 세 가지만 확인해보세요.
               </p>
             </div>
             <Mascot name="retake" size={64} className="lg:size-20" />
@@ -172,35 +191,145 @@ export function RecapturePanel({
 
           <div className="grid gap-3 lg:grid-cols-3">
             <Card radius="lg" padding="lg" className="space-y-3">
-              <p className="font-bold text-cropy-text-primary">01 · 잎이 화면을 채우게</p>
-              <div className="flex items-center justify-center gap-6 rounded-xl bg-cropy-surface-canvas py-5">
-                <span aria-hidden className="icon-[lucide--leaf] size-6 text-cropy-text-secondary" />
-                <span aria-hidden className="icon-[lucide--arrow-right] size-5 text-cropy-text-secondary" />
-                <span aria-hidden className="icon-[lucide--leaf] size-14 text-cropy-action-primary" />
-              </div>
-              <p className="text-sm leading-6 text-cropy-text-secondary">
-                병반이 있는 부위와 주변 잎을 화면에 크게 담아주세요.
+              <p className="font-bold text-cropy-text-primary">
+                01 · 잎이 화면을 채우게
               </p>
+              <p className="text-sm leading-6 text-cropy-text-secondary">
+                반점과 주변 잎이 함께 보이게 가까이 대세요.
+                잎이 틀 안에 크게 들어오면 좋아요.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-cropy-surface-canvas">
+                    <img
+                      src="/guide/leaf-small.svg"
+                      alt=""
+                      className="h-1/3 w-1/3 object-contain"
+                    />
+                    <img
+                      src="/guide/frame.svg"
+                      alt=""
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                    />
+                  </div>
+                  <p className="text-center text-xs text-cropy-text-primary/57">
+                    너무 멀어요
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-cropy-surface-canvas">
+                    <img
+                      src="/guide/leaf.svg"
+                      alt=""
+                      className="h-3/4 w-3/4 object-contain"
+                    />
+                    <img
+                      src="/guide/frame.svg"
+                      alt=""
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                    />
+                  </div>
+                  <p className="text-center text-xs font-semibold text-cropy-action-primary">
+                    이 정도로 크게
+                  </p>
+                </div>
+              </div>
             </Card>
             <Card radius="lg" padding="lg" className="space-y-3">
-              <p className="font-bold text-cropy-text-primary">02 · 색과 무늬가 보이게</p>
-              <div className="flex items-center justify-center gap-6 rounded-xl bg-cropy-surface-canvas py-5">
-                <span aria-hidden className="icon-[lucide--sun] size-10 text-cropy-text-secondary" />
-                <span aria-hidden className="icon-[lucide--leaf] size-14 text-cropy-action-primary" />
-              </div>
-              <p className="text-sm leading-6 text-cropy-text-secondary">
-                밝은 그늘에서 촬영하고 강한 빛 반사와 그림자를 피해 주세요.
+              <p className="font-bold text-cropy-text-primary">
+                02 · 색과 무늬가 보이게
               </p>
+
+              <p className="text-sm leading-6 text-cropy-text-secondary">
+                밝은 그늘이나 창가에서 찍어주세요.
+                검은 그림자와 하얀 빛 반사를 피해 주세요.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-cropy-surface-canvas">
+                    <img
+                      src="/guide/leaf.svg"
+                      alt=""
+                      className="h-3/4 w-3/4 object-contain"
+                    />
+
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 bg-black/50"
+                    />
+                  </div>
+
+                  <p className="text-center text-xs text-cropy-text-primary/57">
+                    어두워 안 보여요
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-cropy-surface-canvas">
+                    <img
+                      src="/guide/leaf.svg"
+                      alt=""
+                      className="h-3/4 w-3/4 object-contain"
+                    />
+                    <img
+                      src="/guide/frame.svg"
+                      alt=""
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                    />
+                  </div>
+
+                  <p className="text-center text-xs font-semibold text-cropy-action-primary">
+                    색이 잘 보여요
+                  </p>
+                </div>
+              </div>
             </Card>
             <Card radius="lg" padding="lg" className="space-y-3">
-              <p className="font-bold text-cropy-text-primary">03 · 초점을 맞춘 뒤 촬영</p>
-              <div className="flex items-center justify-center gap-6 rounded-xl bg-cropy-surface-canvas py-5">
-                <span aria-hidden className="icon-[lucide--focus] size-10 text-cropy-text-secondary" />
-                <span aria-hidden className="icon-[lucide--leaf] size-14 text-cropy-action-primary" />
-              </div>
-              <p className="text-sm leading-6 text-cropy-text-secondary">
-                촬영 전에 잎의 반점에 초점을 맞추고 흔들리지 않게 찍어주세요.
+              <p className="font-bold text-cropy-text-primary">
+                03 · 반점의 경계가 선명하게
               </p>
+
+              <p className="text-sm leading-6 text-cropy-text-secondary">
+                카메라 초점을 맞춘 뒤 흔들리지 않게 찍어주세요.
+                사진을 올릴 때도 반점의 경계를 확인하세요.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-cropy-surface-canvas">
+                    <img
+                      src="/guide/leaf-blurred.svg"
+                      alt=""
+                      className="h-3/4 w-3/4 object-contain"
+                    />
+                  </div>
+
+                  <p className="text-center text-xs text-cropy-text-primary/57">
+                    흔들려 흐려요
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-cropy-surface-canvas">
+                    <img
+                      src="/guide/leaf.svg"
+                      alt=""
+                      className="h-3/4 w-3/4 object-contain"
+                    />
+                    <img
+                      src="/guide/frame.svg"
+                      alt=""
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                    />
+                  </div>
+
+                  <p className="text-center text-xs font-semibold text-cropy-action-primary">
+                    경계가 선명해요
+                  </p>
+                </div>
+              </div>
             </Card>
           </div>
           <DiagnosisPageActions visible={actionsVisible}>

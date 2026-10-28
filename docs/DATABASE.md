@@ -63,7 +63,7 @@ PSIS 제품 식별 정보. 기존 시드에는 23행이 있다. 제품의 사용
 | usage_method | TEXT | 사용법 (살포 시기·방법) |
 | phi_days | INTEGER | 안전사용기준 — 수확 전 마지막 살포일 |
 | reentry_hours | INTEGER | 재입장 시간 (PSIS 미제공, 현재 전부 NULL) |
-| safety_notes | TEXT | 안전사용기준·사용횟수 원문 |
+| safety_notes | TEXT | 안전사용기준·사용횟수 원문. PSIS 동기화 사용 조건에는 독성·어독성도 포함 |
 
 ### disease_pesticides
 
@@ -110,6 +110,7 @@ PSIS 제품 식별 정보. 기존 시드에는 23행이 있다. 제품의 사용
 | recapture | JSON | 재촬영 지침, 재촬영 완료 후 NULL |
 | updated_at | DATETIME | 마지막 갱신 UTC 시각 |
 | revision | INTEGER | 동시 수정 검출용 버전, 기본 1 |
+| device_id | VARCHAR(64) | 익명 기기 쿠키의 SHA-256 (쿠키 값 자체는 저장하지 않음). 기기 분리 이전 기록은 NULL이며 API로 조회되지 않음 |
 
 새 이미지 경로는 저장 루트에 독립적인 파일명만 기록한다. 기존 Windows·절대 경로는
 basename을 추출하여 현재 UPLOAD_DIR에서 읽는다. DB와 해당 이미지 파일을 함께 이전해야 한다.

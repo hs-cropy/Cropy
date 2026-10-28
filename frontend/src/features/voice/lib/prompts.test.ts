@@ -66,6 +66,13 @@ describe("buildResultPrompt (M04-F9)", () => {
     expect(buildResultPrompt(healthy)).toEqual(["건강한 상태예요"]);
   });
 
+  it("판별 불가는 점수·농약 대신 다시 찍기를 읽는다", () => {
+    expect(buildResultPrompt(makeResult({ disease_name: "판별 불가", category: "other", pesticides: [] }))).toEqual([
+      "작물 잎을 찾지 못했어요",
+      "잎이 잘 보이게 다시 찍어 주세요",
+    ]);
+  });
+
   it("category가 없으면 병해로 보고 읽는다", () => {
     expect(buildResultPrompt(makeResult({ category: undefined }))[1]).toBe(
       "등록 농약 2종이 있어요",

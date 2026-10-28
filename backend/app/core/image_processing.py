@@ -7,6 +7,7 @@ import rawpy
 
 from app.core.config import settings
 from app.core.errors import APIError
+from app.core.photo_metadata import strip_jpeg, strip_png
 from app.core.uploads import IMAGE_EXTENSIONS
 
 register_heif_opener(thumbnails=False)
@@ -56,11 +57,14 @@ def prepare_image(content: bytes) -> tuple[bytes, str]:
         if content[:4] in (b"II*\x00", b"MM\x00*"):
             return _raw(content)
         with Image.open(BytesIO(content), formats=["JPEG", "PNG", "HEIF", "WEBP", "AVIF"]) as image:
-            fmt = image.format
+            # Some phones save multi-picture JPEGs (MPO). Pillow opens the primary
+            # JPEG frame, which is what browsers display and the model reads.
+            fmt = "JPEG" if image.format == "MPO" else image.format
             if fmt not in {"JPEG", "PNG", "HEIF", "WEBP", "AVIF"}:
                 raise APIError(400, "UNSUPPORTED_IMAGE_FORMAT", "JPG, PNG, HEIC/HEIF, DNG, WebP, AVIF 사진을 선택해 주세요.")
             _check_pixels(image.width, image.height)
             convert = fmt not in IMAGE_EXTENSIONS or max(image.size) > MAX_STORED_EDGE
+            orientation = image.getexif().get(0x0112) if fmt == "JPEG" else None
             image.verify()
         with Image.open(BytesIO(content), formats=["JPEG", "PNG", "HEIF", "WEBP", "AVIF"]) as image:
             # JPEG decoder downsampling avoids a full-size 200MP RGB allocation.
@@ -69,8 +73,16 @@ def prepare_image(content: bytes) -> tuple[bytes, str]:
             image.load()
             if convert:
                 return _jpeg(image)
-        # Preserve existing model input semantics for ordinary JPEG/PNG files.
-        return content, IMAGE_EXTENSIONS[fmt]
+        # Preserve existing model input semantics for ordinary JPEG/PNG files:
+        # drop GPS/camera metadata without re-encoding the pixels.
+        try:
+            stripped = strip_jpeg(content, orientation) if fmt == "JPEG" else strip_png(content)
+        except ValueError:
+            # Pillow decoded it but the segment walk did not; never store the metadata.
+            with Image.open(BytesIO(content), formats=[fmt]) as image:
+                image.load()
+                return _jpeg(image)
+        return stripped, IMAGE_EXTENSIONS[fmt]
     except Image.DecompressionBombError as exc:
         raise APIError(413, "IMAGE_RESOLUTION_TOO_LARGE", "이미지 해상도가 너무 큽니다. 크기를 줄여 주세요.") from exc
     except (rawpy.LibRawFileUnsupportedError, rawpy.LibRawNotImplementedError, rawpy.NotSupportedError) as exc:

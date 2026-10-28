@@ -14,7 +14,7 @@ const BASE =
 // grade: 80×36px·알약·13px → lg 폭 72px·안쪽 8px·모서리 8px·14px
 // 모바일에서는 쓰는 쪽이 flex-1 을 줘 한 줄을 똑같이 나눈다. lg 부터는 고정 폭이다
 const KIND: Record<ChipKind, string> = {
-  crop: "min-h-12 w-32 rounded-xl text-cropy-body-lg lg:w-[9.25rem] lg:flex-none lg:border-0 lg:p-3",
+  crop: "min-h-12 w-full rounded-xl text-cropy-body-lg lg:w-full lg:border-0 lg:p-3",
   grade:
     "min-h-9 w-20 rounded-full text-cropy-caption lg:w-[4.5rem] lg:flex-none lg:rounded-lg lg:p-2 lg:text-cropy-helper",
 };

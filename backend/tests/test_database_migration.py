@@ -79,6 +79,16 @@ def test_additive_migration_preserves_history(legacy_database):
 
 
 
+def test_legacy_database_gets_device_index(legacy_database):
+    _, test_engine = legacy_database
+    database.ensure_columns()
+    database.ensure_columns()  # idempotent on the next startup
+    with test_engine.connect() as connection:
+        indexes = {index["name"] for index in inspect(connection).get_indexes("diagnoses")}
+    assert "ix_diagnoses_device_id" in indexes
+
+
+
 def test_backup_contains_restorable_original_schema_and_data(legacy_database, tmp_path):
     path, _ = legacy_database
     database.ensure_columns()

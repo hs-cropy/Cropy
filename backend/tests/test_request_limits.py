@@ -218,3 +218,51 @@ def test_buffer_is_closed_after_success_rejection_disconnect_and_errors(tracked_
             assert exchange.response() == (200, payload)
     assert tracked_spools
     assert all(file.closed for file in tracked_spools)
+
+
+class SlowExchange(Exchange):
+    """Delivers chunks with a delay before each one, like a slow or stalled client."""
+
+    def __init__(self, messages, delays):
+        super().__init__(messages)
+        self.delays = list(delays)
+
+    async def receive(self):
+        if self.received < len(self.delays):
+            await asyncio.sleep(self.delays[self.received])
+        if self.received >= len(self.messages):
+            await asyncio.sleep(3600)  # stalled: no more data ever arrives
+        return await super().receive()
+
+
+def _run_timed(exchange, *, idle, total, app=_echo):
+    from app.core.request_limits import RequestBodyLimitMiddleware
+
+    middleware = RequestBodyLimitMiddleware(app, max_body_bytes=100, idle_timeout=idle, total_timeout=total)
+    asyncio.run(middleware(_scope(), exchange.receive, exchange.send))
+
+
+def _never_called(scope, receive, send):
+    raise AssertionError("route must not run for a timed-out upload")
+
+
+def test_stalled_upload_times_out_without_running_route():
+    exchange = SlowExchange([{"type": "http.request", "body": b"12345", "more_body": True}], [0])
+    _run_timed(exchange, idle=.05, total=5, app=_never_called)
+    status, body = exchange.response()
+    assert status == 408
+    assert json.loads(body)["code"] == "UPLOAD_TIMEOUT" and json.loads(body)["retryable"] is True
+
+
+def test_trickling_upload_hits_total_deadline():
+    # Each chunk arrives within the idle limit, but the whole body never finishes in time.
+    exchange = SlowExchange(_chunks(*[b"1"] * 50), [.03] * 50)
+    _run_timed(exchange, idle=.2, total=.3, app=_never_called)
+    assert exchange.response()[0] == 408
+    assert exchange.received < 50
+
+
+def test_slow_but_steady_upload_within_limits_succeeds():
+    exchange = SlowExchange(_chunks(b"123", b"456", b"789"), [.02, .02, .02])
+    _run_timed(exchange, idle=.5, total=2)
+    assert exchange.response() == (200, b"123456789")

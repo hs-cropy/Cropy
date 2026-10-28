@@ -33,7 +33,7 @@ function currentLinks() {
 
 describe("currentNavKey", () => {
   it.each([
-    ["/", "capture"],
+    ["/home", "capture"],
     ["/diagnosis", "result"],
     ["/history", "history"],
     ["/history/abc", "history"],
@@ -46,7 +46,7 @@ describe("currentNavKey", () => {
 
   it("내비 항목은 Figma 의 세 개다. 진단 결과는 진단 결과 화면(/diagnosis)으로 간다", () => {
     expect(APP_NAV_ITEMS.map((item) => [item.key, item.disabled ? null : item.href])).toEqual([
-      ["capture", "/"],
+      ["capture", "/home"],
       ["result", "/diagnosis"],
       ["history", "/history"],
     ]);
@@ -91,6 +91,7 @@ describe("AppFrame", () => {
   });
 
   it("홈에서는 헤더 내비의 새 진단과 하단 내비의 촬영이 현재 화면이다", () => {
+    navigation.pathname = "/home";
     render(<AppFrame>화면</AppFrame>);
 
     expect(currentLinks()).toEqual([["새 진단"], ["촬영"]]);
@@ -120,7 +121,7 @@ describe("AppFrame", () => {
     for (const name of ["주요 메뉴", "하단 메뉴"]) {
       const links = within(screen.getByRole("navigation", { name })).getAllByRole("link");
       expect(links.map((link) => link.getAttribute("href"))).toEqual([
-        "/",
+        "/home",
         "/diagnosis",
         "/history",
       ]);
@@ -130,7 +131,7 @@ describe("AppFrame", () => {
   it("로고는 홈으로 간다", () => {
     render(<AppFrame>화면</AppFrame>);
 
-    expect(screen.getByRole("link", { name: "Cropy 홈" }).getAttribute("href")).toBe("/");
+    expect(screen.getByRole("link", { name: "Cropy 홈" }).getAttribute("href")).toBe("/home");
   });
 
   it("헤더 오른쪽에는 큰 글자·음성 안내 스위치만 있다", () => {
@@ -143,8 +144,8 @@ describe("AppFrame", () => {
     expect(header.queryByRole("button")).toBeNull();
     // 로고와 내비 항목 말고는 링크가 없다 (기기 진단 링크는 진단 화면 본문으로 옮겼다)
     expect(header.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
-      "/",
-      "/",
+      "/home",
+      "/home",
       "/diagnosis",
       "/history",
     ]);

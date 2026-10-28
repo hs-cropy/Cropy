@@ -25,6 +25,13 @@ export const HEADER_TOGGLE =
 export function AppFrame({ children }: { children: ReactNode }) {
   // 진단 상태(고른 사진·진행 중인 요청·결과)는 촬영 화면과 진단 결과 화면이 함께 쓰고,
   // 화면을 오가도 남아야 해서 앱 틀에 둔다
+  const pathname = usePathname();
+
+  // 스플래시는 헤더·하단 내비게이션 없이 전체 화면 표시
+  if (pathname === "/splash") {
+    return <>{children}</>;
+  }
+
   return (
     <DiagnosisSessionProvider>
       <Frame>{children}</Frame>
@@ -59,10 +66,10 @@ function Frame({ children }: { children: ReactNode }) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
       return;
     }
-    if (pathname !== "/") {
+    if (pathname !== "/home") {
       session.reset();
       // 링크가 촬영 화면으로 옮긴 뒤 처음 컨트롤(사진 업로드 영역)에 초점을 둔다
-      session.markArrival("/", "reset");
+      session.markArrival("/home", "reset");
       return;
     }
     // 같은 주소로 다시 옮겨 가지 않는다. 옮기려다 연결이 끊겨 있으면 화면을 통째로 새로 고칠 수 있다
@@ -78,7 +85,7 @@ function Frame({ children }: { children: ReactNode }) {
           items={APP_NAV_ITEMS}
           current={current}
           onItemClick={handleNavClick}
-          homeHref="/"
+          homeHref="/home"
           actions={
             <>
               {/* Figma 헤더 토글: 모바일은 둘 다 90px(큰글씨에서는 늘어난다),

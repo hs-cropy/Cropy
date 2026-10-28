@@ -98,10 +98,13 @@ backend/app/data/seed/*
 !backend/app/data/seed/diseases.json
 !backend/app/data/seed/pesticides.json
 !backend/app/data/seed/disease_pesticides.json
+!backend/app/data/seed/pesticide_catalog.json
 
 # Local CI test reports
 /frontend/test-results/
 /backend/test-results/
+# tests/recapture-e2e.mjs 가 남기는 디버그 스크린샷
+/frontend/recapture-debug.png
 
 # Storybook
 /frontend/storybook-static/

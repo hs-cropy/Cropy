@@ -42,7 +42,13 @@ export function FilterChips<T extends string>({
       >
         {title}
       </legend>
-      <div className="flex w-full gap-2 lg:flex-wrap">
+      <div
+        className={
+          isCrop
+            ? "grid w-full grid-cols-4 gap-2"
+            : "flex w-full flex-nowrap gap-2"
+        }
+      >
         {options.map((option) => {
           const selected = value === option.value;
           const count = counts?.[option.value];
@@ -55,7 +61,7 @@ export function FilterChips<T extends string>({
               disabled={disabled}
               count={count ?? undefined}
               onClick={() => onChange(option.value)}
-              className="min-w-0 flex-1 lg:flex-none"
+              className="min-w-0 w-full"
             >
               {option.label}
             </Chip>
@@ -66,7 +72,7 @@ export function FilterChips<T extends string>({
               selected={selected}
               disabled={disabled}
               onClick={() => onChange(option.value)}
-              className="min-w-0 flex-1 lg:flex-none"
+              className="min-w-0 flex-1"
             >
               {option.label}
             </Chip>

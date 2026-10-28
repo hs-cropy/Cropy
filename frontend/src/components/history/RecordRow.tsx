@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import type { DiagnosisSummary } from "@/types/diagnosis";
 import { StatusBadge } from "@/components/history/StatusBadge";
+import { isNotCrop } from "@/lib/diagnosis";
 
 interface RecordRowProps {
   item: DiagnosisSummary;
@@ -62,7 +63,9 @@ export function RecordRow({
   item,
   onOpen,
 }: RecordRowProps) {
-  const confidence = Number.isFinite(item.confidence)
+  // 판별 불가는 병해 등급·신뢰도가 없는 결과라 둘 다 "확인 불가"로 둔다
+  const notCrop = isNotCrop(item);
+  const confidence = !notCrop && Number.isFinite(item.confidence)
     ? `${Math.round(
         Math.max(0, Math.min(1, item.confidence)) * 100
       )}%`
@@ -148,7 +151,7 @@ export function RecordRow({
             3. 위험 등급
            ================================= */}
         <div className="flex shrink-0 items-center lg:justify-center">
-          {item.severity ? (
+          {item.severity && !notCrop ? (
             <StatusBadge severity={item.severity} />
           ) : (
             <span className="hidden text-cropy-helper text-cropy-text-secondary lg:inline">

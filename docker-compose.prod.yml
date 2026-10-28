@@ -1,0 +1,56 @@
+# CropCare AI - 단일 서버 HTTPS 배포 (AWS Lightsail 등)
+#
+#   cp deploy/.env.example .env      # SITE_ADDRESS 를 실제 주소로 바꾼다
+#   docker compose up -d --build     # .env 의 COMPOSE_FILE 이 이 파일을 함께 읽게 한다
+#   → https://<SITE_ADDRESS>
+#
+# docker-compose.yml 위에 덮어쓰는 파일이다. 로컬 실행(docker compose up)은 바뀌지 않는다.
+# Caddy가 80·443을 받아 Let's Encrypt 인증서를 자동으로 발급하고 frontend로 넘긴다.
+# frontend의 3000 포트는 외부에 열지 않는다. `!reset`은 Compose 2.24.4 이상이 필요하다.
+# 절차 전체는 docs/AWS_LIGHTSAIL_DEPLOY.md 참고.
+
+# 볼륨 이름을 cropy_cropcare-data 로 고정한다. 프로젝트 이름은 기본적으로 디렉터리
+# 이름을 따르므로, 저장소를 다른 이름으로 clone하면 빈 볼륨이 새로 생겨 이력이 안 보인다
+name: cropy
+
+# 기본 json-file 로그는 끝없이 쌓여 오래 켜 두면 디스크를 채운다
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  backend:
+    environment:
+      # 기본 2억1천만 픽셀은 RGB 버퍼만 약 630MB라 4GB 서버에서 큰 HEIF/RAW 한 장으로 OOM 이 날 수 있다.
+      # 6천만이면 12·48·50MP 사진은 통과하고 64MP 이상 모드는 거절된다.
+      # 파일 크기 한도(100MB)는 프론트 안내와 맞추고 DNG 를 받기 위해 둔다
+      MAX_IMAGE_PIXELS: "60000000"
+    logging: *logging
+
+  frontend:
+    ports: !reset []
+    logging: *logging
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?.env에 SITE_ADDRESS를 설정하세요 (deploy/.env.example 참고)}
+    ports:
+      - "80:80"   # 인증서 발급(HTTP-01)과 https 리다이렉트
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # 발급받은 인증서. 지우면 재발급하게 되어 Let's Encrypt 발급 한도에 걸릴 수 있다
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+    logging: *logging
+
+volumes:
+  caddy_data:
+  caddy_config:

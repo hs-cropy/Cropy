@@ -89,6 +89,7 @@ UPLOAD_ERRORS = {
     400: error_response("빈 파일(EMPTY_IMAGE), 지원하지 않는 형식(UNSUPPORTED_IMAGE_FORMAT), 손상된 이미지(INVALID_IMAGE), 잘못된 multipart(HTTP_ERROR)", "INVALID_IMAGE", example_detail="이미지를 읽을 수 없습니다. 다른 사진으로 시도해 주세요."),
     413: error_response("이미지 용량(IMAGE_TOO_LARGE), 해상도(IMAGE_RESOLUTION_TOO_LARGE), 전체 요청(REQUEST_TOO_LARGE) 한도 초과", "IMAGE_RESOLUTION_TOO_LARGE", example_detail="이미지 해상도가 너무 큽니다. 크기를 줄여 주세요."),
     409: error_response("같은 요청 키로 다른 사진이나 작물을 보낼 수 없습니다.", "IDEMPOTENCY_CONFLICT"),
+    408: error_response("사진 전송이 멈췄거나(UPLOAD_IDLE_TIMEOUT_SECONDS, 기본 20초) 전체 전송 시간(UPLOAD_TIMEOUT_SECONDS, 기본 300초)을 넘음", "UPLOAD_TIMEOUT", True, example_detail="사진 전송 시간이 초과되었습니다. 연결 상태를 확인하고 다시 시도해 주세요."),
     503: error_response("모델(MODEL_UNAVAILABLE), DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가", "MODEL_UNAVAILABLE", True, example_detail="모델 진단 결과를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요."),
 }
 IMAGE_DESCRIPTION = "JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진. image/* 또는 application/octet-stream(MIME 누락 가능). 실제 디코딩으로 검증하며 새 형식·고해상도 사진은 긴 변 4096픽셀 이하 JPEG로 변환합니다. 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조. RAW 지원은 서버 디코더가 읽을 수 있는 압축 방식에 한합니다."
@@ -120,7 +121,7 @@ class CapabilitiesResponse(BaseModel):
     model_config = {"json_schema_extra": {"examples": [{
         "upload": {"formats": ["JPEG", "PNG", "HEIC", "HEIF", "DNG", "WEBP", "AVIF"], "max_bytes": 104857600, "max_pixels": 210000000},
         "crops": ["고추", "무", "배추"],
-        "decision": {"version": "decision-v1", "low_confidence_threshold": .5,
+        "decision": {"version": "decision-v2", "low_confidence_threshold": .5,
                      "confusion_margin": .2, "second_photo_weight": .6, "confusion_pairs": [[2, 3], [4, 5]]},
         "execution": {"server_inference": False, "browser_bundle_available": False,
                       "browser_inference": "device_validation_required", "voice_commands": False},
@@ -143,7 +144,7 @@ class ManifestDisease(BaseModel):
     description: str
     causes: list[str]
     prevention: list[str]
-    severity: str
+    severity: str | None = Field(description="판별 불가(category other)는 null")
     management_actions: list[str]
     summary_message: str | None = None
     management_action_details: list[ManagementActionDetail] = Field(default_factory=list)

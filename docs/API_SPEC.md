@@ -160,9 +160,13 @@ Content-Type이 없거나 `image/`로 시작하지 않으면 `400 UNSUPPORTED_IM
 | 503 | 운영 모델 누락·손상 또는 모델 출력·클래스 ID·점수·병해 DB 매핑이 유효하지 않음 |
 
 `Content-Type`만 신뢰하지 않고 실제 형식·픽셀 수·파일 구조와 전체 디코딩을 확인한 뒤
-저장한다. 원본 바이트는 유지하며 재인코딩이나 EXIF 회전을 자동 적용하지 않는다.
+저장한다. 일반 JPEG/PNG는 픽셀 데이터를 재인코딩하지 않고 EXIF 회전도 자동 적용하지 않는다.
+다만 GPS·기기 정보·촬영 시각 등 EXIF, XMP/IPTC, 주석, 이미지 뒤에 붙은 데이터(모션포토 영상 등)는
+제거하고, 화면 회전용 Orientation만 남긴다.
 ASGI 계층에서 multipart 파싱 전에 전체 요청을 `MAX_UPLOAD_MB`에 64KiB를 더한 한도로 제한한다.
 Content-Length가 크면 본문을 읽기 전에 413, 헤더가 없거나 거짓이면 실제 수신량으로 제한한다.
+본문 수신이 `UPLOAD_IDLE_TIMEOUT_SECONDS`(기본 20초, Next.js 프록시 약 30초보다 짧게) 동안 멈추거나 전체 수신이
+`UPLOAD_TIMEOUT_SECONDS`(기본 300초)를 넘으면 라우트를 실행하지 않고 408 `UPLOAD_TIMEOUT`(retryable)을 반환한다.
 허용된 요청은 제한된 임시 버퍼에서 다시 읽고, 개별 파일에는 별도로 `MAX_UPLOAD_MB`를 적용한다.
 이는 저속 업로드 타임아웃이나 연결 개수 제한을 대체하지 않는다.
 
@@ -254,6 +258,14 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 
 ---
 
+### DELETE /history/{id}
+
+이 기기(익명 기기 쿠키)의 진단 기록 하나를 삭제한다. 1차·재촬영 사진 파일과, 같은 결과를 담은 요청 키 캐시도 함께 지운다. 성공 시 본문 없이 `204`이며 되돌릴 수 없다. 같은 요청 키로 다시 진단하면 새 기록이 만들어진다.
+
+**Errors:** `404` — 기록 없음, 다른 기기의 기록, 기기 분리 이전 기록
+
+---
+
 ### GET /diseases
 
 병해 목록 (검색·필터).
@@ -308,7 +320,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 | 이력 요약 `category`, `severity`, `is_refined`, `content_status` | 정상/병해·등급·재촬영·과거 안내 상태 표시 |
 | 진단 `management_actions`, `content_version`, `content_status` | 관리 안내와 당시 콘텐츠 버전. 이전 스냅샷 없는 기록은 `current_reference` |
 | `current_pesticides` | 당시 `pesticides`와 구분한 현재 카탈로그. 과거 이력의 최신 조건 확인에 사용 |
-| `decision_status`, `decision_reasons`, `policy_version` | 작물 불일치 → 혼동 → 낮은 신뢰도 우선순위와 모든 해당 이유 |
+| `decision_status`, `decision_reasons`, `policy_version` | `decision-v2`. 판별 불가(`not_crop`, 단독) → 작물 불일치 → 혼동 → 낮은 신뢰도 우선순위와 모든 해당 이유 |
 | `initial_predictions`, `is_refined` | 최초 상위 후보와 재촬영 여부 |
 | `save_status`, `recovery_token` | `saved` 또는 DB 저장 실패의 `failed`. 실패해도 보관 성공한 경우 결과를 반환 |
 | `POST /api/v1/results/{token}/save` | 서버에 보관된 결과만 재저장. 임의 진단 JSON은 받지 않으며 재추론하지 않음 |
@@ -318,7 +330,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 
 진단·재촬영의 선택적 `Idempotency-Key`는 최대 128자다. 같은 작업·키·사진·작물은 동일 응답을 재사용한다. 다른 본문이면 `409 IDEMPOTENCY_CONFLICT`다. 성공 응답은 진단과 같은 DB 트랜잭션에 저장한다. 기존 기록보다 오래된 복구 결과는 `409 DIAGNOSIS_CHANGED`, 만료 초안은 `410 RESULT_EXPIRED`다. 기본 복구 TTL은 24시간이며 `RECOVERY_TTL_HOURS`로 1~168시간 설정한다.
 
-오류 응답은 `detail`, `code`, `retryable`, `request_id`를 제공하며 응답 헤더에도 `X-Request-ID`가 있다. 대표 코드: `UNSUPPORTED_IMAGE_FORMAT`(Content-Type 누락 또는 이미지 외 형식), `INVALID_IMAGE`, `EMPTY_IMAGE`, `IMAGE_TOO_LARGE`, `IMAGE_RESOLUTION_TOO_LARGE`, `REQUEST_TOO_LARGE`, `MODEL_UNAVAILABLE`, `MODEL_VERSION_CONFLICT`, `DIAGNOSIS_NOT_FOUND`, `DATABASE_UNAVAILABLE`, `SAVE_FAILED`, `RECOVERY_STORAGE_UNAVAILABLE`.
+오류 응답은 `detail`, `code`, `retryable`, `request_id`를 제공하며 응답 헤더에도 `X-Request-ID`가 있다. 대표 코드: `UNSUPPORTED_IMAGE_FORMAT`(Content-Type 누락 또는 이미지 외 형식), `INVALID_IMAGE`, `EMPTY_IMAGE`, `IMAGE_TOO_LARGE`, `IMAGE_RESOLUTION_TOO_LARGE`, `REQUEST_TOO_LARGE`, `UPLOAD_TIMEOUT`, `MODEL_UNAVAILABLE`, `MODEL_VERSION_CONFLICT`, `DIAGNOSIS_NOT_FOUND`, `DATABASE_UNAVAILABLE`, `SAVE_FAILED`, `RECOVERY_STORAGE_UNAVAILABLE`.
 
 오프라인 metadata는 UUID `client_record_id`, 선택적 `selected_crop`, timezone이 있는 `created_at`, `model_version`, `preprocessing_version`, `bundle_version`, 9개 고유 클래스의 합계 1인 `predictions`를 요구한다. `refined_predictions`가 있으면 재촬영 사진도 있어야 한다. 동일 UUID의 동일 본문 재전송은 중복 저장하지 않는다. 기기 확률은 클라이언트 생성값이며 서버 검증을 병해 정확도 검증으로 해석하지 않는다. 상세 준비·배포·검증 범위는 [오프라인 실행 가이드](OFFLINE_WEB.md)를 참조한다.
 
@@ -333,7 +345,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 
 REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_type`은 query로 전송한다. 오류는 `detail`을 가진 JSON이며 일반 HTTP 오류는 문자열, FastAPI 입력 검증 422는 오류 항목 배열일 수 있다.
 
-현재 앱에는 로그인·API 인증·사용자별 이력 분리가 없다. CORS는 허용 출처 설정이며 인증이 아니다. 이미지 정적 URL도 사용자별 보호가 없다. HTTPS는 배포 프록시에서 설정하며 Compose 기본 구성 자체는 TLS를 제공하지 않는다. 카메라·마이크를 통합할 때 대상 브라우저의 보안 컨텍스트를 확인한다.
+현재 앱에는 로그인·API 인증이 없다. 대신 서버가 첫 요청에 익명 기기 쿠키 `cropy_device`(무작위 값, 1년, `HttpOnly; SameSite=Lax`, HTTPS 프록시 뒤에서는 `Secure`)를 발급하고, 진단 기록을 그 기기 단위로 분리한다. `GET /history`, `GET /history/{id}`, `POST /diagnose/{id}/refine`, `POST /results/{token}/save`는 같은 기기의 기록만 다루며, 다른 기기의 기록은 404다. `Idempotency-Key`와 복구 토큰도 기기별로 구분된다. 기기 분리 이전의 기록(`device_id` 없음)은 어느 기기에도 보이지 않는다. 쿠키를 지우거나 다른 브라우저를 쓰면 다른 기기로 취급되며, 이는 기록 분리일 뿐 인증이 아니다. 브라우저는 같은 출처(Next.js rewrite)로 호출하므로 쿠키가 자동으로 전송된다. `NEXT_PUBLIC_API_URL`로 다른 출처를 직접 호출하면 쿠키가 전송되지 않는다. CORS는 허용 출처 설정이며 인증이 아니다. 이미지 정적 URL(`/uploads/...`)은 추측하기 어려운 UUID 파일명이지만 기기별 접근 검사는 하지 않는다. HTTPS는 배포 프록시에서 설정하며 Compose 기본 구성 자체는 TLS를 제공하지 않는다. 카메라·마이크를 통합할 때 대상 브라우저의 보안 컨텍스트를 확인한다.
 
 ## 내부·예정 인터페이스
 

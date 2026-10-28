@@ -22,7 +22,7 @@ import { waitAnalyzingHold } from "./analyzingHold";
 /** 새로고침 뒤 진단 결과 화면이 다시 불러올 마지막 결과의 id (저장된 진단만) */
 const LAST_RESULT_KEY = "cropy:lastDiagnosisId";
 
-export const CAPTURE_PATH = "/";
+export const CAPTURE_PATH = "/home";
 export const DIAGNOSIS_PATH = "/diagnosis";
 
 /**
@@ -265,12 +265,18 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
   };
 
   const submit = async () => {
-    // 진행 중 중복 시작을 막는다. 사진이 없으면 버튼 자체가 보이지 않는다
-    // 같은 순간 두 번 눌러 loading 이 아직 반영되지 않았어도 요청이 있으면 막는다
+    // 진행 중 중복 시작을 막는다.
     if (loading || !file || requestRef.current) return;
     const refine = refineRef.current;
 
+    // 화면 이동 전에 개발용 Preview 파라미터를 저장한다.
+    const previewMode =
+      process.env.NODE_ENV === "development"
+        ? new URLSearchParams(window.location.search).get("preview")
+        : null;
+
     setLoading(true);
+
     setError(null);
     // 다시 불러오던 이전 결과가 늦게 들어와 이번 결과·실패를 가리지 않게 한다
     abortRestore();
@@ -302,7 +308,7 @@ export function DiagnosisSessionProvider({ children }: { children: ReactNode }) 
         setRefineTarget(null);
         setResult(data);
       } else {
-        setResult(withPreviewMode(data));
+        setResult(withPreviewMode(data, previewMode));
       }
     } catch (err) {
       if (controller.signal.aborted) return;
@@ -403,11 +409,10 @@ export function useDiagnosisSession() {
 }
 
 /** 개발 서버에서 ?preview=low-confidence|confusion 으로 예외 화면을 미리 본다 */
-function withPreviewMode(data: DiagnoseResponse): DiagnoseResponse {
-  const previewMode =
-    process.env.NODE_ENV === "development"
-      ? new URLSearchParams(window.location.search).get("preview")
-      : null;
+function withPreviewMode(
+  data: DiagnoseResponse,
+  previewMode: string | null,
+): DiagnoseResponse {
 
   if (previewMode === "low-confidence") {
     return {

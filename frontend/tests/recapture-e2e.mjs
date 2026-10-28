@@ -207,7 +207,7 @@ await page.route(
 );
 
 try {
-  await page.goto(`${origin}/#capture`);
+  await page.goto(`${origin}/home#capture`);
 
   // ======================================
   // 테스트용 PNG 생성
@@ -349,6 +349,10 @@ try {
       'input[aria-label="갤러리에서 추가 사진 선택"]'
     )
     .setInputFiles(extraPhoto);
+    await page.screenshot({
+      path: "recapture-debug.png",
+      fullPage: true,
+    });
 
   // 먼저 촬영 화면의 추가 사진 확인이 표시되어야 한다 (모바일·데스크톱 제목)
   await page
@@ -356,6 +360,10 @@ try {
       name: /^(추가 사진 확인|이 사진으로 다시 분석할까요\?)$/,
     })
     .waitFor();
+    await page.screenshot({
+      path: "recapture-debug.png",
+      fullPage: true,
+    });
 
   // 사진 선택만으로 API가 호출되지 않아야 한다.
   assert.equal(refineCalls, 0);

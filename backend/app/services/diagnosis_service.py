@@ -8,10 +8,11 @@ from pathlib import Path, PurePosixPath
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm.exc import StaleDataError
 
 from app.core.config import settings
 from app.core.uploads import write_image
-from app.models.entities import Disease, Diagnosis
+from app.models.entities import Disease, Diagnosis, DiagnosisRequest
 from app.schemas.diagnosis import (
     DiagnoseResponse,
     DiagnosisSummary,
@@ -22,44 +23,8 @@ from app.schemas.diagnosis import (
 from app.services.ml_service import predict_all, predict_pair, get_prediction_context
 from app.services.pesticide_service import pesticide_infos
 from app.services.recapture import apply_pair_specialist, check_recapture, fuse_predictions
-from app.services.decision import decision
+from app.services.decision import crop_mismatch, decision
 from app.services.result_recovery import lookup, commit_result
-
-
-class PredictionContractError(RuntimeError):
-    """Model output cannot safely be mapped to disease records."""
-
-
-def _prediction_classes(predictions: list[tuple[int, float]]) -> set[int]:
-    if not isinstance(predictions, (list, tuple)) or not predictions:
-        raise PredictionContractError("Invalid prediction: expected a nonempty distribution")
-
-    class_ids: set[int] = set()
-    for item in predictions:
-        if not isinstance(item, (list, tuple)) or len(item) != 2:
-            raise PredictionContractError("Invalid prediction: expected class/score pairs")
-        class_id, confidence = item
-        if not isinstance(class_id, int) or isinstance(class_id, bool) or class_id in class_ids:
-            raise PredictionContractError("Invalid prediction: class IDs must be unique integers")
-        if (
-            not isinstance(confidence, (int, float))
-            or isinstance(confidence, bool)
-            or not 0.0 <= confidence <= 1.0
-            or not math.isfinite(confidence)
-        ):
-            raise PredictionContractError("Invalid prediction: scores must be finite and within [0, 1]")
-        class_ids.add(class_id)
-    return class_ids
-
-
-def _diseases_for_classes(db: Session, class_ids: set[int]) -> dict[int, Disease]:
-    diseases = {
-        disease.model_class_id: disease
-        for disease in db.query(Disease).filter(Disease.model_class_id.in_(class_ids)).all()
-    }
-    if class_ids != diseases.keys():
-        raise PredictionContractError("Invalid prediction: a model class has no disease mapping")
-    return diseases
 
 
 class PredictionContractError(RuntimeError):
@@ -100,16 +65,9 @@ def _diseases_for_classes(db: Session, class_ids: set[int]) -> dict[int, Disease
 
 logger = logging.getLogger(__name__)
 
+
 class ModelVersionConflict(RuntimeError):
     pass
-
-def _file_key(value: str | None) -> str | None:
-    if not value:
-        return None
-    # Old rows contain Windows absolute/relative paths; use the current storage root.
-    key = PurePosixPath(value.replace("\\", "/")).name
-    return key if key not in ("", ".", "..") else None
-
 
 
 def _file_key(value: str | None) -> str | None:
@@ -146,7 +104,7 @@ def _remove_file(path: Path | None) -> None:
 def _response(db: Session, diagnosis: Diagnosis) -> DiagnoseResponse:
     disease = diagnosis.disease
     content = diagnosis.content_snapshot or _content(db, disease)
-    mismatch = bool(diagnosis.selected_crop and diagnosis.selected_crop != content["predicted_crop"])
+    mismatch = crop_mismatch(diagnosis.selected_crop, content["predicted_crop"], content["category"])
     initial = diagnosis.original_predictions or []
     mapping = {d.model_class_id: d.name for d in db.query(Disease).all()}
     return DiagnoseResponse(
@@ -185,8 +143,19 @@ def _content(db, disease):
     return content
 
 
+def _crop(disease: Disease) -> str | None:
+    # "판별 불가" has no crop; keep "기타" out of history crop filters.
+    return None if disease.category == "other" else disease.crop_type
+
+
+def _recapture(primary: Disease, predictions, diseases: dict[int, Disease]):
+    if primary.category == "other":
+        return None
+    return check_recapture(predictions, {c: d.name for c, d in diseases.items()})
+
+
 def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str | None,
-                   request_context=None, recover_save_failure=False) -> DiagnoseResponse:
+                   request_context=None, recover_save_failure=False, device_id=None) -> DiagnoseResponse:
     cached = lookup(db, request_context)
     if cached:
         return cached
@@ -198,16 +167,16 @@ def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str
         diseases = _diseases_for_classes(db, _prediction_classes(predictions))
         primary = diseases[predictions[0][0]]
         top = [PredictionItem(name=diseases[c].name, confidence=p) for c, p in predictions[:3]]
-        guidance = check_recapture(predictions, {c: d.name for c, d in diseases.items()})
+        guidance = _recapture(primary, predictions, diseases)
         now = datetime.now(timezone.utc)
         diagnosis = Diagnosis(
             id=str(uuid.uuid4()),
             disease=primary, confidence=predictions[0][1], top_predictions=[p.model_dump() for p in top],
-            image_path=saved_path.name, crop_type=crop_type or primary.crop_type, selected_crop=crop_type,
+            image_path=saved_path.name, crop_type=crop_type or _crop(primary), selected_crop=crop_type,
             original_predictions=[list(p) for p in predictions],
             recapture=guidance.model_dump() if guidance else None, created_at=now, updated_at=now,
             content_snapshot=_content(db, primary), severity_snapshot=primary.severity,
-            **context,
+            device_id=device_id, **context,
         )
         db.add(diagnosis)
         with db.no_autoflush:
@@ -221,11 +190,11 @@ def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str
 
 
 def refine_diagnosis(db: Session, diagnosis_id: str, file_bytes: bytes, filename: str,
-                     request_context=None, recover_save_failure=False) -> DiagnoseResponse | None:
+                     request_context=None, recover_save_failure=False, device_id=None) -> DiagnoseResponse | None:
     cached = lookup(db, request_context)
     if cached:
         return cached
-    diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id).first()
+    diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id, Diagnosis.device_id == device_id).first()
     if not diagnosis:
         return None
     expected_revision = diagnosis.revision
@@ -262,11 +231,11 @@ def refine_diagnosis(db: Session, diagnosis_id: str, file_bytes: bytes, filename
         diagnosis.disease = primary
         diagnosis.confidence = fused[0][1]
         diagnosis.top_predictions = [dict(name=diseases[c].name, confidence=p) for c, p in fused[:3]]
-        diagnosis.crop_type = diagnosis.selected_crop or primary.crop_type
+        diagnosis.crop_type = diagnosis.selected_crop or _crop(primary)
         diagnosis.image_path = original_path.name
         diagnosis.refined_image_path = second_path.name
         diagnosis.original_predictions = [list(p) for p in dist1]
-        guidance = check_recapture(fused, {c: d.name for c, d in diseases.items()})
+        guidance = _recapture(primary, fused, diseases)
         diagnosis.recapture = guidance.model_dump() if guidance else None
         diagnosis.content_snapshot = _content(db, primary)
         diagnosis.severity_snapshot = primary.severity
@@ -287,8 +256,10 @@ def refine_diagnosis(db: Session, diagnosis_id: str, file_bytes: bytes, filename
     return result
 
 
-def get_history(db: Session, page: int, size: int, crop_type: str | None = None, severity: str | None = None) -> PaginatedHistory:
-    query = db.query(Diagnosis)
+def get_history(db: Session, page: int, size: int, crop_type: str | None = None, severity: str | None = None,
+                device_id: str | None = None) -> PaginatedHistory:
+    # device_id=None matches only unscoped (pre-device) rows; the API always passes a device.
+    query = db.query(Diagnosis).filter(Diagnosis.device_id == device_id)
     unfiltered_total = query.count()
     if crop_type:
         query = query.filter(Diagnosis.crop_type == crop_type)
@@ -308,9 +279,31 @@ def get_history(db: Session, page: int, size: int, crop_type: str | None = None,
     )
 
 
-def get_diagnosis_detail(db: Session, diagnosis_id: str) -> DiagnoseResponse | None:
-    diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id).first()
+def get_diagnosis_detail(db: Session, diagnosis_id: str, device_id: str | None = None) -> DiagnoseResponse | None:
+    diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id, Diagnosis.device_id == device_id).first()
     return _response(db, diagnosis) if diagnosis else None
+
+
+def delete_diagnosis(db: Session, diagnosis_id: str, device_id: str | None = None) -> bool:
+    """Delete one of this device's records with its photos and cached responses."""
+    diagnosis = db.query(Diagnosis).filter(Diagnosis.id == diagnosis_id, Diagnosis.device_id == device_id).first()
+    if diagnosis is None:
+        return False
+    photos = {_upload_path(diagnosis.image_path), _upload_path(diagnosis.refined_image_path)}
+    db.delete(diagnosis)
+    # A replayed request key must not resurrect the deleted result.
+    db.query(DiagnosisRequest).filter(DiagnosisRequest.response["id"].as_string() == diagnosis_id) \
+        .delete(synchronize_session=False)
+    try:
+        db.commit()
+    except StaleDataError:
+        # A refinement committed after this record was read (revision changed).
+        db.rollback()
+        raise
+    # Files go only after the rows are gone, so a failed commit keeps the record intact.
+    for photo in photos:
+        _remove_file(photo)
+    return True
 
 
 def list_diseases(db: Session, q: str | None, crop_type: str | None) -> list[DiseaseDetail]:
