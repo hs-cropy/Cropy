@@ -163,3 +163,9 @@ SQLite가 반환하는 naive UTC 시각은 API에서 UTC offset을 명시한다.
 
 시딩 실패는 트랜잭션을 롤백한다. 운영 DB를 삭제해 재적재하지 말고
 [백업·복구 절차](BACKEND_OPERATIONS.md)를 따른다.
+
+### 진단 결과 안내 필드와 스냅샷
+
+진단 결과 카드: diseases.summary_message(TEXT), management_action_details(JSON)를
+추가하며 seed로 갱신한다. 새 진단 content_snapshot에 함께 보존한다. 기존 진단
+스냅샷·이전 기록에 없는 새 필드는 응답에서 null/[]이며 현재 문구를 소급하지 않는다.

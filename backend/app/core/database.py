@@ -22,6 +22,9 @@ if _is_sqlite:
         cursor = dbapi_connection.cursor()
         try:
             cursor.execute("PRAGMA foreign_keys=ON")
+            # Readers no longer block the writer (and vice versa) while a diagnosis is saved.
+            # Persistent per DB file; in-memory databases report "memory" and are unaffected.
+            cursor.execute("PRAGMA journal_mode=WAL")
         finally:
             cursor.close()
 
@@ -37,6 +40,8 @@ class Base(DeclarativeBase):
 # 도입하기 전까지, 나중에 생긴 칼럼만 누락 시 덧붙여 기존 DB(진단 이력)를 보존한다.
 _ADDED_COLUMNS: list[tuple[str, str, str]] = [
     ("diseases", "management_actions", "JSON"),
+    ("diseases", "summary_message", "TEXT"),
+    ("diseases", "management_action_details", "JSON"),
     ("diagnoses", "content_snapshot", "JSON"),
     ("diagnoses", "severity_snapshot", "VARCHAR(20)"),
     ("diagnoses", "refined_image_path", "VARCHAR(500)"),

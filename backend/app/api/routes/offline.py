@@ -20,7 +20,7 @@ from app.services.recapture import fuse_predictions
 from app.services.decision import crop_mismatch, decision
 from app.services.ml_service import OTHER_CLASS_ID
 from app.services.result_recovery import lookup, request_context, commit_result
-from app.api.routes.diagnosis import _read_image_upload, _with_session
+from app.api.routes.diagnosis import _read_image_upload, _with_session, diagnosis_slot
 
 router = APIRouter()
 
@@ -121,6 +121,8 @@ def import_record(db, metadata, content, extension, refined_content, refined_ext
     snapshot = dict(disease_name=source["name"], predicted_crop=source["crop_type"], category=source["category"],
                     severity=source["severity"], description=source.get("description"), causes=source.get("causes", []),
                     prevention=source.get("prevention", []), management_actions=source.get("management_actions", []),
+                    summary_message=source.get("summary_message"),
+                    management_action_details=source.get("management_action_details", []),
                     pesticides=source.get("pesticides", []), version=bundle["version"])
     id = str(m.client_record_id)
     if db.get(Diagnosis, id):
@@ -168,7 +170,7 @@ def import_record(db, metadata, content, extension, refined_content, refined_ext
              responses={200: OFFLINE_EXAMPLES, **UPLOAD_ERRORS,
                         400: error_response("EMPTY_IMAGE, UNSUPPORTED_IMAGE_FORMAT, INVALID_IMAGE, 잘못된 multipart(HTTP_ERROR) 또는 재촬영 사진·예측값 누락(MISSING_REFINEMENT_EVIDENCE)", "MISSING_REFINEMENT_EVIDENCE", example_detail="재촬영 사진과 예측값을 함께 보내 주세요."),
                         409: error_response("지원하지 않는 묶음(UNSUPPORTED_BUNDLE), 요청 키 충돌(IDEMPOTENCY_CONFLICT), 기존 기록 충돌(DIAGNOSIS_CHANGED)", "UNSUPPORTED_BUNDLE", example_detail="모델과 전처리 버전이 일치하지 않습니다."),
-                        503: error_response("DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가", "DATABASE_UNAVAILABLE", True, example_detail="기록 처리에 실패했습니다. 다시 시도해 주세요.")})
+                        503: error_response("진단 대기 시간 초과(SERVER_BUSY), DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가", "DATABASE_UNAVAILABLE", True, example_detail="기록 처리에 실패했습니다. 다시 시도해 주세요.")})
 async def sync_record(request: Request, metadata: str = Form(..., max_length=20000,
                       description="LocalRecord 스키마의 JSON 문자열. 필수: client_record_id(UUID), model_version(100자 이하), preprocessing_version(100자 이하), bundle_version(64자리 소문자 16진수), created_at(시간대 포함), predictions(manifest class_ids 전체의 class_id/confidence). 선택: selected_crop(고추/무/배추), refined_predictions(같은 클래스 분포). 예시의 버전은 실제 manifest 값으로 교체하세요. 버전 형식 오류는 422, 정상 형식의 미지원 묶음은 409입니다.",
                       json_schema_extra={"contentMediaType": "application/json",
@@ -184,7 +186,7 @@ async def sync_record(request: Request, metadata: str = Form(..., max_length=200
         LocalRecord.model_validate_json(metadata)
     except ValidationError:
         raise APIError(422, "VALIDATION_ERROR", "로컬 기록의 모델·예측값·촬영 시각을 확인해 주세요.")
-    async with request.app.state.diagnosis_limiter:
+    async with diagnosis_slot(request):
         content, extension = await _read_image_upload(file)
         second, second_extension = await _read_image_upload(refined_file) if refined_file else (None, None)
         return await run_in_threadpool(_with_session, import_record, metadata, content, extension, second, second_extension, device)

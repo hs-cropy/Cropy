@@ -23,6 +23,8 @@ def _disease_values(item: dict) -> dict:
         "causes": item.get("causes", []), "prevention": item.get("prevention", []),
         "severity": item.get("severity", "medium"),
         "management_actions": item.get("management_actions", []),
+        "summary_message": item.get("summary_message"),
+        "management_action_details": item.get("management_action_details", []),
     }
 
 

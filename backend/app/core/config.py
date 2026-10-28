@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     allow_mock_predictions: bool = True
     enable_pair_model: bool = False
     max_concurrent_diagnoses: int = Field(default=1, ge=1, le=4)
+    # 진단 자리를 기다리는 최대 시간(초). Next.js 프록시 제한(약 30초)보다 짧게 둔다
+    diagnosis_queue_timeout_seconds: float = Field(default=20, gt=0, le=300)
     database_url: str = "sqlite:///./cropcare.db"
     upload_dir: Path = Path("./uploads")
     ml_model_path: Path = Path("../ml/checkpoints/best_model.pth")

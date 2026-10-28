@@ -9,8 +9,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 class APIError(HTTPException):
-    def __init__(self, status_code, code, detail, retryable=False):
-        super().__init__(status_code, detail)
+    def __init__(self, status_code, code, detail, retryable=False, headers=None):
+        super().__init__(status_code, detail, headers)
         self.code = code
         self.retryable = retryable
 

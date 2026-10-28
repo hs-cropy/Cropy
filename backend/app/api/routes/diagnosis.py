@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, Response, UploadFile
 from sqlalchemy.orm import Session
@@ -55,6 +57,26 @@ def _with_session(operation, *args):
         return operation(db, *args)
 
 
+@asynccontextmanager
+async def diagnosis_slot(request: Request):
+    """Wait a bounded time for one of the MAX_CONCURRENT_DIAGNOSES slots.
+
+    Without a bound, queued requests outlive the Next.js rewrite proxy (about
+    30 s): the browser sees a proxy error while the server still runs them.
+    """
+    limiter = request.app.state.diagnosis_limiter
+    try:
+        await asyncio.wait_for(limiter.acquire(), settings.diagnosis_queue_timeout_seconds)
+    except TimeoutError:
+        # 추론 한 번이 약 1초라 5초 뒤면 대기열이 줄었을 가능성이 높다
+        raise APIError(503, "SERVER_BUSY", "진단 요청이 많아 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.", True,
+                       headers={"Retry-After": "5"})
+    try:
+        yield
+    finally:
+        limiter.release()
+
+
 @router.post("/diagnose", response_model=DiagnoseResponse, summary="사진으로 병해충 진단",
              description="multipart/form-data의 file에 사진을 보내고, 선택 작물은 쿼리 crop_type으로 전달합니다. 진단·재촬영 안내와 저장 상태를 반환합니다. HTTP 200이어도 save_status=failed이면 recovery_token으로 저장을 재시도하세요. 개발용 mock 여부는 prediction_mode로 구분합니다.",
              responses={200: DIAGNOSIS_EXAMPLES, **UPLOAD_ERRORS})
@@ -66,7 +88,7 @@ async def diagnose(
     device: str = Depends(current_device),
 ):
     try:
-        async with request.app.state.diagnosis_limiter:
+        async with diagnosis_slot(request):
             content, extension = await _read_image_upload(file)
             return await run_in_threadpool(
                 _with_session, diagnosis_service.diagnose_image, content, f"image{extension}", crop_type,
@@ -92,7 +114,7 @@ async def refine(
 ):
     """혼동쌍 판별부위 2차 촬영으로 진단을 재확정 (구성 E: 다시점 융합)."""
     try:
-        async with request.app.state.diagnosis_limiter:
+        async with diagnosis_slot(request):
             content, extension = await _read_image_upload(file)
             result = await run_in_threadpool(
                 _with_session, diagnosis_service.refine_diagnosis, diagnosis_id, content, f"image{extension}",
@@ -115,9 +137,9 @@ async def refine(
              responses={404: error_response("저장할 결과를 찾을 수 없습니다.", "RESULT_NOT_FOUND"),
                         409: error_response("기록이 변경되어 이전 결과를 저장할 수 없습니다.", "DIAGNOSIS_CHANGED"),
                         410: error_response("결과 보관 시간이 지났습니다.", "RESULT_EXPIRED"),
-                        503: error_response("저장 실패(SAVE_FAILED), DB 사용 불가(DATABASE_UNAVAILABLE), 복구 저장소 사용 불가(RECOVERY_STORAGE_UNAVAILABLE)", "SAVE_FAILED", True, example_detail="이력에 저장하지 못했습니다. 결과는 보관 중이니 다시 저장해 주세요.")})
+                        503: error_response("진단 대기 시간 초과(SERVER_BUSY), 저장 실패(SAVE_FAILED), DB 사용 불가(DATABASE_UNAVAILABLE), 복구 저장소 사용 불가(RECOVERY_STORAGE_UNAVAILABLE)", "SAVE_FAILED", True, example_detail="이력에 저장하지 못했습니다. 결과는 보관 중이니 다시 저장해 주세요.")})
 async def recover_result(token: str, request: Request, device: str = Depends(current_device)):
-    async with request.app.state.diagnosis_limiter:
+    async with diagnosis_slot(request):
         return await run_in_threadpool(_with_session, save_result, token, device)
 
 
