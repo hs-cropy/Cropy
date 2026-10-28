@@ -48,7 +48,7 @@ def predict(monkeypatch, class_id):
         service,
         "predict_all",
         lambda _: [(class_id, 0.92)]
-        + [(i, 0.01) for i in range(9) if i != class_id],
+        + [(i, 0.01) for i in range(10) if i != class_id],
     )
 
 
@@ -63,14 +63,18 @@ def assert_copy(result):
     )
 
 
-@pytest.mark.parametrize("class_id", range(9))
+@pytest.mark.parametrize("class_id", range(10))
 def test_all_classes_snapshot_and_refinement(
     db, sample_image, monkeypatch, class_id
 ):
     predict(monkeypatch, class_id)
     created = service.diagnose_image(db, sample_image, "leaf.jpg", None)
     assert_copy(created)
-
+    if class_id == 9:
+        assert created.category == "other"
+        assert created.severity is None
+        assert len(created.management_actions) == 3
+        assert len(created.management_action_details) == 3
     seed_row = db.query(Disease).filter_by(model_class_id=class_id).one()
     seed_row.summary_message = "changed current reference"
     seed_row.management_action_details = []
@@ -80,7 +84,7 @@ def test_all_classes_snapshot_and_refinement(
     assert detail.summary_message == created.summary_message
     assert detail.management_action_details == created.management_action_details
 
-    predict(monkeypatch, (class_id + 1) % 9)
+    predict(monkeypatch, (class_id + 1) % 10)
     refined = service.refine_diagnosis(
         db, created.id, sample_image, "second.jpg"
     )
@@ -168,6 +172,7 @@ def test_offline_bundle_preserves_its_copy(
         version="a" * 64,
         model_version="b" * 64,
         preprocessing_version="test",
+	class_ids=list(range(10)),
         diseases=rows,
     )
     (tmp_path / ("manifest-" + "a" * 16 + ".json")).write_text(
@@ -183,8 +188,8 @@ def test_offline_bundle_preserves_its_copy(
         bundle_version="a" * 64,
         created_at=datetime.now(timezone.utc).isoformat(),
         predictions=[
-            dict(class_id=i, confidence=0.92 if i == 0 else 0.01)
-            for i in range(9)
+            dict(class_id=i, confidence=0.91 if i == 0 else 0.01)
+            for i in range(10)
         ],
     )
     response = client.post(
