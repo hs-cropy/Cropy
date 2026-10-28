@@ -156,3 +156,4 @@ train↔val 동일 이미지 2쌍, train↔test 4쌍을 발견했고 원본 SHA2
 - `cropy_testset_baseline_colab.ipynb`: 재분할 → 서버 모델과 같은 설정으로 8 epoch 학습 → 시험 작업자 사진으로 새 모델·서버 모델 평가. 결과 `worker_split_v1/baseline_v1_test_report.json`, Drive `cropy_testset/baseline_v1/`.
 - 기준선(시험 11,434장): 정확도 98.0%, macro F1 0.899, 무검은무늬병 recall 53.8%, 무노균병 74.4%. 무 질병 작업자 정확도 57~63%. 상세와 한계는 [모델 명세](../docs/MODEL_SPEC.md#작업자-분리-시험셋과-기준선-2026-10-28).
 - 이후 모델 실험은 이 시험셋으로 판정한다. 서비스 모델은 교체하지 않았다.
+- 실험 1(백본 ConvNeXt-Tiny, `cropy_testset_convnext_colab.ipynb` + `train_full_colab_convnext.py`): macro F1 0.905, 무검은무늬병 52.4%, 무노균병 80.8%. 판정 기준(10%p) 미달로 기각. 결과 `worker_split_v1/convnext_v1_test_report.json`, Drive `cropy_testset/convnext_v1/`.
