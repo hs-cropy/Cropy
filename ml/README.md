@@ -148,3 +148,11 @@ train↔val 동일 이미지 2쌍, train↔test 4쌍을 발견했고 원본 SHA2
 ## 256 입력 비교 결과 확인 (2026-09-24)
 
 앞 절의 준비 상태 이후 Colab 실행 결과를 확보했다. 같은 val 785장에서 224는 721장 정답(91.85%), 256은 726장 정답(92.48%)이다. 개선 17건·악화 12건이며 단일 seed의 val 비교다. test 평가 및 서비스 모델 교체는 하지 않았다. [256 분석 보고서](../output/colab/group256_analysis_20260924/report.md)를 참조한다.
+
+## 작업자 분리 시험셋과 기준선 (2026-10-28)
+
+- 공식 Validation 4,070장 중 4,063장이 Training과 같은 작업자·날짜 묶음이라 val 99.6%는 새 촬영자 성능을 말해 주지 않는다.
+- `plan_worker_split.py`로 작업자 78명을 통째로 train/val/test에 배정했다. 배정표 `worker_split_v1/workers.json`, 집계 `worker_split_v1/split_summary.json`. 사진별 목록은 `output/colab/worker_testset_20261028/worker_split_v1.csv`(미커밋).
+- `cropy_testset_baseline_colab.ipynb`: 재분할 → 서버 모델과 같은 설정으로 8 epoch 학습 → 시험 작업자 사진으로 새 모델·서버 모델 평가. 결과 `worker_split_v1/baseline_v1_test_report.json`, Drive `cropy_testset/baseline_v1/`.
+- 기준선(시험 11,434장): 정확도 98.0%, macro F1 0.899, 무검은무늬병 recall 53.8%, 무노균병 74.4%. 무 질병 작업자 정확도 57~63%. 상세와 한계는 [모델 명세](../docs/MODEL_SPEC.md#작업자-분리-시험셋과-기준선-2026-10-28).
+- 이후 모델 실험은 이 시험셋으로 판정한다. 서비스 모델은 교체하지 않았다.
