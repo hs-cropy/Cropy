@@ -31,6 +31,8 @@ async def lifespan(app: FastAPI):
         db.close()
     load_model(model_classes)
     app.state.diagnosis_limiter = asyncio.Semaphore(settings.max_concurrent_diagnoses)
+    # 합성은 TTS 서버의 CPU를 수 초씩 점유한다. 캐시 미스만 한 번에 하나씩 보낸다
+    app.state.tts_limiter = asyncio.Semaphore(1)
     yield
 
 
