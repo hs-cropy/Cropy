@@ -1,5 +1,7 @@
 import asyncio
+import hashlib
 import logging
+import re
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, Response, UploadFile
@@ -243,6 +245,33 @@ async def _speech_wav(limiter: asyncio.Semaphore, sentences: list[str]) -> bytes
     return await _before_deadline(deadline, tts_service.join_wavs, parts)
 
 
+# 숫자 자릿수를 제한한다 — 아주 긴 숫자는 int() 변환 한도에 걸려 500이 된다
+_BYTE_RANGE = re.compile(r"bytes=(\d{0,15})-(\d{0,15})", re.IGNORECASE)
+
+
+def _audio_response(audio: bytes, range_header: str | None, if_range: str | None) -> Response:
+    """wav 응답. iOS Safari의 <audio>는 바이트 범위 요청으로 길이를 확인하고 탐색하므로 단일 Range를 지원한다."""
+    # 재확정되면 같은 진단 ID라도 문장이 바뀐다 — 브라우저가 옛 음성을 재사용하지 않게 한다.
+    # ETag는 음성 내용에서 만들어, 내용이 바뀐 뒤 옛 조각에 이어 붙이는 요청(If-Range)을 가려낸다
+    etag = f'"{hashlib.sha256(audio).hexdigest()}"'
+    headers = {"Cache-Control": "no-cache", "Accept-Ranges": "bytes", "ETag": etag}
+    match = _BYTE_RANGE.fullmatch(range_header.strip()) if range_header else None
+    first, last = match.groups() if match else ("", "")
+    # 없거나 해석할 수 없는 Range, 내용이 바뀌었거나 확인할 수 없는(날짜형) If-Range는 무시하고 전체를 보낸다
+    if ((not first and not last) or (first and last and int(last) < int(first))
+            or (if_range is not None and if_range.strip() != etag)):
+        return Response(audio, media_type="audio/wav", headers=headers)
+    size = len(audio)
+    if first:
+        start, end = int(first), min(int(last), size - 1) if last else size - 1
+    else:
+        start, end = max(size - int(last), 0), size - 1
+    if start > end:
+        return Response(status_code=416, headers={**headers, "Content-Range": f"bytes */{size}"})
+    headers["Content-Range"] = f"bytes {start}-{end}/{size}"
+    return Response(audio[start:end + 1], status_code=206, media_type="audio/wav", headers=headers)
+
+
 _SPEECH_NOT_FOUND = error_response("진단 기록을 찾을 수 없습니다.", "DIAGNOSIS_NOT_FOUND")
 
 
@@ -254,9 +283,12 @@ async def speech_text(diagnosis_id: str, device: str = Depends(current_device)):
 
 
 @router.get("/diagnose/{diagnosis_id}/speech", response_class=Response, summary="음성 안내 wav",
-            description="음성 안내 문장을 서버 TTS로 합성한 wav를 돌려줍니다. 문장마다 합성·캐시해 이어 붙이므로 다른 진단과 겹치는 문장은 다시 합성하지 않습니다. TTS가 꺼져 있거나, 합성에 실패하거나, TTS_RESPONSE_BUDGET_SECONDS(기본 20초) 안에 모든 문장을 만들지 못하면 503 TTS_UNAVAILABLE이며, 이때는 /speech/script 문장을 대신 읽습니다. 그때까지 만든 문장은 캐시에 남아 다음 요청은 남은 문장만 합성합니다.",
+            description="음성 안내 문장을 서버 TTS로 합성한 wav를 돌려줍니다. 문장마다 합성·캐시해 이어 붙이므로 다른 진단과 겹치는 문장은 다시 합성하지 않습니다. TTS가 꺼져 있거나, 합성에 실패하거나, TTS_RESPONSE_BUDGET_SECONDS(기본 20초) 안에 모든 문장을 만들지 못하면 503 TTS_UNAVAILABLE이며, 이때는 /speech/script 문장을 대신 읽습니다. 그때까지 만든 문장은 캐시에 남아 다음 요청은 남은 문장만 합성합니다. 단일 바이트 Range 요청(206/416)과 ETag 기반 If-Range를 지원합니다.",
             responses={200: {"content": {"audio/wav": {"schema": {"type": "string", "format": "binary"}}},
                              "description": "wav 음성"},
+                       206: {"content": {"audio/wav": {"schema": {"type": "string", "format": "binary"}}},
+                             "description": "Range 요청에 대한 wav 일부"},
+                       416: {"description": "Range가 음성 길이를 벗어남. Content-Range: bytes */전체 길이"},
                        404: _SPEECH_NOT_FOUND,
                        503: error_response("TTS 사용 불가(TTS_UNAVAILABLE) 또는 DB 사용 불가(DATABASE_UNAVAILABLE)", "TTS_UNAVAILABLE", True,
                                            example_detail="음성 안내를 만들 수 없습니다.")})
@@ -267,5 +299,4 @@ async def speech_audio(diagnosis_id: str, request: Request, device: str = Depend
     except (tts_service.TTSUnavailableError, TimeoutError):
         logger.warning("TTS unavailable", exc_info=True)
         raise APIError(503, "TTS_UNAVAILABLE", "음성 안내를 만들 수 없습니다.", True)
-    # 재확정되면 같은 진단 ID라도 문장이 바뀐다 — 브라우저가 옛 음성을 재사용하지 않게 한다
-    return Response(audio, media_type="audio/wav", headers={"Cache-Control": "no-cache"})
+    return _audio_response(audio, request.headers.get("range"), request.headers.get("if-range"))

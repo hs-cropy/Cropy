@@ -281,3 +281,53 @@ def test_cache_removed_after_lookup_still_answers_the_audio(client, diagnosis_id
     monkeypatch.setattr(tts_service, "cached_audio", lookup_then_removed)
     res = client.get(f"/api/v1/diagnose/{diagnosis_id}/speech")
     assert res.status_code == 200 and res.content.startswith(b"RIFF")
+
+
+# ── Range ────────────────────────────────────────────────────────────────────
+
+
+def _speech(client, diagnosis_id, range_header=None, if_range=None):
+    headers = {"Range": range_header} if range_header else {}
+    if if_range:
+        headers["If-Range"] = if_range
+    return client.get(f"/api/v1/diagnose/{diagnosis_id}/speech", headers=headers)
+
+
+def test_speech_supports_a_single_byte_range(client, diagnosis_id):
+    # iOS Safari의 <audio>는 바이트 범위 요청으로 길이를 확인하고 탐색한다
+    full = _speech(client, diagnosis_id)
+    assert full.status_code == 200 and full.headers["accept-ranges"] == "bytes"
+    audio, size = full.content, len(full.content)
+
+    head = _speech(client, diagnosis_id, "bytes=0-1")
+    assert head.status_code == 206 and head.content == audio[:2]
+    assert head.headers["content-range"] == f"bytes 0-1/{size}"
+    assert _speech(client, diagnosis_id, "bytes=-4").content == audio[-4:]
+    assert _speech(client, diagnosis_id, f"bytes=10-{size + 100}").content == audio[10:]
+
+    assert _speech(client, diagnosis_id, "Bytes=0-1").content == audio[:2]
+
+    beyond = _speech(client, diagnosis_id, f"bytes={size}-")
+    assert beyond.status_code == 416 and beyond.headers["content-range"] == f"bytes */{size}"
+
+
+def test_speech_range_follows_if_range(client, diagnosis_id):
+    # 음성 내용이 바뀐 뒤 옛 조각에 이어 붙이는 요청에는 새 음성 전체를 보낸다
+    full = _speech(client, diagnosis_id)
+    etag = full.headers["etag"]
+    assert _speech(client, diagnosis_id, "bytes=0-1", etag).status_code == 206
+    for stale in ['"other-audio"', "Wed, 21 Oct 2026 07:28:00 GMT"]:
+        res = _speech(client, diagnosis_id, "bytes=0-1", stale)
+        assert res.status_code == 200 and res.content == full.content
+
+
+@pytest.mark.parametrize(
+    "range_header",
+    ["bytes=0-1,4-5", "items=0-1", "bytes=5-2", "bytes=-",
+     "bytes=" + "9" * 4301 + "-", "bytes=0-" + "9" * 4301, "bytes=-" + "9" * 4301],
+    ids=["multi", "other-unit", "reversed", "empty", "huge-start", "huge-end", "huge-suffix"],
+)
+def test_speech_ignores_ranges_it_cannot_serve(client, diagnosis_id, range_header):
+    # 아주 긴 숫자도 500이 아니라 무시하고 전체를 보낸다
+    res = _speech(client, diagnosis_id, range_header)
+    assert res.status_code == 200 and res.content == _speech(client, diagnosis_id).content
