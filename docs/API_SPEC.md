@@ -352,3 +352,48 @@ REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_typ
 현재 CNN↔백엔드는 동일 Python 프로세스의 함수 호출이다. 입력은 검증된 이미지 경로, 출력은 전체/Top-3 `(model_class_id, score)`이며 체크포인트 규격은 [MODEL_SPEC](MODEL_SPEC.md)를 따른다. 프론트는 [api.ts](../frontend/src/lib/api.ts)와 [응답 타입](../frontend/src/types/diagnosis.ts)을 사용한다. nullable 응답과 TypeScript 선택 필드의 정합은 후속 코드 보완 대상이다.
 
 Qwen 기능 토큰/handler와 STT 통합은 계획 단계다. 브라우저 카메라 촬영과 Web Speech API TTS 안내는 구현되어 있으며 보드 음성 통합과 구분한다. 데이터 시트의 get_diagnosis 등 기능명을 현재 REST 엔드포인트로 간주하지 않는다. 실제 호출·인자·오류·시간 제한은 [LLM 계획](LLM_FINETUNING_PLAN.md)에 따라 통합 시 확정한다.
+
+## 진단 결과 카드 안내 필드
+
+`POST /api/v1/diagnose`, `POST /api/v1/diagnose/{diagnosis_id}/refine`,
+`GET /api/v1/history/{diagnosis_id}`, `POST /api/v1/results/{token}/save` 및
+`POST /api/v1/offline/records`는 다음 필드를 추가로 반환한다.
+
+| 필드 | 타입 / 기본값 | 의미 |
+| --- | --- | --- |
+| `summary_message` | `string 또는 null` / `null` | 결과 카드 아래의 고정 한 줄 참고 안내 |
+| `management_action_details` | `{title: string, description: string}[]` / `[]` | 기존 `management_actions`와 같은 순서·개수의 할 일 설명 |
+
+기존 `management_actions: string[]` 제목은 변경하지 않는다. 새 서버 진단은
+9개 클래스의 수기 참고 문구를 스냅샷과 콘텐츠 해시에 포함한다. 정상 클래스도
+일상 관리 문구를 제공한다. 문구는 확정 진단이나 농약 처방을 뜻하지 않으며
+기존 `prediction_mode`, `decision_status`, `decision_reasons`, `recapture`를
+대체하지 않는다. 프론트는 Mock·작물 불일치·판정 보류·재촬영 표시를 우선한다.
+
+이 필드는 LLM 생성 결과가 아니다. 실제 LLM caller, 기존 LLM 입력 계약과
+안전 수치 검증은 변경하지 않는다. 긴 기존 할 일 제목은 호환성을 위해 유지한다.
+
+이전 스냅샷 및 스냅샷 없는 이전 기록은 새 문구를 소급 생성하지 않고
+`null` / `[]`로 반환한다. 복구 초안·요청 캐시의 이전 응답도 스키마 기본값을
+사용한다. 재촬영으로 새 진단이 생성되면 해당 클래스의 현재 문구를 저장한다.
+오프라인 기록은 그 모델 묶음에 포함된 문구만 보존하며, 구형 묶음에는 기본값을
+사용한다. 새 묶음 생성 시 seed의 두 필드도 포함된다. 기존 모델 묶음을 덮어쓰지 않는다.
+
+DB는 diseases 테이블에 TEXT/JSON 컬럼을 추가한다. 시작 시 기존 백업·원자적
+마이그레이션을 사용하며 진단 이력은 삭제하지 않는다. Docker 배포는 새 시드가
+포함되도록 이미지를 재빌드한다.
+
+`docs/api/openapi.json` 및 `openapi.html`은 이 변경의 배포용 명세다.
+백엔드 병합 후 `hs-cropy/locallife-api-docs` 저장소의 `docs/api-docs.json`,
+`docs/api-docs.html`에 각각 복사하고 해당 저장소 PR로 배포한다.
+이 저장소 변경만으로 외부 문서 사이트가 갱신되지는 않는다.
+
+현재 `summary_message`는 병해 6종에 공통 문구 1종, 정상 3종에 공통 문구 1종을 제공한다. 클래스마다 서로 다른 요약 문구를 제공하는 것은 아니다.
+
+이 안내 필드는 진단 시점의 콘텐츠 스냅샷에 저장된다. 기존 스냅샷에 새 안내를 소급 적용하지 않으며, 안내 필드가 없는 이전 기록은 `summary_message=null`, `management_action_details=[]`로 반환될 수 있다.
+
+### 후속 프론트엔드 작업
+
+- `frontend/types/diagnosis.ts`에 새 안내 필드의 타입을 반영한다.
+- `frontend/public/offline/core.mjs`의 오프라인 결과 객체에 `summary_message`와 `management_action_details`를 전달한다.
+- `management_action_details`가 비어 있으면 기존 `management_actions`의 제목을 표시한다.

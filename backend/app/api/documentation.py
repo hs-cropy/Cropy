@@ -1,6 +1,6 @@
 """OpenAPI-only metadata. These models do not filter or change runtime responses."""
 from pydantic import BaseModel, Field
-from app.schemas.diagnosis import DIAGNOSIS_EXAMPLE, PesticideInfo
+from app.schemas.diagnosis import DIAGNOSIS_EXAMPLE, PesticideInfo, ManagementActionDetail
 
 
 def result_examples(example):
@@ -146,6 +146,8 @@ class ManifestDisease(BaseModel):
     prevention: list[str]
     severity: str | None = Field(description="판별 불가(category other)는 null")
     management_actions: list[str]
+    summary_message: str | None = None
+    management_action_details: list[ManagementActionDetail] = Field(default_factory=list)
     pesticides: list[PesticideInfo] = Field(description="현재 내보내기에서는 빈 배열(not_bundled)")
 
 
