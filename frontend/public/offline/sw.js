@@ -1,7 +1,9 @@
-const CACHE = 'cropy-offline-shell-3249e77799a50296';
+const CACHE = 'cropy-offline-shell-ccc0cb91110e297b';
 const SHELL = ['/offline/index.html', '/offline/app.mjs', '/offline/core.mjs',
   '/offline-runtime/ort.wasm.bundle.min.mjs', '/offline-runtime/ort-wasm-simd-threaded.mjs',
-  '/offline-runtime/ort-wasm-simd-threaded.wasm'];
+  '/offline-runtime/ort-wasm-simd-threaded.wasm', '/offline/manifest.webmanifest',
+  '/offline/icons/icon-192.png', '/offline/icons/icon-512.png', '/offline/icons/icon-maskable-512.png',
+  '/offline/icons/apple-touch-icon.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', event => {
