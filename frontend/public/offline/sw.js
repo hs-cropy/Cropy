@@ -1,4 +1,4 @@
-const CACHE = 'cropy-offline-shell-ccc0cb91110e297b';
+const CACHE = 'cropy-offline-shell-11881516999d04bc';
 const SHELL = ['/offline/index.html', '/offline/app.mjs', '/offline/core.mjs',
   '/offline-runtime/ort.wasm.bundle.min.mjs', '/offline-runtime/ort-wasm-simd-threaded.mjs',
   '/offline-runtime/ort-wasm-simd-threaded.wasm', '/offline/manifest.webmanifest',

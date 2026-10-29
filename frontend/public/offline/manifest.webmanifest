@@ -7,7 +7,7 @@
   "start_url": "/offline/index.html",
   "scope": "/offline/",
   "display": "standalone",
-  "background_color": "#27844E",
+  "background_color": "#FAF7F0",
   "theme_color": "#FAF7F0",
   "icons": [
     { "src": "/offline/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
