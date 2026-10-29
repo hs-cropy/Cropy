@@ -200,7 +200,8 @@ body:has(#update-dialog[open]) [data-view="prepare"] { visibility: hidden; }
 @media (min-width: 1024px) {
   body::before { background-image: url('/background/farm-desktop.webp'); }
   /* Header.tsx: 높이 80(테두리 포함), 내용 최대 1200, 로고 84×56 */
-  .site-header { padding: 0 1.5rem; border-bottom: 1px solid var(--cropy-border); background: var(--cropy-surface); }
+  /* 배경은 없다. 앱 헤더(Header.tsx)처럼 농장 배경이 비친다 */
+  .site-header { padding: 0 1.5rem; border-bottom: 1px solid var(--cropy-border); }
   .header { max-width: 75rem; height: calc(5rem - 1px); padding: 0; gap: 1rem; }
   .header .logo { width: 5.25rem; height: 3.5rem; margin-right: 0; }
   .header-nav { display: block; margin-right: auto; }
