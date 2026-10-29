@@ -5,6 +5,9 @@ import { AppFrame } from "@/components/AppFrame";
 export const metadata: Metadata = {
   title: "CropCare AI",
   description: "AI 기반 농작물 병해충 진단 및 스마트 방제 지원 플랫폼",
+  // 설치한 앱은 인터넷 없이도 열려야 해서 시작 화면이 오프라인 페이지(/offline/index.html)다
+  manifest: "/manifest.webmanifest",
+  icons: { apple: "/icons/icon-192.png" },
   appleWebApp: { capable: true, title: "CropCare", statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };

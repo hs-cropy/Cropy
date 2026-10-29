@@ -11,7 +11,8 @@ page.on('pageerror', error => errors.push(error.message));
 try {
   await page.goto(origin + '/offline/index.html');
   const initialCount = await page.evaluate(async()=> (await (await fetch('/api/v1/history')).json()).total);
-  await page.locator('#prepare').click();
+  // 준비 전 카드는 설치 안내로 보낸다. 안내의 "오프라인 파일 받기"처럼 ?prepare=1 로 받기를 시작한다
+  await page.goto(origin + '/offline/index.html?prepare=1');
   await page.waitForFunction(() => document.querySelector('#progress').value === 100, null, {timeout:180000});
   const png = await page.evaluate(() => {
     const canvas = document.createElement('canvas');canvas.width=canvas.height=224;
@@ -19,10 +20,16 @@ try {
     return canvas.toDataURL('image/png').split(',')[1];
   });
   const photo = {name:'smoke.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')};
+  // 준비·사진 분석·진단 기록은 한 페이지의 # 화면이다. 헤더 내비로 사진 분석에 들어간다
+  const open = async name => { await page.locator(`.header-nav a[data-nav="${name}"]`).click(); await page.waitForFunction(n => location.hash === '#' + n, name); };
+  await open('analyze');
+  assert.equal(await page.locator('#view-title').innerText(), '사진 분석');
   await page.locator('#file').setInputFiles(photo);
   await page.locator('#diagnose').click();
   await page.waitForFunction(() => document.querySelectorAll('#history article').length === 1);
   assert.match(await page.locator('#result').innerText(), /이 기기에 저장했어요/);
+  assert.match(await page.locator('#toast').innerText(), /이 기기에 저장했어요/);
+  assert.equal(await page.locator('#phase-label').innerText(), '기기 저장 완료');
   await context.setOffline(true);
   await page.reload();
   await page.waitForFunction(() => document.querySelector('#progress').value === 100, null, {timeout:180000});
@@ -30,7 +37,18 @@ try {
   await page.locator('#file').setInputFiles(photo);
   await page.locator('#diagnose').click();
   await page.waitForFunction(() => document.querySelectorAll('#history article').length === 2);
+  // 오프라인이고 보낼 기록이 있으니 진단 기록 화면에 동기화 대기 안내가 뜬다
+  // 진단 기록에 들어가면 목록을 다시 그린다. 다 그린 뒤에 결과 보기를 누르도록 이전 목록이 빠지길 기다린다
+  const previous = await page.locator('#history article').first().elementHandle();
+  await open('records');
+  await page.waitForFunction(article => !article.isConnected, previous);
+  assert.equal(await page.locator('#records-card-title').innerText(), '동기화를 기다리고 있어요');
+  // 안내 카드가 저장 완료 라벨보다 먼저다. 기록 목록에는 저장 완료 줄이 있고, 새로 확인 버튼 없이 들어올 때 다시 읽는다
+  assert.equal(await page.locator('#phase-label').innerText(), '동기화 대기');
+  assert.ok(await page.locator('#records-saved').isVisible());
+  assert.equal(await page.locator('#reload').count(), 0);
   await page.locator('#history article').first().getByRole('button',{name:'결과 보기'}).click();
+  assert.equal(await page.locator('#view-title').innerText(), '사진 분석');
   assert.match(await page.locator('#result').innerText(), /이 기기에 저장했어요/);
   await context.setOffline(false);
   // Commit succeeds, but the browser never receives the response.
@@ -39,8 +57,12 @@ try {
     assert.equal(response.status(),200);
     await route.abort('connectionreset');
   });
+  const shown = await page.locator('#history article').first().elementHandle();
+  await open('records');
+  await page.waitForFunction(article => !article.isConnected, shown);
   await page.locator('#history article').first().getByRole('button',{name:'서버에 저장'}).click();
   await page.waitForFunction(() => document.querySelector('#state').textContent.includes('기록은 유지돼요'));
+  await page.waitForFunction(() => document.querySelector('#records-card-title').textContent === '동기화하지 못했어요');
   const attempted = await page.evaluate(() => new Promise((resolve,reject) => {
     const request=indexedDB.open('cropy-on-device');
     request.onsuccess=()=>{const read=request.result.transaction('records').objectStore('records').getAll();read.onsuccess=()=>resolve(read.result.sort((a,b)=>b.created_at.localeCompare(a.created_at))[0]);read.onerror=()=>reject(read.error);};

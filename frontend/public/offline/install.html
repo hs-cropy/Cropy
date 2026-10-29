@@ -1,0 +1,154 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#FFFFFF"><title>Cropy · 앱 설치</title>
+<link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/icons/icon-192.png">
+<script>try{if(localStorage.getItem('cropcare:textsize')==='large')document.documentElement.dataset.textsize='large'}catch(e){}</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/offline/offline.css"></head><body>
+<!-- 헤더. 넓은 화면(1024px~)에서는 앱 헤더(Header.tsx)처럼 내비가 함께 보인다 -->
+<header class="site-header"><div class="header"><img class="logo" src="/brand/cropy-logo.png" alt="Cropy" width="299" height="224">
+<nav class="header-nav" aria-label="주요 메뉴"><ul>
+<li><a href="/home"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/></g></svg>새 진단</a></li>
+<li><a href="/diagnosis"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16l-1.9-1.9"/></g></svg>진단 결과</a></li>
+<li><a href="/history"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M3 12a9 9 0 1 0 9-9a9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5m4-1v5l4 2"/></g></svg>진단 이력</a></li>
+</ul></nav>
+<button id="text-size" class="switch" role="switch" aria-checked="false" type="button"><span class="label-mobile">큰 글자</span><span class="label-web">글자 크게</span><span class="track" aria-hidden="true"></span></button>
+<button id="voice" class="switch" role="switch" aria-checked="false" aria-label="음성 안내" type="button"><span class="label-mobile">음성</span><span class="label-web">음성 안내</span><span class="track" aria-hidden="true"></span></button></div></header>
+<div class="page install-page">
+
+<!-- 01 갤럭시 · 설치 전 (설치창을 열 수 있는 브라우저) -->
+<main data-view="android" hidden>
+<h1 tabindex="-1" class="title">갤럭시에서 앱 설치</h1><p class="lead tight">홈 화면에서 크로피를 바로 열어요.</p>
+<div class="steps">
+<section class="card"><p class="step-label">01  앱 설치</p><h2 class="card-title">크로피 앱 설치</h2>
+<p class="body">앱 아이콘으로 빠르게 시작하고<br>넓은 화면으로 진단해보세요.</p>
+<button class="button large" data-install type="button">앱 설치하기</button>
+<p class="caption" data-install-note role="status">브라우저 설치창에서 설치를 확인해주세요.</p></section>
+<section class="card"><p class="step-label">02  오프라인 준비</p><h2 class="card-title">인터넷 없이 사용하기</h2>
+<p class="body">진단 모델과 실행 파일을 이 기기에 저장해요.<br>최초 다운로드 약 108MB · Wi-Fi 권장</p>
+<a class="button secondary" href="/offline/index.html?prepare=1">오프라인 파일 받기</a>
+<p class="caption">앱 설치와 파일 준비는 각각 진행돼요.</p></section>
+</div>
+<div class="bottom"><button class="button guide" data-go="ios" type="button">아이폰 설치 안내 보기<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18l6-6l-6-6"/></svg></button>
+<a class="button secondary" href="/home">웹에서 계속하기</a></div>
+</main>
+
+<!-- 02 아이폰 · 설치 방법 -->
+<main data-view="ios" hidden>
+<h1 tabindex="-1" class="title">아이폰에 앱 추가</h1><p class="lead tight">Safari에서 홈 화면에 추가해주세요.</p>
+<div class="steps">
+<section class="card"><p class="step-label">01  아이폰 · Safari</p><h2 class="card-title">홈 화면에 크로피 추가</h2>
+<ol class="ios-steps"><li>Safari에서 공유 버튼을 누르세요.</li><li>‘홈 화면에 추가’를 선택하세요.</li><li>‘추가’를 누른 뒤 크로피를 열어요.</li></ol>
+<p class="caption">‘웹 앱으로 열기’가 보이면 켜주세요.</p></section>
+<section class="card"><p class="step-label">02  오프라인 준비</p><h2 class="card-title">설치한 앱에서 파일 받기</h2>
+<p class="body">홈 화면의 크로피를 연 뒤<br>오프라인 파일을 받아주세요.</p>
+<p class="caption">약 108MB · 처음에는 인터넷 연결이 필요해요.</p>
+<!-- 아이폰은 Safari 와 홈 화면 앱의 저장소가 따로라 여기서 받으면 앱에 남지 않는다. 그래서 받기 대신 방법만 보인다 -->
+<details class="more"><summary class="button secondary full">설치 후 준비 방법 보기</summary>
+<p class="body">홈 화면의 크로피를 열면 오프라인 사용 준비 화면이 나와요. ‘오프라인 파일 받기’를 눌러 파일을 받은 뒤, 준비 완료가 보이면 인터넷 없이 진단할 수 있어요.</p></details></section>
+</div>
+<div class="bottom"><button class="button guide" data-go="android" type="button">갤럭시 설치 안내 보기<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18l6-6l-6-6"/></svg></button>
+<a class="button secondary" href="/home">웹에서 계속하기</a></div>
+</main>
+
+<!-- 04 설치 안내 · 지원 확인 (설치창을 열 수 없는 브라우저) -->
+<main data-view="unsupported" hidden>
+<h1 tabindex="-1" class="title">브라우저를 확인해주세요</h1><p class="lead tight">현재 브라우저에서 설치창을 열 수 없어요.</p>
+<div class="steps">
+<section class="card"><p class="step-label">01  앱 설치</p><h2 class="card-title">설치 방법 확인</h2>
+<p class="body">Chrome 또는 Safari에서 열어주세요.</p>
+<button class="secondary" data-go="ios" type="button">아이폰 설치 방법 보기</button>
+<p class="body">갤럭시에서는 지원 브라우저의 메뉴에서<br>‘앱 설치’ 또는 ‘홈 화면에 추가’를 확인하세요.</p></section>
+<section class="card"><p class="step-label">02  오프라인 준비</p><h2 class="card-title">오프라인 준비도 가능해요</h2>
+<p class="body">진단 모델과 실행 파일을 저장하면<br>연결 없이 사진을 분석할 수 있어요.</p>
+<p class="body-strong">약 108MB · Wi-Fi 권장</p>
+<a class="button" href="/offline/index.html?prepare=1">오프라인 파일 받기</a>
+<p class="caption">모델 94MB + 실행 파일 약 14MB<br>받은 파일을 검증한 뒤 준비가 완료돼요.</p></section>
+</div>
+<div class="bottom"><a class="button secondary" href="/home">웹에서 계속하기</a></div>
+</main>
+
+<!-- 03 설치 완료 · 파일 받기 (설치한 앱으로 열었거나 방금 설치함) -->
+<main data-view="installed" hidden>
+<h1 tabindex="-1" class="title">앱 설치 완료</h1><p class="lead tight">오프라인 진단도 준비해보세요.</p>
+<div class="steps">
+<section class="card"><p class="step-label">01  앱 설치</p><h2 class="card-title">크로피 앱</h2>
+<p class="body" id="installed-note">설치된 앱에서 이용 중이에요.</p></section>
+<section class="card"><p class="step-label">02  오프라인 준비</p><h2 class="card-title">인터넷 없이 사용하기</h2>
+<p class="body">진단 모델과 실행 파일을 저장하면<br>연결 없이 사진을 분석할 수 있어요.</p>
+<p class="body-strong">약 108MB · Wi-Fi 권장</p>
+<a class="button" href="/offline/index.html?prepare=1">오프라인 파일 받기</a>
+<p class="caption">모델 94MB + 실행 파일 약 14MB<br>받은 파일을 검증한 뒤 준비가 완료돼요.</p></section>
+</div>
+<div class="bottom"><a class="button secondary" href="/home">웹에서 계속하기</a></div>
+</main>
+
+<!-- PC · Chrome·Edge 앱 설치 -->
+<main data-view="pc" hidden>
+<h1 tabindex="-1" class="title">PC에서도 크로피를 편리하게</h1><p class="lead">앱으로 설치하고, 인터넷 없이 사용할 준비를 해보세요.</p>
+<div class="steps">
+<section class="card card-lg"><div class="card-head"><p class="step-label">01  앱 설치 · Chrome · Edge</p><h2 class="card-title">크로피 앱 설치</h2></div>
+<div class="card-body"><p class="body">앱을 별도 창으로 열고 빠르게 이용하세요.</p>
+<ol class="pc-steps"><li>아래 앱 설치하기를 눌러주세요.</li><li>브라우저의 설치 창에서 설치를 확인하세요.</li><li>설치한 크로피 앱을 열어주세요.</li></ol></div>
+<button class="button" data-install type="button">앱 설치하기</button>
+<p class="caption" data-install-note role="status"></p></section>
+<section class="card card-lg"><div class="card-head"><p class="step-label">02  오프라인 준비</p><h2 class="card-title">인터넷 없이 진단하기</h2></div>
+<div class="card-body"><p class="body">진단 모델과 실행 파일을 이 PC에 저장해요.<br>모든 파일의 검증이 끝나면 준비가 완료됩니다.</p>
+<div class="card-size"><p class="size-strong">약 108MB · 인터넷 연결 필요</p><p class="size-note">모델 약 94MB + 실행 파일 약 14MB<br>설치한 앱에서 다운로드하는 것을 권장해요.</p></div></div>
+<a class="button" href="/offline/index.html?prepare=1">오프라인 파일 받기</a></section>
+</div>
+<div class="bottom"><a class="button secondary" href="/home">웹에서 계속하기</a>
+<button class="button guide" data-go="mac" type="button">Mac Safari 설치 안내<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18l6-6l-6-6"/></svg></button>
+<button class="button guide" data-go="pc-help" type="button">설치 버튼이 안 보여요<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18l6-6l-6-6"/></svg></button></div>
+</main>
+
+<!-- PC · Mac Safari 에서 Dock 에 추가 (macOS Sonoma 14~) -->
+<main data-view="mac" hidden>
+<h1 tabindex="-1" class="title">Mac에 크로피 추가하기</h1><p class="lead">Safari에서 Dock에 추가한 뒤 앱을 열어주세요.</p>
+<div class="steps">
+<section class="card card-lg"><div class="card-head"><p class="step-label">01  앱 설치 · Mac · Safari</p><h2 class="card-title">Dock에서 바로 실행</h2></div>
+<div class="card-body"><p class="body">macOS Sonoma 14 이상에서 이용할 수 있어요.</p>
+<ol class="pc-steps"><li>Safari의 파일 메뉴를 열어주세요.</li><li>Dock에 추가를 선택하세요.</li><li>추가를 누른 뒤 Dock에서 크로피를 여세요.</li></ol></div>
+<details class="more"><summary class="button secondary full">설치 후 준비 방법 보기</summary>
+<p class="body">Dock의 크로피를 열면 오프라인 사용 준비 화면이 나와요. ‘오프라인 파일 받기’를 눌러 파일을 받은 뒤, 준비 완료가 보이면 인터넷 없이 진단할 수 있어요.</p></details></section>
+<section class="card card-lg"><div class="card-head"><p class="step-label">02  오프라인 준비</p><h2 class="card-title">인터넷 없이 진단하기</h2></div>
+<div class="card-body"><p class="body">진단 모델과 실행 파일을 이 PC에 저장해요.<br>모든 파일의 검증이 끝나면 준비가 완료됩니다.</p>
+<div class="card-size"><p class="size-strong">약 108MB · 인터넷 연결 필요</p><p class="size-note">모델 약 94MB + 실행 파일 약 14MB<br>설치한 앱에서 다운로드하는 것을 권장해요.</p></div></div>
+<a class="button" href="/offline/index.html?prepare=1">오프라인 파일 받기</a></section>
+</div>
+<div class="bottom"><a class="button secondary" href="/home">웹에서 계속하기</a>
+<button class="button guide" data-go="pc" type="button">Chrome·Edge 설치 안내<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18l6-6l-6-6"/></svg></button></div>
+</main>
+
+<!-- PC · 설치창을 열 수 없는 브라우저 -->
+<main data-view="pc-help" hidden>
+<h1 tabindex="-1" class="title">설치 버튼이 보이지 않나요?</h1><p class="lead">사용 중인 브라우저와 PC 설정을 확인해주세요.</p>
+<div class="steps">
+<section class="card card-lg"><div class="card-head"><p class="step-label">01  앱 설치 · 설치 도움말</p><h2 class="card-title">브라우저에서 확인하기</h2></div>
+<div class="card-body"><p class="body">설치가 제한되어도 웹에서 계속 이용할 수 있어요.</p>
+<ul class="pc-steps plain"><li>Chrome·Edge: 주소창의 설치 아이콘을 확인하세요.</li><li>Mac Safari: 파일 → Dock에 추가를 이용하세요.</li><li>회사·학교 PC는 관리자 정책으로 제한될 수 있어요.</li></ul></div>
+<button class="button secondary" data-go="pc" type="button">Chrome·Edge 설치 안내</button></section>
+<section class="card card-lg"><div class="card-head"><p class="step-label">02  오프라인 준비</p><h2 class="card-title">인터넷 없이 진단하기</h2></div>
+<div class="card-body"><p class="body">진단 모델과 실행 파일을 이 PC에 저장해요.<br>모든 파일의 검증이 끝나면 준비가 완료됩니다.</p>
+<div class="card-size"><p class="size-strong">약 108MB · 인터넷 연결 필요</p><p class="size-note">모델 약 94MB + 실행 파일 약 14MB<br>설치한 앱에서 다운로드하는 것을 권장해요.</p></div></div>
+<a class="button" href="/offline/index.html?prepare=1">오프라인 파일 받기</a></section>
+</div>
+<div class="bottom"><a class="button secondary" href="/home">웹에서 계속하기</a>
+<button class="button guide" data-go="mac" type="button">Mac Safari 설치 안내<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18l6-6l-6-6"/></svg></button></div>
+</main>
+
+<!-- PC · 설치 완료 -->
+<main data-view="pc-installed" hidden>
+<h1 tabindex="-1" class="title">크로피 앱 설치 완료</h1><p class="lead">오프라인으로 진단하려면 파일 준비를 마쳐주세요.</p>
+<div class="steps">
+<section class="card card-lg"><div class="card-head"><p class="step-label">01  앱 설치 · 설치 완료</p><h2 class="card-title">이 PC에서 크로피 이용</h2></div>
+<div class="card-body"><p class="body">설치한 앱을 열어 필요한 파일을 받아주세요.</p>
+<ul class="pc-steps plain"><li>앱 설치와 오프라인 준비는 별도예요.</li><li>설치한 앱에서 파일과 실행 환경을 확인합니다.</li><li>준비가 끝나면 인터넷 없이 진단할 수 있어요.</li></ul></div>
+<a class="button secondary" href="/home">웹에서 계속하기</a></section>
+<section class="card card-lg"><div class="card-head"><p class="step-label">02  오프라인 준비</p><h2 class="card-title">인터넷 없이 진단하기</h2></div>
+<div class="card-body"><p class="body">진단 모델과 실행 파일을 이 PC에 저장해요.<br>모든 파일의 검증이 끝나면 준비가 완료됩니다.</p>
+<div class="card-size"><p class="size-strong">약 108MB · 인터넷 연결 필요</p><p class="size-note">모델 약 94MB + 실행 파일 약 14MB<br>설치한 앱에서 다운로드하는 것을 권장해요.</p></div></div>
+<a class="button" href="/offline/index.html?prepare=1">오프라인 파일 받기</a></section>
+</div>
+<div class="bottom"><a class="button secondary" href="/home">웹에서 계속하기</a></div>
+</main>
+</div>
+<script type="module" src="/offline/shell.mjs"></script><script type="module" src="/offline/install.mjs"></script></body></html>
