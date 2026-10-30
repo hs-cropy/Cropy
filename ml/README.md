@@ -158,3 +158,4 @@ train↔val 동일 이미지 2쌍, train↔test 4쌍을 발견했고 원본 SHA2
 - 이후 모델 실험은 이 시험셋으로 판정한다. 서비스 모델은 교체하지 않았다.
 - 실험 1(백본 ConvNeXt-Tiny, `cropy_testset_convnext_colab.ipynb` + `train_full_colab_convnext.py`): macro F1 0.905, 무검은무늬병 52.4%, 무노균병 80.8%. 판정 기준(10%p) 미달로 기각. 결과 `worker_split_v1/convnext_v1_test_report.json`, Drive `cropy_testset/convnext_v1/`.
 - 실험 2(입력 448px, `cropy_testset_hires448_colab.ipynb`): macro F1 0.917, 무검은무늬병 54.2%, 무노균병 88.5%(+14.1%p). 무노균병만 기준 통과, 채택 후보. 서버 교체 전 전체 데이터 재학습과 추론 시간 측정 필요. 결과 `worker_split_v1/hires448_v1_test_report.json`, Drive `cropy_testset/hires448_v1/`.
+- 교체 후보 재학습: `cropy_full448_colab.ipynb`가 서버 모델과 같은 전체 데이터(10클래스)로 448px ResNet50을 학습하고 공식 val로 서버 모델과 비교한다. 백엔드는 체크포인트 `img_size`를 읽으므로 코드 수정 불필요. CPU 추론 256px 78ms → 448px 185ms(배치 1).
