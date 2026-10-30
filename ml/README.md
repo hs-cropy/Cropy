@@ -157,3 +157,4 @@ train↔val 동일 이미지 2쌍, train↔test 4쌍을 발견했고 원본 SHA2
 - 기준선(시험 11,434장): 정확도 98.0%, macro F1 0.899, 무검은무늬병 recall 53.8%, 무노균병 74.4%. 무 질병 작업자 정확도 57~63%. 상세와 한계는 [모델 명세](../docs/MODEL_SPEC.md#작업자-분리-시험셋과-기준선-2026-10-28).
 - 이후 모델 실험은 이 시험셋으로 판정한다. 서비스 모델은 교체하지 않았다.
 - 실험 1(백본 ConvNeXt-Tiny, `cropy_testset_convnext_colab.ipynb` + `train_full_colab_convnext.py`): macro F1 0.905, 무검은무늬병 52.4%, 무노균병 80.8%. 판정 기준(10%p) 미달로 기각. 결과 `worker_split_v1/convnext_v1_test_report.json`, Drive `cropy_testset/convnext_v1/`.
+- 실험 2(입력 448px, `cropy_testset_hires448_colab.ipynb`): macro F1 0.917, 무검은무늬병 54.2%, 무노균병 88.5%(+14.1%p). 무노균병만 기준 통과, 채택 후보. 서버 교체 전 전체 데이터 재학습과 추론 시간 측정 필요. 결과 `worker_split_v1/hires448_v1_test_report.json`, Drive `cropy_testset/hires448_v1/`.
