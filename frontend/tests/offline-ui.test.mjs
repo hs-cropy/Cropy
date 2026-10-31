@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
-import {gradeOf,resultTimeSentence,recordTime} from '../public/offline/core.mjs';
+import {gradeOf,isNotCrop,resultTimeSentence,recordTime} from '../public/offline/core.mjs';
 const source=(await readFile(new URL('../public/offline/app.mjs',import.meta.url),'utf8')).replaceAll('\r\n','\n');
 // app.mjs 의 실제 escape (결과 HTML 테스트용)
 const escapeHtml=vm.runInNewContext(source.match(/const escape = (.*);\n/)[1]);
@@ -13,8 +13,8 @@ function setup({escape=String}={}){
  const context=vm.createContext({$,escape,busy:false,current:null,selected:{name:'new.jpg'},bundle:{version:'v1'},
  crypto:{randomUUID:()=> 'new-record'},setBusy(v){context.busy=v;},async predict(){return [];},summarize(){return result;},
  async storeRecord(record){context.result(record);return true;},message:e=>e.message,
- notices:[],notice(where,name){context.notices.push([where,name]);},toast(){},renderHeader(){},view:'analyze',document:{activeElement:null,body:{}},
- gradeOf,recordTime,URL:{createObjectURL(file){const url='blob:'+file.name;urls.made.push(url);return url;},revokeObjectURL(url){urls.revoked.push(url);}}});
+ notices:[],notice(where,name){context.notices.push([where,name]);},toast(){},say(text){$('state').textContent=text;},renderHeader(){},view:'analyze',document:{activeElement:null,body:{}},
+ gradeOf,isNotCrop,recordTime,URL:{createObjectURL(file){const url='blob:'+file.name;urls.made.push(url);return url;},revokeObjectURL(url){urls.revoked.push(url);}}});
  vm.runInContext(source.slice(source.indexOf('function result('),source.indexOf('async function storeRecord('))+
  source.slice(source.indexOf('async function diagnose('),source.indexOf('async function refine(')),context);
  return {context,$,urls,record:(id,extra={})=>({id,result,saved:true,...extra})};
@@ -53,6 +53,23 @@ test('low confidence, crop mismatch and a pending second photo get their notices
 test('clearing the result also clears the leftover status text',()=>{
  const h=setup();h.context.result(h.record('r'));h.$('state').textContent='저장 공간이 부족해요.';h.context.clearResult();
  assert.equal(h.$('state').textContent,'');
+});
+test('a not-crop result shows how to retake instead of a disease result',()=>{
+ const h=setup({escape:escapeHtml}),file={name:'a.jpg'};
+ h.context.result(h.record('r',{file,result:{...full,category:'other',disease_name:'판별 불가',severity:null,decision_reasons:['not_crop'],crop_type:null,management_actions:['잎 가까이 찍기'],confidence:.42}}));
+ const html=h.$('result').innerHTML;
+ assert.match(html,/잎이 잘 보이게 다시 찍어 주세요/);assert.match(html,/이 기기에 저장했어요/);assert.match(html,/blob:a\.jpg/);
+ for(const hidden of [/42%/,/class="badge/,/지금 해야 할 일/,/상세 정보/,/판별 불가/])assert.doesNotMatch(html,hidden);
+ assert.equal(h.$('new-photo').textContent,'다시 촬영하기');
+ h.context.result(h.record('n',{result:full}));assert.equal(h.$('new-photo').textContent,'새 사진으로 진단하기');
+});
+test('status text scrolls into view on the analyze screen and toasts elsewhere',()=>{
+ const run=view=>{const state={textContent:'',scrollIntoView(){this.scrolled=true;}},toasts=[];
+  const context=vm.createContext({$:()=>state,view,toast(text){toasts.push(text);}});
+  vm.runInContext(source.slice(source.indexOf('function say('),source.indexOf('// actions 를 주면')),context);
+  context.say('문구');return {state,toasts};};
+ const analyze=run('analyze');assert.equal(analyze.state.scrolled,true);assert.deepEqual(analyze.toasts,[]);assert.equal(analyze.state.textContent,'문구');
+ const records=run('records');assert.equal(records.state.scrolled,undefined);assert.deepEqual(records.toasts,['문구']);assert.equal(records.state.textContent,'문구');
 });
 test('result text is escaped',()=>{
  const h=setup({escape:escapeHtml});h.context.result(h.record('r',{result:{...full,disease_name:'<img src=x onerror=alert(1)>'}}));
@@ -101,7 +118,7 @@ test('a rejected photo is explained in text without the analysis-failed card',as
 });
 function setupHeader({view,desktop=false,savedId=null,current=null,phase}){
  const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',hidden:false,open:false,dataset:{phase},classList:{toggle(){}}});return nodes.get(id);};
- const context=vm.createContext({$,view,desktop,savedId,current,document:{activeElement:null},resultTimeSentence});
+ const context=vm.createContext({$,view,desktop,savedId,current,document:{activeElement:null},resultTimeSentence,isNotCrop});
  vm.runInContext(source.slice(source.indexOf('const PHASES = {'),source.indexOf('function notice('))+
   source.slice(source.indexOf('function show('),source.indexOf('function setBusy('))+';globalThis.notices=notices;',context);
  const header=()=>{context.renderHeader();return {label:$('phase-label').hidden?null:$('phase-label').textContent,lead:$('phase-lead').textContent};};
@@ -138,6 +155,12 @@ test('a result on the analyze screen switches the header to the diagnosis result
  h.context.notices.analyze='local-analysis-failed';assert.equal(h.header().label,'기기 내 분석 오류');assert.equal(h.$('view-title').textContent,'사진 분석');
  h.context.notices.analyze=null;h.context.current=null;h.header();
  assert.equal(h.$('view-title').textContent,'사진 분석');assert.equal(h.$('page-head').dataset.mode,'');
+});
+test('a not-crop result switches the header to the retake guidance',()=>{
+ const h=setupHeader({view:'analyze',current:{id:'r',created_at:'2026-10-06T14:18:00',result:{category:'other'}}});
+ assert.deepEqual(h.header(),{label:null,lead:'고추·무·배추 잎으로 알아보기 어려운 사진이에요.'});
+ assert.equal(h.$('view-title').textContent,'작물 잎을 찾지 못했어요');assert.equal(h.$('phase-lead-wide').textContent,'고추·무·배추 잎으로 알아보기 어려운 사진이에요.');
+ assert.equal(h.$('head-mascot').src,'/mascot/retake.png');
 });
 test('viewing an older record result drops the saved label, the records list keeps it',()=>{
  assert.equal(setupHeader({view:'analyze',savedId:'new',current:{id:'old'}}).header().label,null);

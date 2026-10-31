@@ -85,10 +85,13 @@ export function recordsNotice(records, online) {
   if (!online && records.some(record => record.sync_status === 'pending')) return 'sync-pending';
   return null;
 }
+// 판별 불가(9_기타): 작물 잎을 알아보지 못한 결과 (lib/diagnosis.ts 의 isNotCrop)
+export const isNotCrop = result => result?.category === 'other';
 // 진단 결과 화면의 등급 배지 (DiagnosisResultView.tsx 의 gradeOf 와 같다). 위험·주의는 같은 색이고 라벨로 구분한다.
-// 정상 판정이면 "정상", 등급이 없으면 null
+// 정상 판정이면 "정상", 판별 불가나 등급이 없으면 null
 const SEVERITY = { high: { label: '위험', tone: 'attention' }, medium: { label: '주의', tone: 'attention' }, low: { label: '낮음', tone: 'low' } };
 export function gradeOf(result) {
+  if (isNotCrop(result)) return null;
   if (result?.category === 'normal' || result?.category === 'healthy') return { label: '정상', tone: 'low' };
   return SEVERITY[result?.severity] || null;
 }

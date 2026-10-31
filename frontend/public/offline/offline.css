@@ -229,6 +229,14 @@ select { min-height: 2.75rem; margin-left: .5rem; padding: 0 .5rem; border: 1px 
   content: counter(step, decimal-leading-zero); display: flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; flex-shrink: 0; margin-top: -.125rem;
   border-radius: 50%; background: var(--cropy-green-50); color: var(--cropy-green-600); font-size: .875rem; line-height: 1.375rem; font-weight: 700;
 }
+/* 판별 불가: 병해 결과 대신 다시 찍는 방법 (LowConfidencePanel.tsx) */
+.rv-notcrop { gap: 1rem; }
+.rv-notcrop .rv-photo-main { height: 10rem; overflow: hidden; border-radius: .75rem; background: var(--cropy-surface-canvas); }
+.rv-notcrop-text { display: flex; flex-direction: column; gap: .75rem; min-width: 0; }
+.rv-notcrop h2 { font-size: 1.125rem; line-height: 1.625rem; }
+.rv-tips { display: flex; flex-direction: column; gap: .5rem; margin: 0; padding: 0; list-style: none; color: var(--cropy-text-secondary); font-size: .875rem; line-height: 1.5rem; }
+.rv-tips li { display: flex; gap: .5rem; }
+.rv-tips li::before { content: '✓'; flex-shrink: 0; color: var(--cropy-green-600); font-weight: 700; }
 #refine-area h2 { font-size: 1.125rem; line-height: 1.625rem; }
 .result-tools { display: flex; flex-direction: column; gap: .5rem; }
 /* 새 사진으로 진단하기: 배경 없는 글자 버튼 */
@@ -327,6 +335,9 @@ body:has(#update-dialog[open]) [data-view="prepare"] { visibility: hidden; }
   [data-mode="result"] #phase-lead-wide { display: block; }
   .head-mascot { width: 5.5rem; height: 5.5rem; margin-top: 2rem; }
   .rv-notices { gap: 1rem; }
+  .rv-notcrop { flex-direction: row; align-items: flex-start; gap: 2rem; padding: 1.5rem; }
+  .rv-notcrop .rv-photo-main { flex: 0 0 20rem; height: 13rem; }
+  .rv-notcrop-text { flex: 1; }
   .rv-grid { display: grid; grid-template-columns: 20rem minmax(0, 1fr); align-items: start; gap: 2rem; }
   .rv-main { gap: 1.25rem; }
   .rv-grid .rv-summary { display: none; }

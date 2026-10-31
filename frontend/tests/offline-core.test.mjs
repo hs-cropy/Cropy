@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gradeOf, resultTimeSentence, recordTime } from '../public/offline/core.mjs';
+import { gradeOf, isNotCrop, resultTimeSentence, recordTime } from '../public/offline/core.mjs';
 import { softmax, fuse, summarize, installView, isDesktopDevice, DESKTOP_VIEWS, failurePhase, viewFromHash, recordsNotice, updateAvailable } from '../public/offline/core.mjs';
 const bundle = { model_version: 'm1', preprocessing_version: 'p1', version: 'v1',
   diseases: [{model_class_id: 2, name: '검은무늬병', crop_type: '무', category:'disease'},
@@ -105,6 +105,9 @@ test('result grade and time wording match the online result screen', () => {
   assert.deepEqual(gradeOf({ severity: 'low' }), { label: '낮음', tone: 'low' });
   assert.deepEqual(gradeOf({ category: 'healthy', severity: 'high' }), { label: '정상', tone: 'low' });
   assert.equal(gradeOf({}), null);
+  assert.equal(isNotCrop({ category: 'other' }), true);
+  assert.equal(isNotCrop(undefined), false);
+  assert.equal(gradeOf({ category: 'other', severity: 'high' }), null);
   assert.equal(resultTimeSentence('2026-10-06T14:18:00'), '2026년 10월 6일 오후 2:18에 확인한 결과예요.');
   assert.equal(resultTimeSentence('2026-10-06T00:05:00'), '2026년 10월 6일 오전 12:05에 확인한 결과예요.');
   assert.equal(resultTimeSentence('2026-10-06T12:00:00'), '2026년 10월 6일 오후 12:00에 확인한 결과예요.');
