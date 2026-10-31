@@ -1,5 +1,5 @@
 import * as ort from '/offline-runtime/ort.wasm.bundle.min.mjs';
-import { softmax, distribution, fuse, summarize, failurePhase, viewFromHash, recordsNotice, updateAvailable, isDesktopDevice } from './core.mjs';
+import { softmax, distribution, fuse, summarize, failurePhase, viewFromHash, recordsNotice, updateAvailable, isDesktopDevice, gradeOf, resultTimeSentence, recordTime } from './core.mjs';
 
 ort.env.wasm.wasmPaths = '/offline-runtime/';
 ort.env.wasm.numThreads = 1;
@@ -80,6 +80,8 @@ const VIEWS = {
   analyze: {title:'사진 분석', lead:'사진은 이 기기에서 분석돼요.'},
   records: {title:'진단 기록', lead:'인터넷 없이도 이 기기에 저장된 기록을 볼 수 있어요.'},
 };
+// 사진 분석 화면에 결과가 있을 때의 머리 (온라인 DiagnosisScreen.tsx 의 진단 결과). 넓은 화면은 진단 시각 문장이다
+const RESULT = {title:'진단 결과', lead:'진단 요약을 확인하고\n필요한 상세 정보를 펼쳐보세요.', wide:'진단 요약을 확인하고, 아래 관리 방법을 참고해주세요.'};
 // 업데이트 다이얼로그가 떠 있는 동안의 준비 화면 머리 (Offline/Mobile/model-update)
 const UPDATE = {label:'업데이트 가능', lead:'현재 준비된 파일로 오프라인 진단을 계속할 수 있어요.'};
 // 기기에 저장한 직후의 사진 분석·진단 기록 화면 머리 (Offline/Mobile/local-saved). 부제는 화면 기본값이다
@@ -92,9 +94,12 @@ function renderHeader() {
   const entry = view === 'prepare'
     ? ($('update-dialog').open ? UPDATE : phaseText(PHASES[$('status-card').dataset.phase]))
     : NOTICES[notices[view]] || (saved ? SAVED : undefined);
-  $('view-title').textContent = VIEWS[view].title;
-  $('phase-lead').textContent = entry?.lead || VIEWS[view].lead;
+  const showing = view === 'analyze' && Boolean(current) && !notices.analyze;
+  $('view-title').textContent = showing ? RESULT.title : VIEWS[view].title;
+  $('phase-lead').textContent = entry?.lead || (showing ? RESULT.lead : VIEWS[view].lead);
+  $('phase-lead-wide').textContent = showing ? resultTimeSentence(current.created_at) || RESULT.wide : '';
   $('phase-label').textContent = entry?.label || ''; $('phase-label').hidden = !entry;
+  $('page-head').dataset.mode = showing ? 'result' : '';
 }
 // 사진 분석(analyze)·진단 기록(records) 화면의 안내 카드를 띄우거나(name) 닫는다(null)
 function notice(where, name) {
@@ -102,7 +107,7 @@ function notice(where, name) {
   const focused = document.activeElement;
   notices[where] = entry ? name : null;
   card.hidden = !entry;
-  if (where === 'analyze') $('diagnosis').hidden = Boolean(entry);
+  if (where === 'analyze') syncAnalyzeView();
   if (entry) {
     card.querySelector('.mascot').src = '/mascot/' + entry.mascot + '.png';
     card.querySelector('h2').textContent = entry.title; card.querySelector('p').textContent = entry.body;
@@ -182,7 +187,7 @@ function setBusy(value) {
   $('refine').disabled = value || !current;
   $('prepare').disabled = $('update-accept').disabled = value;
   $('start').disabled = value || !session;
-  for (const id of ['file','crop','second']) $(id).disabled = value;
+  for (const id of ['file','crop','second','new-photo']) $(id).disabled = value;
   for (const id of ['analyze-card','records-card']) $(id).querySelector('[data-act="primary"]').disabled = value;
   for (const button of $('history').querySelectorAll('button')) button.disabled = value || button.dataset.locked === 'true';
 }
@@ -267,19 +272,92 @@ async function predict(file) {
 function result(record) {
   if (current?.id !== record.id) $('second').value = '';
   current = record; const r = record.result;
-  // 판별 불가는 병해 확률이 아니므로 점수와 후보를 보이지 않는다
-  const other = r.category === 'other';
-  $('result').innerHTML = `<h2>${escape(r.disease_name)}${other ? '' : ` · ${Math.round(r.confidence*100)}%`}</h2>
-    <p class="status">${record.refined_predictions ? '두 사진으로 결과를 갱신했어요. ' : ''}${record.saved ? '이 기기에 저장했어요.' : '기기 저장에 실패했어요. 화면의 결과는 유지돼요.'}</p>
-    ${r.decision_reasons.length ? `<p class="status danger">${r.decision_reasons.map(x => ({not_crop:'고추·무·배추 잎으로 알아보기 어려워요. 잎이 잘 보이게 다시 찍어 주세요',crop_mismatch:'선택한 작물과 사진 분류가 달라요',confusion:'후보가 비슷해 추가 확인이 필요해요',low_confidence:'사진만으로 판단이 어려워요'}[x])).map(escape).join(' · ')}</p>` : ''}
-    ${other ? '' : `<ul>${r.top_predictions.map(p => `<li>${escape(p.name)} ${Math.round(p.confidence*100)}%</li>`).join('')}</ul>`}
-    <p>${escape(r.description)}</p><details><summary>원인·예방·관리 안내</summary>
-    <ul>${[...r.causes,...r.prevention].map(x => `<li>${escape(x)}</li>`).join('')}</ul></details>
-    ${!record.saved ? '<button id="retry-local">이 기기에 다시 저장</button>' : ''}`;
-  $('refine-area').classList.toggle('hidden', !r.recapture || Boolean(record.sync_attempted) || record.sync_status === 'saved' || Boolean(record.recovery_token));
+  $('result').innerHTML = resultHtml(record, resultPhotos(record), canRefine(record));
+  $('refine-area').classList.toggle('hidden', !canRefine(record));
   $('guidance').textContent = r.recapture ? r.recapture.instruction + ' ' + r.recapture.candidates.map(c => c.cue).join(' ') : '';
   $('speak').disabled = false;
   $('retry-local')?.addEventListener('click', async () => {if (busy) return; setBusy(true); try {await storeRecord(record);} finally {setBusy(false);}});
+  syncAnalyzeView(); renderHeader();
+}
+// 결과를 내리고 사진 고르기로 돌아간다 (새 사진으로 진단하기·기록 삭제). 기록은 기기에 그대로 있다
+function clearResult() {
+  current = null; $('result').replaceChildren(); $('refine-area').classList.add('hidden'); $('second').value = ''; $('speak').disabled = true; $('state').textContent = '';
+  for (const url of resultUrls) URL.revokeObjectURL(url);
+  resultFiles = []; resultUrls = [];
+  syncAnalyzeView(); renderHeader();
+}
+// 두 번째 사진으로 다시 확인할 수 있는지. 서버에 보낸 뒤에는 보낸 기록과 달라지지 않게 막는다
+function canRefine(record) {
+  return Boolean(record?.result?.recapture) && !record.sync_attempted && record.sync_status !== 'saved' && !record.recovery_token;
+}
+// 결과 화면의 사진 주소 (기기에 저장한 원본·재촬영 사진). 같은 사진이면 주소를 다시 만들지 않는다
+let resultFiles = [], resultUrls = [];
+function resultPhotos(record) {
+  const files = [record.file, record.refined_file].filter(Boolean);
+  if (files.length !== resultFiles.length || files.some((file, i) => file !== resultFiles[i])) {
+    for (const url of resultUrls) URL.revokeObjectURL(url);
+    resultFiles = files; resultUrls = files.map(file => URL.createObjectURL(file));
+  }
+  return resultUrls;
+}
+const CHEVRON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9l6 6l6-6"/></svg>';
+const ALERT = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></g></svg>';
+// 진단 결과 (온라인 DiagnosisResultView.tsx 의 모바일 M-03 · 데스크탑 D-03).
+// 모바일 요약 카드와 데스크탑 사진·제목 카드는 구성이 달라 둘 다 그리고 CSS 가 화면 폭에 맞는 쪽만 보인다.
+// 등록 농약은 오프라인 묶음에 없어 상세 정보에서 뺀다 (면책 문구가 안내한다)
+function resultHtml(record, photos, refinable) {
+  const r = record.result, grade = gradeOf(r);
+  const percent = Number.isFinite(r.confidence) ? Math.round(r.confidence * 100) + '%' : '-';
+  const actions = r.management_actions || [], causes = r.causes || [], prevention = r.prevention || [];
+  const badge = grade ? `<span class="badge ${grade.tone}"><span class="sr-only">위험 등급 </span>${escape(grade.label)}</span>` : '';
+  const uncertain = r.decision_reasons?.includes('low_confidence')
+    ? `<p class="rv-uncertain">${ALERT}사진만으로는 확실하지 않아요. 병징이 잘 보이는 사진으로 다시 확인하고, 방제 전에 가까운 농업기술센터에 문의해 보세요.</p>` : '';
+  const [photo, second] = photos;
+  const pair = second ? `<div class="rv-pair">
+      <figure><img src="${photo}" alt="처음 촬영한 작물"><figcaption>1차 촬영</figcaption></figure>
+      <figure><img src="${second}" alt="판별부위를 다시 촬영한 사진"><figcaption>판별부위 재촬영</figcaption></figure></div>
+    <p class="rv-pair-note${uncertain ? ' warn' : ''}">${uncertain ? '두 장의 사진을 함께 분석했지만 아직 결과가 확실하지 않아요. 병징이 뚜렷한 부위를 다시 확인해 주세요.' : '판별부위 사진까지 함께 분석한 결과예요.'}</p>` : '';
+  const detail = (title, body) => `<details name="rv-detail"><summary>${title}${CHEVRON}</summary><div class="rv-panel">${body}</div></details>`;
+  const missing = text => `<p>${text}</p>`;
+  return `<div class="rv-notices">
+    <p class="status">${record.refined_predictions ? '두 사진으로 결과를 갱신했어요. ' : ''}${record.saved ? '이 기기에 저장했어요.' : '기기 저장에 실패했어요. 화면의 결과는 유지돼요.'}</p>
+    ${!record.saved ? '<button id="retry-local" type="button">이 기기에 다시 저장</button>' : ''}
+    ${r.crop_mismatch ? `<p class="rv-notice warn">선택한 작물은 ${escape(r.selected_crop)}이지만 사진은 ${escape(r.predicted_crop)}로 분류됐어요. 작물 선택과 사진을 확인한 뒤 다시 진단해 주세요.</p>` : ''}
+    ${refinable ? '<div class="rv-notice"><p class="rv-notice-title">추가 촬영 안내가 있어요</p><p>아래 안내대로 판별 부위를 한 장 더 찍으면 두 사진으로 다시 확인할 수 있어요.</p></div>'
+      : r.decision_reasons?.includes('confusion') ? '<p class="rv-notice warn">후보가 비슷해 추가 확인이 필요해요. 병징이 잘 보이는 사진으로 다시 확인해 주세요.</p>' : ''}
+  </div>
+  <div class="rv-grid">
+    <section class="card rv-photo" aria-label="진단에 사용한 사진과 정보"><h2>진단에 사용한 사진</h2>
+      ${pair || `<div class="rv-photo-main">${photo ? `<img src="${photo}" alt="진단한 작물">` : ''}</div>`}
+      <dl class="rv-meta"><div><dt>작물</dt><dd>${escape(r.crop_type || '-')}</dd></div><div><dt>진단 시각</dt><dd>${escape(recordTime(record.created_at) || '-')}</dd></div>
+        <div><dt>등급</dt><dd>${escape(grade?.label || '-')}</dd></div><div><dt>AI 신뢰도</dt><dd>${percent}</dd></div></dl>
+      <p class="caption">AI 신뢰도는 참고 값이며<br>확정 진단을 의미하지 않습니다.</p></section>
+    <div class="rv-main">
+      <section class="card rv-summary" aria-label="진단 요약"><p class="rv-caption">AI 진단 결과</p>
+        <div class="rv-sum-row"><div class="rv-thumb">${photo ? `<img src="${photo}" alt="진단한 작물">` : ''}</div>
+          <div class="rv-sum-text">${r.crop_type ? `<p class="rv-caption">${escape(r.crop_type)}</p>` : ''}<h2>${escape(r.disease_name)}</h2>
+            <div class="rv-badges">${badge}<p class="rv-caption">신뢰도 ${percent}</p></div></div></div>
+        ${uncertain}${pair}</section>
+      <section class="card rv-title"><div class="rv-title-row"><h2>${escape(r.disease_name)}</h2>${badge}</div>
+        <p class="muted">진단 요약을 확인하고, 아래 관리 방법을 참고해주세요.</p>${uncertain}</section>
+      ${actions.length ? `<section class="card rv-todo" aria-labelledby="rv-todo-title"><div class="rv-todo-head"><h2 id="rv-todo-title">지금 해야 할 일</h2><p class="rv-todo-count">${actions.length}가지</p></div>
+        <ol>${actions.map(action => `<li>${escape(action)}</li>`).join('')}</ol></section>` : ''}
+      <section class="rv-details" aria-labelledby="rv-details-title"><h2 id="rv-details-title">상세 정보</h2>
+        ${detail('증상', r.description ? `<p class="rv-strong">${escape(r.description)}</p><p>사진 속 증상과 비교해 주세요. AI 진단은 참고용입니다.</p>` : missing('이 병해의 증상 설명을 확인할 수 없어요.'))}
+        ${detail('원인', causes.length ? `<ul class="rv-dots">${causes.map(x => `<li>${escape(x)}</li>`).join('')}</ul>` : missing('이 병해의 발병 원인 정보를 확인할 수 없어요.'))}
+        ${detail('예방법', prevention.length ? `<ol class="rv-steps">${prevention.map(x => `<li>${escape(x)}</li>`).join('')}</ol>` : missing('이 병해의 예방법 정보를 확인할 수 없어요.'))}
+      </section>
+    </div>
+  </div>`;
+}
+// 사진 분석 화면에는 하나만 보인다: 분석 실패 카드가 떠 있으면 카드, 결과가 있으면 결과, 없으면 사진 고르기.
+// 누른 버튼이 숨겨졌으면 포커스가 사라지지 않게 화면 제목으로 옮긴다
+function syncAnalyzeView() {
+  const focused = document.activeElement, failed = !$('analyze-card').hidden;
+  $('result-view').hidden = failed || !current;
+  $('diagnosis').hidden = failed || Boolean(current);
+  // 진단 중 버튼이 비활성화되면 포커스가 body 로 빠지기도 한다 (다른 화면을 보는 중에는 옮기지 않는다)
+  if (view === 'analyze' && (focused?.closest?.('[hidden]') || !focused || focused === document.body)) $('view-title').focus();
 }
 async function storeRecord(record) {
   let saved;
@@ -308,7 +386,8 @@ async function diagnose() {
       selected_crop:crop || null, predictions, bundle_version:bundle.version, model_version:bundle.model_version,
       preprocessing_version:bundle.preprocessing_version, sync_status:'pending', saved:false,
       result:summarize(bundle,predictions,crop)};
-    result(record); if (await storeRecord(record)) $('state').textContent = '모델 분류는 확진을 뜻하지 않아요.';
+    // 저장에 실패하면 storeRecord 가 원인을 남긴다. 확진이 아니라는 안내는 화면 아래 문구가 한다
+    result(record); if (await storeRecord(record)) $('state').textContent = '';
   } catch (error) { analysisFailed(error, diagnose); }
   finally { setBusy(false); }
 }
@@ -319,10 +398,12 @@ function analysisFailed(error, retry) {
 }
 async function refine() {
   const file = $('second').files[0];
-  if (busy || !file || !current || current.sync_attempted || current.sync_status === 'saved' || current.recovery_token) return;
-  const base = current;
-  // 분석 실패 카드에서 다시 눌렀을 때도 아래 문구가 보이게 카드를 먼저 닫는다
+  if (busy) return;
+  // 분석 실패 카드에서 다시 눌렀을 때도 아래 문구가 보이게 카드를 먼저 닫는다.
+  // 그사이 서버에 보내 다시 확인할 수 없게 됐으면 카드만 닫고 결과를 보인다
   notice('analyze', null);
+  if (!file || !current || !canRefine(current)) return;
+  const base = current;
   if (current.bundle_version !== bundle.version) { $('state').textContent = '모델이 변경됐어요. 새 진단을 시작해 주세요.'; return; }
   setBusy(true); $('state').textContent = '두 사진으로 다시 확인하고 있어요.';
   try {
@@ -330,7 +411,7 @@ async function refine() {
     const combined = fuse(base.predictions,second,bundle.policy.second_photo_weight);
     const record = {...base,refined_file:file,refined_predictions:second,sync_status:'pending',saved:false,
       result:summarize(bundle,combined,base.selected_crop)};
-    result(record); if (await storeRecord(record)) $('state').textContent = '재촬영 결과를 확인해 주세요.';
+    result(record); if (await storeRecord(record)) $('state').textContent = '';
   } catch (error) { analysisFailed(error, refine); }
   finally { setBusy(false); }
 }
@@ -400,7 +481,7 @@ async function history() {
       ['결과 보기',()=>{result(record);notice('analyze',null);go('analyze');},false],
       // 실패해도 목록과 동기화 안내가 새 상태를 보이게 다시 그린다
       ['서버에 저장',async event=>{dismissed=null;await sync(record,event.target);await history();},record.sync_status==='saved'],
-      ['내보내기',()=>exportRecord(record),false],['이 기기에서 삭제',async()=>{if(confirm('이 기기의 사진과 기록을 삭제할까요? 내보낸 파일이나 서버 기록은 유지돼요.')){setBusy(true);try {await db('records','delete',null,record.id);if(current?.id===record.id){current=null;$('result').replaceChildren();$('refine-area').classList.add('hidden');$('speak').disabled=true;}storageFull=false;await history();}finally{setBusy(false);}}},false]]) {
+      ['내보내기',()=>exportRecord(record),false],['이 기기에서 삭제',async()=>{if(confirm('이 기기의 사진과 기록을 삭제할까요? 내보낸 파일이나 서버 기록은 유지돼요.')){setBusy(true);try {await db('records','delete',null,record.id);if(current?.id===record.id)clearResult();storageFull=false;await history();}finally{setBusy(false);}}},false]]) {
       const button=document.createElement('button');button.textContent=label;button.className='secondary';button.dataset.locked=String(disabled);button.disabled=busy || disabled;
       button.addEventListener('click',event=>{if(busy)return;Promise.resolve(handler(event)).catch(error=>{$('state').textContent=message(error);});});actions.append(button);
     }
@@ -418,7 +499,11 @@ $('start').addEventListener('click',()=>{go('analyze');$('file').click();});
 $('manage').addEventListener('click',()=>{go('records');$('records').scrollIntoView();});
 // 분석 실패 카드: 같은 사진으로 다시 분석하거나, 카드를 닫고 다른 사진을 고른다
 $('analyze-card').querySelector('[data-act="primary"]').addEventListener('click',()=>retryAnalysis?.());
-$('analyze-card').querySelector('[data-act="secondary"]').addEventListener('click',()=>{notice('analyze',null);$('file').click();});
+// 두 사진 확인에 실패했으면 결과를 둔 채 추가 사진을, 새 진단에 실패했으면 이전 결과를 내리고 사진을 다시 고른다
+$('analyze-card').querySelector('[data-act="secondary"]').addEventListener('click',()=>{
+  if(retryAnalysis===refine&&canRefine(current)){notice('analyze',null);$('second').click();return;}
+  if(current)clearResult();notice('analyze',null);$('file').click();
+});
 // 기록 안내 카드: 저장 공간 관리는 목록으로, 동기화 재시도는 실패한 기록을 차례로 다시 보낸다
 $('records-card').querySelector('[data-act="primary"]').addEventListener('click',async event=>{
   if(busy)return;
@@ -437,11 +522,21 @@ addEventListener('online',updateRecordsNotice);addEventListener('offline',update
 $('later').addEventListener('click',()=>{$('status-card').hidden=true;$('resume').hidden=false;$('resume').focus();});
 $('resume').addEventListener('click',()=>{$('status-card').hidden=false;$('resume').hidden=true;$('status-title').focus();});
 $('file').addEventListener('change',()=>{
-  selected=$('file').files[0];savedId=null;notice('analyze',null);if(previewUrl)URL.revokeObjectURL(previewUrl);
+  // 결과를 보던 중 진단 시작 등으로 새 사진을 골랐으면 결과를 내리고 사진 고르기를 보인다
+  selected=$('file').files[0];savedId=null;if(selected&&current)clearResult();notice('analyze',null);if(previewUrl)URL.revokeObjectURL(previewUrl);
   if(selected){previewUrl=URL.createObjectURL(selected);$('preview').src=previewUrl;$('preview').classList.remove('hidden');}
   setBusy(busy);
 });
 $('diagnose').addEventListener('click',diagnose);$('refine').addEventListener('click',refine);
+// 새 사진으로 진단하기: 결과와 고른 사진을 내리고 사진 고르기를 연다. 지난 결과는 진단 기록에서 다시 볼 수 있다
+$('new-photo').addEventListener('click',()=>{
+  if(busy)return;
+  selected=null;$('file').value='';if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=null;$('preview').classList.add('hidden');
+  savedId=null;clearResult();setBusy(busy);
+  // 준비된 모델 없이 기록의 결과만 보던 중이면 사진을 고를 수 없으니 준비 화면으로 간다
+  if(!session){go('prepare');return;}
+  $('file').click();
+});
 $('speak').addEventListener('click',()=>{
   if(!current||!('speechSynthesis'in window)){ $('state').textContent='음성 안내를 사용할 수 없어요.';return; }
   const voice=speechSynthesis.getVoices().find(v=>v.localService&&v.lang.startsWith('ko'));

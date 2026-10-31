@@ -30,6 +30,12 @@ try {
   assert.match(await page.locator('#result').innerText(), /이 기기에 저장했어요/);
   assert.match(await page.locator('#toast').innerText(), /이 기기에 저장했어요/);
   assert.equal(await page.locator('#phase-label').innerText(), '기기 저장 완료');
+  // 결과가 나오면 사진 고르기 대신 진단 결과만 보이고, 새 사진으로 진단하기로 돌아간다
+  assert.equal(await page.locator('#view-title').innerText(), '진단 결과');
+  assert.ok(await page.locator('#diagnosis').isHidden());
+  await page.locator('#new-photo').evaluate(button => { HTMLInputElement.prototype.click = () => {}; button.click(); });
+  assert.equal(await page.locator('#view-title').innerText(), '사진 분석');
+  assert.ok(await page.locator('#diagnose').isVisible());
   await context.setOffline(true);
   await page.reload();
   await page.waitForFunction(() => document.querySelector('#progress').value === 100, null, {timeout:180000});
@@ -48,7 +54,7 @@ try {
   assert.ok(await page.locator('#records-saved').isVisible());
   assert.equal(await page.locator('#reload').count(), 0);
   await page.locator('#history article').first().getByRole('button',{name:'결과 보기'}).click();
-  assert.equal(await page.locator('#view-title').innerText(), '사진 분석');
+  assert.equal(await page.locator('#view-title').innerText(), '진단 결과');
   assert.match(await page.locator('#result').innerText(), /이 기기에 저장했어요/);
   await context.setOffline(false);
   // Commit succeeds, but the browser never receives the response.

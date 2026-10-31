@@ -85,3 +85,24 @@ export function recordsNotice(records, online) {
   if (!online && records.some(record => record.sync_status === 'pending')) return 'sync-pending';
   return null;
 }
+// 진단 결과 화면의 등급 배지 (DiagnosisResultView.tsx 의 gradeOf 와 같다). 위험·주의는 같은 색이고 라벨로 구분한다.
+// 정상 판정이면 "정상", 등급이 없으면 null
+const SEVERITY = { high: { label: '위험', tone: 'attention' }, medium: { label: '주의', tone: 'attention' }, low: { label: '낮음', tone: 'low' } };
+export function gradeOf(result) {
+  if (result?.category === 'normal' || result?.category === 'healthy') return { label: '정상', tone: 'low' };
+  return SEVERITY[result?.severity] || null;
+}
+// "2026년 10월 6일 오후 2:18에 확인한 결과예요." (DiagnosisResultView.tsx). 날짜를 읽지 못하면 null
+export function resultTimeSentence(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return null;
+  const hours = date.getHours(), minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 ${hours < 12 ? '오전' : '오후'} ${hours % 12 || 12}:${minutes}에 확인한 결과예요.`;
+}
+// "2026.10.22 · 19:25" (RecentDiagnosisCard.tsx 의 recentDate). 날짜를 읽지 못하면 null
+export function recordTime(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return null;
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} · ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}

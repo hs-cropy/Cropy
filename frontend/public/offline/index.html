@@ -16,9 +16,13 @@
 <div class="page with-nav">
 <main>
 <!-- 제목·부제·상태 라벨은 세 화면이 함께 쓴다. app.mjs 의 renderHeader 가 화면과 상태에 맞게 바꾼다 -->
+<!-- 진단 결과일 때는 넓은 화면 부제(진단 시각)와 마스코트가 함께 보인다 (data-mode="result", PageHeader.tsx) -->
+<div class="page-head" id="page-head"><div class="head-text">
 <h1 class="title" id="view-title" tabindex="-1">오프라인 사용 준비</h1>
 <p class="lead" id="phase-lead">처음 한 번 준비하면 인터넷 없이 사용할 수 있어요.</p>
-<p class="phase" id="phase-label">준비 상태 확인</p>
+<p class="lead" id="phase-lead-wide"></p>
+<p class="phase" id="phase-label">준비 상태 확인</p></div>
+<img class="head-mascot" src="/mascot/result.png" alt="" width="288" height="288"></div>
 
 <!-- 화면 1 · 오프라인 사용 준비 (#prepare, 기본) -->
 <div class="view" data-view="prepare">
@@ -39,19 +43,26 @@
 <button id="resume" class="update" type="button" hidden>오프라인 준비 다시 보기</button>
 </div>
 
-<!-- 화면 2 · 사진 분석 (#analyze). 분석에 실패하면 사진 진단 대신 안내 카드만 보인다 (사진은 그대로 둔다) -->
+<!-- 화면 2 · 사진 분석 (#analyze). 사진 고르기·진단 결과·분석 실패 카드 중 하나만 보인다 (app.mjs 의 syncAnalyzeView).
+     분석에 실패해도 사진은 그대로 둔다 -->
 <div class="view" data-view="analyze" hidden>
 <section class="feedback" id="analyze-card" hidden aria-labelledby="analyze-card-title">
 <img class="mascot" src="/mascot/retake.png" alt="" width="288" height="288">
 <h2 id="analyze-card-title" tabindex="-1"></h2><p role="status"></p>
 <div class="actions"><button type="button" data-act="primary"></button><button class="secondary" type="button" data-act="secondary"></button></div>
 </section>
+<!-- 분석 중·사진 거부·저장 실패 원인 문구. 결과가 길어도 보이게 맨 위에 둔다 -->
+<p id="state" class="muted state" role="status"></p>
+<!-- 진단 결과. 카드들은 app.mjs 의 resultHtml 이 그린다. 추가 사진 입력은 다시 그려도 고른 파일이 남게 밖에 둔다 -->
+<section class="result-view" id="result-view" hidden aria-label="진단 결과"><div id="result"></div>
+<section class="card hidden" id="refine-area" aria-labelledby="refine-title"><h2 id="refine-title">추가 촬영</h2><p id="guidance" class="muted"></p>
+<label>추가 사진 <input id="second" type="file" accept="image/jpeg,image/png" capture="environment"></label><button id="refine" type="button">두 사진으로 다시 확인</button></section>
+<div class="result-tools"><button id="speak" class="secondary" type="button" disabled>결과 읽기</button><button id="new-photo" class="text-button" type="button">새 사진으로 진단하기</button></div>
+</section>
 <section class="card section" id="diagnosis" aria-labelledby="diagnosis-title"><h2 id="diagnosis-title">사진 진단</h2>
 <label>작물 <select id="crop"><option value="">자동 감지</option><option>고추</option><option>무</option><option>배추</option></select></label>
 <input id="file" type="file" accept="image/jpeg,image/png" capture="environment" aria-label="진단할 사진"><img id="preview" alt="선택한 사진" class="hidden">
-<div class="row"><button id="diagnose" type="button" disabled>이 기기에서 진단하기</button><button id="speak" class="secondary" type="button" disabled>결과 읽기</button></div>
-<p id="state" class="muted" role="status"></p><div id="result"></div>
-<div id="refine-area" class="hidden"><p id="guidance" class="muted"></p><label>추가 사진 <input id="second" type="file" accept="image/jpeg,image/png" capture="environment"></label><button id="refine" type="button">두 사진으로 다시 확인</button></div>
+<div class="row"><button id="diagnose" type="button" disabled>이 기기에서 진단하기</button></div>
 </section>
 
 <p class="muted note">모델 분류는 확진을 뜻하지 않아요. 농약 사용 조건은 오프라인 묶음에 포함하지 않으며 최신 등록정보·제품 라벨을 별도로 확인해야 해요.</p>
