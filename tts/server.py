@@ -109,7 +109,8 @@ app = FastAPI(title="CropCare TTS", lifespan=lifespan)
 
 
 @app.get("/health")
-def health():
+async def health():
+    # 이벤트 루프에서 바로 답한다 — 합성을 기다리는 요청이 스레드풀을 모두 차지해도 늦어지지 않는다
     return {
         "status": "ok",
         "model": f"melotts-{LANGUAGE.lower()}-pretrained",
@@ -120,7 +121,7 @@ def health():
 
 @app.post("/synthesize")
 def synthesize(req: SynthesizeRequest):
-    # 동기 함수라 FastAPI가 스레드풀에서 돌린다 — 합성 중에도 /health는 응답한다
+    # 동기 함수라 스레드풀(기본 40개)에서 돈다. 합성은 _lock으로 하나씩이라 나머지 요청은 스레드를 쥔 채 기다린다
     try:
         audio = _synthesize(req.text, req.speed)
     except Exception:
