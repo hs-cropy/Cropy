@@ -86,6 +86,8 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 print('결과 폴더', OUTPUT_DIR)
 """),
         code("""
+# Colab 기본 torchao(0.10)가 있으면 peft 0.21이 get_peft_model에서 ImportError를 낸다. 이 노트북은 torchao를 쓰지 않는다.
+subprocess.check_call([sys.executable, '-m', 'pip', 'uninstall', '-y', '-q', 'torchao'])
 subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-q', 'transformers==5.19.0', 'peft==0.21.2',
                        'accelerate==1.15.0', 'bitsandbytes==0.50.2', 'tokenizers==0.23.2'])
 import torch, transformers, peft
