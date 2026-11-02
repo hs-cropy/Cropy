@@ -190,15 +190,14 @@ async def _speech_script(diagnosis_id: str, device: str) -> SpeechScript:
     return SpeechScript(sentences=sentences, text=" ".join(sentences))
 
 
-async def _synthesize_within_budget(limiter: asyncio.Semaphore, text: str):
-    """대기와 합성을 TTS_RESPONSE_BUDGET_SECONDS 안에 끝내지 못하면 TimeoutError.
+async def _synthesize_within_budget(limiter: asyncio.Semaphore, text: str, deadline: float):
+    """대기와 합성을 마감 시각(loop.time() 기준)까지 끝내지 못하면 TimeoutError.
 
     합성 스레드는 중간에 멈출 수 없다. 시간이 지나도 끝날 때까지 자리를 쥐고 있게 해서
     TTS 서버에 작업이 겹쳐 쌓이지 않게 하고, 끝난 결과는 캐시에 남아 다음 요청이 쓴다.
     """
     loop = asyncio.get_running_loop()
-    deadline = loop.time() + settings.tts_response_budget_seconds
-    await asyncio.wait_for(limiter.acquire(), settings.tts_response_budget_seconds)
+    await asyncio.wait_for(limiter.acquire(), max(deadline - loop.time(), 0))
     task = asyncio.ensure_future(run_in_threadpool(tts_service.synthesize, text))
 
     def finished(done: asyncio.Future) -> None:
@@ -209,6 +208,22 @@ async def _synthesize_within_budget(limiter: asyncio.Semaphore, text: str):
 
     task.add_done_callback(finished)
     return await asyncio.wait_for(asyncio.shield(task), max(deadline - loop.time(), 0))
+
+
+async def _speech_wav(limiter: asyncio.Semaphore, sentences: list[str]) -> bytes:
+    """문장마다 캐시를 쓰거나 합성해 하나로 잇는다. 예산은 요청 전체에 한 번만 쓴다.
+
+    예산 안에 다 만들지 못해도 그때까지 만든 문장은 캐시에 남는다. 다음 요청은 남은 문장만
+    합성하므로, 합성이 느린 기기에서도 요청이 거듭될수록 완성된다.
+    """
+    deadline = asyncio.get_running_loop().time() + settings.tts_response_budget_seconds
+    parts = []
+    for sentence in sentences:
+        audio = await run_in_threadpool(tts_service.cached_audio, sentence)
+        if audio is None:
+            audio = await _synthesize_within_budget(limiter, sentence, deadline)
+        parts.append(audio)
+    return await run_in_threadpool(tts_service.join_wavs, parts)
 
 
 _SPEECH_NOT_FOUND = error_response("진단 기록을 찾을 수 없습니다.", "DIAGNOSIS_NOT_FOUND")
@@ -222,7 +237,7 @@ async def speech_text(diagnosis_id: str, device: str = Depends(current_device)):
 
 
 @router.get("/diagnose/{diagnosis_id}/speech", response_class=Response, summary="음성 안내 wav",
-            description="음성 안내 문장을 서버 TTS로 합성한 wav를 돌려줍니다. 같은 문장은 캐시를 재사용합니다. TTS가 꺼져 있거나, 합성에 실패하거나, TTS_RESPONSE_BUDGET_SECONDS(기본 20초) 안에 만들지 못하면 503 TTS_UNAVAILABLE이며, 이때는 /speech/script 문장을 대신 읽습니다.",
+            description="음성 안내 문장을 서버 TTS로 합성한 wav를 돌려줍니다. 문장마다 합성·캐시해 이어 붙이므로 다른 진단과 겹치는 문장은 다시 합성하지 않습니다. TTS가 꺼져 있거나, 합성에 실패하거나, TTS_RESPONSE_BUDGET_SECONDS(기본 20초) 안에 모든 문장을 만들지 못하면 503 TTS_UNAVAILABLE이며, 이때는 /speech/script 문장을 대신 읽습니다. 그때까지 만든 문장은 캐시에 남아 다음 요청은 남은 문장만 합성합니다.",
             responses={200: {"content": {"audio/wav": {"schema": {"type": "string", "format": "binary"}}},
                              "description": "wav 음성"},
                        404: _SPEECH_NOT_FOUND,
@@ -231,9 +246,7 @@ async def speech_text(diagnosis_id: str, device: str = Depends(current_device)):
 async def speech_audio(diagnosis_id: str, request: Request, device: str = Depends(current_device)):
     script = await _speech_script(diagnosis_id, device)
     try:
-        audio = await run_in_threadpool(tts_service.cached_audio, script.text)
-        if audio is None:
-            audio = await _synthesize_within_budget(request.app.state.tts_limiter, script.text)
+        audio = await _speech_wav(request.app.state.tts_limiter, script.sentences)
     except (tts_service.TTSUnavailableError, TimeoutError):
         logger.warning("TTS unavailable", exc_info=True)
         raise APIError(503, "TTS_UNAVAILABLE", "음성 안내를 만들 수 없습니다.", True)

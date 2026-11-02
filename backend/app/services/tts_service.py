@@ -2,6 +2,8 @@
 
 TTS 모델(MeloTTS 등)은 의존성이 백엔드와 충돌하고 CPU를 오래 점유하므로
 같은 프로세스에 올리지 않는다. 백엔드는 HTTP로 문장을 넘기고 결과를 캐시한다.
+캐시는 문장 단위다 — 안내문은 정해진 템플릿·병해·농약 카탈로그로만 만들어져, 진단이 달라도
+같은 문장이 많이 겹친다. 문장별 wav를 join_wavs로 이어 한 번에 돌려준다.
 
   TTS_ENGINE=off   — 음성 비활성 (기본). 엔드포인트가 503을 돌려주고
                      프론트는 브라우저 내장 음성으로 대신 읽는다.
@@ -136,6 +138,35 @@ def _validate_wav(audio: bytes) -> None:
         raise TTSUnavailableError("TTS 서버가 빈 wav를 반환했습니다.")
     if len(data) != frames * channels * width:
         raise TTSUnavailableError("TTS 서버가 잘린 wav를 반환했습니다.")
+
+
+# 문장마다 따로 합성하므로 문장 사이 쉼을 직접 넣는다. 고령 사용자가 문장을 나눠 들을 수 있게 둔다
+SENTENCE_PAUSE_SECONDS = 0.3
+
+
+def join_wavs(parts: list[bytes]) -> bytes:
+    """문장별 wav를 쉼을 두고 하나로 잇는다. 형식(채널·샘플 크기·샘플레이트)이 다르면 이을 수 없다."""
+    if not parts:
+        raise TTSUnavailableError("이을 음성이 없습니다.")
+    params, frames = None, []
+    for audio in parts:
+        with wave.open(io.BytesIO(audio), "rb") as wav:
+            current = (wav.getnchannels(), wav.getsampwidth(), wav.getframerate())
+            if params is not None and current != params:
+                raise TTSUnavailableError(f"문장 음성의 형식이 달라 이을 수 없습니다: {params} / {current}")
+            params = current
+            frames.append(wav.readframes(wav.getnframes()))
+    channels, width, rate = params
+    # 8비트 wav는 부호 없는 값이라 무음이 0x80이다
+    silent_sample = b"\x80" if width == 1 else b"\x00" * width
+    pause = silent_sample * channels * int(rate * SENTENCE_PAUSE_SECONDS)
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wav:
+        wav.setnchannels(channels)
+        wav.setsampwidth(width)
+        wav.setframerate(rate)
+        wav.writeframes(pause.join(frames))
+    return buf.getvalue()
 
 
 def synthesize(text: str) -> bytes:
