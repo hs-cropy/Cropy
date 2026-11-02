@@ -1,8 +1,8 @@
 """Apply the fixes found by the first training run's validation errors (2026-11-02, v2_r16_e2).
 
-  LABEL_FIXES         validation groups whose label contradicted the function spec or the train data
+  LABEL_FIXES         validation groups whose label contradicted the function spec
   train_patch_seed.tsv train-only rows for patterns train did not cover (assistant identity chit-chat,
-                      crop mismatch, result provenance, score meaning, recapture certainty, step-by-step retry)
+                      crop mismatch, result provenance, recapture certainty, step-by-step retry)
 Validation keeps its rows, so scores stay comparable with the first run. Re-running is a no-op.
 """
 import argparse
@@ -26,11 +26,10 @@ LABEL_FIXES = {
                        "same as G_V5_R_103"),
     "v11:G_V5_R_127": ("<hs_2>(topic=2)<hs_end>", "get_recapture_guidance", {"topic": "provenance"},
                        "same as G_V5_R_103"),
-    "v11:G_V5_D_105": ("<hs_0>(topic=1)<hs_end>", "get_prediction_metrics", {"topic": "ranking"},
-                       "'가장 높게 나온 후보' is ranking in train (46 rows)"),
-    "v11:G_V5_D_126": ("<hs_0>(topic=1)<hs_end>", "get_prediction_metrics", {"topic": "ranking"},
-                       "same as G_V5_D_105"),
 }
+# v2c: '가장 높게 나온 병명 후보를 알려줘' (G_V5_D_105/126) keeps the reviewed get_diagnosis(result) label;
+# train has no such sentence under ranking, and adding score-meaning rows (confidence/limits/ranking) in v2b
+# pulled care 'rank by effect' and metrics distribution/comparison questions away (v2b_r16_e2 eval).
 RESULT = {"ui_stage": "result", "crop_mismatch": False, "prediction_mode": "model", "category": "disease"}
 CONTEXTS = {
     **build.PRESET_CONTEXTS,

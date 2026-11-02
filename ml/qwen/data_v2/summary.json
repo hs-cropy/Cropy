@@ -12,29 +12,29 @@
     "<hs_8>",
     "<hs_end>"
   ],
-  "rows": 6274,
+  "rows": 6222,
   "split": {
-    "train": 5114,
+    "train": 5062,
     "validation": 1160
   },
   "train_function": {
-    "get_recapture_guidance": 635,
     "clarify_request": 635,
+    "get_recapture_guidance": 633,
     "handle_scope_limit": 626,
     "get_diagnosis": 611,
-    "get_prediction_metrics": 606,
     "chit_chat": 593,
+    "get_prediction_metrics": 560,
     "get_care_information": 560,
     "get_pesticide_information": 506,
-    "get_usage_guidance": 342
+    "get_usage_guidance": 338
   },
   "validation_function": {
     "handle_scope_limit": 150,
-    "get_prediction_metrics": 145,
     "clarify_request": 140,
     "get_pesticide_information": 139,
+    "get_diagnosis": 138,
+    "get_prediction_metrics": 137,
     "get_care_information": 135,
-    "get_diagnosis": 130,
     "get_recapture_guidance": 128,
     "chit_chat": 121,
     "get_usage_guidance": 72
@@ -43,18 +43,18 @@
     "v11": 4856,
     "seed_chit_chat": 634,
     "seed_get_usage_guidance": 293,
-    "seed_train_patch": 284,
+    "seed_train_patch": 232,
     "v12_usage": 207
   },
   "augmentation": {
-    "original": 3025,
-    "banmal": 2106,
-    "spacing": 607,
-    "dialect_chungcheong": 309,
-    "dialect_gyeongsang": 117,
+    "original": 3015,
+    "banmal": 2097,
+    "spacing": 581,
+    "dialect_chungcheong": 306,
+    "dialect_gyeongsang": 113,
     "dialect_jeolla": 110
   },
-  "honorific_share": 0.409,
+  "honorific_share": 0.41,
   "dropped": {
     "duplicate": 502,
     "train_text_in_validation": 2
@@ -75,13 +75,11 @@
   },
   "eval_fixes": {
     "relabeled": {
-      "v11:G_V5_D_105": 6,
-      "v11:G_V5_D_126": 2,
       "v11:G_V5_R_103": 5,
       "v11:G_V5_R_115": 5,
       "v11:G_V5_R_127": 4
     },
-    "patch_added": 284,
+    "patch_added": 232,
     "patch_dropped": {}
   }
 }

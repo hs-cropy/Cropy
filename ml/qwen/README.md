@@ -128,7 +128,24 @@ python ml/qwen/apply_eval_fixes.py      # validation 라벨 5그룹 수정 + tra
 python ml/qwen/build_train_notebook.py  # data_v2/qwen_v2b_data.jsonl.xz + 노트북(RUN_NAME v2b_r16_e2)
 ```
 
-- 라벨 수정(validation 22행): "재촬영 요청의 **근거**가 기록돼 있나요"는 `get_recapture_guidance(topic=provenance)`(기존 why). "가장 높게 나온 병명 후보"는 train 46행과 같게 `get_prediction_metrics(topic=ranking)`(기존 get_diagnosis). 두 경우 모두 모델 답이 함수 설명과 맞았다.
+- 라벨 수정(validation 22행): "재촬영 요청의 **근거**가 기록돼 있나요"는 `get_recapture_guidance(topic=provenance)`(기존 why). "가장 높게 나온 병명 후보"는 `get_prediction_metrics(topic=ranking)`(기존 get_diagnosis, v2c에서 원복).
 - train 보강(`train_patch_seed.tsv` 60문장 → 변형 포함 284행, train에만): 앱에게 이름·하는 일을 묻는 잡담, 선택 작물과 안내 작물이 다른 상황(`clarify_request(target=crop)`), 임시 응답/모델 분류 구분(`get_diagnosis(topic=provenance)`), 점수 의미(confidence/limits/ranking), 재촬영하면 확정되는지, 다시 시도 순서(step_by_step). validation과 띄어쓰기만 다른 문장은 넣지 않는다.
 - validation 행은 그대로라 1차 결과와 비교할 수 있다. 라벨을 고친 22행 기준으로 1차 결과를 다시 매기면 기능 97.8%, 인자까지 95.7%.
 - 남긴 것(정책 경계라 데이터로 밀지 않음): D1·D3 문장, "고추 가루 병"(stt/disease).
+
+## 2차 결과와 v2c (2026-11-02)
+
+2차 학습(`v2b_r16_e2`, 위 보정 반영): 기능 97.5%, 인자까지 93.4%로 1차 재채점(97.8%/95.7%)보다 낮았다. 문장 그룹 508개 중 21개를 새로 맞히고 38개를 새로 틀렸다.
+
+- 좋아진 것: 잡담 94.2→100%, 되묻기 91.4→98.6%, 사용 안내 95.8→100%, 임시 응답/모델 분류 구분.
+- 나빠진 것: 관리 방법을 "효과 순으로 순서 매겨 줘"(13행)가 `get_prediction_metrics(topic=ranking)`로, 점수 분포·비교 질문이 confidence·ranking으로 갔다. 보강에 넣은 점수 의미 문장(confidence/limits/ranking 10문장)의 부작용으로 본다. 농약 topic 3→4 같은 변화는 보강과 무관해 학습 한 번의 흔들림으로 본다.
+- "가장 높게 나온 병명 후보를 알려줘"는 2차가 `get_diagnosis(result)`로 답했다. train에서 "가장 높은 후보"는 점수(confidence)나 다음 후보(ranking)를 묻는 문장뿐이고 이 문장과 같은 꼴은 없다. 그래서 1차 보정에서 바꾼 ranking 라벨을 사람 검수 라벨로 되돌렸다(위 "train 46행"은 잘못 센 수).
+
+v2c = v2b에서 점수 의미 10문장 제거, "가장 높게 나온 병명 후보" 라벨 원복. train 5,062 / validation 1,160(재촬영 근거 14행만 수정).
+v2c validation 라벨로 다시 매기면 1차 기능 97.2%·인자까지 95.0%, 2차 98.2%·94.1%.
+
+```bash
+git checkout 2243e4c^ -- ml/qwen/data_v2/train.jsonl ml/qwen/data_v2/validation.jsonl ml/qwen/data_v2/summary.json
+python ml/qwen/apply_eval_fixes.py
+python ml/qwen/build_train_notebook.py  # data_v2/qwen_v2c_data.jsonl.xz + 노트북(RUN_NAME v2c_r16_e2)
+```

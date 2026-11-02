@@ -17,7 +17,7 @@ import spec_v2
 HERE = Path(__file__).resolve().parent
 DATA = HERE / "data_v2"
 KEEP = ("case_id", "split", "group", "function", "user_text", "context", "output", "augmentation")
-VERSION = "v2b"  # v2: first run (v2_r16_e2), v2b: + apply_eval_fixes.py
+VERSION = "v2c"  # v2: first run (v2_r16_e2), v2b: + apply_eval_fixes.py, v2c: without score-meaning rows
 DATA_FILE = f"qwen_{VERSION}_data.jsonl.xz"
 MODEL_ID = "Qwen/Qwen3.5-2B"
 MODEL_REF = "15852e8c16360a2fea060d615a32b45270f8a8fc"  # revision used by the v14~v18 runs
