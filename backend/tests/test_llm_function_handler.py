@@ -120,7 +120,7 @@ def test_invalid_tokens_are_rejected(context):
 def test_unimplemented_function_is_distinct_from_user_scope(context):
     with pytest.raises(FunctionHandlerNotImplemented):
         handle_function_output(
-            "<hs_get_diagnosis><hs_topic_result><hs-end>",
+            "<hs_get_care_information><hs_topic_causes><hs-end>",
             context,
         )
 
@@ -135,3 +135,107 @@ def test_modified_invalid_context_is_rejected(context):
 def test_blank_location_information_is_insufficient(context, field):
     setattr(context.recapture, field, " ")
     assert run("where", context).status == "insufficient_information"
+
+def dispatch(function_name, topic, context):
+    return handle_function_output(
+        f"<hs_{function_name}><hs_topic_{topic}><hs-end>",
+        context,
+    )
+
+
+def test_result_preserves_confusion_state(context):
+    result = dispatch("get_diagnosis", "result", context)
+
+    assert result.status == "ok"
+    assert context.disease_name in result.text
+    assert "추가 촬영이 필요한 상태" in result.text
+    assert "확진이 아닙니다" in result.text
+
+
+def test_not_crop_result_does_not_present_disease_candidate(context):
+    context.category = "other"
+    context.severity = None
+    context.decision_status = "not_crop"
+    context.decision_reasons = ["not_crop"]
+
+    result = dispatch("get_diagnosis", "result", context)
+
+    assert result.status == "ok"
+    assert "판별 불가" in result.text
+    assert context.disease_name not in result.text
+
+
+def test_missing_severity_is_not_invented(context):
+    context.severity = None
+    result = dispatch("get_diagnosis", "severity", context)
+
+    assert result.status == "insufficient_information"
+
+
+def test_severity_is_reference_attribute(context):
+    result = dispatch("get_diagnosis", "severity", context)
+
+    assert result.status == "ok"
+    assert "보통" in result.text
+    assert "사진에서 측정한 병의 진행 정도" in result.text
+
+
+@pytest.mark.parametrize(
+    "topic", ["observation", "impact", "food_safety", "change"]
+)
+def test_unprovided_evidence_is_not_invented(context, topic):
+    result = dispatch("get_diagnosis", topic, context)
+    assert result.status == "insufficient_information"
+
+
+def test_browser_provenance_is_known(context):
+    context.prediction_mode = "browser"
+    result = dispatch("get_diagnosis", "provenance", context)
+
+    assert result.status == "ok"
+    assert "브라우저 모델" in result.text
+
+
+def test_confidence_is_not_disease_probability(context):
+    result = dispatch("get_prediction_metrics", "confidence", context)
+
+    assert result.status == "ok"
+    assert str(context.confidence) in result.text
+    assert "실제 발병 확률이나 피해 수준을 뜻하지 않습니다" in result.text
+
+
+def test_comparison_requires_two_candidates(context):
+    context.top_predictions = []
+    result = dispatch("get_prediction_metrics", "comparison", context)
+    assert result.status == "insufficient_information"
+
+
+def test_comparison_reads_scores_without_changing_policy(context):
+    context = DiagnosisLLMInput.model_validate({
+        **context.model_dump(),
+        "top_predictions": [
+            {"name": "후보 가", "confidence": 0.8},
+            {"name": "후보 나", "confidence": 0.15},
+        ],
+    })
+    before = context.model_dump()
+
+    result = dispatch("get_prediction_metrics", "comparison", context)
+
+    assert result.status == "ok"
+    assert "0.65" in result.text
+    assert "재촬영 여부를 새로 판정하지 않습니다" in result.text
+    assert context.model_dump() == before
+
+
+@pytest.mark.parametrize("topic", ["ranking", "distribution"])
+def test_empty_candidate_list_is_insufficient(context, topic):
+    context.top_predictions = []
+    result = dispatch("get_prediction_metrics", topic, context)
+    assert result.status == "insufficient_information"
+
+
+def test_mock_result_remains_explicit(context):
+    context.prediction_mode = "mock"
+    result = dispatch("get_diagnosis", "result", context)
+    assert "데모 결과이며 실제 모델 진단이 아닙니다" in result.text
