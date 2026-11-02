@@ -54,3 +54,29 @@ PC에서 실제 CNN과 별도 SQLite를 사용하고 Python의 외부 DNS·소�
 [운영 안내](BACKEND_OPERATIONS.md)에 따라 DB·업로드·복구 초안을 함께 백업하고 대상 장치에서 복원을 연습한다. 저장 이력, 요청 캐시(`diagnosis_requests`), 만료 복구 초안의 보관 기간을 확정한 뒤 필요한 정리 작업을 구현한다. 보관 기간을 추측해 기존 자료를 자동 삭제하지 않는다.
 
 CPU 추론의 초기 로드·예열 후 지연, 전체 스택의 p95·피크 RAM·온도와 장시간 운용을 측정한다. CPU가 목표를 충족하면 유지하고, 부족할 때 ONNX/RKNN 등의 변경을 검토한다.
+
+## 판별 불가 결과의 LLM 입력 및 안내 처리
+
+DiagnosisLLMInput의 severity는 필수 필드이며 null을 허용한다.
+판별 불가(category="other") 결과의 severity=null을 그대로 보존한다.
+
+다음 조건 중 하나에 해당하면 외부 LLM caller를 호출하지 않고
+재촬영 안내 템플릿을 반환한다.
+
+- category="other"
+- decision_status="not_crop"
+- decision_reasons에 "not_crop" 포함
+
+응답은 source="template", fallback_reason="not_crop"이다.
+not_crop은 제공자 장애가 아니라 판별 불가에 따른 의도적인 호출 생략이다.
+
+템플릿은 기존 management_actions를 재촬영 방법으로 표시한다.
+해당 목록이 없으면 기본 촬영 방법을 안내한다.
+병해 설명과 예방 안내는 덧붙이지 않는다.
+입력 수치 재검증은 호출 생략 여부를 판단하기 전에 수행한다.
+
+이 변경은 LLM 서비스 단위의 처리이며, 진단 API에 실제 LLM 호출을
+연결하거나 온디바이스 모델을 실행한 것은 아니다.
+
+검증: Windows 로컬 관련 테스트 108 passed,
+전체 백엔드 테스트 460 passed, 24 skipped, 1 warning.
