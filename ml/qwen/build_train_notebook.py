@@ -1,7 +1,7 @@
 """Write the Colab LoRA training notebook for hs-call-v2 and its compressed data file.
 
 Outputs
-  data_v2/qwen_v2_data.jsonl.xz      train+validation rows with only the fields training needs
+  data_v2/qwen_<VERSION>_data.jsonl.xz  train+validation rows with only the fields training needs
   cropy_qwen_v2_train_colab.ipynb    upload both to Drive MyDrive/cropy_qwen_v2/ and run on Colab GPU
 
 The notebook embeds the system prompt and the function table, and checks the data hash, so a
@@ -17,6 +17,8 @@ import spec_v2
 HERE = Path(__file__).resolve().parent
 DATA = HERE / "data_v2"
 KEEP = ("case_id", "split", "group", "function", "user_text", "context", "output", "augmentation")
+VERSION = "v2b"  # v2: first run (v2_r16_e2), v2b: + apply_eval_fixes.py
+DATA_FILE = f"qwen_{VERSION}_data.jsonl.xz"
 MODEL_ID = "Qwen/Qwen3.5-2B"
 MODEL_REF = "15852e8c16360a2fea060d615a32b45270f8a8fc"  # revision used by the v14~v18 runs
 
@@ -55,7 +57,7 @@ def notebook(data_sha, counts):
 - 런타임: **A100 권장**(L4·T4도 동작, 24GB 미만이면 4bit로 불러옴). 메뉴 런타임 → 런타임 유형 변경 → GPU.
 
 **실행 방법**
-1. Drive `내 드라이브/cropy_qwen_v2/`에 `qwen_v2_data.jsonl.xz`가 있는지 확인한다.
+1. Drive `내 드라이브/cropy_qwen_v2/`에 `{DATA_FILE}`가 있는지 확인한다.
 2. 위에서부터 차례로 실행한다(`런타임 → 모두 실행`).
 3. 중간에 끊기면 새 런타임에서 그대로 다시 모두 실행한다. 같은 `RUN_NAME`이면 마지막 체크포인트(50step마다 저장)에서 이어서 학습한다.
 4. 끝나면 `cropy_qwen_v2/<RUN_NAME>/` 안의 `eval_metrics.json`을 확인한다.
@@ -67,12 +69,12 @@ from pathlib import Path
 import json, hashlib, lzma, os, re, sys, subprocess, random, math, datetime
 
 DRIVE_DIR = Path('/content/drive/MyDrive/cropy_qwen_v2')
-DATA_FILE = DRIVE_DIR / 'qwen_v2_data.jsonl.xz'
+DATA_FILE = DRIVE_DIR / '{DATA_FILE}'
 DATA_SHA256 = '{data_sha}'
 MODEL_ID = '{MODEL_ID}'
 MODEL_REF = '{MODEL_REF}'
 
-RUN_NAME = 'v2_r16_e2'      # 설정을 바꿔 새로 학습할 때만 이름을 바꾼다
+RUN_NAME = '{VERSION}_r16_e2'      # 설정을 바꿔 새로 학습할 때만 이름을 바꾼다
 EPOCHS = 2
 LEARNING_RATE = 2e-4
 LORA_R, LORA_ALPHA, LORA_DROPOUT = 16, 32, 0.05
@@ -108,7 +110,7 @@ print(ENV)
         md("## 데이터"),
         code(f"""
 raw = DATA_FILE.read_bytes()
-assert hashlib.sha256(raw).hexdigest() == DATA_SHA256, '데이터 파일이 노트북과 다릅니다. 같이 올린 qwen_v2_data.jsonl.xz를 쓰세요'
+assert hashlib.sha256(raw).hexdigest() == DATA_SHA256, '데이터 파일이 노트북과 다릅니다. 같이 올린 {DATA_FILE}을 쓰세요'
 rows = [json.loads(l) for l in lzma.decompress(raw).decode('utf-8').splitlines()]
 train_rows = [r for r in rows if r['split'] == 'train']
 val_rows = [r for r in rows if r['split'] == 'validation']
@@ -339,7 +341,7 @@ print('완료. 결과 폴더:', OUTPUT_DIR)
 
 def main():
     data, counts = payload()
-    (DATA / "qwen_v2_data.jsonl.xz").write_bytes(data)
+    (DATA / DATA_FILE).write_bytes(data)
     sha = hashlib.sha256(data).hexdigest()
     nb = notebook(sha, counts)
     out = HERE / "cropy_qwen_v2_train_colab.ipynb"

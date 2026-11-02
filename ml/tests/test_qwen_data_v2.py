@@ -159,3 +159,33 @@ def test_review_applies_decisions_verdicts_and_variant_edits():
         review.apply(rows, {"D7": "B"}, [], [])  # rule changes are not relabels
     with pytest.raises(ValueError):
         review.parse_label("handle_scope_limit(reason=weather)")
+
+
+def test_eval_fixes_relabel_groups_and_add_train_only_patch(monkeypatch):
+    import apply_eval_fixes as fixes
+
+    monkeypatch.setattr(fixes, "LABEL_FIXES", {"g_v": ("<hs_2>(topic=2)<hs_end>", "get_recapture_guidance",
+                                                       {"topic": "provenance"}, "test")})
+    rows, _ = build.assemble([
+        row("v", "validation", "재촬영 요청의 근거가 기록돼 있나요", "get_recapture_guidance", {"topic": "why"}, "v11"),
+        row("w", "validation", "오늘 날씨 어때요"),
+        row("t", "train", "고마워요"),
+    ])
+    for r in rows:
+        r["group"] = "g_" + r["source_case_id"]
+    patch = [row("p1", "train", "너 이름이 뭐니", source=fixes.SOURCE),
+             row("p2", "train", "오늘날씨 어때요", source=fixes.SOURCE),  # spacing variant of validation
+             row("p3", "train", "고마워요", source=fixes.SOURCE)]          # already in train, same label
+
+    out, report = fixes.apply(rows, patch)
+    assert {r["output"] for r in out if r["group"] == "g_v"} == {"<hs_2>(topic=4)<hs_end>"}
+    added = [r for r in out if r["source"] == fixes.SOURCE]
+    assert added and {r["split"] for r in added} == {"train"} and "너 이름이 뭐니" in [r["user_text"] for r in added]
+    assert report["patch_dropped"]["text_in_validation"] >= 1 and report["patch_dropped"]["duplicate"] >= 1
+    assert len([r for r in out if r["split"] == "validation"]) == len([r for r in rows if r["split"] == "validation"])
+    again, report2 = fixes.apply(out, patch)
+    assert again == out and report2 == report
+
+    with pytest.raises(ValueError):  # same sentence with another label in train
+        fixes.apply(rows, [row("p4", "train", "고마워요", "get_usage_guidance",
+                               {"topic": "next_step", "delivery": "brief"}, fixes.SOURCE)])

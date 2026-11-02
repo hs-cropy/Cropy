@@ -116,3 +116,19 @@ python ml/qwen/apply_review.py   # 검수표_v2.xlsx → train/validation.jsonl,
 - "주식 지금 사도 돼"는 `chit_chat` 유지. 주식 같은 결정을 대신 판단하지 않는 것은 잡담 답변 규칙에서 막는다.
 - 변형 300행: 모두 ok.
 - 결과: validation 1,160행 전부 `labels_human_validated: true`. train 4,830행은 AI 검수 상태 그대로.
+
+## 1차 학습 결과와 보정 (2026-11-02)
+
+1차 학습(`v2_r16_e2`, A100 70분, validation 1,160행): 형식 100%, 기능 97.2%, 인자까지 정답 93.8%. train 300행 표본 99.7%.
+
+틀린 72건을 문장 단위로 보고 고친 것:
+
+```bash
+python ml/qwen/apply_eval_fixes.py      # validation 라벨 5그룹 수정 + train 보강 (다시 돌려도 같음)
+python ml/qwen/build_train_notebook.py  # data_v2/qwen_v2b_data.jsonl.xz + 노트북(RUN_NAME v2b_r16_e2)
+```
+
+- 라벨 수정(validation 22행): "재촬영 요청의 **근거**가 기록돼 있나요"는 `get_recapture_guidance(topic=provenance)`(기존 why). "가장 높게 나온 병명 후보"는 train 46행과 같게 `get_prediction_metrics(topic=ranking)`(기존 get_diagnosis). 두 경우 모두 모델 답이 함수 설명과 맞았다.
+- train 보강(`train_patch_seed.tsv` 60문장 → 변형 포함 284행, train에만): 앱에게 이름·하는 일을 묻는 잡담, 선택 작물과 안내 작물이 다른 상황(`clarify_request(target=crop)`), 임시 응답/모델 분류 구분(`get_diagnosis(topic=provenance)`), 점수 의미(confidence/limits/ranking), 재촬영하면 확정되는지, 다시 시도 순서(step_by_step). validation과 띄어쓰기만 다른 문장은 넣지 않는다.
+- validation 행은 그대로라 1차 결과와 비교할 수 있다. 라벨을 고친 22행 기준으로 1차 결과를 다시 매기면 기능 97.8%, 인자까지 95.8%.
+- 남긴 것(정책 경계라 데이터로 밀지 않음): D1·D3 문장, "고추 가루 병"(stt/disease).
