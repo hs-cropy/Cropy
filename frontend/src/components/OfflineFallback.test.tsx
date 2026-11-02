@@ -1,10 +1,11 @@
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { OfflineFallback } from "./OfflineFallback";
 
-function mockServiceWorker() {
+function mockServiceWorker(registrations: { scope: string; unregister: () => Promise<boolean> }[] = []) {
   const register = vi.fn().mockResolvedValue({});
-  Object.defineProperty(navigator, "serviceWorker", { value: { register }, configurable: true });
+  const getRegistrations = vi.fn().mockResolvedValue(registrations);
+  Object.defineProperty(navigator, "serviceWorker", { value: { register, getRegistrations }, configurable: true });
   Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
   return register;
 }
@@ -31,5 +32,17 @@ describe("OfflineFallback", () => {
     render(<OfflineFallback />);
 
     expect(register).not.toHaveBeenCalled();
+  });
+
+  it("개발 중에는 남아 있는 전체 범위 워커만 해제한다", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const root = { scope: `${location.origin}/`, unregister: vi.fn().mockResolvedValue(true) };
+    const offline = { scope: `${location.origin}/offline/`, unregister: vi.fn().mockResolvedValue(true) };
+    mockServiceWorker([root, offline]);
+
+    render(<OfflineFallback />);
+
+    await waitFor(() => expect(root.unregister).toHaveBeenCalled());
+    expect(offline.unregister).not.toHaveBeenCalled();
   });
 });
