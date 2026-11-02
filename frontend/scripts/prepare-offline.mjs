@@ -8,7 +8,9 @@ for (const name of ['ort.wasm.bundle.min.mjs', 'ort-wasm-simd-threaded.mjs', 'or
 }
 const digest = createHash('sha256');
 for (const name of ['offline/index.html','offline/app.mjs','offline/core.mjs',
-  'offline-runtime/ort.wasm.bundle.min.mjs','offline-runtime/ort-wasm-simd-threaded.mjs','offline-runtime/ort-wasm-simd-threaded.wasm']) {
+  'offline-runtime/ort.wasm.bundle.min.mjs','offline-runtime/ort-wasm-simd-threaded.mjs','offline-runtime/ort-wasm-simd-threaded.wasm',
+  'offline/manifest.webmanifest','offline/icons/icon-192.png','offline/icons/icon-512.png','offline/icons/icon-maskable-512.png',
+  'offline/icons/apple-touch-icon.png']) {
   digest.update(await readFile(resolve('public',name)));
 }
 const swPath = resolve('public/offline/sw.js');

@@ -241,6 +241,10 @@ $('speak').addEventListener('click',()=>{
   if(!voice){$('state').textContent='이 기기에 한국어 오프라인 음성이 없어요. 글로 확인해 주세요.';return;}
   speechSynthesis.cancel();const speech=new SpeechSynthesisUtterance(current.result.disease_name+'으로 분류됐어요. 확진을 뜻하지 않아요. '+current.result.description);speech.voice=voice;speech.lang='ko-KR';speech.onerror=()=>{$('state').textContent='음성 안내를 시작하지 못했어요.';};speechSynthesis.speak(speech);
 });
+// 연결 없이 다른 화면 링크를 누르면 메인 워커가 이동을 막고 알려 준다(public/sw.js).
+navigator.serviceWorker?.addEventListener('message',event=>{
+  if(event.data?.type==='cropy-offline-stay')$('state').textContent='인터넷에 연결되어 있지 않아 이 화면에 머물러요. 연결되면 다시 눌러 주세요.';
+});
 try {
   const cached=await db('assets','get',null,'active');
   if(cached){bundle=cached.manifest;session=await initSession(cached.model);$('ready').textContent='저장한 모델로 이 기기에서 진단할 수 있어요.';$('progress').value=100;}
