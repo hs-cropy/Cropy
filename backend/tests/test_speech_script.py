@@ -161,6 +161,23 @@ def test_script_reads_action_descriptions_before_titles():
     assert "첫째, 감염 부위 제거." in titles
 
 
+def test_script_reads_a_description_only_when_its_title_matches():
+    # 화면과 같은 기준: 같은 자리의 설명이 그 할 일의 것일 때만 읽고, 아니면 제목을 읽는다
+    lines = build_script(_result(
+        management_actions=["감염 부위 제거", "주변 포기 확인"],
+        management_action_details=[ManagementActionDetail(title="감염 부위 제거", description="병든 잎을 따서 밭 밖으로 치우세요."),
+                                   ManagementActionDetail(title="다른 할 일", description="화면에 없는 설명.")],
+    ))
+    assert "첫째, 병든 잎을 따서 밭 밖으로 치우세요." in lines
+    assert "둘째, 주변 포기 확인." in lines
+    assert not any("화면에 없는 설명" in line for line in lines)
+
+    # 할 일 제목이 없으면 설명만으로 읽지 않는다 — 화면에도 표시되지 않는다
+    orphan = build_script(_result(management_action_details=[
+        ManagementActionDetail(title="감염 부위 제거", description="화면에 없는 설명.")]))
+    assert not any("화면에 없는 설명" in line for line in orphan)
+
+
 def test_script_follows_the_server_decision_not_a_fixed_threshold():
     # 신뢰도 0.6이어도 서버 임계값(예: 0.8) 아래면 decision_reasons에 low_confidence가 온다
     lines = build_script(_result(confidence=0.6, decision_status="low_confidence", decision_reasons=["low_confidence"]))

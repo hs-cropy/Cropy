@@ -204,9 +204,19 @@ def _pesticide_lines(pesticides: list[PesticideInfo]) -> list[str]:
 
 
 def _actions(result: DiagnoseResponse) -> list[str]:
-    """지금 할 일. 귀로 듣기 좋은 설명 문장을 먼저 쓰고, 없는 이전 기록은 제목·예방법으로 대신한다."""
-    details = [detail.description for detail in result.management_action_details]
-    return (details or result.management_actions or result.prevention)[:MAX_ACTIONS]
+    """지금 할 일. 귀로 듣기 좋은 설명 문장을 먼저 쓰고, 없는 이전 기록은 제목·예방법으로 대신한다.
+
+    화면(DiagnosisResultView)과 같이 할 일 제목을 기준으로, 같은 자리의 설명이 그 제목의 것일 때만
+    설명을 읽는다. 어긋난 설명을 읽으면 화면에 없는 할 일을 귀로만 듣게 된다.
+    """
+    details = result.management_action_details
+    actions = [
+        details[index].description
+        if index < len(details) and details[index].title == title and details[index].description.strip()
+        else title
+        for index, title in enumerate(result.management_actions)
+    ]
+    return (actions or result.prevention)[:MAX_ACTIONS]
 
 
 def _numbered(items: list[str]) -> list[str]:
