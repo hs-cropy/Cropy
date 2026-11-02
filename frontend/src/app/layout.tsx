@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppFrame } from "@/components/AppFrame";
+import { OfflineFallback } from "@/components/OfflineFallback";
 
 export const metadata: Metadata = {
   title: "CropCare AI",
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* 각 화면이 AppShellPage 로 <main> 을 그린다 */}
         <AppFrame>{children}</AppFrame>
+        <OfflineFallback />
       </body>
     </html>
   );
