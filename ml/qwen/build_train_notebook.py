@@ -64,7 +64,7 @@ def notebook(data_sha, counts):
 from google.colab import drive
 drive.mount('/content/drive')
 from pathlib import Path
-import json, hashlib, lzma, re, sys, subprocess, random, math, datetime
+import json, hashlib, lzma, os, re, sys, subprocess, random, math, datetime
 
 DRIVE_DIR = Path('/content/drive/MyDrive/cropy_qwen_v2')
 DATA_FILE = DRIVE_DIR / 'qwen_v2_data.jsonl.xz'
@@ -90,6 +90,7 @@ print('결과 폴더', OUTPUT_DIR)
 subprocess.check_call([sys.executable, '-m', 'pip', 'uninstall', '-y', '-q', 'torchao'])
 subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-q', 'transformers==5.19.0', 'peft==0.21.2',
                        'accelerate==1.15.0', 'bitsandbytes==0.50.2', 'tokenizers==0.23.2'])
+os.environ.setdefault('PYTORCH_CUDA_ALLOC_CONF', 'expandable_segments:True')
 import torch, transformers, peft
 assert torch.cuda.is_available(), 'GPU 런타임을 선택하세요'
 random.seed(SEED); torch.manual_seed(SEED); torch.cuda.manual_seed_all(SEED)
@@ -97,7 +98,8 @@ GPU = torch.cuda.get_device_name(0)
 VRAM = torch.cuda.get_device_properties(0).total_memory
 DTYPE = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
 QUANTIZE = VRAM < 30 * 1024**3
-PER_DEVICE = 8 if VRAM >= 39 * 1024**3 else 4 if VRAM >= 22 * 1024**3 else 2
+# 시스템 프롬프트 때문에 한 행이 약 1,300 토큰이고, 어휘 25만 개 logits가 행마다 1GB 넘게 든다. A100 40GB에서 8은 OOM.
+PER_DEVICE = 4 if VRAM >= 39 * 1024**3 else 2 if VRAM >= 22 * 1024**3 else 1
 ACCUM = max(1, EFFECTIVE_BATCH // PER_DEVICE)
 ENV = dict(torch=torch.__version__, transformers=transformers.__version__, peft=peft.__version__, gpu=GPU,
            vram_gb=round(VRAM / 1024**3, 1), dtype=str(DTYPE), quantize_4bit=QUANTIZE, per_device=PER_DEVICE, accum=ACCUM)
