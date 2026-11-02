@@ -17,8 +17,10 @@ import spec_v2
 HERE = Path(__file__).resolve().parent
 DATA = HERE / "data_v2"
 KEEP = ("case_id", "split", "group", "function", "user_text", "context", "output", "augmentation")
-VERSION = "v2c"  # v2: first run (v2_r16_e2), v2b: + apply_eval_fixes.py, v2c: without score-meaning rows
-DATA_FILE = f"qwen_{VERSION}_data.jsonl.xz"
+DATA_VERSION = "v2c"  # v2: first run (v2_r16_e2), v2b: + apply_eval_fixes.py, v2c: without score-meaning rows
+DATA_FILE = f"qwen_{DATA_VERSION}_data.jsonl.xz"
+SHORT_PROMPT = True  # v3s: same v2c data, one-line system prompt (spec_v2.SHORT_PROMPT)
+VERSION = "v3s" if SHORT_PROMPT else DATA_VERSION
 MODEL_ID = "Qwen/Qwen3.5-2B"
 MODEL_REF = "15852e8c16360a2fea060d615a32b45270f8a8fc"  # revision used by the v14~v18 runs
 
@@ -44,7 +46,7 @@ def code(text):
 
 
 def notebook(data_sha, counts):
-    system = spec_v2.system_prompt()
+    system = spec_v2.system_prompt(SHORT_PROMPT)
     table = {name: [[arg, len(values)] for arg, values in args.items()] for name, args, _ in spec_v2.FUNCTIONS}
     cells = [
         md(f"""
@@ -54,6 +56,7 @@ def notebook(data_sha, counts):
 
 - 데이터: train {counts['train']:,}행 / validation {counts['validation']:,}행 (validation은 사람 검수 완료)
 - 새 토큰 10개(`<hs_0>`~`<hs_8>`, `<hs_end>`)의 임베딩도 함께 학습한다.
+- 시스템 프롬프트: {'한 줄(`spec_v2.SHORT_PROMPT`). 규칙·함수 설명 없이 학습해 보드에서 매번 처리할 입력을 약 1,300 → 200 토큰으로 줄인다' if SHORT_PROMPT else '규칙과 함수 설명 전체(약 1,100 토큰)'}.
 - 런타임: **A100 권장**(L4·T4도 동작, 24GB 미만이면 4bit로 불러옴). 메뉴 런타임 → 런타임 유형 변경 → GPU.
 
 **실행 방법**
@@ -75,6 +78,7 @@ MODEL_ID = '{MODEL_ID}'
 MODEL_REF = '{MODEL_REF}'
 
 RUN_NAME = '{VERSION}_r16_e2'      # 설정을 바꿔 새로 학습할 때만 이름을 바꾼다
+SHORT_PROMPT = {SHORT_PROMPT}       # True: 한 줄 시스템 프롬프트(보드 응답 속도용)
 EPOCHS = 2
 LEARNING_RATE = 2e-4
 LORA_R, LORA_ALPHA, LORA_DROPOUT = 16, 32, 0.05
@@ -100,8 +104,8 @@ GPU = torch.cuda.get_device_name(0)
 VRAM = torch.cuda.get_device_properties(0).total_memory
 DTYPE = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
 QUANTIZE = VRAM < 30 * 1024**3
-# 시스템 프롬프트 때문에 한 행이 약 1,300 토큰이고, 어휘 25만 개 logits가 행마다 1GB 넘게 든다. A100 40GB에서 8은 OOM.
-PER_DEVICE = 4 if VRAM >= 39 * 1024**3 else 2 if VRAM >= 22 * 1024**3 else 1
+# 긴 시스템 프롬프트면 한 행이 약 1,300 토큰이고 어휘 25만 개 logits가 행마다 1GB 넘게 들어 A100 40GB에서 8은 OOM. 짧은 프롬프트는 약 200 토큰.
+PER_DEVICE = ((16, 8, 4) if SHORT_PROMPT else (4, 2, 1))[0 if VRAM >= 39 * 1024**3 else 1 if VRAM >= 22 * 1024**3 else 2]
 ACCUM = max(1, EFFECTIVE_BATCH // PER_DEVICE)
 ENV = dict(torch=torch.__version__, transformers=transformers.__version__, peft=peft.__version__, gpu=GPU,
            vram_gb=round(VRAM / 1024**3, 1), dtype=str(DTYPE), quantize_4bit=QUANTIZE, per_device=PER_DEVICE, accum=ACCUM)
@@ -221,7 +225,7 @@ from transformers import Trainer, TrainingArguments
 from transformers.trainer_utils import get_last_checkpoint
 RUN_CONFIG = dict(data_sha256=DATA_SHA256, model_id=MODEL_ID, revision=MODEL_REF, epochs=EPOCHS, lr=LEARNING_RATE,
                   lora_r=LORA_R, lora_alpha=LORA_ALPHA, lora_dropout=LORA_DROPOUT, effective_batch=EFFECTIVE_BATCH,
-                  targets=TARGETS, seed=SEED, new_tokens=TOKEN_IDS)
+                  targets=TARGETS, seed=SEED, new_tokens=TOKEN_IDS, short_prompt=SHORT_PROMPT)
 config_file = OUTPUT_DIR / 'run_config.json'
 if config_file.exists():
     saved = json.loads(config_file.read_text())

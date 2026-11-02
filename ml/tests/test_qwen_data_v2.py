@@ -60,6 +60,13 @@ def test_docstrings_number_every_value_and_prompt_has_no_contract_json():
     assert '"get_diagnosis":{' not in prompt
 
 
+def test_short_prompt_is_one_line_and_used_by_build_messages():
+    short = spec_v2.system_prompt(short=True)
+    assert "\n" not in short and "<hs_end>" in short and len(short) < len(spec_v2.system_prompt()) // 10
+    messages = spec_v2.build_messages("고마워요", {"ui_stage": "no_photo"}, short=True)
+    assert messages[0] == {"role": "system", "content": short}
+
+
 def test_compact_context_keeps_decision_fields_only():
     context = spec_v2.compact_context({"diagnosis": {"disease_name": "무노균병", "category": "disease",
                                                      "description": "긴 설명" * 50, "crop_mismatch": False,

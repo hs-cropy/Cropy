@@ -87,7 +87,14 @@ def docstring(index):
     return "\n".join(lines)
 
 
-def system_prompt():
+# v3s: after fine-tuning the model no longer needs the rules and docstrings (~1,100 tokens). The board
+# (RK3588 NPU) prefills the prompt on every utterance, so a one-line prompt cuts latency several times.
+SHORT_PROMPT = "사용자 발화와 현재 앱 상태(context)를 보고 함수 하나를 골라 <hs_번호>(인자=값, ...)<hs_end> 한 줄만 출력한다."
+
+
+def system_prompt(short=False):
+    if short:
+        return SHORT_PROMPT
     return "\n".join(RULES) + "\n\n" + "\n\n".join(docstring(i) for i in range(len(FUNCTIONS)))
 
 
@@ -177,7 +184,7 @@ def compact_context(raw):
     return context
 
 
-def build_messages(user_text, context):
+def build_messages(user_text, context, short=False):
     payload = {"utterance": user_text, "context": compact_context(context)}
-    return [{"role": "system", "content": system_prompt()},
+    return [{"role": "system", "content": system_prompt(short)},
             {"role": "user", "content": json.dumps(payload, ensure_ascii=False, separators=(",", ":"))}]
