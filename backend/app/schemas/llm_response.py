@@ -7,4 +7,7 @@ from pydantic import BaseModel
 class LLMGuidanceResponse(BaseModel):
     text: str
     source: Literal["llm", "template"]
-    fallback_reason: Literal["unavailable", "timeout", "error", "invalid_response"] | None = None
+    fallback_reason: Literal[
+        "unavailable", "timeout", "error", "invalid_response", "not_crop"
+    ] | None = None
+
