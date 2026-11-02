@@ -116,13 +116,10 @@ export function SplashScreen() {
           시작하기
         </Link>
 
-        {/* PWA 설치 기능은 추후 연결 */}
-        <button
-          type="button"
-          className={styles.installButton}
-        >
+        {/* 설치 안내는 인터넷 없이도 열리는 정적 페이지라 Link 가 아닌 전체 페이지 이동이다 */}
+        <a href="/offline/install.html" className={styles.installButton}>
           앱 설치하기
-        </button>
+        </a>
       </div>
     </main>
   );
