@@ -160,3 +160,4 @@ train↔val 동일 이미지 2쌍, train↔test 4쌍을 발견했고 원본 SHA2
 - 실험 2(입력 448px, `cropy_testset_hires448_colab.ipynb`): macro F1 0.917, 무검은무늬병 54.2%, 무노균병 88.5%(+14.1%p). 무노균병만 기준 통과, 채택 후보. 서버 교체 전 전체 데이터 재학습과 추론 시간 측정 필요. 결과 `worker_split_v1/hires448_v1_test_report.json`, Drive `cropy_testset/hires448_v1/`.
 - 교체 후보 재학습: `cropy_full448_colab.ipynb`가 서버 모델과 같은 전체 데이터(10클래스)로 448px ResNet50을 학습하고 공식 val로 서버 모델과 비교한다. 백엔드는 체크포인트 `img_size`를 읽으므로 코드 수정 불필요. CPU 추론 256px 78ms → 448px 185ms(배치 1).
 - 재학습 결과(2026-11-02): 공식 val 99.68% / Macro F1 0.962, 회귀 없음. 교체 절차 [MODEL_SWAP_448.md](../docs/operations/MODEL_SWAP_448.md). 결과 `worker_split_v1/full448_v1_val_report.json`, 모델 Drive `cropy_testset/cropy_448_handoff_20261102/`.
+- 실험 3(무 질병 전용 2단계 분류기, `cropy_testset_pair_colab.ipynb`): 시험셋 무 질병 290장에서 전용 단독은 본 모델과 차이 없음(McNemar p=0.47), 재분배 규칙 적용 시 악화. 기각. 오류는 11월 중순 이후·피해 정도 2~3 검은무늬병에 집중, 학습 데이터에 심한 검은무늬병이 거의 없음 → 데이터 수집이 다음 단계. 결과 `worker_split_v1/pair_v1_test_report.json`.
