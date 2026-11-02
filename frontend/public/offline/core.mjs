@@ -69,10 +69,12 @@ export function failurePhase(error, online) {
   if (error?.name === 'QuotaExceededError') return 'storage-full';
   return 'failed';
 }
-// 오프라인 화면은 한 페이지에서 주소의 # 로 나눈다: 준비(기본)·사진 분석·진단 기록
+// 오프라인 화면은 한 페이지에서 주소의 # 로 나눈다: 준비(기본)·새 진단·진단 결과·진단 기록.
+// 예전 사진 분석 주소(#analyze)는 새 진단으로 연다
 export function viewFromHash(hash) {
   const name = String(hash || '').replace(/^#/, '');
-  return name === 'analyze' || name === 'records' ? name : 'prepare';
+  if (name === 'analyze') return 'new';
+  return name === 'new' || name === 'result' || name === 'records' ? name : 'prepare';
 }
 // 서버에 새 진단 파일 묶음이 있는지. version 은 모델·전처리·병해 안내·정책을 합친 64자리 해시라 순서가 없어 다르면 새것이다.
 // 받아 둔 묶음이 없거나 서버 값이 이상하면 묻지 않는다

@@ -20,22 +20,27 @@ try {
     return canvas.toDataURL('image/png').split(',')[1];
   });
   const photo = {name:'smoke.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')};
-  // 준비·사진 분석·진단 기록은 한 페이지의 # 화면이다. 헤더 내비로 사진 분석에 들어간다
+  // 준비·새 진단·진단 결과·진단 기록은 한 페이지의 # 화면이다. 헤더 내비로 새 진단에 들어간다
   const open = async name => { await page.locator(`.header-nav a[data-nav="${name}"]`).click(); await page.waitForFunction(n => location.hash === '#' + n, name); };
-  await open('analyze');
-  assert.equal(await page.locator('#view-title').innerText(), '사진 분석');
+  await open('new');
+  assert.equal(await page.locator('#view-title').innerText(), '새 진단');
   await page.locator('#file').setInputFiles(photo);
   await page.locator('#diagnose').click();
   await page.waitForFunction(() => document.querySelectorAll('#history article').length === 1);
   assert.match(await page.locator('#result').innerText(), /이 기기에 저장했어요/);
   assert.match(await page.locator('#toast').innerText(), /이 기기에 저장했어요/);
   assert.equal(await page.locator('#phase-label').innerText(), '기기 저장 완료');
-  // 결과가 나오면 사진 고르기 대신 진단 결과만 보이고, 새 사진으로 진단하기로 돌아간다
+  // 결과가 나오면 진단 결과 화면으로 옮기고, 새 사진으로 진단하기로 새 진단 화면에 돌아간다
+  assert.equal(await page.evaluate(() => location.hash), '#result');
   assert.equal(await page.locator('#view-title').innerText(), '진단 결과');
   assert.ok(await page.locator('#diagnosis').isHidden());
   await page.locator('#new-photo').evaluate(button => { HTMLInputElement.prototype.click = () => {}; button.click(); });
-  assert.equal(await page.locator('#view-title').innerText(), '사진 분석');
+  assert.equal(await page.locator('#view-title').innerText(), '새 진단');
   assert.ok(await page.locator('#diagnose').isVisible());
+  // 지난 결과는 진단 결과 탭에 남아 있다
+  await open('result');
+  assert.equal(await page.locator('#view-title').innerText(), '진단 결과');
+  await open('new');
   await context.setOffline(true);
   await page.reload();
   await page.waitForFunction(() => document.querySelector('#progress').value === 100, null, {timeout:180000});

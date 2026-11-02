@@ -164,7 +164,7 @@ select { min-height: 2.75rem; margin-left: .5rem; padding: 0 .5rem; border: 1px 
 #state:empty { display: none; }
 /* 문구가 있으면 그 아래 결과·사진 고르기는 간격을 줄인다 */
 .state { margin: 2.125rem 0 0; }
-.state:not(:empty) ~ #result-view, .state:not(:empty) ~ #diagnosis { margin-top: 1rem; }
+.state:not(:empty) ~ #result-view, .state:not(:empty) ~ #diagnosis, .state:not(:empty) ~ #result-empty { margin-top: 1rem; }
 #result:empty { display: none; }
 
 /* 진단 결과 (온라인 DiagnosisResultView.tsx · 모바일 M-03). 넓은 화면 배치는 아래 1024px 규칙에 있다 */
@@ -248,7 +248,7 @@ select { min-height: 2.75rem; margin-left: .5rem; padding: 0 .5rem; border: 1px 
 #history img { width: 5.625rem; height: 5.625rem; border-radius: .75rem; object-fit: cover; }
 #history .row > button { min-height: 2.75rem; padding: .5rem .75rem; border-radius: .625rem; font-size: .875rem; }
 .note { margin: 1rem 0 0; }
-#analyze-card:not([hidden]) ~ .note { display: none; } /* 분석 실패 화면은 안내 카드만 보인다 */
+#analyze-card:not([hidden]) ~ .note, #result-empty:not([hidden]) ~ .note { display: none; } /* 분석 실패·빈 진단 결과 화면은 안내 카드만 보인다 */
 
 /* 하단 내비 (Cropy/V2/Mobile/Navigation, MobileNav.tsx). 높이 72px, 아이콘 24px, 라벨 12px */
 .with-nav { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
