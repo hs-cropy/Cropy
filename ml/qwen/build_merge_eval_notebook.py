@@ -8,6 +8,9 @@ What the notebook does (validation = qwen_v2c_data.jsonl.xz, the labels every ru
             it as a plain Hugging Face model for the RKLLM conversion on the board
   2. soup   average the merged weights of the three long-prompt runs (v2, v2b, v2c) into one model and
             evaluate it; a 3-run majority vote reached 96.6% exact against 95.0% for v2 alone
+
+2026-11-02 run: merged v2 95.1% (1,158/1,160 same as the adapter), soup 96.9% with batched generation.
+The second build skips the merge, evaluates the soup one prompt at a time and saves it for the board.
 """
 import hashlib
 import json
@@ -19,6 +22,9 @@ import spec_v2
 HERE = Path(__file__).resolve().parent
 RUNS = ["v2_r16_e2", "v2b_r16_e2", "v2c_r16_e2"]  # same base, prompt and new-token ids; v3s used another prompt
 EXPORT = "v2_r16_e2"  # adapter chosen for the server (README "v2c 결과와 결정")
+RUN_MERGE = False  # done on 2026-11-02 (v2_r16_e2/merged_hf)
+SAVE_SOUP = True
+SOUP_NAME = "soup_" + "_".join(r.split("_")[0] for r in RUNS)
 
 
 def notebook(data_sha, counts):
@@ -36,7 +42,8 @@ def notebook(data_sha, counts):
 2. **평균**: {', '.join(f'`{r}`' for r in RUNS)} 세 모델의 병합 가중치를 평균 낸 한 모델을 평가한다. 세 모델 다수결은 인자까지 96.6%였다(`{EXPORT}` 단독 95.0%).
 
 - 평가 기준: `{train.DATA_FILE}`의 validation {counts['validation']:,}행(학습 결과 비교에 써 온 라벨)
-- 런타임: **A100**, 메뉴 런타임 → 모두 실행. 결과는 `cropy_qwen_v2/merge_eval/`, 병합 모델은 `cropy_qwen_v2/{EXPORT}/merged_hf/`(약 4~5GB, Drive 여유 공간 확인).
+- 런타임: **A100**, 메뉴 런타임 → 모두 실행. 결과는 `cropy_qwen_v2/merge_eval/`, 병합 모델은 `cropy_qwen_v2/{EXPORT}/merged_hf/`, 평균 모델은 `cropy_qwen_v2/{SOUP_NAME}/merged_hf/`(각 약 4~5GB, Drive 여유 공간 확인).
+- 이번 설정: 병합 {'실행' if RUN_MERGE else '건너뜀(11/2에 함)'}, 평균 모델 {'한 건씩 평가 후 저장' if SAVE_SOUP else '평가만'}.
 """),
         code(f"""
 from google.colab import drive
@@ -51,7 +58,10 @@ MODEL_ID = '{train.MODEL_ID}'
 MODEL_REF = '{train.MODEL_REF}'
 RUNS = {RUNS!r}
 EXPORT = '{EXPORT}'
+RUN_MERGE = {RUN_MERGE}           # 단일 어댑터 병합·저장 (11/2에 함)
 SAVE_MERGED = True          # False면 병합 모델을 Drive에 저장하지 않는다
+SAVE_SOUP = {SAVE_SOUP}           # 평균 모델을 한 건씩 평가하고 Drive에 저장
+SOUP_NAME = '{SOUP_NAME}'
 OUT = DRIVE_DIR / 'merge_eval'
 OUT.mkdir(parents=True, exist_ok=True)
 for run in RUNS:
@@ -185,6 +195,23 @@ def load_base():
 
 def load_merged(run):
     return PeftModel.from_pretrained(load_base(), DRIVE_DIR / run / 'adapter', is_trainable=False).merge_and_unload()
+
+def save_hf(model, folder, source):
+    # Plain HF model for the RKLLM conversion; a reload must answer the same.
+    check = val_rows[:64]
+    expected = generate(model, check, 1)
+    folder.mkdir(parents=True, exist_ok=True)
+    model.save_pretrained(folder, safe_serialization=True, max_shard_size='2GB')
+    tokenizer.save_pretrained(folder)
+    (folder / 'cropy_prompt.json').write_text(json.dumps(
+        dict(system_prompt=SYSTEM_PROMPT, functions=FUNCTIONS, new_tokens=TOKEN_IDS, user_format='{"utterance":...,"context":...}',
+             enable_thinking=False, stop_token='<hs_end>', base=MODEL_ID, revision=MODEL_REF, source=source),
+        ensure_ascii=False, indent=2))
+    reloaded = MODEL_CLASS.from_pretrained(folder, device_map={'': 0}, dtype=DTYPE, attn_implementation='sdpa')
+    ok = generate(reloaded, check, 1) == expected
+    del reloaded; gc.collect(); torch.cuda.empty_cache()
+    print('저장', folder, '| 다시 불러온 결과가 같은가:', ok)
+    return {'cases': len(check), 'outputs_equal': ok}
 """),
         md(f"""
 ## 1. 병합 (`{EXPORT}`)
@@ -192,36 +219,22 @@ def load_merged(run):
 bf16에서 더하는 순서가 달라 몇 건은 달라질 수 있다.
 """),
         code("""
-merged = load_merged(EXPORT)
-merged.config.use_cache = True
-texts, run_info = evaluate(merged)
-cases, metrics = score(texts)
-before = saved_outputs(EXPORT)
-same = sum(c['actual'] == before[c['case_id']] for c in cases)
-metrics |= dict(run=EXPORT, same_as_adapter=same, env=ENV, **run_info)
-write('merged_' + EXPORT, cases, metrics)
-print(f'어댑터 평가와 같은 답 {same}/{len(cases)}')
-"""),
-        code("""
-if SAVE_MERGED:
-    check = val_rows[:64]
-    expected = generate(merged, check, 1)
-    MERGED_DIR = DRIVE_DIR / EXPORT / 'merged_hf'
-    merged.save_pretrained(MERGED_DIR, safe_serialization=True, max_shard_size='2GB')
-    tokenizer.save_pretrained(MERGED_DIR)
-    (MERGED_DIR / 'cropy_prompt.json').write_text(json.dumps(
-        dict(system_prompt=SYSTEM_PROMPT, functions=FUNCTIONS, new_tokens=TOKEN_IDS, user_format='{"utterance":...,"context":...}',
-             enable_thinking=False, stop_token='<hs_end>', base=MODEL_ID, revision=MODEL_REF, adapter=EXPORT),
-        ensure_ascii=False, indent=2))
+if RUN_MERGE:
+    merged = load_merged(EXPORT)
+    merged.config.use_cache = True
+    texts, run_info = evaluate(merged)
+    cases, metrics = score(texts)
+    before = saved_outputs(EXPORT)
+    same = sum(c['actual'] == before[c['case_id']] for c in cases)
+    metrics |= dict(run=EXPORT, same_as_adapter=same, env=ENV, **run_info)
+    write('merged_' + EXPORT, cases, metrics)
+    print(f'어댑터 평가와 같은 답 {same}/{len(cases)}')
+    if SAVE_MERGED:
+        check = save_hf(merged, DRIVE_DIR / EXPORT / 'merged_hf', EXPORT)
+        (OUT / 'merged_reload_check.json').write_text(json.dumps(check))
     del merged; gc.collect(); torch.cuda.empty_cache()
-    reloaded = MODEL_CLASS.from_pretrained(MERGED_DIR, device_map={'': 0}, dtype=DTYPE, attn_implementation='sdpa')
-    ok = generate(reloaded, check, 1) == expected
-    (OUT / 'merged_reload_check.json').write_text(json.dumps({'cases': len(check), 'outputs_equal': ok}))
-    print('저장', MERGED_DIR, '| 다시 불러온 결과가 같은가:', ok)
-    del reloaded
 else:
-    del merged
-gc.collect(); torch.cuda.empty_cache()
+    print('병합 건너뜀')
 """),
         md("""
 ## 2. 평균 (모델 수프)
@@ -247,10 +260,18 @@ assert not unexpected, unexpected[:5]
 assert all('lm_head' in k for k in missing), missing[:5]  # tied to the embeddings
 del total; gc.collect()
 soup.config.use_cache = True
-texts, run_info = evaluate(soup)
+if SAVE_SOUP:  # one prompt at a time, as the board will run it; the first run used batches of 16
+    start = time.time()
+    texts, run_info = generate(soup, val_rows, 1), dict(batch_generation=1)
+    run_info['seconds'] = round(time.time() - start)
+else:
+    texts, run_info = evaluate(soup)
 cases, metrics = score(texts)
 metrics |= dict(runs=RUNS, env=ENV, **run_info)
-write('soup_' + '_'.join(r.split('_')[0] for r in RUNS), cases, metrics)
+name = SOUP_NAME + ('_b1' if run_info['batch_generation'] == 1 else '')
+write(name, cases, metrics)
+if SAVE_SOUP:
+    (OUT / f'{name}_reload_check.json').write_text(json.dumps(save_hf(soup, DRIVE_DIR / SOUP_NAME / 'merged_hf', RUNS)))
 """),
         md("## 요약"),
         code("""
@@ -261,7 +282,7 @@ for path in sorted(OUT.glob('*_metrics.json')):
 (OUT / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2))
 for name, v in summary.items():
     print(f'{name:24s} 형식 {v["format_valid"]:.4f} 기능 {v["function"]:.4f} 인자까지 {v["exact"]:.4f}')
-print('비교 기준(같은 라벨): v2 단독 0.9500, v2c 0.9483, 세 run 다수결 0.9664')
+print('비교 기준(같은 라벨): v2 단독 0.9500, v2c 0.9483, 세 run 다수결 0.9664, 평균 모델(16개씩 생성) 0.9690')
 """),
     ]
     return {"cells": cells, "metadata": {"accelerator": "GPU", "colab": {"provenance": [], "gpuType": "A100"},
