@@ -25,3 +25,49 @@ test('판별 불가 overrides mismatch, confusion and low score', () => {
   assert.equal(result.recapture, null); assert.equal(result.crop_mismatch, false); assert.equal(result.crop_type, '고추');
   assert.equal(summarize(withOther, [{class_id:9,confidence:.9}], '').crop_type, null);
 });
+test('new bundle preserves result guidance without sharing detail objects', () => {
+  const withGuidance = structuredClone(bundle);
+  const disease = withGuidance.diseases[0];
+  disease.management_actions = ['감염 부위 제거'];
+  disease.summary_message = '아래 관리 방법을 참고하세요.';
+  disease.management_action_details = [
+    { title: '감염 부위 제거', description: '증상이 있는 부위를 확인해 주세요.' },
+  ];
+
+  const result = summarize(
+    withGuidance,
+    [{ class_id: 2, confidence: 0.95 }, { class_id: 3, confidence: 0.05 }],
+    '무',
+  );
+
+  assert.equal(result.summary_message, disease.summary_message);
+  assert.deepEqual(
+    result.management_action_details,
+    disease.management_action_details,
+  );
+  assert.deepEqual(
+    result.management_action_details.map(detail => detail.title),
+    result.management_actions,
+  );
+
+  result.management_action_details[0].description = '변경된 설명';
+  assert.equal(
+    disease.management_action_details[0].description,
+    '증상이 있는 부위를 확인해 주세요.',
+  );
+});
+
+test('legacy bundle keeps existing actions without inventing guidance', () => {
+  const legacy = structuredClone(bundle);
+  legacy.diseases[0].management_actions = ['감염 부위 제거'];
+
+  const result = summarize(
+    legacy,
+    [{ class_id: 2, confidence: 0.95 }, { class_id: 3, confidence: 0.05 }],
+    '무',
+  );
+
+  assert.equal(result.summary_message, null);
+  assert.deepEqual(result.management_action_details, []);
+  assert.deepEqual(result.management_actions, ['감염 부위 제거']);
+});
