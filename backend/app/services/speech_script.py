@@ -85,6 +85,27 @@ def _read_number(text: str, native: bool) -> str:
     return sino_number(n)
 
 
+# 괄호를 벗겨 이어 읽을 때 괄호 뒤 조사를 표시해 두었다가, 숫자를 한글로 바꾼 뒤 괄호 안
+# 마지막 말에 맞춰 다시 고른다 ("횟수(3번)를" → "횟수 세 번을")
+_JOSA_PAIRS = {"을": ("을", "를"), "를": ("을", "를"), "이": ("이", "가"), "가": ("이", "가"),
+               "은": ("은", "는"), "는": ("은", "는"), "과": ("과", "와"), "와": ("과", "와")}
+_JOSA_PATTERN = "으로|로|" + "|".join(_JOSA_PAIRS)
+_JOSA_MARK = "\x00"
+_MARKED_JOSA = re.compile(rf"(\S){_JOSA_MARK}({_JOSA_PATTERN}){_JOSA_MARK}")
+
+
+def _unwrap_parenthesis(match: re.Match) -> str:
+    inner, particle = match.group(1), match.group(2)
+    return f" {inner}{_JOSA_MARK}{particle}{_JOSA_MARK}" if particle else f" {inner}"
+
+
+def _repick_josa(match: re.Match) -> str:
+    word, particle = match.group(1), match.group(2)
+    if particle in ("으로", "로"):
+        return word + euro(word)
+    return word + josa(word, *_JOSA_PAIRS[particle])
+
+
 _SYMBOLS = [
     (re.compile(r"\s*\([A-Za-z][A-Za-z .]*\)"), ""),  # 학명 괄호 "세균(Xanthomonas)" — 귀로는 의미가 없다
     (re.compile(r"\bV자"), "브이 자"),
@@ -92,10 +113,10 @@ _SYMBOLS = [
     (re.compile(r"\s*(°C|℃)"), "도"),
     (re.compile(r"\s*%"), "퍼센트"),
     (re.compile(r"\s*[~～]\s*|(?<=\d)\s*–\s*(?=\d)"), "에서 "),  # 25~30, 갈색~흑갈색
-    # 괄호는 귀로 구분되지 않는다. 바로 뒤에 조사가 붙으면("곰팡이(포자층)가") 풀어 읽을 때
-    # 조사가 어긋나므로 보충 설명인 괄호 안을 빼고, 아니면 괄호만 벗겨 이어 읽는다
-    (re.compile(r"\s*\([^()]*\)(?=[가-힣])"), ""),
-    (re.compile(r"\s*\(\s*([^()]*?)\s*\)"), r" \1"),
+    # 괄호는 귀로 구분되지 않는다. 숫자가 없는 보충 설명 뒤에 조사가 붙으면("곰팡이(포자층)가")
+    # 괄호 안을 뺀다. 시간·배수·온도처럼 숫자가 있는 괄호는 뜻이 담겨 있어 괄호만 벗겨 읽는다
+    (re.compile(r"\s*\([^()\d]*\)(?=[가-힣])"), ""),
+    (re.compile(rf"\s*\(\s*([^()]*?)\s*\)(?:({_JOSA_PATTERN})(?![가-힣]))?"), _unwrap_parenthesis),
     # 단위 바로 뒤에 '당'·조사가 붙기도 해서(20L당) \b 대신 영문자가 이어지지 않는지만 본다
     (re.compile(r"(?<=\d)\s*(?:mL|㎖)(?![A-Za-z])", re.IGNORECASE), "밀리리터"),
     (re.compile(r"(?<=\d)\s*(?:kg|㎏)(?![A-Za-z])"), "킬로그램"),
@@ -124,4 +145,5 @@ def normalize_for_tts(text: str) -> str:
         return f"{spoken} {following}" if following else spoken
 
     text = _NUMBER.sub(replace, text)
+    text = _MARKED_JOSA.sub(_repick_josa, text).replace(_JOSA_MARK, "")
     return re.sub(r"\s{2,}", " ", text).strip()
