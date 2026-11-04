@@ -12,7 +12,7 @@ function setup(responses) {
   const context = vm.createContext({
     busy: false, current: null, FormData,
     setBusy(value) { context.busy = value; },
-    $(id) { return state; }, message(error) { return error.message; },
+    $(id) { return state; }, say(text) { state.textContent = text; }, message(error) { return error.message; },
     result() {}, async history() {},
     async db(store, operation, record) { writes.push(structuredClone(record)); },
     async fetch(url, options) {
