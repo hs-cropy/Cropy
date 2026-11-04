@@ -1,4 +1,6 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#FAF7F0"><title>Cropy · 이 기기에서 진단</title>
+<!-- 설치 앱 manifest 와 아이콘 (PR #121) -->
+<link rel="manifest" href="/offline/manifest.webmanifest"><link rel="apple-touch-icon" href="/offline/icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-title" content="Cropy">
 <script>try{if(localStorage.getItem('cropcare:textsize')==='large')document.documentElement.dataset.textsize='large'}catch(e){}</script>
 <!-- 글꼴은 화면을 막지 않게 늦게 붙인다. 연결이 약한 곳에서 첫 화면이 하얗게 멈추지 않게 한다 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" media="print" onload="this.media='all'">
@@ -6,15 +8,15 @@
 <!-- 헤더. 넓은 화면(1024px~)에서는 앱 헤더(Header.tsx)처럼 내비가 함께 보인다 -->
 <header class="site-header"><div class="header"><img class="logo" src="/brand/cropy-logo.png" alt="Cropy" width="299" height="224">
 <nav class="header-nav" aria-label="주요 메뉴"><ul>
-<li><a href="/home"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/></g></svg>새 진단</a></li>
-<li><a href="#analyze" data-nav="analyze" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16l-1.9-1.9"/></g></svg>진단 결과</a></li>
+<li><a href="#new" data-nav="new" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/></g></svg>새 진단</a></li>
+<li><a href="#result" data-nav="result"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16l-1.9-1.9"/></g></svg>진단 결과</a></li>
 <li><a href="#records" data-nav="records"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4"><path d="M3 12a9 9 0 1 0 9-9a9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5m4-1v5l4 2"/></g></svg>진단 이력</a></li>
 </ul></nav>
 <button id="text-size" class="switch" role="switch" aria-checked="false" type="button"><span class="label-mobile">큰 글자</span><span class="label-web">글자 크게</span><span class="track" aria-hidden="true"></span></button>
 <button id="voice" class="switch" role="switch" aria-checked="false" aria-label="음성 안내" type="button"><span class="label-mobile">음성</span><span class="label-web">음성 안내</span><span class="track" aria-hidden="true"></span></button></div></header>
 <div class="page with-nav">
 <main>
-<!-- 제목·부제·상태 라벨은 세 화면이 함께 쓴다. app.mjs 의 renderHeader 가 화면과 상태에 맞게 바꾼다 -->
+<!-- 제목·부제·상태 라벨은 네 화면이 함께 쓴다. app.mjs 의 renderHeader 가 화면과 상태에 맞게 바꾼다 -->
 <!-- 진단 결과일 때는 넓은 화면 부제(진단 시각)와 마스코트가 함께 보인다 (data-mode="result", PageHeader.tsx) -->
 <div class="page-head" id="page-head"><div class="head-text">
 <h1 class="title" id="view-title" tabindex="-1">오프라인 사용 준비</h1>
@@ -42,9 +44,10 @@
 <button id="resume" class="update" type="button" hidden>오프라인 준비 다시 보기</button>
 </div>
 
-<!-- 화면 2 · 사진 분석 (#analyze). 사진 고르기·진단 결과·분석 실패 카드 중 하나만 보인다 (app.mjs 의 syncAnalyzeView).
-     분석에 실패해도 사진은 그대로 둔다 -->
-<div class="view" data-view="analyze" hidden>
+<!-- 화면 2·3 · 새 진단 (#new, 예전 #analyze) 과 진단 결과 (#result). 분석 실패 카드와 문구 자리를 같이 쓰려고 한 묶음이다.
+     새 진단은 사진 고르기, 진단 결과는 결과(없으면 빈 안내)가 보이고, 그 화면의 분석 실패 카드가 떠 있으면 카드만 보인다
+     (app.mjs 의 syncAnalyzeView). 분석에 실패해도 사진은 그대로 둔다 -->
+<div class="view" data-view="new result" hidden>
 <section class="feedback" id="analyze-card" hidden aria-labelledby="analyze-card-title">
 <img class="mascot" src="/mascot/retake.png" alt="" width="288" height="288">
 <h2 id="analyze-card-title" tabindex="-1"></h2><p role="status"></p>
@@ -58,6 +61,14 @@
 <label>추가 사진 <input id="second" type="file" accept="image/jpeg,image/png" capture="environment"></label><button id="refine" type="button">두 사진으로 다시 확인</button></section>
 <div class="result-tools"><button id="speak" class="secondary" type="button" disabled>결과 읽기</button><button id="new-photo" class="text-button" type="button">새 사진으로 진단하기</button></div>
 </section>
+<!-- 결과가 없는 진단 결과 화면 (온라인 DiagnosisEmptyState.tsx). 오프라인에는 촬영 방법 화면이 없어 그 링크는 뺀다 -->
+<section class="feedback" id="result-empty" hidden aria-labelledby="result-empty-title">
+<img class="mascot" src="/mascot/greeting.png" alt="" width="288" height="288">
+<h2 id="result-empty-title" tabindex="-1"><span class="label-mobile">사진으로 작물 상태를<br>확인해보세요</span><span class="label-web">먼저 작물 사진을 준비해주세요</span></h2>
+<p><span class="label-mobile">작물 사진을 찍거나 갤러리에서 선택하면<br>진단 결과와 관리 방법을 확인할 수 있어요.</span><span class="label-web">사진을 찍거나 갤러리에서 선택해보세요.<br>지난 진단 결과는 진단 이력에서 확인할 수 있어요.</span></p>
+<div class="actions single"><button id="empty-new" type="button">새 진단 시작하기</button></div>
+<p class="label-mobile">지난 진단은 이력에서 확인할 수 있어요.</p>
+</section>
 <section class="card section" id="diagnosis" aria-labelledby="diagnosis-title"><h2 id="diagnosis-title">사진 진단</h2>
 <label>작물 <select id="crop"><option value="">자동 감지</option><option>고추</option><option>무</option><option>배추</option></select></label>
 <input id="file" type="file" accept="image/jpeg,image/png" capture="environment" aria-label="진단할 사진"><img id="preview" alt="선택한 사진" class="hidden">
@@ -67,7 +78,7 @@
 <p class="muted note">모델 분류는 확진을 뜻하지 않아요. 농약 사용 조건은 오프라인 묶음에 포함하지 않으며 최신 등록정보·제품 라벨을 별도로 확인해야 해요.</p>
 </div>
 
-<!-- 화면 3 · 진단 기록 (#records). 저장 공간·동기화 안내 카드는 기록 목록 위에 뜬다 -->
+<!-- 화면 4 · 진단 기록 (#records). 저장 공간·동기화 안내 카드는 기록 목록 위에 뜬다 -->
 <div class="view" data-view="records" hidden>
 <section class="feedback" id="records-card" hidden aria-labelledby="records-card-title">
 <img class="mascot" src="/mascot/saved.png" alt="" width="288" height="288">
@@ -90,10 +101,10 @@
 <div class="actions"><button id="update-accept" type="button">업데이트</button><button id="update-later" class="secondary" type="button">나중에</button></div>
 </div>
 </dialog>
-<!-- 하단 내비 (MobileNav). 촬영은 Next 화면이라 인터넷이 있어야 열리고, 진단·이력은 이 페이지의 화면이다 -->
+<!-- 하단 내비 (MobileNav). 모두 이 페이지의 화면이다: 촬영은 새 진단(#new), 진단은 진단 결과(#result), 이력은 진단 기록(#records) -->
 <nav class="nav" aria-label="하단 메뉴"><ul>
-<li><a href="/home"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/></g></svg>촬영</a></li>
-<li><a href="#analyze" data-nav="analyze" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16l-1.9-1.9"/></g></svg>진단</a></li>
+<li><a href="#new" data-nav="new" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/></g></svg>촬영</a></li>
+<li><a href="#result" data-nav="result"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="m16 16l-1.9-1.9"/></g></svg>진단</a></li>
 <li><a href="#records" data-nav="records"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9a9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5m4-1v5l4 2"/></g></svg>이력</a></li>
 </ul></nav>
 <script type="module" src="/offline/shell.mjs"></script><script type="module" src="/offline/app.mjs"></script></body></html>

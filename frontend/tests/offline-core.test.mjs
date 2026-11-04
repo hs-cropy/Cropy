@@ -78,9 +78,12 @@ test('a failed download maps to paused, storage-full or failed', () => {
   assert.equal(failurePhase(named('QuotaExceededError'), true), 'storage-full');
   assert.equal(failurePhase(new Error('모델 검증에 실패했어요.'), true), 'failed');
 });
-test('the # in the address picks the prepare, analyze or records screen', () => {
-  assert.equal(viewFromHash('#analyze'), 'analyze');
+test('the # in the address picks the prepare, new diagnosis, result or records screen', () => {
+  assert.equal(viewFromHash('#new'), 'new');
+  assert.equal(viewFromHash('#result'), 'result');
   assert.equal(viewFromHash('#records'), 'records');
+  // 예전 사진 분석 주소는 새 진단으로 연다
+  assert.equal(viewFromHash('#analyze'), 'new');
   for (const hash of ['', '#', '#prepare', '#unknown', undefined]) assert.equal(viewFromHash(hash), 'prepare');
 });
 test('records show sync-failed first, sync-pending only while offline', () => {

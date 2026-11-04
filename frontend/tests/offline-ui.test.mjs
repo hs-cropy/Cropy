@@ -13,7 +13,8 @@ function setup({escape=String}={}){
  const context=vm.createContext({$,escape,busy:false,current:null,selected:{name:'new.jpg'},bundle:{version:'v1'},
  crypto:{randomUUID:()=> 'new-record'},setBusy(v){context.busy=v;},async predict(){return [];},summarize(){return result;},
  async storeRecord(record){context.result(record);return true;},message:e=>e.message,
- notices:[],notice(where,name){context.notices.push([where,name]);},toast(){},say(text){$('state').textContent=text;},renderHeader(){},view:'analyze',document:{activeElement:null,body:{}},
+ notices:{new:null,result:null,records:null},calls:[],notice(where,name){context.calls.push([where,name]);context.notices[where]=name;},toasts:[],toast(text){context.toasts.push(text);},say(text){$('state').textContent=text;},renderHeader(){},view:'new',document:{activeElement:null,body:{}},
+ went:[],go(name){context.went.push(name);context.view=name;},resets:0,resetPhoto(){context.resets++;context.selected=null;},
  gradeOf,isNotCrop,recordTime,URL:{createObjectURL(file){const url='blob:'+file.name;urls.made.push(url);return url;},revokeObjectURL(url){urls.revoked.push(url);}}});
  vm.runInContext(source.slice(source.indexOf('function result('),source.indexOf('async function storeRecord('))+
  source.slice(source.indexOf('async function diagnose('),source.indexOf('async function refine(')),context);
@@ -63,12 +64,12 @@ test('a not-crop result shows how to retake instead of a disease result',()=>{
  assert.equal(h.$('new-photo').textContent,'다시 촬영하기');
  h.context.result(h.record('n',{result:full}));assert.equal(h.$('new-photo').textContent,'새 사진으로 진단하기');
 });
-test('status text scrolls into view on the analyze screen and toasts elsewhere',()=>{
+test('status text scrolls into view on the new diagnosis and result screens and toasts elsewhere',()=>{
  const run=view=>{const state={textContent:'',scrollIntoView(){this.scrolled=true;}},toasts=[];
   const context=vm.createContext({$:()=>state,view,toast(text){toasts.push(text);}});
   vm.runInContext(source.slice(source.indexOf('function say('),source.indexOf('// actions 를 주면')),context);
   context.say('문구');return {state,toasts};};
- const analyze=run('analyze');assert.equal(analyze.state.scrolled,true);assert.deepEqual(analyze.toasts,[]);assert.equal(analyze.state.textContent,'문구');
+ for(const view of ['new','result']){const shown=run(view);assert.equal(shown.state.scrolled,true);assert.deepEqual(shown.toasts,[]);assert.equal(shown.state.textContent,'문구');}
  const records=run('records');assert.equal(records.state.scrolled,undefined);assert.deepEqual(records.toasts,['문구']);assert.equal(records.state.textContent,'문구');
 });
 test('result text is escaped',()=>{
@@ -84,13 +85,22 @@ test('result photos are made once per photo and released when the result is clea
  h.context.clearResult();
  assert.deepEqual(h.urls.revoked,['blob:a.jpg','blob:a.jpg','blob:b.jpg']);assert.equal(h.context.current,null);
 });
-test('the analyze screen shows the photo picker, the result or the failure card, one at a time',()=>{
- const h=setup();h.$('analyze-card').hidden=true;h.context.result(h.record('r'));
- assert.equal(h.$('result-view').hidden,false);assert.equal(h.$('diagnosis').hidden,true);
- h.$('analyze-card').hidden=false;h.context.syncAnalyzeView();
- assert.equal(h.$('result-view').hidden,true);assert.equal(h.$('diagnosis').hidden,true);
- h.$('analyze-card').hidden=true;h.context.clearResult();
- assert.equal(h.$('result-view').hidden,true);assert.equal(h.$('diagnosis').hidden,false);assert.equal(h.$('second').value,'');
+test('the new diagnosis screen shows the photo picker and the result screen the result or the empty state',()=>{
+ const h=setup(),shown=()=>['diagnosis','result-view','result-empty','analyze-card'].filter(id=>!h.$(id).hidden);
+ h.context.syncAnalyzeView();assert.deepEqual(shown(),['diagnosis']);
+ h.context.result(h.record('r'));assert.deepEqual(shown(),['diagnosis']);
+ h.context.view='result';h.context.syncAnalyzeView();assert.deepEqual(shown(),['result-view']);
+ h.context.clearResult();assert.deepEqual(shown(),['result-empty']);assert.equal(h.$('second').value,'');
+ // 분석 실패 카드는 그 화면에서만 보이고, 떠 있으면 카드만 보인다
+ h.context.notices.new='local-analysis-failed';h.context.syncAnalyzeView();assert.deepEqual(shown(),['result-empty']);
+ h.context.view='new';h.context.syncAnalyzeView();assert.deepEqual(shown(),['analyze-card']);
+ h.context.view='records';h.context.syncAnalyzeView();assert.deepEqual(shown(),[]);
+});
+test('a finished diagnosis moves to the result screen and clears the photo, unless the user left for another screen',async()=>{
+ const h=setup();await h.context.diagnose();
+ assert.deepEqual(h.context.went,['result']);assert.equal(h.context.resets,1);assert.equal(h.context.current.id,'new-record');
+ const away=setup();away.context.view='records';await away.context.diagnose();
+ assert.deepEqual(away.context.went,[]);assert.equal(away.context.current.id,'new-record');
 });
 test('switching records clears the previous second photo',()=>{
  const h=setup();h.context.result(h.record('old'));h.$('second').value='old-second.jpg';
@@ -105,16 +115,27 @@ test('starting a diagnosis clears the second photo even if inference fails',asyn
  h.context.predict=async()=>{throw new Error('inference failed');};await h.context.diagnose();
  assert.equal(h.$('second').value,'');
 });
-test('an inference failure shows the analysis-failed card and keeps the photo',async()=>{
+test('an inference failure shows the analysis-failed card on the new diagnosis screen and keeps the photo',async()=>{
  const h=setup();h.context.predict=async()=>{throw new Error('inference failed');};await h.context.diagnose();
- assert.deepEqual(h.context.notices.at(-1),['analyze','local-analysis-failed']);
+ assert.deepEqual(h.context.calls.at(-1),['new','local-analysis-failed']);
  assert.equal(h.$('state').textContent,'');assert.equal(h.context.selected.name,'new.jpg');
- assert.equal(h.context.retryAnalysis,h.context.diagnose);
+ assert.deepEqual(h.context.went,[]);assert.equal(h.context.resets,0);
+});
+test('a failure while on another tab is toasted and its card waits on the new diagnosis screen',async()=>{
+ const h=setup();h.context.view='records';h.context.predict=async()=>{throw new Error('inference failed');};await h.context.diagnose();
+ assert.equal(h.context.notices.new,'local-analysis-failed');assert.deepEqual(h.context.toasts,['이 기기에서 분석하지 못했어요.']);
+ const here=setup();here.context.predict=h.context.predict;await here.context.diagnose();assert.deepEqual(here.context.toasts,[]);
+});
+test('a new or cleared result drops the second-photo failure card of the previous result',()=>{
+ const h=setup();h.context.view='result';h.context.result(h.record('old'));
+ h.context.notices.result='local-analysis-failed';h.context.result(h.record('old'));assert.equal(h.context.notices.result,'local-analysis-failed');
+ h.context.result(h.record('new'));assert.equal(h.context.notices.result,null);assert.equal(h.$('result-view').hidden,false);
+ h.context.notices.result='local-analysis-failed';h.context.clearResult();assert.equal(h.context.notices.result,null);assert.equal(h.$('result-empty').hidden,false);
 });
 test('a rejected photo is explained in text without the analysis-failed card',async()=>{
  const h=setup();h.context.predict=async()=>{throw Object.assign(new Error('JPEG 또는 PNG 사진을 선택해 주세요.'),{input:true});};
  await h.context.diagnose();
- assert.deepEqual(h.context.notices,[['analyze',null]]);assert.match(h.$('state').textContent,/JPEG/);
+ assert.deepEqual(h.context.calls,[['new',null]]);assert.match(h.$('state').textContent,/JPEG/);
 });
 function setupHeader({view,desktop=false,savedId=null,current=null,phase}){
  const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',hidden:false,open:false,dataset:{phase},classList:{toggle(){}}});return nodes.get(id);};
@@ -136,34 +157,43 @@ test('the verifying header uses the PC wording only on a PC',()=>{
   assert.match(h.$('ready').textContent,new RegExp(place));
  }
 });
-test('a fresh local save labels the analyze and records headers unless a notice is up',()=>{
- for(const view of ['analyze','records']){
+test('a fresh local save labels the result and records headers unless a notice is up',()=>{
+ for(const view of ['result','records']){
   const h=setupHeader({view,savedId:'new',current:{id:'new'}});
-  assert.deepEqual(h.header(),{label:'기기 저장 완료',lead:{analyze:'진단 요약을 확인하고\n필요한 상세 정보를 펼쳐보세요.',records:'인터넷 없이도 이 기기에 저장된 기록을 볼 수 있어요.'}[view]});
+  assert.deepEqual(h.header(),{label:'기기 저장 완료',lead:{result:'진단 요약을 확인하고\n필요한 상세 정보를 펼쳐보세요.',records:'인터넷 없이도 이 기기에 저장된 기록을 볼 수 있어요.'}[view]});
   h.context.notices[view]='sync-failed';assert.equal(h.header().label,'서버 동기화 실패');
   h.context.notices[view]=null;h.context.savedId=null;assert.equal(h.header().label,null);
  }
  assert.equal(setupHeader({view:'prepare',savedId:'new',phase:'ready'}).header().label,'오프라인 준비 완료');
+ // 새 진단 화면은 저장 완료를 보이지 않는다 (결과는 진단 결과 화면에 있다)
+ assert.equal(setupHeader({view:'new',savedId:'new',current:{id:'new'}}).header().label,null);
 });
-test('a result on the analyze screen switches the header to the diagnosis result',()=>{
- const h=setupHeader({view:'analyze',current:{id:'r',created_at:'2026-10-06T14:18:00'}});
+test('a result on the result screen switches the header to the diagnosis result',()=>{
+ const h=setupHeader({view:'result',current:{id:'r',created_at:'2026-10-06T14:18:00'}});
  assert.deepEqual(h.header(),{label:null,lead:'진단 요약을 확인하고\n필요한 상세 정보를 펼쳐보세요.'});
  assert.equal(h.$('view-title').textContent,'진단 결과');assert.equal(h.$('page-head').dataset.mode,'result');
  assert.equal(h.$('phase-lead-wide').textContent,'2026년 10월 6일 오후 2:18에 확인한 결과예요.');
  h.context.current={id:'r'};h.header();assert.equal(h.$('phase-lead-wide').textContent,'진단 요약을 확인하고, 아래 관리 방법을 참고해주세요.');
- // 분석 실패 카드가 떠 있으면 카드의 머리, 결과가 없으면 사진 분석이다
- h.context.notices.analyze='local-analysis-failed';assert.equal(h.header().label,'기기 내 분석 오류');assert.equal(h.$('view-title').textContent,'사진 분석');
- h.context.notices.analyze=null;h.context.current=null;h.header();
- assert.equal(h.$('view-title').textContent,'사진 분석');assert.equal(h.$('page-head').dataset.mode,'');
+ // 추가 사진 확인 실패 카드가 떠 있으면 카드의 라벨이고 제목은 진단 결과다. 결과가 없으면 진단 시작 안내다
+ h.context.notices.result='local-analysis-failed';assert.equal(h.header().label,'기기 내 분석 오류');assert.equal(h.$('view-title').textContent,'진단 결과');
+ assert.equal(h.$('page-head').dataset.mode,'');
+ h.context.notices.result=null;h.context.current=null;
+ assert.deepEqual(h.header(),{label:null,lead:'사진을 찍거나 선택하면\n진단 결과와 관리 방법을 볼 수 있어요.'});
+ assert.equal(h.$('view-title').textContent,'진단 시작');assert.equal(h.$('page-head').dataset.mode,'');
+});
+test('the new diagnosis header stays the same with a result and shows its failure card',()=>{
+ const h=setupHeader({view:'new',current:{id:'r'}});
+ assert.deepEqual(h.header(),{label:null,lead:'사진은 이 기기에서 분석돼요.'});assert.equal(h.$('view-title').textContent,'새 진단');
+ h.context.notices.new='local-analysis-failed';assert.equal(h.header().label,'기기 내 분석 오류');assert.equal(h.$('view-title').textContent,'새 진단');
 });
 test('a not-crop result switches the header to the retake guidance',()=>{
- const h=setupHeader({view:'analyze',current:{id:'r',created_at:'2026-10-06T14:18:00',result:{category:'other'}}});
+ const h=setupHeader({view:'result',current:{id:'r',created_at:'2026-10-06T14:18:00',result:{category:'other'}}});
  assert.deepEqual(h.header(),{label:null,lead:'고추·무·배추 잎으로 알아보기 어려운 사진이에요.'});
  assert.equal(h.$('view-title').textContent,'작물 잎을 찾지 못했어요');assert.equal(h.$('phase-lead-wide').textContent,'고추·무·배추 잎으로 알아보기 어려운 사진이에요.');
  assert.equal(h.$('head-mascot').src,'/mascot/retake.png');
 });
 test('viewing an older record result drops the saved label, the records list keeps it',()=>{
- assert.equal(setupHeader({view:'analyze',savedId:'new',current:{id:'old'}}).header().label,null);
+ assert.equal(setupHeader({view:'result',savedId:'new',current:{id:'old'}}).header().label,null);
  assert.equal(setupHeader({view:'records',savedId:'new',current:{id:'old'}}).header().label,'기기 저장 완료');
 });
 for(const failure of ['model','asset read']){
