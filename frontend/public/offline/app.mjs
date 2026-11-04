@@ -566,8 +566,10 @@ $('speak').addEventListener('click',()=>{
   if(!voice){say('이 기기에 한국어 오프라인 음성이 없어요. 글로 확인해 주세요.');return;}
   speechSynthesis.cancel();const speech=new SpeechSynthesisUtterance(isNotCrop(current.result)?'작물 잎을 찾지 못했어요. 잎이 잘 보이게 다시 찍어 주세요.':current.result.disease_name+'으로 분류됐어요. 확진을 뜻하지 않아요. '+current.result.description);speech.voice=voice;speech.lang='ko-KR';speech.onerror=()=>{say('음성 안내를 시작하지 못했어요.');};speechSynthesis.speak(speech);
 });
-// 주소의 # 화면을 먼저 보인다. 모델을 다 불러온 뒤 한 번 더 확인한다 (없으면 사진 분석 대신 준비 화면)
-route();
+// 연결 없이 다른 화면 링크를 누르면 메인 워커가 이동을 막고 알려 준다(public/sw.js).
+navigator.serviceWorker?.addEventListener('message',event=>{
+  if(event.data?.type==='cropy-offline-stay')$('state').textContent='인터넷에 연결되어 있지 않아 이 화면에 머물러요. 연결되면 다시 눌러 주세요.';
+});
 try {
   const cached=await db('assets','get',null,'active');
   if(cached){bundle=cached.manifest;session=await initSession(cached.model);show('ready');$('progress').value=100;}
