@@ -1126,3 +1126,77 @@ def test_backup_with_a_hot_rollback_journal_is_checked_on_a_copy(live, snapshot_
 
     assert restore(snapshot_to_restore, db_path, upload_dir)["applied"] is False
     assert _file_hashes(snapshot_to_restore) == before  # 검사는 사본에서 했다
+
+
+# ---- 복원 직전 안전 백업 ----
+
+
+def _safety_backup(db_path: Path, upload_dir: Path, root: Path) -> Path:
+    safety_dir = root / "pre_restore_test"
+    safety_dir.mkdir(parents=True)
+    backup_db._safety_backup(db_path, upload_dir, safety_dir)
+    return safety_dir
+
+
+def test_safety_backup_keeps_a_corrupt_db_and_its_journal_as_raw_files(live):
+    # 리뷰 5: 손상된 현재 DB도 읽지 않고 원시 파일 그대로 남겨야 나중에 살펴볼 수 있다
+    db_path, upload_dir, root = live
+    db_path.write_bytes(b"corrupted-current-db")
+    db_path.with_name(db_path.name + "-journal").write_bytes(b"stale-journal")
+
+    safety_dir = _safety_backup(db_path, upload_dir, root)
+
+    assert (safety_dir / "cropcare.db").read_bytes() == b"corrupted-current-db"
+    assert (safety_dir / "cropcare.db-journal").read_bytes() == b"stale-journal"
+    manifest = _manifest(safety_dir)
+    assert manifest["kind"] == "pre_restore" and manifest["raw_copy"] is True
+    assert manifest["sidecars"] == ["cropcare.db-journal"]
+
+
+def test_safety_backup_names_journals_after_the_saved_db(live, tmp_path):
+    # 3차 리뷰 1: DB 이름이 cropcare.db가 아니면 저널을 원래 이름(app.db-wal)으로 두어 인식되지 않았다
+    _, upload_dir, root = live
+    db_path = tmp_path / "current" / "app.db"
+    _make_sqlite_db(db_path, "original")
+    db_path.with_name("app.db-wal").write_bytes(b"live-wal")
+
+    safety_dir = _safety_backup(db_path, upload_dir, root)
+
+    assert (safety_dir / "cropcare.db-wal").read_bytes() == b"live-wal"
+    assert not (safety_dir / "app.db-wal").exists()
+
+
+def test_safety_backup_copies_photos_without_linking_to_any_backup(live):
+    # 안전 백업은 이것만 믿고 운영 데이터를 바꾸므로, 다른 백업과 하드링크로 묶지 않는다
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "b1")
+
+    safety_dir = _safety_backup(db_path, upload_dir, root)
+
+    manifest = _manifest(safety_dir)
+    assert (manifest["upload_file_count"], manifest["linked_files"]) == (3, 0)
+    assert not os.path.samefile(root / "b1" / "uploads" / "a.jpg", safety_dir / "uploads" / "a.jpg")
+    assert manifest["sequence"] == 1  # 정기 백업과 같은 순번을 이어 쓴다
+
+
+def test_safety_backup_is_synced_before_its_manifest(live, monkeypatch):
+    db_path, upload_dir, root = live
+    synced = []
+    real_fsync = backup_db._fsync
+    monkeypatch.setattr(backup_db, "_fsync", lambda path: (synced.append(Path(path)), real_fsync(path))[1])
+    real_write = backup_db._write_manifest
+
+    def check_then_write(directory, manifest):
+        files = [path for path in Path(directory).rglob("*") if path.is_file()]
+        assert files and all(path in synced for path in files)
+        real_write(directory, manifest)
+
+    monkeypatch.setattr(backup_db, "_write_manifest", check_then_write)
+    assert _manifest(_safety_backup(db_path, upload_dir, root))["kind"] == "pre_restore"
+
+
+def test_safety_backup_of_a_device_without_data(tmp_path):
+    safety_dir = _safety_backup(tmp_path / "fresh" / "cropcare.db", tmp_path / "fresh" / "uploads", tmp_path / "b")
+    manifest = _manifest(safety_dir)
+    assert manifest["db_backed_up"] is False
+    assert manifest["upload_file_count"] == 0 and manifest["warning_uploads_missing"] is True
