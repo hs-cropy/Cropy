@@ -17,7 +17,7 @@ DIAGNOSIS_EXAMPLE = {
     "created_at": "2026-10-15T00:00:00Z", "updated_at": "2026-10-15T00:00:00Z",
     "image_url": "/uploads/4da54046-bae9-4249-a4b3-85d17b83ee40.jpg",
     "recapture": None, "is_refined": False, "content_status": "snapshot",
-    "decision_status": "disease", "decision_reasons": [], "policy_version": "decision-v2:low=0.8",
+    "decision_status": "disease", "decision_reasons": [], "policy_version": "decision-v3:low=0.8",
     "save_status": "saved", "recovery_token": None,
     "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
     "management_actions": ["감염 부위 제거"],

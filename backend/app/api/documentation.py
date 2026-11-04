@@ -1,4 +1,5 @@
 """OpenAPI-only metadata. These models do not filter or change runtime responses."""
+from typing import Literal
 from pydantic import BaseModel, Field
 from app.schemas.diagnosis import DIAGNOSIS_EXAMPLE, PesticideInfo, ManagementActionDetail
 
@@ -108,6 +109,8 @@ class DecisionCapabilities(BaseModel):
     confusion_margin: float = Field(description="혼동쌍 재촬영 안내 기준")
     second_photo_weight: float = Field(description="재촬영 예측 결합 가중치")
     confusion_pairs: list[list[int]] = Field(description="혼동쌍 모델 클래스 ID")
+    top1_recapture_pairs: list[list[int]] = Field(
+        description="1순위가 속하기만 하면 마진과 무관하게 재촬영을 안내하는 혼동쌍(첫 사진에만 적용)")
 
 
 class ExecutionCapabilities(BaseModel):
@@ -121,8 +124,9 @@ class CapabilitiesResponse(BaseModel):
     model_config = {"json_schema_extra": {"examples": [{
         "upload": {"formats": ["JPEG", "PNG", "HEIC", "HEIF", "DNG", "WEBP", "AVIF"], "max_bytes": 104857600, "max_pixels": 210000000},
         "crops": ["고추", "무", "배추"],
-        "decision": {"version": "decision-v2", "low_confidence_threshold": .8,
-                     "confusion_margin": .2, "second_photo_weight": .6, "confusion_pairs": [[2, 3], [4, 5]]},
+        "decision": {"version": "decision-v3", "low_confidence_threshold": .8,
+                     "confusion_margin": .2, "second_photo_weight": .6, "confusion_pairs": [[2, 3], [4, 5]],
+                     "top1_recapture_pairs": [[2, 3]]},
         "execution": {"server_inference": False, "browser_bundle_available": False,
                       "browser_inference": "device_validation_required", "voice_commands": False},
         "recovery_ttl_hours": 24,
@@ -153,6 +157,7 @@ class ManifestDisease(BaseModel):
 
 class ManifestPair(BaseModel):
     ids: list[int] = Field(description="혼동쌍 클래스 ID")
+    trigger: Literal["margin", "top1"] = Field("margin", description="margin: 상위 두 후보가 쌍이고 마진이 좁을 때, top1: 1순위가 쌍에 속하면 항상(첫 사진만)")
     region: str = Field(description="재촬영할 판별 부위")
     instruction: str = Field(description="재촬영 지침")
     cues: dict[str, str] = Field(description="클래스 ID 문자열을 키로 하는 판별 단서")

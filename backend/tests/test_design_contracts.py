@@ -70,7 +70,8 @@ def test_refinement_preserves_remaining_ambiguity(db, sample_image, monkeypatch)
 
 
 def test_low_confidence_and_crop_mismatch_are_distinct_reasons(db, sample_image, monkeypatch):
-    monkeypatch.setattr(service, "predict_all", lambda _: [(2, .4), (7, .35), (3, .25)])
+    # 배추 병해 1순위·2순위 쌍 아님 → 재촬영 없음 (무 질병 1순위는 항상 재촬영이라 여기서 쓰지 않는다)
+    monkeypatch.setattr(service, "predict_all", lambda _: [(4, .4), (8, .35), (5, .25)])
     created = service.diagnose_image(db, sample_image, "a.jpg", "고추")
     assert created.decision_status == "crop_mismatch"
     assert set(created.decision_reasons) == {"crop_mismatch", "low_confidence"}

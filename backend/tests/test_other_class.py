@@ -43,7 +43,7 @@ def test_other_overrides_mismatch_confusion_and_crop(db, sample_image, crop, sto
     assert (result.decision_status, result.decision_reasons) == ("not_crop", ["not_crop"])
     assert result.crop_mismatch is False and result.recapture is None
     assert result.crop_type == stored and result.category == "other"
-    assert result.policy_version.startswith("decision-v2")
+    assert result.policy_version.startswith("decision-v3")
     history = service.get_history(db, 1, 10)
     assert history.items[0].crop_type == stored
     assert service.get_diagnosis_detail(db, result.id).decision_status == "not_crop"
