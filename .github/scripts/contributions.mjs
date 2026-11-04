@@ -7,7 +7,10 @@ export const MEMBERS = [
   { name: '김헌영', role: 'PM · 모델', emails: ['rlagjsdud3@hansung.ac.kr'], logins: ['khy1121'] },
   { name: '고명준', role: '카메라 · 음성', emails: ['kmj0973@naver.com'], logins: ['kmj0973'] },
   { name: '김민서', role: '프론트엔드', emails: ['minseo040204@gmail.com'], logins: ['AllforMinseo'] },
-  { name: '박성호', role: '백엔드', emails: ['117083460+hs-2171392-parkseongho@users.noreply.github.com'], logins: ['hs-2171392-parkseongho'] },
+  { name: '박성호', role: '백엔드', emails: [
+  '117083460+hs-2171392-parkseongho@users.noreply.github.com',
+  'parksungho02@gmail.com',
+], logins: ['hs-2171392-parkseongho'] },
   { name: '이서하', role: '디바이스 · 인프라', emails: ['seoha0813@hansung.ac.kr'], logins: ['hstjgklee'] },
 ];
 
