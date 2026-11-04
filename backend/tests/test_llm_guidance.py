@@ -140,3 +140,66 @@ def test_policy_is_not_recalculated_from_confidence(context):
     result = asyncio.run(generate_guidance(context))
     assert "모델 분류 결과:" in result.text
     assert "판정을 보류" not in result.text
+
+@pytest.mark.parametrize("with_caller", [False, True])
+def test_not_crop_uses_recapture_template_without_provider(context, with_caller):
+    actions = ["밝은 곳에서 잎 한 장을 선명하게 다시 찍기"]
+    changed = DiagnosisLLMInput.model_validate({
+        **context.model_dump(),
+        "disease_name": "판별 불가",
+        "category": "other",
+        "severity": None,
+        "decision_status": "not_crop",
+        "decision_reasons": ["not_crop"],
+        "management_actions": actions,
+        "description": "출력되면 안 되는 병해 설명",
+        "prevention": ["출력되면 안 되는 방제 안내"],
+        "recapture": None,
+    })
+
+    async def caller(payload):
+        pytest.fail("판별 불가 결과는 LLM에 전달하면 안 됩니다.")
+
+    result = asyncio.run(
+        generate_guidance(changed, caller if with_caller else None)
+    )
+
+    assert result.source == "template"
+    assert result.fallback_reason == "not_crop"
+    assert "재촬영" in result.text
+    assert actions[0] in result.text
+    assert "모델 분류 결과:" not in result.text
+    assert "출력되면 안 되는" not in result.text
+
+
+@pytest.mark.parametrize("changes", [
+    {"category": "other"},
+    {"decision_status": "not_crop"},
+    {"decision_reasons": ["not_crop"]},
+])
+def test_not_crop_signals_prevent_provider_call(context, changes):
+    changed = DiagnosisLLMInput.model_validate({
+        **context.model_dump(),
+        **changes,
+        "management_actions": [],
+    })
+
+    async def caller(payload):
+        pytest.fail("판별 불가 신호가 있으면 LLM 호출을 생략해야 합니다.")
+
+    result = asyncio.run(generate_guidance(changed, caller))
+
+    assert result.fallback_reason == "not_crop"
+    assert "초점을 맞춰 다시 찍어 주세요." in result.text
+
+
+def test_not_crop_still_revalidates_input(context):
+    context.category = "other"
+    context.severity = None
+    context.confidence = -1
+
+    async def caller(payload):
+        pytest.fail("잘못된 입력은 LLM에 전달하면 안 됩니다.")
+
+    with pytest.raises(ValidationError):
+        asyncio.run(generate_guidance(context, caller))
