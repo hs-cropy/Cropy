@@ -35,7 +35,10 @@ WAL 모드에서는 최근 커밋이 cropcare.db-wal에 있으므로 DB 파일�
 백업만 최근 --keep개를 남기고 지운다. 복원 직전 안전 백업(pre_restore_*), 표시가 없는
 예전 백업, 다른 원본의 백업, 링크 폴더는 지우지 않는다.
 
-지원하지 않는 구성: DB 파일이 업로드 폴더 안에 있는 경우.
+복원 미리보기: 백업 구성(manifest, 저널을 반영한 DB의 무결성·외래 키, 사진 수, 링크 여부)을
+검증하고 무엇이 바뀔지 보여 준다. 아무것도 바꾸지 않는다.
+
+지원하지 않는 구성: DB 파일이 업로드 폴더 안에 있는 경우, 링크가 들어 있는 백업.
 
 Usage (backend 디렉터리에서):
     # 백업 (backups/<timestamp>/ 에 생성, 같은 원본의 최근 7개만 유지)
@@ -43,6 +46,9 @@ Usage (backend 디렉터리에서):
 
     # 직전 백업과 연결하지 않고 전체 복사 / 보관 개수 제한 끄기
     python scripts/backup_db.py backup --full --keep 0
+
+    # 어떤 파일이 복원될지만 보기 (기본, 아무것도 안 건드림. 백업 구성은 검증한다)
+    python scripts/backup_db.py restore backups/20260928T120000Z
 """
 
 import argparse
@@ -52,6 +58,7 @@ import shutil
 import sqlite3
 import stat
 import sys
+import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -69,6 +76,8 @@ DEFAULT_KEEP = 7
 # 이 스크립트가 만든 백업의 표시. 증분 기준과 보관 정리는 이 표시가 있는 폴더만 다룬다.
 TOOL_NAME = "cropy-backup"
 MANIFEST_FORMAT = 2
+# SQLite가 DB 옆에 두는 파일. 남아 있으면 교체한 DB에 이전 내용이 적용될 수 있다.
+SIDECAR_SUFFIXES = ("-journal", "-wal", "-shm")
 # 앱이 DB에 쓰는 중이면 쓰기 잠금을 이 시간까지 기다린다.
 LOCK_TIMEOUT_SECONDS = 10
 # 백업 폴더에 두는 작업 잠금 파일. 같은 폴더의 백업·보관 정리·복원이 동시에 돌지 않게 한다.
@@ -561,6 +570,92 @@ def run_backup(db_path: Path, upload_dir: Path, out_dir: Path, keep: int, increm
     return manifest, removed
 
 
+def _validate_backup(backup_dir: Path) -> dict:
+    """복원 전에 백업 구성을 검증한다. 하나라도 빠지면 아무것도 바꾸지 않고 실패한다."""
+    if not (backup_dir / "manifest.json").exists():
+        raise FileNotFoundError(f"백업 디렉터리가 아닙니다 (manifest.json 없음): {backup_dir}")
+    manifest = _read_manifest(backup_dir)
+    if manifest is None:
+        raise BackupError(f"manifest.json을 읽을 수 없습니다: {backup_dir}")
+    if manifest.get("db_backed_up") is not True or not (backup_dir / "cropcare.db").is_file():
+        raise BackupError("백업에 DB가 없습니다. 서로 다른 시점의 DB·사진이 섞이지 않도록 복원하지 않습니다")
+    uploads = backup_dir / "uploads"
+    if not uploads.is_dir() or _is_link(uploads):
+        raise BackupError("백업에 업로드 폴더가 없습니다. DB만 복원하지 않습니다")
+    link = _first_link(uploads)
+    if link is not None:
+        # 복원하면 링크가 운영 업로드 폴더 밖의 파일을 가리키게 된다.
+        raise BackupError(f"백업에 링크·특수 파일이 있어 복원하지 않습니다: {link}")
+    expected = manifest.get("upload_file_count")
+    actual = _count_upload_files(uploads)
+    if type(expected) is not int or expected != actual:
+        raise BackupError(f"백업의 사진 수가 manifest와 다릅니다 (기록 {expected}, 실제 {actual})")
+    # 안전 백업에는 강제 종료로 남은 rollback 저널(-journal)이 함께 있을 수 있다. 원본 백업을 그대로
+    # 열면 SQLite가 저널을 되돌리려다 읽기 전용 오류로 실패하므로, 복원과 같이 저널을 반영한 사본을 검사한다
+    with tempfile.TemporaryDirectory(prefix="cropy-restore-check-") as scratch:
+        checked = Path(scratch) / "cropcare.db"
+        try:
+            _materialize_db(backup_dir / "cropcare.db", checked)
+        except sqlite3.DatabaseError as exc:
+            raise BackupError(f"백업 DB를 SQLite 파일로 읽을 수 없습니다: {backup_dir / 'cropcare.db'}") from exc
+        _check_integrity(checked)
+    return manifest
+
+
+def _materialize_db(source: Path, target: Path) -> None:
+    """백업 DB를 저널(-wal·-journal)까지 반영한 독립 파일 하나로 target에 만든다.
+
+    DB 본체만 복사하면 안전 백업의 -wal에만 있는 커밋이 빠진 채 무결성 검사를 통과한다.
+    백업 폴더를 열면 체크포인트가 백업 자체를 바꾸므로, 사본에서 저널을 반영한다.
+    -shm은 SQLite가 -wal로 다시 만들므로 복사하지 않는다.
+    """
+    copies = [target.with_name(target.name + suffix) for suffix in ("-wal", "-journal")]
+    try:
+        shutil.copy2(source, target)
+        for copy, suffix in zip(copies, ("-wal", "-journal")):
+            sidecar = source.with_name(source.name + suffix)
+            if sidecar.exists():
+                shutil.copy2(sidecar, copy)
+        connection = sqlite3.connect(str(target))
+        try:
+            connection.execute("PRAGMA journal_mode=DELETE")  # WAL은 체크포인트, 남은 rollback 저널은 되돌림
+        finally:
+            connection.close()
+        leftover = _sidecars(target)
+        if leftover:
+            raise BackupError(f"백업 DB의 저널을 반영하지 못했습니다: {leftover[0].name}")
+    except BaseException:
+        for path in (target, *copies, target.with_name(target.name + "-shm")):
+            path.unlink(missing_ok=True)
+        raise
+
+
+def _sidecars(db_path: Path) -> list[Path]:
+    return [db_path.with_name(db_path.name + suffix) for suffix in SIDECAR_SUFFIXES
+            if db_path.with_name(db_path.name + suffix).exists()]
+
+
+def restore(backup_dir: Path, db_path: Path, upload_dir: Path) -> dict:
+    """backup_dir로 복원하면 무엇이 바뀌는지 미리 본다. 아무것도 바꾸지 않는다.
+
+    백업 구성(manifest, 저널을 반영한 DB의 무결성, 사진 수, 링크 여부)을 검증하고 계획을 돌려준다.
+    """
+    backup_dir, db_path, upload_dir = Path(backup_dir).resolve(), Path(db_path).resolve(), Path(upload_dir).resolve()
+    if _is_within(db_path, upload_dir):
+        raise BackupError("DB 파일이 업로드 폴더 안에 있는 구성은 지원하지 않습니다")
+    manifest = _validate_backup(backup_dir)
+    if _overlaps(backup_dir, upload_dir) or _is_within(db_path, backup_dir):
+        raise BackupError("백업 폴더가 운영 DB·업로드 폴더와 겹쳐 복원하지 않습니다")
+    return {
+        "backup_dir": str(backup_dir),
+        "backup_created_at": manifest.get("created_at"),
+        "will_restore_db": True,
+        "will_restore_uploads": True,
+        "upload_file_count": manifest["upload_file_count"],
+        "applied": False,
+    }
+
+
 def _non_negative_int(value: str) -> int:
     number = int(value)
     if number < 0:
@@ -581,6 +676,9 @@ def _build_parser() -> argparse.ArgumentParser:
     backup_parser.add_argument("--keep", type=_non_negative_int, default=DEFAULT_KEEP,
                                help=f"같은 원본의 최근 N개 정기 백업만 남긴다 (기본 {DEFAULT_KEEP}, 0이면 지우지 않음)")
 
+    restore_parser = sub.add_parser("restore", help="백업으로 복원하면 무엇이 바뀌는지 미리 본다")
+    restore_parser.add_argument("backup_dir", type=Path)
+
     return parser
 
 
@@ -599,6 +697,11 @@ def main() -> None:
                 print(f"경고: {manifest['warning']}", file=sys.stderr)
             for path in removed:
                 print(f"보관 개수({args.keep}개) 초과로 삭제: {path}")
+
+        elif args.command == "restore":
+            plan = restore(args.backup_dir, db_path, upload_dir)
+            print(json.dumps(plan, ensure_ascii=False, indent=2))
+            print("\n미리보기입니다. 아무것도 바꾸지 않았습니다.")
     except (BackupError, FileExistsError, FileNotFoundError, sqlite3.Error, OSError) as exc:
         sys.exit(f"{args.command} 실패 ({type(exc).__name__}): {exc}")
 
