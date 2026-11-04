@@ -22,7 +22,9 @@ Settings 기본값과 맞춰뒀다.
 업로드 정리(cleanup_uploads.py)와는 잠금을 공유하지 않으니 운영 절차로 겹치지 않게 한다.
 완료 표시(manifest)는 백업 파일을 저장장치에 내린(fsync) 뒤 원자적으로 쓰고, 보관 정리는 그 뒤에
 한다. 실제 보장은 파일시스템·저장장치에 달려 있고, 윈도에서는 폴더 항목까지는 내리지 못한다.
-실행 계정은 원본을 읽을 권한 외에 백업 폴더와 DB·업로드 폴더의 부모에 잠금
+복원(--apply) 뒤의 운영 DB·사진은 따로 저장장치에 내리지 않는다. "applied": true는 복원 직후
+전원이 끊겨도 그 상태가 남는다는 뜻이 아니므로, 입력 백업과 안전 백업을 지우지 말고 재부팅 뒤
+다시 확인한다. 실행 계정은 원본을 읽을 권한 외에 백업 폴더와 DB·업로드 폴더의 부모에 잠금
 파일을 만들 권한이 있어야 한다(없으면 잠금 없이 진행하지 않고 실패한다).
 WAL 모드에서는 최근 커밋이 cropcare.db-wal에 있으므로 DB 파일만 복사하는 수동 백업은
 쓰지 않는다(이 스크립트는 SQLite 백업 API로 WAL 내용까지 담는다).
@@ -35,8 +37,10 @@ WAL 모드에서는 최근 커밋이 cropcare.db-wal에 있으므로 DB 파일�
 백업만 최근 --keep개를 남기고 지운다. 복원 직전 안전 백업(pre_restore_*), 표시가 없는
 예전 백업, 다른 원본의 백업, 링크 폴더는 지우지 않는다.
 
-복원 미리보기: 백업 구성(manifest, 저널을 반영한 DB의 무결성·외래 키, 사진 수, 링크 여부)을
-검증하고 무엇이 바뀔지 보여 준다. 아무것도 바꾸지 않는다.
+복원: 서비스를 멈춘 뒤 실행한다. 백업 구성을 먼저 검증하고, 새 DB·사진을 임시 위치에
+완전히 준비·검증한 다음 교체한다. 교체 직전 현재 DB(손상돼도)와 저널 파일은 원시 파일
+그대로, 사진은 전체 복사로 안전 백업에 남긴다. 교체 중 실패하면 원래 상태로 되돌리고,
+되돌리지 못한 단계가 있으면 서비스를 시작하지 말라는 안내와 함께 경로를 출력한다.
 
 지원하지 않는 구성: DB 파일이 업로드 폴더 안에 있는 경우, 링크가 들어 있는 백업.
 
@@ -49,6 +53,9 @@ Usage (backend 디렉터리에서):
 
     # 어떤 파일이 복원될지만 보기 (기본, 아무것도 안 건드림. 백업 구성은 검증한다)
     python scripts/backup_db.py restore backups/20260928T120000Z
+
+    # 실제 복원
+    python scripts/backup_db.py restore backups/20260928T120000Z --apply
 """
 
 import argparse
@@ -665,18 +672,37 @@ def _safety_backup(db_path: Path, upload_dir: Path, safety_dir: Path) -> None:
     _write_manifest(safety_dir, manifest)
 
 
-def restore(backup_dir: Path, db_path: Path, upload_dir: Path) -> dict:
-    """backup_dir로 복원하면 무엇이 바뀌는지 미리 본다. 아무것도 바꾸지 않는다.
+def restore(backup_dir: Path, db_path: Path, upload_dir: Path, apply: bool) -> dict:
+    """backup_dir의 내용을 db_path·upload_dir로 복원한다. 서비스를 멈춘 뒤 실행한다.
 
-    백업 구성(manifest, 저널을 반영한 DB의 무결성, 사진 수, 링크 여부)을 검증하고 계획을 돌려준다.
+    apply=False(기본)면 백업 구성만 검증하고 계획을 반환한다 — 아무것도 바꾸지 않는다.
+    apply=True면 ① 새 DB·사진을 임시 위치에 준비·검증 ② 현재 상태를 안전 백업 ③ 교체
+    순서로 진행하고, 교체 중 실패하면 원래 DB·사진·저널 파일을 되돌린다.
+    교체와 되돌리기는 모두 운영 DB·업로드와 같은 폴더 안의 이름 변경이다.
+    apply=True면 안전 백업을 두는 백업 폴더나 같은 운영 DB·업로드를 쓰는 다른 작업과 동시에 돌지 않는다.
     """
+    # 미리보기(쓰기 없음)로 먼저 검증해, 잘못된 구성이면 잠금 파일도 만들지 않는다
+    plan = _restore(backup_dir, db_path, upload_dir, apply=False)
+    if not apply:
+        return plan
+    with _exclusive(Path(backup_dir).resolve().parent, Path(db_path).resolve(), Path(upload_dir).resolve()):
+        return _restore(backup_dir, db_path, upload_dir, apply=True)
+
+
+def _restore(backup_dir: Path, db_path: Path, upload_dir: Path, apply: bool) -> dict:
     backup_dir, db_path, upload_dir = Path(backup_dir).resolve(), Path(db_path).resolve(), Path(upload_dir).resolve()
     if _is_within(db_path, upload_dir):
         raise BackupError("DB 파일이 업로드 폴더 안에 있는 구성은 지원하지 않습니다")
     manifest = _validate_backup(backup_dir)
-    if _overlaps(backup_dir, upload_dir) or _is_within(db_path, backup_dir):
-        raise BackupError("백업 폴더가 운영 DB·업로드 폴더와 겹쳐 복원하지 않습니다")
-    return {
+    # 이름이 겹치면 다른 복원의 안전 백업이나 복원 입력을 건드릴 수 있으므로 고유 이름을 쓴다.
+    token = f"{_timestamp()}-{uuid4().hex[:8]}"
+    safety_dir = backup_dir.parent / f"pre_restore_{token}"
+    if (_overlaps(backup_dir, upload_dir) or _is_within(db_path, backup_dir)
+            or _overlaps(safety_dir, upload_dir) or _is_within(db_path, safety_dir)
+            or _overlaps(safety_dir, backup_dir)):
+        raise BackupError("백업·안전 백업 폴더가 운영 DB·업로드 폴더나 서로와 겹쳐 복원하지 않습니다")
+
+    plan = {
         "backup_dir": str(backup_dir),
         "backup_created_at": manifest.get("created_at"),
         "will_restore_db": True,
@@ -684,6 +710,85 @@ def restore(backup_dir: Path, db_path: Path, upload_dir: Path) -> dict:
         "upload_file_count": manifest["upload_file_count"],
         "applied": False,
     }
+    if not apply:
+        return plan
+
+    staged_db = db_path.with_name(f".restore-{token}-{db_path.name}")
+    staged_uploads = upload_dir.with_name(f".restore-{token}-{upload_dir.name}")
+    previous_uploads = upload_dir.with_name(f".pre-restore-{token}-{upload_dir.name}")
+    for path in (staged_db, staged_uploads, previous_uploads, safety_dir):
+        if path.exists():
+            raise BackupError(f"임시 경로가 이미 있습니다: {path}")
+
+    # ① 준비: 실패해도 운영 데이터는 그대로다.
+    try:
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        upload_dir.parent.mkdir(parents=True, exist_ok=True)
+        _materialize_db(backup_dir / "cropcare.db", staged_db)
+        _check_integrity(staged_db)
+        shutil.copytree(backup_dir / "uploads", staged_uploads, symlinks=True)
+        if _count_upload_files(staged_uploads) != manifest["upload_file_count"]:
+            raise BackupError("임시 위치로 복사한 사진 수가 백업과 다릅니다")
+    except BaseException:
+        staged_db.unlink(missing_ok=True)
+        shutil.rmtree(staged_uploads, ignore_errors=True)
+        raise
+
+    # ② 안전 백업: 이번 실행이 배타적으로 만든 폴더에만 쓰고, 실패하면 그 폴더만 지운다.
+    try:
+        safety_dir.mkdir(parents=False, exist_ok=False)
+    except BaseException:
+        staged_db.unlink(missing_ok=True)
+        shutil.rmtree(staged_uploads, ignore_errors=True)
+        raise
+    try:
+        _safety_backup(db_path, upload_dir, safety_dir)
+    except BaseException:
+        staged_db.unlink(missing_ok=True)
+        shutil.rmtree(staged_uploads, ignore_errors=True)
+        shutil.rmtree(safety_dir, ignore_errors=True)
+        raise
+    plan["safety_backup_dir"] = str(safety_dir)
+
+    # ③ 교체: 운영 DB·업로드와 같은 폴더 안의 이름 변경이라 각 단계가 원자적이고 되돌릴 수 있다.
+    done: list[tuple[Path, Path]] = []
+    moved_sidecars: list[Path] = []
+    try:
+        if upload_dir.exists():
+            os.replace(upload_dir, previous_uploads)
+            done.append((upload_dir, previous_uploads))
+        os.replace(staged_uploads, upload_dir)
+        done.append((staged_uploads, upload_dir))
+        for sidecar in _sidecars(db_path):
+            # 남겨 두면 이전 저널이 새 DB에 적용될 수 있다. DB와 같은 폴더로 옮겨(다른 볼륨으로
+            # 옮기지 않는다) 되돌릴 수 있게 하고, 성공하면 지운다. 안전 백업에 사본이 있다.
+            moved = sidecar.with_name(f".restore-{token}-{sidecar.name}")
+            os.replace(sidecar, moved)
+            done.append((sidecar, moved))
+            moved_sidecars.append(moved)
+        os.replace(staged_db, db_path)
+    except BaseException as failure:
+        # 한 단계가 실패해도 나머지는 계속 되돌린다. 되돌리지 못한 경로는 모아서 알린다.
+        unrecovered = []
+        for original, moved in reversed(done):
+            try:
+                os.replace(moved, original)
+            except OSError as exc:
+                unrecovered.append(f"{moved} → {original} ({exc})")
+        staged_db.unlink(missing_ok=True)
+        # staged_uploads 경로에는 준비한 사본만 있거나(되돌리기 성공) 아무것도 없다(실패).
+        shutil.rmtree(staged_uploads, ignore_errors=True)
+        if unrecovered:
+            raise BackupError(
+                "복원이 실패했고 일부를 원래대로 되돌리지 못했습니다. 서비스를 시작하지 말고 "
+                f"안전 백업({safety_dir})으로 수동 복구하세요. 되돌리지 못한 항목: " + "; ".join(unrecovered)
+            ) from failure
+        raise
+    for moved in moved_sidecars:
+        moved.unlink(missing_ok=True)
+    shutil.rmtree(previous_uploads, ignore_errors=True)  # 안전 백업에 전체 사본이 있다
+    plan["applied"] = True
+    return plan
 
 
 def _non_negative_int(value: str) -> int:
@@ -706,8 +811,9 @@ def _build_parser() -> argparse.ArgumentParser:
     backup_parser.add_argument("--keep", type=_non_negative_int, default=DEFAULT_KEEP,
                                help=f"같은 원본의 최근 N개 정기 백업만 남긴다 (기본 {DEFAULT_KEEP}, 0이면 지우지 않음)")
 
-    restore_parser = sub.add_parser("restore", help="백업으로 복원하면 무엇이 바뀌는지 미리 본다")
+    restore_parser = sub.add_parser("restore", help="백업으로부터 복원한다 (기본은 미리보기)")
     restore_parser.add_argument("backup_dir", type=Path)
+    restore_parser.add_argument("--apply", action="store_true", help="명시해야 실제로 덮어쓴다")
 
     return parser
 
@@ -729,9 +835,10 @@ def main() -> None:
                 print(f"보관 개수({args.keep}개) 초과로 삭제: {path}")
 
         elif args.command == "restore":
-            plan = restore(args.backup_dir, db_path, upload_dir)
+            plan = restore(args.backup_dir, db_path, upload_dir, apply=args.apply)
             print(json.dumps(plan, ensure_ascii=False, indent=2))
-            print("\n미리보기입니다. 아무것도 바꾸지 않았습니다.")
+            if not args.apply:
+                print("\n미리보기입니다. 서비스를 멈춘 뒤 --apply를 추가하면 복원합니다.")
     except (BackupError, FileExistsError, FileNotFoundError, sqlite3.Error, OSError) as exc:
         sys.exit(f"{args.command} 실패 ({type(exc).__name__}): {exc}")
 

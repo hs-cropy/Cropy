@@ -1031,7 +1031,7 @@ def snapshot_to_restore(tmp_path):
 def test_restore_preview_validates_but_does_not_touch_anything(live, snapshot_to_restore):
     db_path, upload_dir, _ = live
     before = _snapshot(db_path, upload_dir)
-    plan = restore(snapshot_to_restore, db_path, upload_dir)
+    plan = restore(snapshot_to_restore, db_path, upload_dir, apply=False)
     assert plan["applied"] is False
     assert plan["upload_file_count"] == 1
     assert _snapshot(db_path, upload_dir) == before
@@ -1054,7 +1054,7 @@ def test_incomplete_or_damaged_backup_is_rejected(live, snapshot_to_restore, dam
     before = _snapshot(db_path, upload_dir)
 
     with pytest.raises(BackupError):
-        restore(snapshot_to_restore, db_path, upload_dir)
+        restore(snapshot_to_restore, db_path, upload_dir, apply=False)
     assert _snapshot(db_path, upload_dir) == before
 
 
@@ -1064,13 +1064,13 @@ def test_restore_rejects_a_backup_inside_the_upload_folder(live, snapshot_to_res
     nested = upload_dir / "backups" / "snap"
     shutil.copytree(snapshot_to_restore, nested)
     with pytest.raises(BackupError):
-        restore(nested, db_path, upload_dir)
+        restore(nested, db_path, upload_dir, apply=False)
 
 
 def test_restore_rejects_a_db_inside_the_upload_folder(live, snapshot_to_restore):
     _, upload_dir, _ = live
     with pytest.raises(BackupError, match="업로드 폴더 안"):
-        restore(snapshot_to_restore, upload_dir / "cropcare.db", upload_dir)
+        restore(snapshot_to_restore, upload_dir / "cropcare.db", upload_dir, apply=False)
 
 
 def test_backup_with_links_is_rejected(live, snapshot_to_restore, tmp_path):
@@ -1082,7 +1082,7 @@ def test_backup_with_links_is_rejected(live, snapshot_to_restore, tmp_path):
     except OSError as exc:
         pytest.skip(f"심볼릭 링크를 만들 수 없는 환경: {exc}")
     with pytest.raises(BackupError, match="링크"):
-        restore(snapshot_to_restore, db_path, upload_dir)
+        restore(snapshot_to_restore, db_path, upload_dir, apply=False)
 
 
 def test_backup_with_foreign_key_violation_is_rejected(live, snapshot_to_restore):
@@ -1094,14 +1094,14 @@ def test_backup_with_foreign_key_violation_is_rejected(live, snapshot_to_restore
             INSERT INTO findings VALUES (999);
         """)
     with pytest.raises(BackupError, match="외래 키"):
-        restore(snapshot_to_restore, db_path, upload_dir)
+        restore(snapshot_to_restore, db_path, upload_dir, apply=False)
 
 
 def test_restore_without_manifest_raises(tmp_path):
     empty_dir = tmp_path / "not_a_backup"
     empty_dir.mkdir()
     with pytest.raises(FileNotFoundError):
-        restore(empty_dir, tmp_path / "db.sqlite", tmp_path / "uploads")
+        restore(empty_dir, tmp_path / "db.sqlite", tmp_path / "uploads", apply=False)
 
 
 def test_backup_with_a_hot_rollback_journal_is_checked_on_a_copy(live, snapshot_to_restore):
@@ -1124,7 +1124,7 @@ def test_backup_with_a_hot_rollback_journal_is_checked_on_a_copy(live, snapshot_
     assert (snapshot_to_restore / "cropcare.db-journal").stat().st_size > 0
     before = _file_hashes(snapshot_to_restore)
 
-    assert restore(snapshot_to_restore, db_path, upload_dir)["applied"] is False
+    assert restore(snapshot_to_restore, db_path, upload_dir, apply=False)["applied"] is False
     assert _file_hashes(snapshot_to_restore) == before  # 검사는 사본에서 했다
 
 
@@ -1200,3 +1200,187 @@ def test_safety_backup_of_a_device_without_data(tmp_path):
     manifest = _manifest(safety_dir)
     assert manifest["db_backed_up"] is False
     assert manifest["upload_file_count"] == 0 and manifest["warning_uploads_missing"] is True
+
+
+# ---- restore: 실제 복원 ----
+
+
+def test_restore_apply_overwrites_and_keeps_safety_backup(live, snapshot_to_restore):
+    db_path, upload_dir, _ = live
+    plan = restore(snapshot_to_restore, db_path, upload_dir, apply=True)
+
+    assert plan["applied"] is True
+    assert _read_marker(db_path) == "new-data"
+    assert (upload_dir / "new.jpg").exists()
+    assert not (upload_dir / "a.jpg").exists()
+    assert not list(upload_dir.parent.glob(".restore-*")) and not list(upload_dir.parent.glob(".pre-restore-*"))
+
+    # 덮어쓰기 직전 상태가 안전 백업으로 남아있어야 한다
+    safety_dir = Path(plan["safety_backup_dir"])
+    assert _read_marker(safety_dir / "cropcare.db") == "original"
+    assert (safety_dir / "uploads" / "a.jpg").read_bytes() == b"photo-a"
+    assert (safety_dir / "uploads" / ".pending" / "draft.json").exists()
+    assert _manifest(safety_dir)["kind"] == "pre_restore"
+    assert _manifest(safety_dir)["linked_files"] == 0
+
+
+def test_wal_backup_restores_and_live_wal_files_are_set_aside(live, snapshot_to_restore):
+    db_path, upload_dir, _ = live
+    _use_wal(db_path)
+    for suffix in ("-wal", "-shm"):
+        sidecar = db_path.with_name(db_path.name + suffix)
+        if not sidecar.exists():
+            sidecar.write_bytes(b"live-" + suffix.encode())
+    _use_wal(snapshot_to_restore / "cropcare.db")
+
+    plan = restore(snapshot_to_restore, db_path, upload_dir, apply=True)
+
+    assert _read_marker(db_path) == "new-data"
+    safety_dir = Path(plan["safety_backup_dir"])
+    assert (safety_dir / "cropcare.db-wal").exists() and (safety_dir / "cropcare.db-shm").exists()
+
+
+def test_restore_works_when_current_db_is_corrupt_and_keeps_raw_copy(live, snapshot_to_restore):
+    # 리뷰 5: 손상된 현재 DB 때문에 정상 백업으로 복원하지 못하면 안 된다.
+    db_path, upload_dir, _ = live
+    db_path.write_bytes(b"corrupted-current-db")
+    hot_journal = db_path.with_name(db_path.name + "-journal")
+    hot_journal.write_bytes(b"stale-journal")
+
+    plan = restore(snapshot_to_restore, db_path, upload_dir, apply=True)
+
+    assert _read_marker(db_path) == "new-data"
+    assert not hot_journal.exists()  # 이전 저널이 새 DB에 적용되지 않도록 치웠다
+    safety_dir = Path(plan["safety_backup_dir"])
+    assert (safety_dir / "cropcare.db").read_bytes() == b"corrupted-current-db"
+    assert (safety_dir / "cropcare.db-journal").read_bytes() == b"stale-journal"
+
+
+def test_restore_onto_an_empty_device(tmp_path, snapshot_to_restore):
+    db_path = tmp_path / "fresh" / "cropcare.db"
+    upload_dir = tmp_path / "fresh" / "uploads"
+    restore(snapshot_to_restore, db_path, upload_dir, apply=True)
+    assert _read_marker(db_path) == "new-data"
+    assert (upload_dir / "new.jpg").read_bytes() == b"new"
+
+
+def test_failure_while_staging_leaves_live_data_untouched(live, snapshot_to_restore, monkeypatch):
+    # 리뷰 7: 사진 복사 중 실패하면 새 DB와 비어 있는 업로드가 남으면 안 된다.
+    db_path, upload_dir, _ = live
+    before = _snapshot(db_path, upload_dir)
+
+    def disk_full(*args, **kwargs):
+        raise OSError("No space left on device")
+
+    monkeypatch.setattr(backup_db.shutil, "copytree", disk_full)
+    with pytest.raises(OSError):
+        restore(snapshot_to_restore, db_path, upload_dir, apply=True)
+    assert _snapshot(db_path, upload_dir) == before
+    assert not list(upload_dir.parent.glob(".restore-*"))
+
+
+def test_failure_while_swapping_rolls_everything_back(live, snapshot_to_restore, monkeypatch):
+    db_path, upload_dir, _ = live
+    journal = db_path.with_name(db_path.name + "-journal")
+    journal.write_bytes(b"live-journal")
+    before = _snapshot(db_path, upload_dir)
+    real_replace = os.replace
+
+    def fail_on_db_swap(source, target):
+        if Path(target) == db_path.resolve():
+            raise OSError("file is in use")
+        return real_replace(source, target)
+
+    monkeypatch.setattr(backup_db.os, "replace", fail_on_db_swap)
+    with pytest.raises(OSError):
+        restore(snapshot_to_restore, db_path, upload_dir, apply=True)
+
+    assert _snapshot(db_path, upload_dir) == before
+    assert journal.read_bytes() == b"live-journal"
+    assert not list(upload_dir.parent.glob(".restore-*")) and not list(upload_dir.parent.glob(".pre-restore-*"))
+
+
+def test_rollback_keeps_going_when_one_step_fails_and_reports_it(live, snapshot_to_restore, monkeypatch):
+    # 2차 리뷰 5: 저널 되돌리기가 실패해도 업로드 되돌리기는 계속해야 한다.
+    db_path, upload_dir, _ = live
+    journal = db_path.with_name(db_path.name + "-journal")
+    journal.write_bytes(b"live-journal")
+    before_uploads = _snapshot(db_path, upload_dir)[1]
+    real_replace = os.replace
+
+    def flaky_replace(source, target):
+        if Path(target) == db_path.resolve():
+            raise OSError("file is in use")
+        if Path(target) == journal.resolve():
+            raise OSError("journal rollback failed")
+        return real_replace(source, target)
+
+    monkeypatch.setattr(backup_db.os, "replace", flaky_replace)
+    with pytest.raises(BackupError, match="서비스를 시작하지 말고") as caught:
+        restore(snapshot_to_restore, db_path, upload_dir, apply=True)
+
+    assert "pre_restore_" in str(caught.value) and "journal" in str(caught.value)
+    assert _read_marker(db_path) == "original"  # DB는 교체되지 않았다
+    assert _snapshot(db_path, upload_dir)[1] == before_uploads  # 업로드는 되돌렸다
+    assert not journal.exists()  # 되돌리지 못한 저널은 DB 옆 임시 이름에 남는다
+    leftover = list(db_path.parent.glob(".restore-*-cropcare.db-journal"))
+    assert len(leftover) == 1 and leftover[0].read_bytes() == b"live-journal"
+
+
+def test_journal_is_moved_within_the_db_folder_not_to_another_volume(live, snapshot_to_restore, monkeypatch):
+    # 2차 리뷰 6: 안전 백업이 다른 디스크에 있으면 볼륨 간 이동이 실패한다.
+    db_path, upload_dir, _ = live
+    journal = db_path.with_name(db_path.name + "-wal")
+    journal.write_bytes(b"live-wal")
+    moves = []
+    real_replace = os.replace
+
+    def recording_replace(source, target):
+        moves.append((Path(source), Path(target)))
+        return real_replace(source, target)
+
+    monkeypatch.setattr(backup_db.os, "replace", recording_replace)
+    plan = restore(snapshot_to_restore, db_path, upload_dir, apply=True)
+
+    journal_moves = [(s, t) for s, t in moves if s.name.endswith("-wal")]
+    assert journal_moves and all(t.parent == db_path.parent.resolve() for _, t in journal_moves)
+    assert not list(db_path.parent.glob(".restore-*"))  # 성공 후 옮긴 저널은 지웠다
+    assert (Path(plan["safety_backup_dir"]) / "cropcare.db-wal").read_bytes() == b"live-wal"
+
+
+def test_safety_backup_name_collision_never_deletes_existing_folders(live, snapshot_to_restore, monkeypatch):
+    # 2차 리뷰 1·7: 이름이 겹친 기존 안전 백업이나 복원 입력을 실패 정리에서 지우면 안 된다.
+    db_path, upload_dir, _ = live
+    monkeypatch.setattr(backup_db, "_timestamp", lambda: "20261015T000000Z")
+
+    class FixedUUID:
+        hex = "deadbeefcafebabe"
+
+    monkeypatch.setattr(backup_db, "uuid4", lambda: FixedUUID())
+    existing = snapshot_to_restore.parent / "pre_restore_20261015T000000Z-deadbeef"
+    existing.mkdir()
+    (existing / "keep.txt").write_text("earlier safety backup", encoding="utf-8")
+    before = _snapshot(db_path, upload_dir)
+
+    with pytest.raises(BackupError, match="임시 경로가 이미"):
+        restore(snapshot_to_restore, db_path, upload_dir, apply=True)
+    assert (existing / "keep.txt").read_text(encoding="utf-8") == "earlier safety backup"
+
+    # 복원 입력 자체가 그 이름이어도 지우지 않는다.
+    shutil.rmtree(existing)
+    shutil.copytree(snapshot_to_restore, existing)
+    with pytest.raises(BackupError):
+        restore(existing, db_path, upload_dir, apply=True)
+    assert (existing / "manifest.json").exists() and (existing / "cropcare.db").exists()
+    assert _snapshot(db_path, upload_dir) == before
+
+
+def test_db_inside_upload_folder_is_rejected_before_restoring(live, snapshot_to_restore):
+    # 2차 리뷰 8: 업로드 폴더를 옮기면 그 안의 DB까지 옮겨져 교체가 중간에 실패한다.
+    _, upload_dir, _ = live
+    nested_db = upload_dir / "cropcare.db"
+    _make_sqlite_db(nested_db, "nested")
+    before = _snapshot(nested_db, upload_dir)
+    with pytest.raises(BackupError, match="업로드 폴더 안"):
+        restore(snapshot_to_restore, nested_db, upload_dir, apply=True)
+    assert _snapshot(nested_db, upload_dir) == before
