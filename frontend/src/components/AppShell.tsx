@@ -9,7 +9,7 @@ const BACKGROUND_DESKTOP = "/background/farm-desktop.webp";
 // 높이는 className 으로 바꿀 수 없다 (h-* 를 넘겨도 dvh 규칙이 남는다).
 // 인쇄할 때는 높이 고정을 풀어 본문 전체가 나오게 한다
 const ROOT =
-  "relative isolate flex h-screen flex-col overflow-hidden bg-cropy-surface supports-[height:100dvh]:h-dvh print:!h-auto print:overflow-visible";
+  "relative isolate flex min-h-screen flex-col overflow-x-hidden bg-cropy-surface supports-[height:100dvh]:min-h-dvh print:!min-h-0 print:overflow-visible";
 
 interface AppShellProps extends ComponentPropsWithRef<"div"> {
   /** 위쪽 Header */
@@ -21,11 +21,14 @@ interface AppShellProps extends ComponentPropsWithRef<"div"> {
 }
 
 /**
- * 앱의 고정 틀: 헤더, 화면, 모바일 내비, 데스크탑 푸터와 농장 배경. 화면 높이를 꽉 채우고
- * 틀 자체는 스크롤되지 않는다. 화면(page)은 children 자리에 AppShellPage 를 그린다.
- * 위아래 안전 영역은 Header 와 MobileNav 가 이미 띄우므로 여기서 또 띄우지 않는다.
- * 알려진 한계: 고정 영역(모바일 약 404px)보다 낮은 화면(가로로 돌린 휴대폰)에서는 본문이
- * 남지 않는다. 그리고 내비가 없는 화면이나 데스크탑 푸터는 아래 안전 영역을 띄우지 않는다.
+ * 앱의 전체 레이아웃: 헤더, 화면, 모바일 내비게이션,
+ * 데스크탑 푸터와 농장 배경을 배치한다.
+ *
+ * 콘텐츠 높이에 따라 페이지가 자연스럽게 늘어나며,
+ * 모바일 하단 내비게이션만 화면 아래에 고정한다.
+ *
+ * 내비게이션이 마지막 콘텐츠를 가리지 않도록
+ * 모바일에서는 하단 여백을 확보한다.
  */
 export function AppShell({ header, nav, footer, className, children, ...rest }: AppShellProps) {
   return (
@@ -43,8 +46,22 @@ export function AppShell({ header, nav, footer, className, children, ...rest }: 
         </picture>
       </div>
       {header}
-      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-      {nav != null && nav !== false && <div className="shrink-0 lg:hidden">{nav}</div>}
+
+      <div
+        className={cn(
+          "flex min-w-0 flex-1 flex-col",
+          nav != null && nav !== false && "pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0",
+        )}
+      >
+        {children}
+      </div>
+
+      {nav != null && nav !== false && (
+        <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden">
+          {nav}
+        </div>
+      )}
+
       {footer}
     </div>
   );
@@ -60,9 +77,11 @@ interface AppShellPageProps extends Omit<ComponentPropsWithRef<"main">, "title">
 }
 
 /**
- * 한 화면의 틀: 제목 영역, 스크롤되는 본문, 행동 영역. 본문만 스크롤된다.
- * 본문은 좌우 24px(lg 24px → xl 64px)·최대 폭 1200px 이고 안의 덩어리 간격은 16px 이다.
- * 본문 영역은 키보드로 스크롤할 수 있게 Tab 으로 닿는다.
+ * 한 화면의 레이아웃: 제목 영역, 본문, 행동 영역.
+ *
+ * 세 영역은 모두 페이지 스크롤에 참여한다.
+ * 본문은 좌우 24px(넓은 화면에서 64px),
+ * 최대 폭 1200px이며 콘텐츠 간격은 16px이다.
  */
 export function AppShellPage({
   header,
@@ -79,8 +98,8 @@ export function AppShellPage({
         role="region"
         aria-label={scrollLabel}
         // 버튼이 없는 본문도 키보드(방향키·스페이스)로 스크롤할 수 있어야 한다
-        tabIndex={0}
-        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 pb-5 print:overflow-visible focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-cropy-action-primary lg:pb-6 xl:px-16"
+        tabIndex={-1}
+        className="min-w-0 flex-1 px-6 pb-5 lg:pb-6 xl:px-16"
       >
         <div className="mx-auto flex w-full max-w-[75rem] flex-col gap-4">{children}</div>
       </div>
