@@ -27,11 +27,18 @@ Settings 기본값과 맞춰뒀다.
 WAL 모드에서는 최근 커밋이 cropcare.db-wal에 있으므로 DB 파일만 복사하는 수동 백업은
 쓰지 않는다(이 스크립트는 SQLite 백업 API로 WAL 내용까지 담는다).
 
+증분 백업: 업로드 사진은 저장 후 바뀌지 않으므로, 같은 원본의 직전 완료 백업에 크기·
+수정 시각이 같은 파일이 있으면 복사하지 않고 하드링크로 연결한다. 내용까지 비교하지는
+않으므로 사진을 제자리에서 고치는 운영은 하지 않는다. 하드링크가 안 되면 복사한다.
+
 지원하지 않는 구성: DB 파일이 업로드 폴더 안에 있는 경우.
 
 Usage (backend 디렉터리에서):
     # 백업 (backups/<timestamp>/ 에 생성)
     python scripts/backup_db.py backup
+
+    # 직전 백업과 연결하지 않고 전체 복사
+    python scripts/backup_db.py backup --full
 """
 
 import argparse
@@ -128,6 +135,47 @@ def _read_manifest(directory: Path) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+def _own_backups(backup_root: Path, db_path: Path, upload_dir: Path,
+                 kinds: set[str]) -> list[tuple[int, datetime, str, Path]]:
+    """같은 원본으로 이 스크립트가 만든 완료 백업을 (순번, UTC 생성 시각, 이름, 경로)로 돌려준다.
+
+    RTC가 없는 보드는 재부팅 뒤 시계가 과거로 돌아갈 수 있어, 생성 순서는 시각이 아니라
+    manifest의 순번(sequence)으로 정한다. 순번이 없는 예전 백업은 -1로 두고 시각으로만 정렬한다.
+    """
+    if not backup_root.is_dir():
+        return []
+    found = []
+    for directory in backup_root.iterdir():
+        if not directory.is_dir() or _is_link(directory):
+            continue
+        manifest = _read_manifest(directory)
+        if (not manifest or manifest.get("tool") != TOOL_NAME or manifest.get("format") != MANIFEST_FORMAT
+                or manifest.get("kind") not in kinds):
+            continue
+        if (os.path.normcase(str(manifest.get("source_db", ""))) != _norm(db_path)
+                or os.path.normcase(str(manifest.get("source_uploads", ""))) != _norm(upload_dir)):
+            continue  # 다른 DB·업로드의 백업 집합은 기준으로도, 정리 대상으로도 쓰지 않는다
+        created = _parse_created_at(manifest.get("created_at"))
+        if created is not None:
+            sequence = manifest.get("sequence")
+            found.append((sequence if type(sequence) is int and sequence >= 0 else -1, created, directory.name, directory))
+    return found
+
+
+def find_latest_backup(backup_root: Path, db_path: Path, upload_dir: Path, exclude: Path | None = None) -> Path | None:
+    """증분의 기준이 될, 같은 원본의 가장 최근 완료 백업(업로드 포함)을 찾는다.
+
+    manifest는 백업의 마지막 단계에서 쓰므로 manifest가 없는 폴더(중간에 멈춘 백업)는
+    제외된다. 예전 형식·다른 도구의 폴더도 같은 경로의 다른 내용을 담을 수 있어 제외한다.
+    """
+    candidates = [
+        entry for entry in _own_backups(backup_root, db_path, upload_dir, {"backup", "pre_restore"})
+        if (entry[3] / "uploads").is_dir() and not _is_link(entry[3] / "uploads")
+        and not (exclude is not None and _norm(entry[3]) == _norm(exclude))
+    ]
+    return max(candidates)[3] if candidates else None
+
+
 def _raise(error: OSError) -> None:
     # os.walk는 기본적으로 읽지 못한 폴더를 조용히 건너뛴다. 그러면 사진이 빠진 백업이
     # "완료"로 남으므로 즉시 실패시킨다.
@@ -212,16 +260,40 @@ def _check_references(out_dir: Path, upload_dir: Path) -> dict:
     return {"missing_referenced_files": len(missing), "missing_referenced_examples": missing[:20]}
 
 
-def _copy_uploads(upload_dir: Path, dest: Path) -> dict:
-    """업로드 사진을 dest로 복사한다. 링크·정션·특수 파일은 따라가지도, 복사하지도 않는다."""
-    stats = {"upload_file_count": 0, "copied_files": 0, "copied_bytes": 0}
+def _copy_uploads(upload_dir: Path, dest: Path, base: Path | None) -> dict:
+    """업로드를 복사하되, 기준 백업에 같은 파일이 있으면 하드링크로 연결한다.
+
+    하드링크는 이전 *백업* 파일에만 건다. 운영 중인 업로드 원본에 링크하면 원본이
+    수정될 때 백업까지 바뀌기 때문이다.
+    """
+    stats = {"upload_file_count": 0, "linked_files": 0, "copied_files": 0, "copied_bytes": 0}
     dest.mkdir(parents=True, exist_ok=True)
     for relative, info in _iter_upload_files(upload_dir):
         source, target = upload_dir / relative, dest / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
-        stats["copied_files"] += 1
-        stats["copied_bytes"] += info.st_size
+        linked = False
+        previous = base / relative if base is not None else None
+        # 중간 폴더가 링크·정션이면 마지막 파일만 봐서는 알 수 없다. 실제 경로가 기준 백업
+        # 안에 있고 운영 업로드 밖에 있을 때만 연결한다 (운영 원본에 링크하면 안 된다).
+        if (previous is not None and not _is_link(previous)
+                and _is_within(previous, base) and not _is_within(previous, upload_dir)):
+            try:
+                old = previous.lstat()
+            except OSError:
+                old = None
+            if (old is not None and stat.S_ISREG(old.st_mode)
+                    and old.st_size == info.st_size and old.st_mtime_ns == info.st_mtime_ns):
+                try:
+                    os.link(previous, target)
+                    linked = True
+                except OSError:
+                    linked = False  # FAT·네트워크 드라이브 등은 하드링크를 지원하지 않는다
+        if linked:
+            stats["linked_files"] += 1
+        else:
+            shutil.copy2(source, target)
+            stats["copied_files"] += 1
+            stats["copied_bytes"] += info.st_size
         stats["upload_file_count"] += 1
     return stats
 
@@ -371,7 +443,7 @@ def _write_manifest(directory: Path, manifest: dict) -> None:
     _fsync(directory.parent)
 
 
-def backup(db_path: Path, upload_dir: Path, out_dir: Path) -> dict:
+def backup(db_path: Path, upload_dir: Path, out_dir: Path, *, incremental: bool = True) -> dict:
     """DB와 업로드 디렉터리를 out_dir 아래로 백업하고 manifest를 반환한다.
 
     DB와 업로드 폴더가 모두 있어야 한다. 원본이 없으면 아무것도 만들지 않고 실패한다.
@@ -380,7 +452,7 @@ def backup(db_path: Path, upload_dir: Path, out_dir: Path) -> dict:
     """
     db_path, upload_dir, out_dir = _check_backup_paths(db_path, upload_dir, out_dir)
     with _exclusive(out_dir.parent, db_path, upload_dir):
-        return _backup(db_path, upload_dir, out_dir)
+        return _backup(db_path, upload_dir, out_dir, incremental=incremental)
 
 
 def _check_backup_paths(db_path: Path, upload_dir: Path, out_dir: Path) -> tuple[Path, Path, Path]:
@@ -401,11 +473,12 @@ def _check_backup_paths(db_path: Path, upload_dir: Path, out_dir: Path) -> tuple
     return db_path, upload_dir, out_dir
 
 
-def _backup(db_path: Path, upload_dir: Path, out_dir: Path) -> dict:
+def _backup(db_path: Path, upload_dir: Path, out_dir: Path, *, incremental: bool) -> dict:
     db_path, upload_dir, out_dir = _check_backup_paths(db_path, upload_dir, out_dir)
     if out_dir.exists() and any(out_dir.iterdir()):
         raise FileExistsError(f"이미 내용이 있는 폴더에는 백업하지 않습니다: {out_dir}")
 
+    base = find_latest_backup(out_dir.parent, db_path, upload_dir, exclude=out_dir) if incremental else None
     created_new = not out_dir.exists()
     out_dir.mkdir(parents=True, exist_ok=True)
     manifest: dict = {
@@ -416,12 +489,13 @@ def _backup(db_path: Path, upload_dir: Path, out_dir: Path) -> dict:
         "source_db": str(db_path),
         "source_uploads": str(upload_dir),
         "db_backed_up": True,
+        "base_backup": base.name if base else None,
     }
     try:
         with _writes_blocked(db_path) as journal_mode:
             manifest["journal_mode"] = journal_mode
             _snapshot_db(db_path, out_dir / "cropcare.db")
-            manifest.update(_copy_uploads(upload_dir, out_dir / "uploads"))
+            manifest.update(_copy_uploads(upload_dir, out_dir / "uploads", base / "uploads" if base else None))
             manifest.update(_check_references(out_dir, upload_dir))
         # 복원 검증에서 거부될 백업을 "완료"로 남기면, 보관 정리가 그 백업을 근거로 정상 백업을
         # 지운다. 잠금을 푼 뒤(앱 쓰기를 오래 막지 않도록) 스냅샷을 복원과 같은 기준으로 검사한다.
@@ -448,6 +522,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     backup_parser = sub.add_parser("backup", help="현재 DB·업로드를 백업한다")
     backup_parser.add_argument("--out", type=Path, default=None, help=f"기본: {BACKUP_ROOT}/<타임스탬프>")
+    backup_parser.add_argument("--full", action="store_true", help="직전 백업과 연결하지 않고 전체 복사한다")
 
     return parser
 
@@ -460,7 +535,7 @@ def main() -> None:
     try:
         if args.command == "backup":
             out_dir = args.out or (BACKUP_ROOT / _timestamp())
-            manifest = backup(db_path, upload_dir, out_dir)
+            manifest = backup(db_path, upload_dir, out_dir, incremental=not args.full)
             print(f"백업 완료: {out_dir}")
             print(json.dumps(manifest, ensure_ascii=False, indent=2))
             if manifest.get("warning"):
