@@ -2,6 +2,8 @@
 진짜 DB·업로드는 건드리지 않는다."""
 
 import json
+import os
+import shutil
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -198,3 +200,153 @@ def test_integrity_check_rejects_damaged_files_and_foreign_key_violations(source
         """)
     with pytest.raises(BackupError, match="외래 키"):
         backup_db._check_integrity(source_db)
+
+
+# ---- 사진 복사·참조 확인 ----
+
+
+def _add_diagnosis(db_path: Path, image_path, refined_image_path=None) -> None:
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute("CREATE TABLE IF NOT EXISTS diagnoses (id TEXT, image_path TEXT, refined_image_path TEXT)")
+        conn.execute("INSERT INTO diagnoses VALUES (?, ?, ?)", (str(image_path), image_path, refined_image_path))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _write_draft(pending: Path, name: str, image_path, refined_image_path=None) -> None:
+    """앱(result_recovery.commit_result)이 남기는 복구 초안과 같은 모양."""
+    pending.mkdir(parents=True, exist_ok=True)
+    draft = {"token": name, "expires_at": "2099-01-01T00:00:00+00:00",
+             "fields": {"image_path": image_path, "refined_image_path": refined_image_path}}
+    (pending / f"{name}.json").write_text(json.dumps(draft), encoding="utf-8")
+
+
+@pytest.fixture
+def live(tmp_path):
+    """운영 중인 DB와 업로드 폴더를 흉내 낸다. 진단 기록과 복구 초안(.pending)도 포함한다."""
+    db_path = tmp_path / "current" / "cropcare.db"
+    db_path.parent.mkdir()
+    _make_sqlite_db(db_path, "original")
+    # 예전 기록에는 Windows 절대 경로가 들어 있다. 앱처럼 마지막 이름(a.jpg)으로 해석해야 한다.
+    _add_diagnosis(db_path, r"C:\old-device\uploads\a.jpg")
+    upload_dir = tmp_path / "current" / "uploads"
+    upload_dir.mkdir()
+    (upload_dir / "a.jpg").write_bytes(b"photo-a")
+    (upload_dir / "b.jpg").write_bytes(b"photo-b")
+    _write_draft(upload_dir / ".pending", "draft", "b.jpg")
+    return db_path, upload_dir, tmp_path / "backups"
+
+
+def _copy(upload_dir: Path, dest: Path) -> dict:
+    return backup_db._copy_uploads(upload_dir, dest)
+
+
+def test_uploads_and_pending_drafts_are_copied(live, tmp_path):
+    _, upload_dir, _ = live
+    dest = tmp_path / "out" / "uploads"
+    stats = _copy(upload_dir, dest)
+    assert (stats["upload_file_count"], stats["copied_files"]) == (3, 3)
+    assert (dest / "a.jpg").read_bytes() == b"photo-a"
+    assert (dest / ".pending" / "draft.json").exists()
+    assert backup_db._count_upload_files(dest) == 3
+
+
+def test_symlinked_uploads_are_neither_followed_nor_copied(live, tmp_path):
+    _, upload_dir, _ = live
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.txt").write_text("outside", encoding="utf-8")
+    try:
+        (upload_dir / "link.jpg").symlink_to(outside / "secret.txt")
+        (upload_dir / "linkdir").symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"심볼릭 링크를 만들 수 없는 환경: {exc}")
+    dest = tmp_path / "out" / "uploads"
+    assert _copy(upload_dir, dest)["upload_file_count"] == 3
+    assert not (dest / "link.jpg").exists() and not (dest / "linkdir").exists()
+    assert backup_db._first_link(upload_dir) is not None
+    assert backup_db._first_link(dest) is None
+
+
+def test_unreadable_upload_subfolder_fails_instead_of_skipping(live, tmp_path, monkeypatch):
+    # 2차 리뷰 2: os.walk가 읽지 못한 폴더를 조용히 건너뛰면 사진이 빠진 "완료" 백업이 생긴다.
+    _, upload_dir, _ = live
+    real_walk = os.walk
+
+    def walk_with_denied_subfolder(top, *args, **kwargs):
+        for entry in real_walk(top, *args, **kwargs):
+            yield entry
+            if Path(entry[0]) == Path(top) and kwargs.get("onerror"):
+                kwargs["onerror"](PermissionError(13, "Permission denied", str(Path(top) / ".pending")))
+
+    monkeypatch.setattr(backup_db.os, "walk", walk_with_denied_subfolder)
+    with pytest.raises(PermissionError):
+        _copy(upload_dir, tmp_path / "out" / "uploads")
+
+
+@pytest.mark.skipif(os.name == "nt" or (hasattr(os, "geteuid") and os.geteuid() == 0),
+                    reason="실제 권한 오류는 비root POSIX에서만 재현된다")
+def test_real_permission_error_in_upload_subfolder_fails(live, tmp_path):
+    _, upload_dir, _ = live
+    locked = upload_dir / "locked"
+    locked.mkdir()
+    (locked / "c.jpg").write_bytes(b"photo-c")
+    locked.chmod(0)
+    try:
+        with pytest.raises(PermissionError):
+            _copy(upload_dir, tmp_path / "out" / "uploads")
+    finally:
+        locked.chmod(0o755)
+
+
+@pytest.mark.parametrize("value, expected", [
+    (r"C:\old-device\uploads\a.jpg", "a.jpg"),
+    ("uploads/b.jpg", "b.jpg"),
+    ("c.jpg", "c.jpg"),
+    ("..", None), ("", None), (None, None),
+])
+def test_photo_file_key_uses_the_last_name_like_the_app(value, expected):
+    assert backup_db._file_key(value) == expected
+
+
+def test_referenced_photos_come_from_diagnoses_and_recovery_drafts(live):
+    db_path, upload_dir, _ = live
+    _write_draft(upload_dir / ".pending", "refine", "a.jpg", r"uploads\c.jpg")
+    assert backup_db._referenced_photos(db_path, upload_dir) == {"a.jpg", "b.jpg", "c.jpg"}
+
+
+def test_unreadable_recovery_draft_is_an_error_not_a_guess(live):
+    db_path, upload_dir, _ = live
+    (upload_dir / ".pending" / "broken.json").write_text("{not json", encoding="utf-8")
+    with pytest.raises(BackupError, match="복구 초안"):
+        backup_db._referenced_photos(db_path, upload_dir)
+
+
+def _copied_backup(live, tmp_path) -> Path:
+    """_check_references가 보는 모양(cropcare.db + uploads)의 백업 폴더를 만든다."""
+    db_path, upload_dir, _ = live
+    out = tmp_path / "out"
+    _copy(upload_dir, out / "uploads")
+    shutil.copy2(db_path, out / "cropcare.db")
+    return out
+
+
+def test_references_missing_everywhere_are_recorded_not_fatal(live, tmp_path):
+    # 예전부터 사진이 없던 기록 때문에 백업이 영원히 실패하면 안 된다.
+    db_path, upload_dir, _ = live
+    _add_diagnosis(db_path, "gone-long-ago.jpg")
+    out = _copied_backup(live, tmp_path)
+    result = backup_db._check_references(out, upload_dir)
+    assert result == {"missing_referenced_files": 1, "missing_referenced_examples": ["gone-long-ago.jpg"]}
+
+
+def test_photo_created_after_the_copy_fails_the_check(live, tmp_path):
+    # 2차 리뷰 3: 잠금은 사진·초안 생성을 막지 못한다. 초안만 있고 사진은 없는 백업이 완료되면 안 된다.
+    _, upload_dir, _ = live
+    out = _copied_backup(live, tmp_path)
+    (upload_dir / "late.jpg").write_bytes(b"late")
+    _write_draft(out / "uploads" / ".pending", "late", "late.jpg")
+    with pytest.raises(BackupError, match="서비스를 멈추고"):
+        backup_db._check_references(out, upload_dir)
