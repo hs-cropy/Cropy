@@ -29,8 +29,9 @@ class TTSUnavailableError(RuntimeError):
 
 
 def _cache_key(text: str) -> str:
-    # 목소리(모델)나 속도가 바뀌면 같은 문장이라도 다른 파일이어야 한다
-    material = "|".join([settings.tts_engine, settings.tts_voice, f"{settings.tts_speed:.2f}", text])
+    # 목소리(모델)나 속도가 바뀌면 같은 문장이라도 다른 파일이어야 한다. 속도는 TTS 서버에 보내는
+    # 값 그대로(repr) 넣는다 — 반올림하면 0.901과 0.904처럼 다르게 합성한 음성이 같은 파일을 쓴다
+    material = "|".join([settings.tts_engine, settings.tts_voice, repr(settings.tts_speed), text])
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
 

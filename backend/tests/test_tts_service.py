@@ -68,6 +68,24 @@ def test_http_engine_sends_text_and_speed(monkeypatch, tmp_path):
     assert len(calls) == 1  # 두 번째는 캐시
 
 
+def test_different_speeds_never_share_a_cache_file(monkeypatch, tmp_path):
+    # 캐시 키에 서버로 보내는 속도를 그대로 넣는다. 반올림하면 0.901과 0.904가 같은 파일을 쓴다
+    monkeypatch.setattr(settings, "tts_engine", "http")
+    monkeypatch.setattr(settings, "tts_cache_dir", tmp_path)
+    speeds = []
+
+    def fake_post(url, json, timeout):
+        speeds.append(json["speed"])
+        return httpx.Response(200, content=_wav_bytes())
+
+    monkeypatch.setattr(tts_service.httpx, "post", fake_post)
+    for speed in (0.901, 0.904, 0.901):
+        monkeypatch.setattr(settings, "tts_speed", speed)
+        tts_service.synthesize("안녕하세요")
+    assert speeds == [0.901, 0.904]  # 세 번째(0.901)는 첫 번째의 캐시를 쓴다
+    assert len(list(tmp_path.glob("*.wav"))) == 2
+
+
 def test_http_engine_unreachable_raises_tts_unavailable(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "tts_engine", "http")
     monkeypatch.setattr(settings, "tts_cache_dir", tmp_path)
