@@ -37,21 +37,42 @@ const GRADE_OPTIONS: {
   { value: "low", label: "낮음" },
 ];
 
-// PR #75의 AppShellPage는 window가 아니라
-// 내부 region 요소에서 스크롤이 발생한다.
-function getHistoryScrollElement(): HTMLElement | null {
-  return document.querySelector<HTMLElement>(
-    '[role="region"][aria-label="진단 이력"]'
-  );
+
+/**
+ * AppShellPage는 별도의 본문 스크롤을 사용하지 않는다.
+ * 페이지 전체가 window 기준으로 스크롤되므로
+ * 필터 및 페이지 변경 시 문서의 맨 위로 이동한다.
+ */
+function scrollHistoryToTop(): void {
+  setHistoryScrollPosition(0);
 }
 
-function scrollHistoryToTop() {
-  const scroller = getHistoryScrollElement();
+function getHistoryScrollElement(): HTMLElement | null {
+  const region = document.querySelector<HTMLElement>(
+    '[role="region"][aria-label="진단 이력"]',
+  );
 
-  if (scroller) {
-    scroller.scrollTop = 0;
+  // 모바일에서는 본문 region이 스크롤되고,
+  // 데스크톱에서는 window가 스크롤된다.
+  if (window.matchMedia("(min-width: 1024px)").matches) {
+    return null;
+  }
+
+  return region;
+}
+
+function getHistoryScrollPosition(): number {
+  const region = getHistoryScrollElement();
+  return region ? region.scrollTop : window.scrollY;
+}
+
+function setHistoryScrollPosition(position: number): void {
+  const region = getHistoryScrollElement();
+
+  if (region) {
+    region.scrollTop = position;
   } else {
-    window.scrollTo(0, 0);
+    window.scrollTo(0, position);
   }
 }
 
@@ -146,15 +167,13 @@ export default function HistoryPage() {
 
   const rememberPosition = () => {
     try {
-      const scroller = getHistoryScrollElement();
-
       sessionStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
           crop,
           grade,
           page,
-          scrollY: scroller?.scrollTop ?? window.scrollY,
+          scrollY: getHistoryScrollPosition(),
         })
       );
     } catch {
@@ -296,13 +315,7 @@ export default function HistoryPage() {
     pendingScrollRef.current = null;
 
     const frame = requestAnimationFrame(() => {
-      const scroller = getHistoryScrollElement();
-
-      if (scroller) {
-        scroller.scrollTop = position;
-      } else {
-        window.scrollTo(0, position);
-      }
+      setHistoryScrollPosition(position);
     });
 
     return () => cancelAnimationFrame(frame);

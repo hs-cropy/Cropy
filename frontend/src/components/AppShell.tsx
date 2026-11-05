@@ -1,43 +1,70 @@
+
 import type { ComponentPropsWithRef, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-// Figma 의 농장 배경(원본 PNG 1.4~1.7MB)을 WebP 로 줄인 파일. 흰 바탕 위에 24% 로 깐다
+// Figma의 농장 배경을 WebP로 최적화한 파일
+// 흰 배경 위에 24% 불투명도로 표시한다.
 const BACKGROUND_MOBILE = "/background/farm-mobile.webp";
 const BACKGROUND_DESKTOP = "/background/farm-desktop.webp";
 
-// 화면 높이에 맞춘 틀. 주소 표시줄이 접히고 펴져도 맞도록 dvh 를 쓰고, 모르는 브라우저에는 vh 를 준다.
-// 높이는 className 으로 바꿀 수 없다 (h-* 를 넘겨도 dvh 규칙이 남는다).
-// 인쇄할 때는 높이 고정을 풀어 본문 전체가 나오게 한다
+// 모바일에서는 화면 높이에 맞춰 고정 영역과 스크롤 영역을 분리한다.
+// dvh를 지원하지 않는 브라우저에서는 vh를 사용한다.
+// 데스크톱에서는 기존 전체 페이지 스크롤 구조를 유지한다.
+// 인쇄 시에는 높이 제한과 overflow 제한을 해제한다.
 const ROOT =
-  "relative isolate flex min-h-screen flex-col overflow-x-hidden bg-cropy-surface supports-[height:100dvh]:min-h-dvh print:!min-h-0 print:overflow-visible";
+  "relative isolate flex h-screen min-h-0 flex-col overflow-hidden bg-cropy-surface " +
+  "supports-[height:100dvh]:h-dvh " +
+  "lg:h-auto lg:min-h-screen lg:overflow-visible " +
+  "print:!h-auto print:!min-h-0 print:!overflow-visible";
 
 interface AppShellProps extends ComponentPropsWithRef<"div"> {
-  /** 위쪽 Header */
+  /** 앱 상단의 공통 Header */
   header?: ReactNode;
-  /** 모바일 화면 아래의 MobileNav. lg 부터는 Header 안의 내비가 대신하므로 숨긴다 */
+
+  /** 모바일 하단 내비게이션. lg부터 숨긴다. */
   nav?: ReactNode;
-  /** 데스크탑 화면 아래의 AppShellFooter */
+
+  /** 데스크톱 하단 Footer */
   footer?: ReactNode;
 }
 
 /**
- * 앱의 전체 레이아웃: 헤더, 화면, 모바일 내비게이션,
- * 데스크탑 푸터와 농장 배경을 배치한다.
+ * 앱의 전체 레이아웃.
  *
- * 콘텐츠 높이에 따라 페이지가 자연스럽게 늘어나며,
- * 모바일 하단 내비게이션만 화면 아래에 고정한다.
+ * 모바일:
+ * - 앱 공통 헤더 고정
+ * - AppShellPage의 제목과 본문 스크롤
+ * - 행동 버튼은 본문 밖에 유지
+ * - 하단 내비게이션 고정
  *
- * 내비게이션이 마지막 콘텐츠를 가리지 않도록
- * 모바일에서는 하단 여백을 확보한다.
+ * 데스크톱:
+ * - 기존 콘텐츠 기반 페이지 스크롤 유지
+ *
+ * 모바일에서는 하단 내비게이션과 안전 영역만큼
+ * 콘텐츠 영역의 여백을 확보한다.
  */
-export function AppShell({ header, nav, footer, className, children, ...rest }: AppShellProps) {
+export function AppShell({
+  header,
+  nav,
+  footer,
+  className,
+  children,
+  ...rest
+}: AppShellProps) {
   return (
     <div {...rest} className={cn(ROOT, className)}>
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        {/* picture 는 화면 폭에 맞는 한 장만 받는다 */}
+      {/* 장식용 농장 배경 */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+      >
         <picture>
-          <source media="(min-width: 1024px)" srcSet={BACKGROUND_DESKTOP} />
-          {/* eslint-disable-next-line @next/next/no-img-element -- 50KB 안쪽의 배경이라 next/image 최적화가 필요 없다 */}
+          <source
+            media="(min-width: 1024px)"
+            srcSet={BACKGROUND_DESKTOP}
+          />
+
+          {/* eslint-disable-next-line @next/next/no-img-element -- 최적화된 배경 이미지 */}
           <img
             src={BACKGROUND_MOBILE}
             alt=""
@@ -45,43 +72,73 @@ export function AppShell({ header, nav, footer, className, children, ...rest }: 
           />
         </picture>
       </div>
-      {header}
 
+      {/* 앱 공통 상단 헤더: 스크롤 영역 밖 */}
+      {header && (
+        <div className="shrink-0">
+          {header}
+        </div>
+      )}
+
+      {/* 페이지 콘텐츠 영역 */}
       <div
         className={cn(
-          "flex min-w-0 flex-1 flex-col",
-          nav != null && nav !== false && "pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0",
+          "flex min-h-0 min-w-0 flex-1 flex-col",
+          nav != null &&
+            nav !== false &&
+            "pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0",
         )}
       >
         {children}
       </div>
 
+      {/* 모바일 하단 내비게이션 */}
       {nav != null && nav !== false && (
         <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden">
           {nav}
         </div>
       )}
 
+      {/* 데스크톱 푸터 */}
       {footer}
     </div>
   );
 }
 
-interface AppShellPageProps extends Omit<ComponentPropsWithRef<"main">, "title"> {
-  /** 스크롤되지 않는 제목 영역. PageHeader 를 넣는다 */
+interface AppShellPageProps
+  extends Omit<ComponentPropsWithRef<"main">, "title"> {
+  /**
+   * 페이지 제목 영역.
+   *
+   * 모바일에서는 본문과 함께 스크롤된다.
+   * PageHeader 컴포넌트를 전달할 수 있다.
+   */
   header?: ReactNode;
-  /** 스크롤되지 않는 아래 행동 영역. ActionBar 를 넣는다 */
+
+  /**
+   * 하단 행동 영역.
+   * 본문 스크롤과 분리하여 고정한다.
+   */
   actions?: ReactNode;
-  /** 스크롤되는 본문 영역의 이름 (스크린리더용) */
+
+  /** 스크롤 영역의 접근성 이름 */
   scrollLabel?: string;
 }
 
 /**
- * 한 화면의 레이아웃: 제목 영역, 본문, 행동 영역.
+ * 개별 페이지의 레이아웃.
  *
- * 세 영역은 모두 페이지 스크롤에 참여한다.
- * 본문은 좌우 24px(넓은 화면에서 64px),
- * 최대 폭 1200px이며 콘텐츠 간격은 16px이다.
+ * 모바일:
+ * - 페이지 제목과 본문을 같은 스크롤 영역에 배치한다.
+ * - 제목은 본문과 함께 스크롤된다.
+ * - actions는 스크롤 영역 밖에 유지한다.
+ *
+ * 데스크톱:
+ * - 기존처럼 페이지 높이에 따라 콘텐츠가 늘어난다.
+ * - 데스크톱의 구체적인 배치는 추후 Figma 확인 후 수정한다.
+ *
+ * 제목과 본문을 동일한 region에 두므로
+ * header를 복제해서 렌더링할 필요가 없다.
  */
 export function AppShellPage({
   header,
@@ -92,18 +149,45 @@ export function AppShellPage({
   ...rest
 }: AppShellPageProps) {
   return (
-    <main {...rest} className={cn("flex min-h-0 flex-1 flex-col", className)}>
-      {header}
+    <main
+      {...rest}
+      className={cn(
+        "flex min-h-0 min-w-0 flex-1 flex-col",
+        className,
+      )}
+    >
+      {/* 제목과 본문이 함께 스크롤되는 영역 */}
       <div
         role="region"
         aria-label={scrollLabel}
-        // 버튼이 없는 본문도 키보드(방향키·스페이스)로 스크롤할 수 있어야 한다
         tabIndex={-1}
-        className="min-w-0 flex-1 px-6 pb-5 lg:pb-6 xl:px-16"
+        className={cn(
+          "min-h-0 min-w-0 flex-1",
+          "overflow-y-auto overscroll-contain",
+          "px-6 pb-5",
+          "lg:overflow-visible lg:pb-6 xl:px-16",
+          "print:!overflow-visible",
+        )}
       >
-        <div className="mx-auto flex w-full max-w-[75rem] flex-col gap-4">{children}</div>
+        {/* 페이지 제목: 스크롤 영역 내부 */}
+        {header && (
+          <div className="-mx-6 xl:-mx-16">
+            {header}
+          </div>
+        )}
+
+        {/* 페이지 본문 */}
+        <div className="mx-auto flex w-full max-w-[75rem] flex-col gap-4">
+          {children}
+        </div>
       </div>
-      {actions}
+
+      {/* 행동 버튼: 스크롤 영역 밖 */}
+      {actions && (
+        <div className="shrink-0">
+          {actions}
+        </div>
+      )}
     </main>
   );
 }
@@ -111,10 +195,15 @@ export function AppShellPage({
 type AppShellFooterProps = ComponentPropsWithRef<"footer">;
 
 /**
- * 데스크탑 화면 아래의 푸터 (WebShell/Footer): 높이 64px, 서비스 이름과 AI 진단 안내 문구.
- * 모바일에는 없다.
+ * 데스크톱 하단 푸터.
+ *
+ * 높이 64px, 서비스 이름과 AI 진단 안내 문구를 표시한다.
+ * 모바일에서는 렌더링 영역을 숨긴다.
  */
-export function AppShellFooter({ className, ...rest }: AppShellFooterProps) {
+export function AppShellFooter({
+  className,
+  ...rest
+}: AppShellFooterProps) {
   return (
     <footer
       {...rest}
@@ -124,7 +213,10 @@ export function AppShellFooter({ className, ...rest }: AppShellFooterProps) {
       )}
     >
       <div className="mx-auto flex w-full max-w-[75rem] items-center gap-6">
-        <p className="w-20 shrink-0 text-cropy-helper font-bold">Cropy</p>
+        <p className="w-20 shrink-0 text-cropy-helper font-bold">
+          Cropy
+        </p>
+
         <p className="min-w-0 flex-1 break-keep text-cropy-label-xs font-normal">
           AI 진단은 참고 정보입니다. 정확한 판단이 필요하면 지역 농업기술센터에 문의하세요.
         </p>

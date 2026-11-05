@@ -36,7 +36,8 @@ describe("AppShell", () => {
     ]);
   });
 
-  it("화면 최소 높이를 유지하고 페이지 전체 스크롤을 허용한다", () => {
+
+  it("모바일은 화면 높이에 맞추고 데스크톱은 콘텐츠 높이를 허용한다", () => {
     render(<AppShell data-testid="shell">화면</AppShell>);
 
     const shell = classes(screen.getByTestId("shell"));
@@ -45,18 +46,19 @@ describe("AppShell", () => {
       expect.arrayContaining([
         "flex",
         "flex-col",
-        "min-h-screen",
-        "supports-[height:100dvh]:min-h-dvh",
-        "overflow-x-hidden",
+        "h-screen",
+        "min-h-0",
+        "overflow-hidden",
+        "supports-[height:100dvh]:h-dvh",
+        "lg:h-auto",
+        "lg:min-h-screen",
+        "lg:overflow-visible",
         "bg-cropy-surface",
       ]),
     );
-
-    expect(shell).not.toContain("h-screen");
-    expect(shell).not.toContain("overflow-hidden");
   });
 
-  it("인쇄할 때 최소 높이 제한과 잘림 없이 콘텐츠를 표시한다.", () => {
+  it("인쇄할 때 높이 제한과 잘림 없이 콘텐츠를 표시한다", () => {
     render(
       <AppShell data-testid="shell">
         <AppShellPage>화면</AppShellPage>
@@ -66,9 +68,12 @@ describe("AppShell", () => {
     const shell = classes(screen.getByTestId("shell"));
 
     expect(shell).toEqual(
-      expect.arrayContaining(["print:!min-h-0", "print:overflow-visible"]),
+      expect.arrayContaining([
+        "print:!h-auto",
+        "print:!min-h-0",
+        "print:!overflow-visible",
+      ]),
     );
-    //expect(classes(screen.getByRole("region"))).toContain("print:overflow-visible");
   });
 
   it("화면 영역은 남는 공간을 사용하면서 콘텐츠 높이에 따라 늘어난다", () => {
@@ -169,33 +174,68 @@ describe("AppShellPage", () => {
     return screen.getByRole("main");
   }
 
-  it("화면의 main이고 제목 영역 → 본문 → 행동 영역 순서로 놓는다", () => {
+  it("제목과 본문은 스크롤 영역에, 행동 영역은 그 아래에 배치한다", () => {
     const main = renderPage();
+    const children = Array.from(main.children);
 
-    expect(Array.from(main.children)).toEqual([
-      screen.getByTestId("head"),
-      screen.getByRole("region", { name: "본문" }),
-      screen.getByTestId("actions"),
-    ]);
-  });
+    const region = screen.getByRole("region", {
+      name: "본문",
+    });
 
-  it("본문에 별도 스크롤을 만들지 않고 제목과 행동 영역을 함께 배치한다", () => {
-    const main = renderPage();
-    const region = screen.getByRole("region", { name: "본문" });
+    const head = screen.getByTestId("head");
+    const actions = screen.getByTestId("actions");
 
-    expect(classes(region)).not.toContain("overflow-y-auto");
-    expect(classes(region)).toContain("flex-1");
+    // main의 직접 자식은 스크롤 영역과 행동 영역 2개
+    expect(children).toHaveLength(2);
+    expect(children[0]).toBe(region);
 
-    expect(Array.from(main.children)).toEqual([
-      screen.getByTestId("head"),
-      region,
-      screen.getByTestId("actions"),
-    ]);
+    // 제목은 스크롤 영역 내부
+    expect(region.contains(head)).toBe(true);
 
+    // 본문 역시 같은 스크롤 영역 내부
     expect(region.contains(screen.getByText("본문 하나"))).toBe(true);
+    expect(region.contains(screen.getByText("본문 둘"))).toBe(true);
+
+    // 행동 영역은 스크롤 영역 바깥
+    expect(children[1].contains(actions)).toBe(true);
+    expect(region.contains(actions)).toBe(false);
   });
 
-  //이제 본문은 별도 스크롤 상자가 아님
+  it("모바일에서 제목과 본문은 함께 스크롤하고 행동 영역은 분리한다", () => {
+    const main = renderPage();
+
+    const region = screen.getByRole("region", {
+      name: "본문",
+    });
+
+    const head = screen.getByTestId("head");
+    const actions = screen.getByTestId("actions");
+
+    expect(classes(region)).toEqual(
+      expect.arrayContaining([
+        "min-h-0",
+        "flex-1",
+        "overflow-y-auto",
+        "overscroll-contain",
+        "lg:overflow-visible",
+      ]),
+    );
+
+    // 제목도 본문 스크롤 영역에 포함
+    expect(region.contains(head)).toBe(true);
+
+    // 본문도 동일한 스크롤 영역에 포함
+    expect(region.contains(screen.getByText("본문 하나"))).toBe(true);
+
+    // 행동 영역은 스크롤 영역 밖에 유지
+    expect(region.contains(actions)).toBe(false);
+
+    // main에는 스크롤 영역과 행동 영역만 존재
+    expect(main.children).toHaveLength(2);
+    expect(main.children[0]).toBe(region);
+    expect(main.children[1].contains(actions)).toBe(true);
+  });
+
   it("본문은 일반 Tab 이동에서 제외하고 화면 전환 시 초점을 받을 수 있다", () => {
     renderPage();
 
@@ -219,16 +259,43 @@ describe("AppShellPage", () => {
     ).toBeTruthy();
   });
 
-  it("본문은 좌우 24px·아래 20px이고 덩어리 간격은 16px, 최대 폭은 1200px이다", () => {
+  it("본문 여백과 콘텐츠 간격 및 최대 너비를 유지한다", () => {
     renderPage();
-    const scroll = screen.getByRole("region", { name: "본문" });
+
+    const scroll = screen.getByRole("region", {
+      name: "본문",
+    });
 
     expect(classes(scroll)).toEqual(
-      expect.arrayContaining(["px-6", "pb-5", "lg:pb-6", "xl:px-16"]),
+      expect.arrayContaining([
+        "px-6",
+        "pb-5",
+        "lg:pb-6",
+        "xl:px-16",
+      ]),
     );
-    expect(classes(scroll.firstElementChild as Element)).toEqual(
-      expect.arrayContaining(["flex-col", "gap-4", "max-w-[75rem]", "mx-auto"]),
+
+    const titleWrapper = scroll.children[0];
+    const contentWrapper = scroll.children[1];
+
+    // 제목 래퍼
+    expect(titleWrapper.contains(screen.getByTestId("head"))).toBe(true);
+
+    // 본문 래퍼
+    expect(classes(contentWrapper)).toEqual(
+      expect.arrayContaining([
+        "mx-auto",
+        "flex",
+        "w-full",
+        "max-w-[75rem]",
+        "flex-col",
+        "gap-4",
+      ]),
     );
+
+    expect(
+      contentWrapper.contains(screen.getByText("본문 하나")),
+    ).toBe(true);
   });
 
   it("제목 영역과 행동 영역이 없으면 본문만 그린다", () => {

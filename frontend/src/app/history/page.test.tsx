@@ -1,6 +1,6 @@
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { fetchHistory } from "@/lib/api";
 import type { PaginatedHistory } from "@/types/diagnosis";
 import HistoryPage from "./page";
@@ -42,6 +42,30 @@ const countResponse: PaginatedHistory = {
 
 beforeEach(() => {
   fetchMock.mockReset();
+  sessionStorage.clear();
+
+  // 기본 테스트 환경은 모바일로 설정
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  sessionStorage.clear();
 });
 
 for (const change of ["crop", "page"]) {
@@ -138,3 +162,185 @@ for (const change of ["crop", "page"]) {
     }
   );
 }
+
+it("모바일에서 이력 목록 복귀 시 본문 스크롤 위치를 복원한다", async () => {
+  sessionStorage.setItem(
+    "cropy:history-view",
+    JSON.stringify({
+      crop: "",
+      grade: "",
+      page: 1,
+      scrollY: 640,
+    }),
+  );
+
+  fetchMock.mockImplementation((_page, size) =>
+    Promise.resolve(
+      size === 1
+        ? countResponse
+        : response("저장된 진단", "고추"),
+    ),
+  );
+
+  render(<HistoryPage />);
+
+  const region = screen.getByRole("region", {
+    name: "진단 이력",
+  });
+
+  // 이력 목록이 로딩되어 실제로 표시될 때까지 기다린다.
+  await screen.findByText("저장된 진단");
+
+  // 이전에 저장한 스크롤 위치로 이동해야 한다.
+  await waitFor(() => {
+    expect(region.scrollTop).toBe(640);
+  });
+
+  // 복원에 사용한 저장 정보는 다시 사용하지 않는다.
+  expect(sessionStorage.getItem("cropy:history-view")).toBeNull();
+});
+
+it("모바일에서 작물 필터를 변경하면 본문 스크롤을 맨 위로 이동시킨다", async () => {
+  fetchMock.mockImplementation((_page, size) =>
+    Promise.resolve(
+      size === 1
+        ? countResponse
+        : response("고추 진단", "고추"),
+    ),
+  );
+
+  render(<HistoryPage />);
+
+  await screen.findByText("고추 진단");
+
+  const region = screen.getByRole("region", {
+    name: "진단 이력",
+  });
+
+  region.scrollTop = 640;
+
+  fireEvent.click(
+    screen.getByRole("button", { name: /배추/ }),
+  );
+
+  expect(region.scrollTop).toBe(0);
+});
+
+it("모바일에서 페이지를 변경하면 본문 스크롤을 맨 위로 이동시킨다", async () => {
+  fetchMock.mockImplementation((_page, size) =>
+    Promise.resolve(
+      size === 1
+        ? countResponse
+        : response("고추 진단", "고추"),
+    ),
+  );
+  
+  render(<HistoryPage />);
+
+  await screen.findByText("고추 진단");
+
+  const region = screen.getByRole("region", {
+    name: "진단 이력",
+  });
+
+  region.scrollTop = 640;
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "다음" }),
+  );
+
+  expect(region.scrollTop).toBe(0);
+});
+
+
+it("데스크톱에서는 window 스크롤 위치를 복원한다", async () => {
+  vi.mocked(window.matchMedia).mockImplementation(
+    (query: string): MediaQueryList =>
+      ({
+        matches: query === "(min-width: 1024px)",
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false),
+      }),
+  );
+
+  const scrollTo = vi.mocked(window.scrollTo);
+
+  sessionStorage.setItem(
+    "cropy:history-view",
+    JSON.stringify({
+      crop: "",
+      grade: "",
+      page: 1,
+      scrollY: 640,
+    }),
+  );
+
+  fetchMock.mockImplementation((_page, size) =>
+    Promise.resolve(
+      size === 1
+        ? countResponse
+        : response("저장된 진단", "고추"),
+    ),
+  );
+
+  render(<HistoryPage />);
+
+  await screen.findByText("저장된 진단");
+
+  await waitFor(() => {
+    expect(scrollTo).toHaveBeenCalledWith(0, 640);
+  });
+});
+
+it("모바일에서 진단 이력 상세로 이동하기 전에 본문 스크롤 위치를 저장한다", async () => {
+  fetchMock.mockImplementation((_page, size) =>
+    Promise.resolve(
+      size === 1
+        ? countResponse
+        : response("고추 진단", "고추"),
+    ),
+  );
+
+  render(<HistoryPage />);
+
+  await screen.findByText("고추 진단");
+
+  const region = screen.getByRole("region", {
+    name: "진단 이력",
+  });
+
+  region.scrollTop = 640;
+
+  const detailLink = screen.getByRole("link", {
+    name: /고추 진단.*진단 상세 보기/,
+  });
+
+  // 브라우저의 기본 링크 이동을 막고 클릭 시 스크롤 위치가 저장되는지만 검증한다
+  const clickEvent = new MouseEvent("click", {
+    bubbles: true,
+    cancelable: true,
+  });
+
+  clickEvent.preventDefault();
+  fireEvent(detailLink, clickEvent);
+
+  expect(detailLink.getAttribute("href")).toBe(
+    "/history/%EA%B3%A0%EC%B6%94%20%EC%A7%84%EB%8B%A8",
+  );
+
+  expect(
+    JSON.parse(
+      sessionStorage.getItem("cropy:history-view") ?? "{}",
+    ),
+  ).toEqual({
+    crop: "",
+    grade: "",
+    page: 1,
+    scrollY: 640,
+  });
+});

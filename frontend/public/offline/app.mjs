@@ -567,44 +567,22 @@ $('file').addEventListener('change',()=>{
   setBusy(busy);
 });
 $('diagnose').addEventListener('click',diagnose);$('refine').addEventListener('click',refine);
-// 고른 사진과 미리보기를 내린다.
-// 결과는 진단 결과 화면에 남는다.
-function resetPhoto() {
-  selected = null;
-  $('file').value = '';
-
-  if (previewUrl) URL.revokeObjectURL(previewUrl);
-  previewUrl = null;
-
-  $('preview').classList.add('hidden');
-  savedId = null;
-  setBusy(busy);
+// 고른 사진과 미리보기를 내린다 (진단을 마쳤거나 새 사진으로 진단하기). 결과는 진단 결과 화면에 남는다
+function resetPhoto(){
+  selected=null;$('file').value='';if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=null;$('preview').classList.add('hidden');
+  savedId=null;setBusy(busy);
 }
-
-// 새 사진으로 진단하기·빈 결과의 새 진단 시작하기:
-// 새 진단 화면으로 가서 사진 고르기를 연다.
-// 준비된 모델이 없으면 route가 준비 화면으로 보낸다.
-function startNew() {
-  if (busy) return;
-
-  resetPhoto();
-  notice('new', null);
-  go('new');
-
-  if (view === 'new') $('file').click();
+// 새 사진으로 진단하기·빈 결과의 새 진단 시작하기: 새 진단 화면으로 가서 사진 고르기를 연다.
+// 준비된 모델이 없으면 route 가 준비 화면으로 보낸다
+function startNew(){
+  if(busy)return;
+  resetPhoto();notice('new',null);go('new');
+  if(view==='new')$('file').click();
 }
-
-$('new-photo').addEventListener('click', startNew);
-$('empty-new').addEventListener('click', startNew);
-
-// 새 진단 탭을 다시 누르면 진단 실패 카드를 닫는다.
-for (const link of document.querySelectorAll('[data-nav="new"]')) {
-  link.addEventListener('click', () => {
-    if (!busy && view === 'new' && notices.new) {
-      notice('new', null);
-    }
-  });
-}
+$('new-photo').addEventListener('click',startNew);$('empty-new').addEventListener('click',startNew);
+// 새 진단 화면에서 새 진단 탭을 다시 누르면 떠 있던 진단 실패 카드를 닫는다 (같은 # 이라 hashchange 가 없어도 notice 가 다시 그린다).
+// 다른 탭에서 돌아올 때는 아직 보지 못한 실패 카드를 그대로 보인다
+for(const link of document.querySelectorAll('[data-nav="new"]'))link.addEventListener('click',()=>{if(!busy&&view==='new'&&notices.new)notice('new',null);});
 $('speak').addEventListener('click',()=>{
   if(!current||!('speechSynthesis'in window)){ say('음성 안내를 사용할 수 없어요.');return; }
   const voice=speechSynthesis.getVoices().find(v=>v.localService&&v.lang.startsWith('ko'));
