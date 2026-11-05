@@ -206,6 +206,35 @@ def test_script_uncertain_disease_defers_to_extension_center():
     assert not any("농약" in line or "첫째" in line for line in lines)
 
 
+def test_script_low_confidence_status_alone_still_defers():
+    # 상태만 low_confidence이고 사유 목록이 빈 기록도 단정하거나 농약을 읽지 않는다
+    lines = build_script(_result(decision_status="low_confidence", decision_reasons=[]))
+    assert "확실하지 않아요" in lines[0]
+    assert lines[-1] == "방제하기 전에 가까운 농업기술센터에 확인해 보세요."
+    assert not any("농약" in line or "첫째" in line for line in lines)
+
+
+@pytest.mark.parametrize("reasons", [["confusion"], []])
+def test_script_confusion_without_recapture_guidance_asks_for_another_photo(reasons):
+    # 후보를 가리지 못한 상태인데 저장된 재촬영 안내가 없으면, 방제 대신 일반 재촬영 안내를 읽는다
+    lines = build_script(_result(decision_status="confusion", decision_reasons=reasons, recapture=None))
+    assert "확실하지 않아요" in lines[0]
+    assert lines[-1] == "정확히 가리려면 병든 부위가 잘 보이게 사진을 한 장 더 찍어 주세요."
+    assert not any("농약" in line or "첫째" in line or "농업기술센터" in line for line in lines)
+
+
+@pytest.mark.parametrize("field", ["status", "reasons"])
+def test_script_reads_crop_mismatch_and_not_crop_from_either_field(field):
+    def judged(state):
+        return dict(decision_status=state, decision_reasons=[]) if field == "status" \
+            else dict(decision_status="disease", decision_reasons=[state])
+
+    mismatch = build_script(_result(selected_crop="배추", predicted_crop="고추", **judged("crop_mismatch")))
+    assert mismatch[0].startswith("선택하신 작물은 배추인데") and len(mismatch) == 2
+    not_crop = build_script(_result(prevention=[], **judged("not_crop")))
+    assert not_crop == ["사진에서 작물 잎을 찾지 못했어요.", "잎이 잘 보이게 다시 찍어 주세요."]
+
+
 def test_script_healthy_crop_gives_tips_without_pesticides():
     lines = build_script(_result(disease_name="고추 정상", category="normal", confidence=0.9))
     assert lines[0] == "고추는 건강한 상태로 보여요."

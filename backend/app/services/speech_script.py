@@ -228,17 +228,22 @@ def build_script(result: DiagnoseResponse) -> list[str]:
 
     판단은 화면과 같은 decision_status·decision_reasons를 따른다. 임계값을 여기서 다시
     계산하면 서버 설정(LOW_CONFIDENCE_THRESHOLD)과 음성의 단정 수준이 어긋난다.
+    서버(decision.decision)는 상태를 항상 사유의 첫 항목으로 두고, 혼동(confusion)은 재촬영
+    안내와 함께 저장한다. 그래도 음성은 방제를 단정해 읽으므로 둘 중 한쪽만 확실하지 않다고
+    해도 확실하지 않은 쪽으로 읽는다.
     """
     is_normal = result.category == "normal"
-    reasons = result.decision_reasons
-    uncertain = "low_confidence" in reasons
+    states = {result.decision_status, *result.decision_reasons}
+    # 재촬영 안내 없이 혼동만 남은 기록도 후보를 가리지 못한 상태다
+    confused_without_guidance = "confusion" in states and not result.recapture
+    uncertain = "low_confidence" in states or confused_without_guidance
     lines: list[str] = []
 
     if result.prediction_mode == "mock":
         lines.append("지금은 시험용 결과예요. 실제 진단이 아니에요.")
 
     # 작물 잎으로 알아볼 수 없으면 병명도 작물도 말하지 않고 다시 찍는 방법만 알린다
-    if result.decision_status == "not_crop" or result.category == "other":
+    if "not_crop" in states or result.category == "other":
         lines.append("사진에서 작물 잎을 찾지 못했어요.")
         tips = _actions(result)
         if tips:
@@ -250,7 +255,7 @@ def build_script(result: DiagnoseResponse) -> list[str]:
 
     # 고른 작물과 사진 속 작물이 다르면 진단 전체가 의심스럽다. 정상 단정·방제 안내 없이
     # 작물 확인부터 요청한다
-    if "crop_mismatch" in reasons or result.crop_mismatch:
+    if "crop_mismatch" in states or result.crop_mismatch:
         selected = result.selected_crop or result.crop_type or "선택하신 작물"
         predicted = result.predicted_crop or "다른 작물"
         lines.append(f"선택하신 작물은 {selected}인데, 사진은 {predicted} 잎으로 보여요.")
@@ -263,6 +268,10 @@ def build_script(result: DiagnoseResponse) -> list[str]:
     if result.recapture:
         lines.append("정확히 가리려면 사진을 한 장 더 찍어 주세요.")
         lines.append(result.recapture.instruction)
+        return [normalize_for_tts(line) for line in lines]
+
+    if confused_without_guidance:
+        lines.append("정확히 가리려면 병든 부위가 잘 보이게 사진을 한 장 더 찍어 주세요.")
         return [normalize_for_tts(line) for line in lines]
 
     if not is_normal and uncertain:
