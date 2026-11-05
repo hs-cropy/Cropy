@@ -14,6 +14,9 @@ services:
     environment:
       DATABASE_URL: sqlite:////data/cropcare.db
       UPLOAD_DIR: /data/uploads
+      # scripts/backup_db.py의 기본 백업 위치. 이미지 안(/app/backups)에 두면 컨테이너를
+      # 다시 만들 때 정기 백업과 복원 직전 안전 백업이 함께 사라진다
+      BACKUP_ROOT: /backups
       ML_MODEL_PATH: /models/best_model.pth
       OFFLINE_BUNDLE_DIR: /offline-assets
       MAX_UPLOAD_MB: "100"
@@ -32,6 +35,9 @@ services:
       - ./frontend/public/offline-assets:/offline-assets:ro
       # SQLite 파일과 업로드 이미지 — 컨테이너를 다시 만들어도 보존된다
       - cropcare-data:/data
+      # 백업 — 데이터와 따로 둬서 백업 볼륨만 서버 밖으로 옮기기 쉽게 한다
+      # (docs/operations/BACKUP_RESTORE.md)
+      - cropcare-backups:/backups
     expose:
       - "8000"
     healthcheck:
@@ -61,3 +67,4 @@ services:
 
 volumes:
   cropcare-data:
+  cropcare-backups:
