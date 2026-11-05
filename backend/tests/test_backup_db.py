@@ -1384,3 +1384,130 @@ def test_db_inside_upload_folder_is_rejected_before_restoring(live, snapshot_to_
     with pytest.raises(BackupError, match="업로드 폴더 안"):
         restore(snapshot_to_restore, nested_db, upload_dir, apply=True)
     assert _snapshot(nested_db, upload_dir) == before
+
+
+# ---- restore: 저널·하드링크·동시 실행 ----
+
+
+@pytest.mark.parametrize("db_name", ["cropcare.db", "app.db"])
+def test_restoring_a_safety_backup_keeps_commits_only_in_its_wal(live, tmp_path, db_name):
+    # 3차 리뷰 1: 안전 백업의 -wal에만 있는 커밋이 DB 본체만 복사하는 복원에서 조용히 사라졌다.
+    # DB 이름이 cropcare.db가 아니면 저널이 원래 이름으로 저장돼 아예 인식되지 않았다.
+    _, upload_dir, root = live
+    db_path = tmp_path / "current" / db_name
+    if db_name != "cropcare.db":
+        shutil.copy2(live[0], db_path)
+    _use_wal(db_path)
+    holder = sqlite3.connect(str(db_path))
+    holder.execute("PRAGMA wal_autocheckpoint=0")
+    holder.execute("INSERT INTO marker (value) VALUES ('only-in-wal')")
+    holder.commit()
+    try:
+        safety_dir = root / "pre_restore_test"
+        safety_dir.mkdir(parents=True)
+        backup_db._safety_backup(db_path, upload_dir, safety_dir)
+    finally:
+        holder.close()
+    assert (safety_dir / "cropcare.db-wal").stat().st_size > 0
+
+    restore(safety_dir, db_path, upload_dir, apply=True)
+
+    with closing(sqlite3.connect(str(db_path))) as conn:
+        assert {row[0] for row in conn.execute("SELECT value FROM marker")} == {"original", "only-in-wal"}
+    assert (safety_dir / "cropcare.db-wal").stat().st_size > 0  # 복원 입력은 바뀌지 않는다
+    assert not list(db_path.parent.glob(".restore-*"))
+
+
+def test_safety_backup_with_a_hot_rollback_journal_is_checked_and_restored(live):
+    # 4차 리뷰 2: 강제 종료로 남은 rollback 저널을 그대로 열어 검사하면 SQLite가 되돌리려다
+    # 읽기 전용 오류를 내, 복구할 수 있는 안전 백업을 미리보기 단계에서 거부했다
+    db_path, upload_dir, root = live
+    crash = (
+        "import os, sqlite3, sys\n"
+        "c = sqlite3.connect(sys.argv[1], isolation_level=None)\n"
+        "c.execute('PRAGMA journal_mode=DELETE')\n"
+        "c.execute('CREATE TABLE filler (v TEXT)')\n"
+        "c.execute('PRAGMA cache_size=1')\n"  # 바뀐 페이지를 DB 파일에 내보내 진짜 hot journal을 만든다
+        "c.execute('BEGIN')\n"
+        "c.execute(\"UPDATE marker SET value='uncommitted'\")\n"
+        "c.executemany('INSERT INTO filler VALUES (?)', [('x' * 500,)] * 2000)\n"
+        "os._exit(1)\n"
+    )
+    assert subprocess.run([sys.executable, "-c", crash, str(db_path)], check=False).returncode == 1  # 의도한 강제 종료
+    assert (db_path.parent / "cropcare.db-journal").stat().st_size > 0
+    safety_dir = root / "pre_restore_crash"
+    safety_dir.mkdir(parents=True)
+    backup_db._safety_backup(db_path, upload_dir, safety_dir)
+    before = _file_hashes(safety_dir)
+
+    assert restore(safety_dir, db_path, upload_dir, apply=False)["applied"] is False
+    restore(safety_dir, db_path, upload_dir, apply=True)
+
+    assert _read_marker(db_path) == "original"  # 커밋되지 않은 변경은 저널로 되돌려졌다
+    assert _file_hashes(safety_dir) == before  # 복원 입력(저널 포함)은 바뀌지 않는다
+    assert (safety_dir / "cropcare.db-journal").stat().st_size > 0
+
+
+def test_restored_uploads_are_independent_of_incremental_backup(live, tmp_path):
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "b1")
+    backup(db_path, upload_dir, root / "b2")  # a.jpg는 b1과 하드링크로 연결될 수 있다
+
+    target_uploads = tmp_path / "restored" / "uploads"
+    restore(root / "b2", tmp_path / "restored" / "cropcare.db", target_uploads, apply=True)
+    (target_uploads / "a.jpg").write_bytes(b"edited-after-restore")
+
+    assert (root / "b1" / "uploads" / "a.jpg").read_bytes() == b"photo-a"
+    assert (root / "b2" / "uploads" / "a.jpg").read_bytes() == b"photo-a"
+
+
+@pytest.fixture
+def two_backup_folders(live, tmp_path):
+    """같은 운영 데이터를 서로 다른 백업 폴더에 다른 시점으로 백업해 둔다. (A, B)."""
+    db_path, upload_dir, _ = live
+    a = tmp_path / "backups-a" / "a"
+    backup(db_path, upload_dir, a)
+    with closing(sqlite3.connect(str(db_path))) as conn:
+        conn.execute("UPDATE marker SET value = 'second'")
+        conn.commit()
+    (upload_dir / "c.jpg").write_bytes(b"photo-c")
+    b = tmp_path / "backups-b" / "b"
+    backup(db_path, upload_dir, b)
+    return a, b
+
+
+def test_restores_from_different_backup_folders_never_mix_db_and_photos(live, two_backup_folders, monkeypatch):
+    # 5차 리뷰: 백업 폴더만 잠그면, 다른 폴더의 백업으로 같은 운영 데이터를 복원하는 두 작업이 동시에
+    # 돌아 한쪽 사진과 다른 쪽 DB가 섞였다(둘 다 성공으로 끝났다). 운영 DB·업로드도 잠근다
+    db_path, upload_dir, _ = live
+    a, b = two_backup_folders
+    with _PausedJob(monkeypatch, "_safety_backup", lambda: restore(a, db_path, upload_dir, apply=True)) as first:
+        with pytest.raises(BackupError, match="실행 중"):
+            restore(b, db_path, upload_dir, apply=True)
+
+    assert first.result["applied"] is True
+    assert _read_marker(db_path) == "original"
+    assert sorted(path.name for path in upload_dir.iterdir() if path.is_file()) == ["a.jpg", "b.jpg"]
+
+
+def test_backup_and_restore_on_the_same_data_never_overlap_across_folders(live, two_backup_folders, monkeypatch):
+    db_path, upload_dir, _ = live
+    a, b = two_backup_folders
+    with _PausedJob(monkeypatch, "_snapshot_db", lambda: backup(db_path, upload_dir, a.parent / "a2")):
+        with pytest.raises(BackupError, match="실행 중"):
+            restore(b, db_path, upload_dir, apply=True)
+    with _PausedJob(monkeypatch, "_safety_backup", lambda: restore(a, db_path, upload_dir, apply=True)):
+        with pytest.raises(BackupError, match="실행 중"):
+            run_backup(db_path, upload_dir, b.parent / "b2", keep=0)
+    assert _read_marker(db_path) == "original"
+
+
+def test_restore_apply_waits_for_no_backup_on_the_same_folder(live, monkeypatch):
+    # 4차 리뷰 1: 백업이 도는 동안 같은 백업 폴더의 복원은 기다리지 않고 실패한다. 미리보기는 쓰지 않으므로 된다
+    db_path, upload_dir, root = live
+    good = root / "good"
+    backup(db_path, upload_dir, good)
+    with _PausedJob(monkeypatch, "_snapshot_db", lambda: backup(db_path, upload_dir, root / "b2")):
+        with pytest.raises(BackupError, match="실행 중"):
+            restore(good, db_path, upload_dir, apply=True)
+        assert restore(good, db_path, upload_dir, apply=False)["applied"] is False
