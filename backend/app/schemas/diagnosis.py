@@ -119,6 +119,13 @@ class DiagnoseResponse(TimestampedResponse):
     recovery_token: str | None = Field(None, description="저장 실패 시 /api/v1/results/{token}/save에 사용할 토큰")
 
 
+class SpeechScript(BaseModel):
+    """음성으로 읽어줄 문장. TTS 서버가 없을 때 프론트가 브라우저 음성으로 읽는 데도 쓴다."""
+
+    sentences: list[str]
+    text: str
+
+
 class DiagnosisSummary(TimestampedResponse):
     id: str
     disease_name: str

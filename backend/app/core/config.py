@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     tts_engine: Literal["off", "mock", "http"] = "off"
     tts_server_url: str = "http://127.0.0.1:8100"
     tts_timeout_seconds: float = Field(default=60, gt=0)
+    # 대기와 합성을 합친 응답 시간 상한. Next.js 프록시 제한(약 30초)보다 짧게 둬서, 늦으면
+    # 프록시 오류 대신 503을 보내 프론트가 브라우저 음성으로 읽게 한다. 합성은 계속돼 캐시에 남는다
+    tts_response_budget_seconds: float = Field(default=20, gt=0, le=300)
     # 캐시 wav 최대 개수(0이면 제한 없음). 오래 안 쓴 파일부터 지운다
     tts_cache_max_files: int = Field(default=500, ge=0)
     # 캐시 키에 들어간다. 학습한 목소리로 바꾸면 이 값도 바꿔야 옛 음성이 재사용되지 않는다
