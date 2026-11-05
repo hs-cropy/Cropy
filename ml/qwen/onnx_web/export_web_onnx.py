@@ -97,6 +97,8 @@ def float_name(quant_base):
 
 
 def rows_for(name, form, ckpt, key):
+    if form == "T" and name != "model.embed_tokens.weight":
+        return np.ascontiguousarray(ckpt.get(key), dtype=np.float32)  # transpose then MatMulNBits rows = the HF matrix itself
     x = W.apply(form, ckpt.get(key), config)
     return x if name == "model.embed_tokens.weight" else W.matmul_rows(x)  # Gather rows are already [V, K]
 
@@ -139,7 +141,7 @@ def fill_graph(src, dst):
                 rows = rows_for(name, form, base, key)
                 if rows.shape[0] != osc.shape[0] or rows.shape[1] != osc.shape[1] * W.BLOCK:
                     continue
-                res = W.check_quant_layout(rows, oq, osc, ozp)
+                res = W.check_quant_layout_chunked(rows, oq.reshape(osc.shape[0], -1), osc, ozp)
                 if res["same_bytes"] >= 0.98 and res["same_zero_points"] >= 0.98:
                     hit = (key, form, res)
                     break
@@ -148,7 +150,8 @@ def fill_graph(src, dst):
         assert hit, f"{src.name}: {name}의 양자화 값이 기본 모델과 맞지 않습니다"
         worst["quant_bytes"] = min(worst["quant_bytes"], hit[2]["same_bytes"])
         worst["quant_zp"] = min(worst["quant_zp"], hit[2]["same_zero_points"])
-        packed, scales, zp = W.quantize_blockwise(rows_for(name, hit[1], ours, hit[0]), W.BLOCK, osc.dtype)
+        del rows
+        packed, scales, zp = W.quantize_chunked(rows_for(name, hit[1], ours, hit[0]), W.BLOCK, osc.dtype)
         arrays[qb + "_quant"] = packed.reshape(oq.shape)
         arrays[qb + "_scales"] = scales.reshape(osc.shape)
         arrays[qb + "_zp"] = zp.reshape(ozp.shape)

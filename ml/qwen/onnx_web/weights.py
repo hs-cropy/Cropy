@@ -179,3 +179,25 @@ def check_quant_layout(w_rows, official_packed, official_scales, official_zp, bl
                 same_zero_points=round(float(np.mean(zp == official_zp.reshape(zp.shape))), 4),
                 scale_rel_diff=float(np.max(np.abs(scales - official_scales.astype(np.float32).reshape(scales.shape)) / np.maximum(scales, 1e-12))),
                 ours_err=float(np.mean(np.abs(deq_ours - w_rows))), official_err=float(np.mean(np.abs(deq_official - w_rows))))
+
+
+def quantize_chunked(w_rows, block=BLOCK, scale_dtype=np.float32, chunk=16384):
+    """quantize_blockwise in row chunks so the 248,320-row embedding / lm_head fit in a few GB of RAM."""
+    parts = [quantize_blockwise(w_rows[i:i + chunk], block, scale_dtype) for i in range(0, w_rows.shape[0], chunk)]
+    return tuple(np.concatenate([p[k] for p in parts]) for k in range(3))
+
+
+def check_quant_layout_chunked(w_rows, official_packed, official_scales, official_zp, block=BLOCK, chunk=16384):
+    """check_quant_layout over row chunks; agreement rates are row-weighted means."""
+    n = w_rows.shape[0]
+    acc = dict(same_bytes=0.0, same_zero_points=0.0, scale_rel_diff=0.0, ours_err=0.0, official_err=0.0)
+    for i in range(0, n, chunk):
+        j = min(n, i + chunk)
+        r = check_quant_layout(w_rows[i:j], official_packed[i:j], official_scales[i:j], official_zp[i:j], block)
+        w = (j - i) / n
+        for k in ("same_bytes", "same_zero_points", "ours_err", "official_err"):
+            acc[k] += r[k] * w
+        acc["scale_rel_diff"] = max(acc["scale_rel_diff"], r["scale_rel_diff"])
+    acc["same_bytes"] = round(acc["same_bytes"], 4)
+    acc["same_zero_points"] = round(acc["same_zero_points"], 4)
+    return acc
