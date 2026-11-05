@@ -5,6 +5,9 @@ import json
 import os
 import shutil
 import sqlite3
+import subprocess
+import sys
+import time
 from contextlib import closing
 from pathlib import Path
 
@@ -12,6 +15,7 @@ import pytest
 
 from scripts import backup_db
 from scripts.backup_db import (
+    LOCK_FILE_NAME,
     BackupError,
     UnsupportedDatabaseUrlError,
     sqlite_path_from_url,
@@ -350,3 +354,97 @@ def test_photo_created_after_the_copy_fails_the_check(live, tmp_path):
     _write_draft(out / "uploads" / ".pending", "late", "late.jpg")
     with pytest.raises(BackupError, match="서비스를 멈추고"):
         backup_db._check_references(out, upload_dir)
+
+
+# ---- 작업 잠금·디스크 동기화 ----
+
+
+def test_a_held_lock_fails_the_next_job_immediately(tmp_path):
+    lock = tmp_path / "backups" / LOCK_FILE_NAME
+    with backup_db._lock_file(lock):
+        with pytest.raises(BackupError, match="실행 중"):
+            with backup_db._lock_file(lock):
+                pass
+    with backup_db._lock_file(lock):  # 작업이 끝나면 풀린다
+        pass
+
+
+def test_a_lock_held_by_a_killed_process_is_released(tmp_path):
+    # OS 잠금이라 작업이 강제 종료돼도 남은 잠금 파일 때문에 다음 작업이 막히지 않는다
+    lock = tmp_path / "backups" / LOCK_FILE_NAME
+    holder = subprocess.Popen(
+        [sys.executable, "-c",
+         "import sys, time\n"
+         "from pathlib import Path\n"
+         "from scripts import backup_db\n"
+         "with backup_db._lock_file(Path(sys.argv[1])):\n"
+         "    print('locked', flush=True)\n"
+         "    time.sleep(60)\n",
+         str(lock)],
+        cwd=Path(backup_db.__file__).resolve().parent.parent, stdout=subprocess.PIPE, text=True)
+    try:
+        assert holder.stdout.readline().strip() == "locked"
+        with pytest.raises(BackupError, match="실행 중"):
+            with backup_db._lock_file(lock):
+                pass
+    finally:
+        holder.kill()
+        holder.wait(10)
+        holder.stdout.close()
+    # Windows는 강제 종료된 프로세스의 잠금을 종료 직후가 아니라 조금 뒤에 풀 수 있다
+    deadline = time.monotonic() + 10
+    while True:
+        try:
+            with backup_db._lock_file(lock):
+                break
+        except BackupError:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.05)
+
+
+def test_a_failed_lock_releases_the_locks_already_taken(tmp_path):
+    # 잠금 세 개 중 뒤의 것을 못 잡으면 앞서 잡은 백업 폴더·DB 잠금도 풀려야 다음 작업이 돈다
+    root, db_path, upload_dir = tmp_path / "backups", tmp_path / "data" / "cropcare.db", tmp_path / "data" / "uploads"
+    upload_lock = upload_dir.parent / f".{upload_dir.name}{LOCK_FILE_NAME}"
+    with backup_db._lock_file(upload_lock):
+        with pytest.raises(BackupError, match="실행 중"):
+            with backup_db._exclusive(root, db_path, upload_dir):
+                pass
+        with backup_db._lock_file(root / LOCK_FILE_NAME), \
+                backup_db._lock_file(db_path.parent / f".{db_path.name}{LOCK_FILE_NAME}"):
+            pass
+    with backup_db._exclusive(root, db_path, upload_dir):
+        pass
+    # 업로드 폴더는 복원 때 통째로 바뀌므로 잠금 파일은 폴더 안이 아니라 옆에 있다
+    assert not upload_dir.exists() and upload_lock.exists()
+
+
+def test_manifest_is_published_atomically_after_the_files_are_synced(tmp_path, monkeypatch):
+    out = tmp_path / "b1"
+    (out / "uploads" / "nested").mkdir(parents=True)
+    (out / "cropcare.db").write_bytes(b"db")
+    (out / "uploads" / "nested" / "a.jpg").write_bytes(b"a")
+    synced = []
+    real_fsync = backup_db._fsync
+    monkeypatch.setattr(backup_db, "_fsync", lambda path: (synced.append(Path(path)), real_fsync(path))[1])
+
+    backup_db._sync_tree(out)
+    assert {out / "cropcare.db", out / "uploads" / "nested" / "a.jpg"} <= set(synced)
+    backup_db._write_manifest(out, {"kind": "backup"})
+
+    assert json.loads((out / "manifest.json").read_text(encoding="utf-8")) == {"kind": "backup"}
+    assert not list(out.glob(".manifest-*.tmp"))
+
+
+def test_failed_manifest_publish_leaves_no_partial_manifest(tmp_path, monkeypatch):
+    out = tmp_path / "b1"
+    out.mkdir()
+
+    def disk_full(*args, **kwargs):
+        raise OSError("No space left on device")
+
+    monkeypatch.setattr(backup_db.os, "replace", disk_full)
+    with pytest.raises(OSError):
+        backup_db._write_manifest(out, {"kind": "backup"})
+    assert list(out.iterdir()) == []

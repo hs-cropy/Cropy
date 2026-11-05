@@ -16,6 +16,14 @@ Settings 기본값과 맞춰뒀다.
     참조하는 사진이 백업에 모두 있는지 확인한다. 운영 폴더에는 있는데 백업에 없으면
     백업 도중 생긴 파일이므로 실패한다. 운영 폴더에도 없는 참조(예전부터 없던 사진)는
     manifest에 개수만 기록한다.
+같은 백업 폴더나 같은 운영 DB·업로드를 쓰는 백업·보관 정리·복원(--apply)은 작업 잠금
+(백업 폴더 안과 DB·업로드 폴더 옆의 .cropy-backup.lock 파일)으로 한 번에 하나만 돈다.
+이미 실행 중이면 기다리지 않고 실패하므로, 정기 실행이 겹쳐도 앞 작업을 망가뜨리지 않는다.
+업로드 정리(cleanup_uploads.py)와는 잠금을 공유하지 않으니 운영 절차로 겹치지 않게 한다.
+완료 표시(manifest)는 백업 파일을 저장장치에 내린(fsync) 뒤 원자적으로 쓰고, 보관 정리는 그 뒤에
+한다. 실제 보장은 파일시스템·저장장치에 달려 있고, 윈도에서는 폴더 항목까지는 내리지 못한다.
+실행 계정은 원본을 읽을 권한 외에 백업 폴더와 DB·업로드 폴더의 부모에 잠금
+파일을 만들 권한이 있어야 한다(없으면 잠금 없이 진행하지 않고 실패한다).
 WAL 모드에서는 최근 커밋이 cropcare.db-wal에 있으므로 DB 파일만 복사하는 수동 백업은
 쓰지 않는다(이 스크립트는 SQLite 백업 API로 WAL 내용까지 담는다).
 """
@@ -28,9 +36,17 @@ import stat
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
+from uuid import uuid4
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
 
 # 앱이 DB에 쓰는 중이면 쓰기 잠금을 이 시간까지 기다린다.
 LOCK_TIMEOUT_SECONDS = 10
+# 백업 폴더에 두는 작업 잠금 파일. 같은 폴더의 백업·보관 정리·복원이 동시에 돌지 않게 한다.
+LOCK_FILE_NAME = ".cropy-backup.lock"
 
 
 class UnsupportedDatabaseUrlError(ValueError):
@@ -252,3 +268,86 @@ def _check_integrity(db_path: Path) -> None:
         raise BackupError(f"DB 무결성 검사 실패 ({result}): {db_path}")
     if violation is not None:
         raise BackupError(f"DB 외래 키 위반이 있습니다 (테이블 {violation[0]}): {db_path}")
+
+
+@contextmanager
+def _lock_file(path: Path):
+    """잠금 파일 하나에 OS 잠금을 건다. 이미 잠겨 있으면 기다리지 않고 바로 실패한다.
+
+    OS 잠금이라 프로세스가 죽으면 저절로 풀린다(잠금 파일은 남아도 된다).
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = open(path, "a+b")
+    locked = False
+    try:
+        try:
+            if os.name == "nt":
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            locked = True
+        except OSError as exc:
+            raise BackupError(f"같은 운영 데이터나 백업 폴더를 쓰는 다른 백업·복원이 실행 중입니다. "
+                              f"끝난 뒤 다시 실행하세요 (잠금: {path})") from exc
+        yield
+    finally:
+        if locked and os.name == "nt":
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        handle.close()
+
+
+@contextmanager
+def _exclusive(backup_root: Path, db_path: Path, upload_dir: Path):
+    """같은 백업 폴더나 같은 운영 DB·업로드를 쓰는 백업·보관 정리·복원이 동시에 돌지 않게 한다.
+
+    백업 폴더만 잠그면, 다른 폴더의 백업으로 같은 운영 데이터를 복원하는 두 작업이 동시에 돌아
+    한쪽의 사진과 다른 쪽의 DB가 섞인다(예외 없이 끝나 되돌리기로도 잡히지 않는다). 그래서 운영
+    DB와 업로드도 각각 잠근다. 복원은 업로드 폴더를 통째로 바꾸므로 잠금 파일은 폴더 옆에 둔다.
+    정기 실행이 겹쳐도 기다리지 않고 바로 실패한다.
+    """
+    with (_lock_file(backup_root / LOCK_FILE_NAME),
+          _lock_file(db_path.parent / f".{db_path.name}{LOCK_FILE_NAME}"),
+          _lock_file(upload_dir.parent / f".{upload_dir.name}{LOCK_FILE_NAME}")):
+        yield
+
+
+def _fsync(path: Path) -> None:
+    """파일이나 폴더 항목을 저장장치에 내린다. 폴더는 POSIX에서만 열 수 있어 그 밖에서는 건너뛴다."""
+    if path.is_dir():
+        if os.name == "nt":
+            return
+        fd = os.open(path, os.O_RDONLY)
+    else:
+        # 윈도에서는 쓰기 권한으로 연 핸들만 디스크에 내릴 수 있다
+        fd = os.open(path, (os.O_RDWR | os.O_BINARY) if os.name == "nt" else os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _sync_tree(root: Path) -> None:
+    """완료 표시를 쓰기 전에 백업 안의 파일과 폴더를 모두 저장장치에 내린다.
+
+    복사가 끝났다고 디스크에 기록된 것은 아니다. 내리지 않은 채 보관 정리로 이전 백업을 지우고
+    전원이 끊기면 새 백업과 이전 백업을 함께 잃을 수 있다. 실제 보장은 파일시스템에 달려 있다.
+    """
+    for directory, _, files in os.walk(root):
+        for name in files:
+            _fsync(Path(directory) / name)
+        _fsync(Path(directory))
+
+
+def _write_manifest(directory: Path, manifest: dict) -> None:
+    """완료 표시를 남긴다. 임시 이름에 쓰고 저장장치에 내린 뒤 이름을 바꿔, 반쯤 쓴 manifest가 남지 않게 한다."""
+    temporary = directory / f".manifest-{uuid4().hex}.tmp"
+    try:
+        temporary.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        _fsync(temporary)
+        os.replace(temporary, directory / "manifest.json")
+    finally:
+        temporary.unlink(missing_ok=True)
+    _fsync(directory)
+    _fsync(directory.parent)
