@@ -1,0 +1,134 @@
+# STT 서버 — 농가 음성 질문을 글자로
+
+마이크로 받은 한국어 질문을 글자로 바꾸는 음성 인식 서버입니다. 결과 문장은 Qwen 기능 선택 모델의 입력이 됩니다.
+**sherpa-onnx**(실행 엔진) 위에서 **SenseVoice-Small int8**(사전학습, 별도 학습 없음)을 CPU로 돌립니다.
+
+```
+마이크 wav ──▶ POST /transcribe
+                 ① 16kHz 모노로 변환
+                 ② VAD(silero)로 말소리 구간만 자름 — 앞뒤 무음·잡음 구간을 인식하지 않음
+                 ③ SenseVoice 인식
+                 ④ 농업 용어 보정 (lexicon.py, terms.txt) — "탄접병" → "탄저병"
+              ◀── {"text": "고추 탄저병에 쓸 약 알려 줘.", ...}
+```
+
+PyTorch가 필요 없어 설치가 가볍고, ARM64 리눅스(오렌지파이) 휠도 있습니다. TTS 서버(`tts/`)와 같은 방식으로
+별도 가상환경에서 띄우고 백엔드는 HTTP로만 부릅니다.
+
+## 왜 이 조합인가 (2026-11-05 PC 비교)
+
+Windows 한국어 합성 음성 16문장 + 백색 잡음, PC CPU int8. CER = 글자 오류율.
+
+| 엔진 | 조용 | 잡음 SNR 10dB | 잡음 SNR 5dB | 속도(RTF) |
+|---|---|---|---|---|
+| **SenseVoice (sherpa-onnx)** | 6.0% | **22.3%** | **35.9%** | **0.032** |
+| faster-whisper small | 5.4% | 29.3% | 59.8% | 0.78 |
+| faster-whisper small + 용어 힌트 | 2.7% | 31.5% | 56.5% | 0.66 |
+| 한국어 Zipformer (sherpa-onnx) | 14.1% | 69.0% | 83.7% | 0.016 |
+
+- SenseVoice가 잡음에 가장 강하고 Whisper small보다 약 25배 빠릅니다.
+- Whisper에 용어 힌트를 넣으면 잡음 속에서 "무름병 무름병 무름병"처럼 **없는 병명을 지어냅니다**.
+- SenseVoice는 병명을 비슷한 소리로 틀리게 적는 일이 많아(탄접병·무음병·휘석) 용어 보정을 붙였습니다.
+  이 서버로 같은 16문장을 다시 넣었을 때 보정 전→후 CER: 조용 6.0→2.7%, SNR 10dB 25.5→21.2%,
+  SNR 5dB 41.8→40.2%. 조용한 음성에서 맞는 말을 잘못 바꾼 경우는 없었습니다.
+- 합성 음성 예비 실험입니다. 실제 녹음(고령 화자·밭 소음)으로 다시 확인해야 합니다.
+
+> ⚠️ sherpa-onnx의 `sense-voice-zh-en-ja-ko-yue-int8-2025-09-09` 패키지는 광둥어 미세조정판이라 한국어를 넣으면
+> 중국어가 나옵니다. 반드시 **2024-07-17** 원본을 씁니다(`download_models.py`가 받는 파일).
+
+## 1. 설치 (처음 한 번)
+
+Python 3.11 이상.
+
+```bash
+py -3.12 -m venv stt/.venv
+```
+
+```bash
+stt/.venv/Scripts/python -X utf8 -m pip install -r stt/requirements.txt
+```
+
+모델 받기 (약 240MB, sha256 확인). 인터넷이 없는 보드에는 PC에서 받은 `stt/models/` 폴더를 그대로 복사합니다.
+
+```bash
+stt/.venv/Scripts/python stt/download_models.py
+```
+
+- `-X utf8`: 이 저장소의 requirements 파일에 한글 주석이 있어, 오래된 pip가 윈도우 기본 인코딩(cp949)으로 읽다 실패하는 것을 막습니다.
+- 리눅스·맥에서는 `stt/.venv/Scripts/python` 대신 `stt/.venv/bin/python`입니다.
+
+## 2. 실행
+
+```bash
+stt/.venv/Scripts/python -m uvicorn server:app --app-dir stt --host 127.0.0.1 --port 8200
+```
+
+오렌지파이 5에서는 큰 코어(A76, 4~7번)에 고정해 띄웁니다. NPU는 Qwen(RKLLM) 전용으로 두고 STT는 CPU에서 돕니다.
+
+```bash
+STT_THREADS=2 taskset -c 4-7 stt/.venv/bin/python -m uvicorn server:app --app-dir stt --host 127.0.0.1 --port 8200
+```
+
+동작 확인:
+
+```bash
+curl http://127.0.0.1:8200/health
+```
+
+```bash
+curl -X POST http://127.0.0.1:8200/transcribe -H "Content-Type: audio/wav" --data-binary @question.wav
+```
+
+```json
+{
+  "text": "이곳 탄저병 맞 아요.",
+  "raw_text": "이곳 탄접병 맞 아요.",
+  "corrections": [{"heard": "탄접병", "term": "탄저병"}],
+  "speech": true,
+  "audio_seconds": 2.5,
+  "elapsed_ms": 212
+}
+```
+
+- `text`: 용어 보정까지 한 결과(Qwen 입력). `raw_text`: 인식기 원문.
+- `speech: false`: 말소리가 없었음(무음·잡음만). 다시 말해 달라고 안내하면 됩니다.
+- 입력: 16비트 PCM wav(모노·스테레오, 샘플레이트 무관), 30초 이하, 6MB 이하. 그 밖에는 400·413.
+
+| 환경변수 | 기본값 | 설명 |
+|---|---|---|
+| `STT_THREADS` | `2` | 인식 스레드 수. 보드 A76 기준 값입니다. **인텔 하이브리드 CPU PC에서는 `4`로** 두세요 — 스레드가 적으면 윈도우가 효율 코어로 보내 4배 가까이 느려집니다(3.8초 음성 2스레드 약 890ms, 4스레드 약 210ms) |
+| `STT_VAD` | `1` | `0`이면 VAD 없이 전체를 인식 |
+| `STT_MODEL_DIR` | `stt/models` | 모델 폴더 |
+| `STT_TERMS` | `stt/terms.txt` | 용어 보정 사전 |
+
+## 3. 용어 보정 사전 (`terms.txt`)
+
+한글을 자모로 풀어(탄저병 → ㅌㅏㄴㅈㅓㅂㅕㅇ) 비슷한 말을 사전 단어로 바꿉니다.
+
+- 두 글자 단어는 자모 1개, 세 글자 이상은 자모 수의 1/4까지 다르면 바꿉니다.
+- 띄어쓰기를 무시하고 비교합니다("탄젖 병" → "탄저병"). 고친 곳 밖의 문장은 그대로 둡니다.
+- 정확히 맞은 단어는 그 자리를 지킵니다(맞게 들은 "배수"가 "배추"로 바뀌지 않음).
+- 일상어와 소리가 비슷한 두 글자 단어는 멀쩡한 말까지 바꿀 수 있습니다(예: 잡음 속 "대추" → "배추").
+  **실제로 틀리게 적힌 예를 본 단어만** 추가하고, 추가한 뒤 `pytest stt/tests`를 돌립니다.
+
+## 4. 테스트
+
+가짜 sherpa-onnx로 돌리므로 모델 파일 없이 실행됩니다(240MB 모델을 CI·팀원 PC마다 받지 않기 위해).
+wav 검증·변환, VAD 구간 자르기, 용어 보정, 오류 응답, 모델 파일이 없을 때 기동 실패를 확인합니다.
+용어 보정 테스트는 실제 SenseVoice가 틀리게 적은 문장을 씁니다.
+
+```bash
+stt/.venv/Scripts/python -X utf8 -m pip install -r stt/requirements-test.txt
+```
+
+```bash
+stt/.venv/Scripts/python -m pytest stt/tests
+```
+
+## 참고
+
+- 서버는 `127.0.0.1`에만 바인딩합니다. 인증이 없으니 외부에 열지 마세요.
+- 인식은 한 번에 하나씩 합니다. 보드에서 동시에 돌리면 서로 느려지고, 단말은 한 사람이 쓰기 때문입니다.
+- SenseVoice는 띄어쓰기가 불규칙합니다("맞 아요"). Qwen이 이런 문장에서도 기능을 맞게 고르는지는 아직 확인하지 않았습니다.
+- 라이선스: SenseVoice-Small은 FunASR 모델 라이선스(출처·모델명 표기 필요), sherpa-onnx는 Apache-2.0, silero VAD는 MIT.
+- 아직 할 일: 보드 실측(지연·메모리·온도), 실제 녹음 평가셋, 백엔드 연결(음성 질문 → Qwen → TTS).

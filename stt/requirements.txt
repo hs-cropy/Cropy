@@ -1,0 +1,6 @@
+# STT 서버(server.py) 전용 가상환경. PyTorch가 필요 없어 설치가 가볍다 (ARM64 리눅스 휠도 있음)
+sherpa-onnx==2.0.1
+numpy==2.5.4
+
+fastapi==0.142.2
+uvicorn[standard]==0.54.0

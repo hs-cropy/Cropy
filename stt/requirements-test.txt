@@ -1,0 +1,5 @@
+# 서버 테스트(stt/tests) 전용. 가짜 sherpa-onnx로 돌리므로 모델 없이 실행된다
+fastapi==0.142.2
+numpy==2.5.4
+httpx==0.28.1
+pytest==9.1.1
