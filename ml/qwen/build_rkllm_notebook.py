@@ -41,7 +41,7 @@ def notebook(data_sha):
 2. **준비**: 새 토큰 10개 확인, 학습 데이터에서 보정(calibration) 입력 64개, validation 전체의 프롬프트·토큰 저장, 툴킷 transformers 버전으로 float 모델 확인.
 3. **변환**: W8A8 양자화 → `.rkllm` 저장 → validation {SIM_N}건을 양자화 모델로 시뮬레이션해 float 결과(97.0%)와 비교.
 
-- 런타임: **A100 + 높은 RAM**. 메뉴 런타임 → 모두 실행. 변환은 수십 분 걸릴 수 있다.
+- 런타임: **A100 + 높은 RAM** (L4·T4도 됨). 툴킷의 torch 2.6은 최신 GPU(G4·RTX PRO 6000·B200 등 Blackwell)를 지원하지 않는다. 메뉴 런타임 → 모두 실행. 변환은 수십 분 걸릴 수 있다.
 - 결과: `cropy_qwen_v2/rkllm/` — `cropy_qwen_w8a8_rk3588.rkllm`(보드에 복사), `eval_cases.jsonl`(보드 평가 입력), `sim_w8a8_metrics.json`.
 - 끊기면 다시 모두 실행: 시뮬레이션은 이미 한 건을 건너뛰지만 변환은 처음부터 다시 한다.
 - 보드에서 돌릴 때는 `skip_special_token = false`로 해야 `<hs_4>` 같은 토큰이 지워지지 않는다.
@@ -60,6 +60,7 @@ REFERENCE = DRIVE_DIR / '{REFERENCE}'
 RKLLM_VERSION = '{RKLLM_VERSION}'
 QUANTS = {QUANTS!r}      # 정확도가 떨어지면 'w8a8_g128' 등을 추가해 비교
 SIM_N = {SIM_N}          # 양자화 모델 시뮬레이션 건수 (-1이면 validation 전체, 0이면 건너뜀)
+ALLOW_CPU = False    # GPU가 툴킷 torch 2.6과 안 맞을 때 CPU로 진행(매우 느림). 기본은 멈추고 A100으로 바꾸라고 안내
 OUT = DRIVE_DIR / 'rkllm'
 WORK = Path('/content/rk')        # 변환 중간 파일은 로컬에서 만들고 결과만 Drive로 복사
 for p in (OUT, WORK):
@@ -88,6 +89,19 @@ if not PY.exists():
     subprocess.check_call(['uv', 'pip', 'install', '--python', str(PY), str(wheel)])
 print(subprocess.run([str(PY), '-c', 'import torch, transformers, rkllm.api; print("torch", torch.__version__, "cuda", torch.cuda.is_available(), "| transformers", transformers.__version__)'],
                      capture_output=True, text=True).stdout)
+# The toolkit pins torch 2.6 (CUDA 12.4): A100·L4·T4·H100 work, newer GPUs (Blackwell: G4/RTX PRO 6000, B200) do not.
+gpu = subprocess.run([str(PY), '-c', 'import torch; x = torch.ones(4, device="cuda"); print(float((x * 2).sum()), torch.cuda.get_device_name(0), torch.cuda.get_device_capability(0))'],
+                     capture_output=True, text=True)
+if gpu.returncode == 0:
+    DEVICE = 'cuda'
+    print('GPU 사용 가능:', gpu.stdout.strip())
+elif ALLOW_CPU:
+    DEVICE = 'cpu'
+    print('이 GPU에서 torch 2.6이 돌지 않아 CPU로 진행합니다(느림, float 확인 생략).', gpu.stderr.strip().splitlines()[-1:])
+else:
+    subprocess.run(['nvidia-smi', '--query-gpu=name,compute_cap', '--format=csv'])
+    raise SystemExit('이 GPU는 툴킷의 torch 2.6이 지원하지 않습니다. 런타임 → 런타임 유형 변경에서 A100(또는 L4·T4)을 고르고 '
+                     '다시 모두 실행하세요. CPU로라도 돌리려면 첫 셀의 ALLOW_CPU = True.')
 
 def run(script, *argv):
     # Stream the script's log here; stop the notebook if it fails.
@@ -109,7 +123,7 @@ print('스크립트 복사', WORK)
         md("## 2. 준비: 토큰 확인 · 보정 데이터 · 평가 입력 · float 확인"),
         code("""
 run(WORK / 'prepare_rkllm.py', '--model-dir', LOCAL_MODEL, '--data', DATA_FILE, '--data-sha', DATA_SHA256,
-    '--out-dir', WORK, '--reference-cases', REFERENCE)
+    '--out-dir', WORK, '--reference-cases', REFERENCE, '--device', DEVICE)
 for name in ('prepare_report.json', 'data_quant.json', 'eval_cases.jsonl'):
     shutil.copy(WORK / name, OUT / name)
 report = json.loads((WORK / 'prepare_report.json').read_text())
@@ -126,7 +140,7 @@ for quant in QUANTS:
     if sim.exists():
         shutil.copy(sim, WORK / sim.name)
     run(WORK / 'convert_rkllm.py', '--model-dir', LOCAL_MODEL, '--work-dir', WORK, '--quant', quant,
-        '--sim-n', SIM_N, '--reference-cases', REFERENCE, '--device', 'cuda')
+        '--sim-n', SIM_N, '--reference-cases', REFERENCE, '--device', DEVICE)
     for f in WORK.glob(f'*{quant}*'):
         shutil.copy(f, OUT / f.name)
         print('Drive에 저장', f.name, f'{f.stat().st_size / 2**20:.1f}MB')

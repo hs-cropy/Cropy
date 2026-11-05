@@ -30,6 +30,7 @@ ap.add_argument("--out-dir", required=True)
 ap.add_argument("--reference-cases", default="", help="merge_eval/soup_*_b1_cases.jsonl (float outputs saved in Colab)")
 ap.add_argument("--calib-n", type=int, default=64)
 ap.add_argument("--float-check-n", type=int, default=64)
+ap.add_argument("--device", default="cuda", help="cpu skips the float check (slow there)")
 ap.add_argument("--seed", type=int, default=20261105)
 args = ap.parse_args()
 
@@ -104,7 +105,7 @@ report["calibration"] = dict(n=len(calib), by_function=dict(collections.Counter(
 print("보정 데이터", report["calibration"])
 
 # 4. float check under this transformers version (catches weight-name changes between versions)
-if args.float_check_n and torch.cuda.is_available():
+if args.float_check_n and args.device == "cuda":
     cls = getattr(transformers, "Qwen3_5ForConditionalGeneration", None) or transformers.AutoModelForImageTextToText
     model = cls.from_pretrained(model_dir, dtype=torch.bfloat16, device_map={"": 0}, attn_implementation="sdpa").eval()
     ref = {}
@@ -130,7 +131,7 @@ if args.float_check_n and torch.cuda.is_available():
     torch.cuda.empty_cache()
 else:
     report["float_check"] = None
-    print("GPU가 없어 float 확인을 건너뜀")
+    print("CPU로 실행해 float 확인을 건너뜀")
 
 (out / "prepare_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 print("완료", out)
