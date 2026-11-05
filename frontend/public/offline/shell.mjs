@@ -20,3 +20,10 @@ voice.addEventListener('click', () => {
   voice.setAttribute('aria-checked', String(on));
   write(VOICE_SETTING_KEY, on ? 'on' : 'off');
 });
+
+// 설치 앱은 / 에서 시작한다. 이 화면만 열어 본 기기(예전 설치 앱 등)에도 / 를 맡는 메인 워커(public/sw.js)를
+// 등록해 둬야 연결 없이 앱을 열 때 브라우저 오류 대신 기기 진단으로 넘어간다. /offline/ 아래는 범위가 더 좁은
+// /offline/sw.js가 계속 맡는다. 등록 실패는 이 화면 동작에 영향이 없으므로 무시한다
+if (window.isSecureContext && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+}
