@@ -43,8 +43,8 @@ class DiagnosisLLMInput(BaseModel):
     policy_version: str | None
     management_actions: list[str] = Field(default_factory=list)
     category: str
-    # DB의 병해 속성으로, 모델 신뢰도나 사진 기반 심각도와 구분한다.
-    severity: str
+    # DB의 병해 속성이다. 판별 불가(category other)는 None이다.
+    severity: str | None
     confidence: Probability
     top_predictions: list[LLMPredictionItem] = Field(default_factory=list)
     description: str | None = None
