@@ -26,13 +26,21 @@ Settings 기본값과 맞춰뒀다.
 파일을 만들 권한이 있어야 한다(없으면 잠금 없이 진행하지 않고 실패한다).
 WAL 모드에서는 최근 커밋이 cropcare.db-wal에 있으므로 DB 파일만 복사하는 수동 백업은
 쓰지 않는다(이 스크립트는 SQLite 백업 API로 WAL 내용까지 담는다).
+
+지원하지 않는 구성: DB 파일이 업로드 폴더 안에 있는 경우.
+
+Usage (backend 디렉터리에서):
+    # 백업 (backups/<timestamp>/ 에 생성)
+    python scripts/backup_db.py backup
 """
 
+import argparse
 import json
 import os
 import shutil
 import sqlite3
 import stat
+import sys
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -43,6 +51,12 @@ if os.name == "nt":
 else:
     import fcntl
 
+DEFAULT_DATABASE_URL = "sqlite:///./cropcare.db"
+DEFAULT_UPLOAD_DIR = "./uploads"
+BACKUP_ROOT = Path(__file__).resolve().parent.parent / "backups"
+# 이 스크립트가 만든 백업의 표시. 증분 기준과 보관 정리는 이 표시가 있는 폴더만 다룬다.
+TOOL_NAME = "cropy-backup"
+MANIFEST_FORMAT = 2
 # 앱이 DB에 쓰는 중이면 쓰기 잠금을 이 시간까지 기다린다.
 LOCK_TIMEOUT_SECONDS = 10
 # 백업 폴더에 두는 작업 잠금 파일. 같은 폴더의 백업·보관 정리·복원이 동시에 돌지 않게 한다.
@@ -69,6 +83,10 @@ def sqlite_path_from_url(database_url: str) -> Path:
             f"SQLite URL이 아닙니다 (PostgreSQL 등은 별도 도구 필요): {database_url!r}"
         )
     return Path(database_url[len(prefix):])
+
+
+def _timestamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _norm(path: Path) -> str:
@@ -351,3 +369,105 @@ def _write_manifest(directory: Path, manifest: dict) -> None:
         temporary.unlink(missing_ok=True)
     _fsync(directory)
     _fsync(directory.parent)
+
+
+def backup(db_path: Path, upload_dir: Path, out_dir: Path) -> dict:
+    """DB와 업로드 디렉터리를 out_dir 아래로 백업하고 manifest를 반환한다.
+
+    DB와 업로드 폴더가 모두 있어야 한다. 원본이 없으면 아무것도 만들지 않고 실패한다.
+    manifest는 모든 복사가 끝나고 저장장치에 내린 뒤 마지막에 쓴다. 중간에 실패하면 만든 폴더를 지운다.
+    같은 백업 폴더(out_dir의 부모)나 같은 운영 DB·업로드를 쓰는 다른 작업과는 동시에 돌지 않는다.
+    """
+    db_path, upload_dir, out_dir = _check_backup_paths(db_path, upload_dir, out_dir)
+    with _exclusive(out_dir.parent, db_path, upload_dir):
+        return _backup(db_path, upload_dir, out_dir)
+
+
+def _check_backup_paths(db_path: Path, upload_dir: Path, out_dir: Path) -> tuple[Path, Path, Path]:
+    """원본과 출력 경로를 검사해 절대 경로로 돌려준다.
+
+    작업 잠금은 백업 폴더에 잠금 파일을 만들므로, 잘못된 설정(예: 업로드 폴더 안의 백업 폴더)에서
+    아무것도 만들지 않도록 잠금보다 먼저 검사한다.
+    """
+    db_path, upload_dir, out_dir = Path(db_path).resolve(), Path(upload_dir).resolve(), Path(out_dir).resolve()
+    if not db_path.is_file():
+        raise BackupError(f"DB 파일이 없습니다. DATABASE_URL을 확인하세요: {db_path}")
+    if not upload_dir.is_dir():
+        raise BackupError(f"업로드 폴더가 없습니다. UPLOAD_DIR을 확인하세요: {upload_dir}")
+    if _is_within(db_path, upload_dir):
+        raise BackupError("DB 파일이 업로드 폴더 안에 있는 구성은 지원하지 않습니다")
+    if _overlaps(out_dir, upload_dir) or _is_within(db_path, out_dir):
+        raise BackupError("백업 폴더는 DB·업로드 폴더와 겹치지 않는 곳이어야 합니다")
+    return db_path, upload_dir, out_dir
+
+
+def _backup(db_path: Path, upload_dir: Path, out_dir: Path) -> dict:
+    db_path, upload_dir, out_dir = _check_backup_paths(db_path, upload_dir, out_dir)
+    if out_dir.exists() and any(out_dir.iterdir()):
+        raise FileExistsError(f"이미 내용이 있는 폴더에는 백업하지 않습니다: {out_dir}")
+
+    created_new = not out_dir.exists()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    manifest: dict = {
+        "tool": TOOL_NAME,
+        "format": MANIFEST_FORMAT,
+        "kind": "backup",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "source_db": str(db_path),
+        "source_uploads": str(upload_dir),
+        "db_backed_up": True,
+    }
+    try:
+        with _writes_blocked(db_path) as journal_mode:
+            manifest["journal_mode"] = journal_mode
+            _snapshot_db(db_path, out_dir / "cropcare.db")
+            manifest.update(_copy_uploads(upload_dir, out_dir / "uploads"))
+            manifest.update(_check_references(out_dir, upload_dir))
+        # 복원 검증에서 거부될 백업을 "완료"로 남기면, 보관 정리가 그 백업을 근거로 정상 백업을
+        # 지운다. 잠금을 푼 뒤(앱 쓰기를 오래 막지 않도록) 스냅샷을 복원과 같은 기준으로 검사한다.
+        _check_integrity(out_dir / "cropcare.db")
+        _sync_tree(out_dir)
+        _write_manifest(out_dir, manifest)
+    except BaseException:
+        # 작업 잠금 안이라 out_dir에는 이번 실행이 쓴 것만 있다
+        if created_new:
+            shutil.rmtree(out_dir, ignore_errors=True)
+        else:
+            for child in out_dir.iterdir():
+                shutil.rmtree(child) if child.is_dir() else child.unlink()
+        raise
+    return manifest
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--database-url", default=os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL))
+    parser.add_argument("--upload-dir", default=os.environ.get("UPLOAD_DIR", DEFAULT_UPLOAD_DIR))
+
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    backup_parser = sub.add_parser("backup", help="현재 DB·업로드를 백업한다")
+    backup_parser.add_argument("--out", type=Path, default=None, help=f"기본: {BACKUP_ROOT}/<타임스탬프>")
+
+    return parser
+
+
+def main() -> None:
+    args = _build_parser().parse_args()
+    db_path = sqlite_path_from_url(args.database_url)
+    upload_dir = Path(args.upload_dir)
+
+    try:
+        if args.command == "backup":
+            out_dir = args.out or (BACKUP_ROOT / _timestamp())
+            manifest = backup(db_path, upload_dir, out_dir)
+            print(f"백업 완료: {out_dir}")
+            print(json.dumps(manifest, ensure_ascii=False, indent=2))
+            if manifest.get("warning"):
+                print(f"경고: {manifest['warning']}", file=sys.stderr)
+    except (BackupError, FileExistsError, FileNotFoundError, sqlite3.Error, OSError) as exc:
+        sys.exit(f"{args.command} 실패 ({type(exc).__name__}): {exc}")
+
+
+if __name__ == "__main__":
+    main()

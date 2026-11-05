@@ -18,6 +18,7 @@ from scripts.backup_db import (
     LOCK_FILE_NAME,
     BackupError,
     UnsupportedDatabaseUrlError,
+    backup,
     sqlite_path_from_url,
 )
 
@@ -448,3 +449,184 @@ def test_failed_manifest_publish_leaves_no_partial_manifest(tmp_path, monkeypatc
     with pytest.raises(OSError):
         backup_db._write_manifest(out, {"kind": "backup"})
     assert list(out.iterdir()) == []
+
+
+# ---- backup ----
+
+
+def _entries(root: Path) -> list[str]:
+    """백업 폴더의 항목 이름. 작업 잠금 파일은 백업이 아니므로 뺀다."""
+    return sorted(path.name for path in root.iterdir() if path.name != LOCK_FILE_NAME)
+
+
+def _manifest(directory: Path) -> dict:
+    return json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+
+
+def _snapshot(db_path: Path, upload_dir: Path) -> tuple:
+    files = sorted((str(p.relative_to(upload_dir)), p.read_bytes()) for p in upload_dir.rglob("*") if p.is_file())
+    return db_path.read_bytes(), files
+
+
+def test_backup_copies_db_uploads_and_pending_drafts(live):
+    db_path, upload_dir, root = live
+    manifest = backup(db_path, upload_dir, root / "b1")
+
+    assert manifest["db_backed_up"] is True
+    assert (manifest["upload_file_count"], manifest["copied_files"]) == (3, 3)
+    assert manifest["tool"] == "cropy-backup" and manifest["kind"] == "backup"
+    assert manifest["journal_mode"] == "delete"
+    assert _read_marker(root / "b1" / "cropcare.db") == "original"
+    assert (root / "b1" / "uploads" / "a.jpg").read_bytes() == b"photo-a"
+    assert (root / "b1" / "uploads" / ".pending" / "draft.json").exists()
+
+
+@pytest.mark.parametrize("missing", ["db", "uploads"])
+def test_missing_source_fails_without_creating_a_backup(live, tmp_path, missing):
+    # 리뷰 1: 잘못된 경로로 실행해도 빈 "완료" 백업이 생기면 안 된다.
+    db_path, upload_dir, root = live
+    wrong_db = tmp_path / "typo.db" if missing == "db" else db_path
+    wrong_uploads = tmp_path / "typo_uploads" if missing == "uploads" else upload_dir
+    with pytest.raises(BackupError):
+        backup(wrong_db, wrong_uploads, root / "empty")
+    assert not root.exists()  # 잠금 파일도 만들지 않았다
+    assert not (tmp_path / "typo.db").exists()  # sqlite3.connect가 빈 DB를 만들지 않았다
+
+
+def test_backup_refuses_to_mix_into_an_existing_backup(live):
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "same")
+    with pytest.raises(FileExistsError):
+        backup(db_path, upload_dir, root / "same")
+
+
+@pytest.mark.parametrize("where", ["inside_uploads", "contains_db"])
+def test_backup_output_must_not_overlap_live_data(live, where):
+    db_path, upload_dir, _ = live
+    out_dir = upload_dir / "backups" / "b1" if where == "inside_uploads" else db_path.parent
+    with pytest.raises(BackupError):
+        backup(db_path, upload_dir, out_dir)
+    assert not (upload_dir / "backups").exists()
+
+
+def test_db_inside_upload_folder_is_rejected_up_front(live):
+    # 2차 리뷰 8: 업로드 폴더를 옮기면 그 안의 DB까지 옮겨져 교체가 중간에 실패한다.
+    _, upload_dir, root = live
+    nested_db = upload_dir / "cropcare.db"
+    _make_sqlite_db(nested_db, "nested")
+    before = _snapshot(nested_db, upload_dir)
+    with pytest.raises(BackupError, match="업로드 폴더 안"):
+        backup(nested_db, upload_dir, root / "b1")
+    assert _snapshot(nested_db, upload_dir) == before
+
+
+def test_failed_backup_leaves_no_folder(live, monkeypatch):
+    db_path, upload_dir, root = live
+
+    def broken_copy(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(backup_db.shutil, "copy2", broken_copy)
+    with pytest.raises(OSError):
+        backup(db_path, upload_dir, root / "b1")
+    assert not (root / "b1").exists()
+
+
+def test_wal_recapture_during_backup_cannot_split_db_and_photos(live, monkeypatch):
+    # PR #104 검토에서 재현: WAL에서 백업 도중 재촬영 결과가 커밋되고 이전 사진이 지워지면,
+    # 백업 DB가 없는 사진을 가리키는데도 백업이 "성공"으로 끝났다.
+    db_path, upload_dir, root = live
+    _use_wal(db_path)
+    (upload_dir / "old-refine.jpg").write_bytes(b"old")
+    with closing(sqlite3.connect(str(db_path))) as conn:
+        conn.execute("UPDATE diagnoses SET refined_image_path = 'old-refine.jpg'")
+        conn.commit()
+    real_copy = backup_db._copy_uploads
+
+    def copy_during_recapture(*args, **kwargs):
+        (upload_dir / "new-refine.jpg").write_bytes(b"new")
+        app = sqlite3.connect(str(db_path), timeout=0)
+        try:
+            app.execute("UPDATE diagnoses SET refined_image_path = 'new-refine.jpg'")
+            app.commit()
+            (upload_dir / "old-refine.jpg").unlink()  # diagnosis_service: 커밋 뒤 이전 사진 삭제
+        except sqlite3.OperationalError:
+            app.rollback()
+        finally:
+            app.close()
+        return real_copy(*args, **kwargs)
+
+    monkeypatch.setattr(backup_db, "_copy_uploads", copy_during_recapture)
+    manifest = backup(db_path, upload_dir, root / "b1")
+
+    with closing(sqlite3.connect(str(root / "b1" / "cropcare.db"))) as snapshot:
+        refined = snapshot.execute("SELECT refined_image_path FROM diagnoses").fetchone()[0]
+    assert (root / "b1" / "uploads" / refined).exists()
+    assert manifest["missing_referenced_files"] == 0
+
+
+def test_photo_and_draft_created_during_backup_cannot_complete_a_backup(live, monkeypatch):
+    # 2차 리뷰 3: 잠금은 사진·초안 생성을 막지 못한다. 초안만 있고 사진은 없는 백업이 완료되면 안 된다.
+    db_path, upload_dir, root = live
+    real_copy = backup_db._copy_uploads
+
+    def copy_then_app_writes(source, dest, *args):
+        stats = real_copy(source, dest, *args)
+        (upload_dir / "late.jpg").write_bytes(b"late")
+        _write_draft(dest / ".pending", "late", "late.jpg")
+        return stats
+
+    monkeypatch.setattr(backup_db, "_copy_uploads", copy_then_app_writes)
+    with pytest.raises(BackupError, match="서비스를 멈추고"):
+        backup(db_path, upload_dir, root / "b1")
+    assert not (root / "b1").exists()
+
+
+def test_backup_with_a_foreign_key_violation_is_not_completed(live):
+    # 3차 리뷰 2: 복원 검증에서 거부될 백업을 "완료"로 남기면 안 된다.
+    db_path, upload_dir, root = live
+    with closing(sqlite3.connect(str(db_path))) as conn:
+        conn.executescript("""
+            CREATE TABLE diseases (id INTEGER PRIMARY KEY);
+            CREATE TABLE findings (disease_id INTEGER REFERENCES diseases(id));
+            INSERT INTO findings VALUES (999);
+        """)
+    with pytest.raises(BackupError, match="외래 키"):
+        backup(db_path, upload_dir, root / "bad")
+    assert not (root / "bad").exists()
+
+
+def test_backup_is_flushed_to_disk_before_it_is_marked_complete(live, monkeypatch):
+    # 4차 리뷰 3: 복사가 끝났다고 저장장치에 기록된 것은 아니다. 완료 표시(manifest)는 백업 안의 모든
+    # 파일을 내린 뒤에 쓴다
+    db_path, upload_dir, root = live
+    synced = []
+    real_fsync = backup_db._fsync
+    monkeypatch.setattr(backup_db, "_fsync", lambda path: (synced.append(Path(path)), real_fsync(path))[1])
+    real_write = backup_db._write_manifest
+
+    def check_then_write(directory, manifest):
+        files = [path for path in Path(directory).rglob("*") if path.is_file()]
+        assert files and all(path in synced for path in files)
+        real_write(directory, manifest)
+
+    monkeypatch.setattr(backup_db, "_write_manifest", check_then_write)
+    out = root / "b1"
+    backup(db_path, upload_dir, out)
+    assert _manifest(out)["kind"] == "backup"
+    assert not list(out.glob(".manifest-*.tmp"))
+
+
+def test_help_prints_on_a_cp949_console():
+    # Windows에서 출력을 파일·파이프로 넘기면 cp949로 인코딩된다. 못 쓰는 문자가 있으면 --help가 멈춘다.
+    backup_db._build_parser().format_help().encode("cp949")
+
+
+def test_backup_fails_at_once_while_another_job_holds_the_lock(live):
+    # 같은 백업 폴더나 운영 데이터를 쓰는 다른 작업이 돌고 있으면 기다리지 않고 실패한다
+    db_path, upload_dir, root = live
+    with backup_db._lock_file(root / LOCK_FILE_NAME):
+        with pytest.raises(BackupError, match="실행 중"):
+            backup(db_path, upload_dir, root / "b1")
+    assert _entries(root) == []
+    backup(db_path, upload_dir, root / "b1")  # 잠금이 풀리면 다시 된다
