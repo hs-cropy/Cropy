@@ -7,21 +7,27 @@ project_work_report의 남은 작업 "운영 DB 백업·마이그레이션·복�
 Settings 기본값과 맞춰뒀다.
 
 일관성: 서비스를 멈추고 실행하는 것이 원칙이다. 실행 중에 돌리더라도 망가진 백업을
-"완료"로 남기지 않도록 다음을 한다.
+"완료"로 남기지 않도록 두 가지를 한다.
   - 백업하는 동안 원본 DB에 쓰기 잠금(BEGIN IMMEDIATE)을 잡는다. rollback 저널과 WAL
     모드 모두에서 앱은 그동안 커밋하지 못하므로 커밋 뒤의 이전 사진·복구 초안 삭제도
     일어나지 않는다. 이력 조회 같은 읽기는 막지 않는다. 잠금이 길어지면 앱의 저장이 시간
     초과(기본 5초)로 실패할 수 있다(앱은 이때 .pending 복구 초안을 남긴다).
+  - 잠금은 사진·초안 *생성*은 막지 못한다. 그래서 복사가 끝난 뒤 백업 안의 DB와 초안이
+    참조하는 사진이 백업에 모두 있는지 확인한다. 운영 폴더에는 있는데 백업에 없으면
+    백업 도중 생긴 파일이므로 실패한다. 운영 폴더에도 없는 참조(예전부터 없던 사진)는
+    manifest에 개수만 기록한다.
 WAL 모드에서는 최근 커밋이 cropcare.db-wal에 있으므로 DB 파일만 복사하는 수동 백업은
 쓰지 않는다(이 스크립트는 SQLite 백업 API로 WAL 내용까지 담는다).
 """
 
 import json
 import os
+import shutil
 import sqlite3
+import stat
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 # 앱이 DB에 쓰는 중이면 쓰기 잠금을 이 시간까지 기다린다.
 LOCK_TIMEOUT_SECONDS = 10
@@ -86,6 +92,104 @@ def _read_manifest(directory: Path) -> dict | None:
     except (OSError, ValueError):
         return None
     return data if isinstance(data, dict) else None
+
+
+def _raise(error: OSError) -> None:
+    # os.walk는 기본적으로 읽지 못한 폴더를 조용히 건너뛴다. 그러면 사진이 빠진 백업이
+    # "완료"로 남으므로 즉시 실패시킨다.
+    raise error
+
+
+def _iter_upload_files(upload_dir: Path):
+    """(상대 경로, lstat) 순회. 링크·정션·특수 파일은 따라가지도, 백업하지도 않는다."""
+    for current, dirs, files in os.walk(upload_dir, followlinks=False, onerror=_raise):
+        dirs[:] = [name for name in dirs if not _is_link(Path(current, name))]
+        for name in files:
+            path = Path(current, name)
+            info = path.lstat()
+            if stat.S_ISREG(info.st_mode):
+                yield path.relative_to(upload_dir), info
+
+
+def _count_upload_files(upload_dir: Path) -> int:
+    return sum(1 for _ in _iter_upload_files(upload_dir))
+
+
+def _first_link(directory: Path) -> Path | None:
+    """폴더 안의 링크·정션·특수 파일 중 처음 발견한 것. 없으면 None."""
+    for current, dirs, files in os.walk(directory, followlinks=False, onerror=_raise):
+        for name in dirs + files:
+            path = Path(current, name)
+            if _is_link(path) or not (path.is_dir() or stat.S_ISREG(path.lstat().st_mode)):
+                return path
+    return None
+
+
+def _file_key(value) -> str | None:
+    """앱(diagnosis_service._file_key)·cleanup_uploads.py와 같은 규칙으로 사진 파일명을 얻는다.
+
+    예전 기록에는 Windows 절대·상대 경로가 들어 있으므로 마지막 이름만 쓴다.
+    """
+    if not isinstance(value, str) or not value:
+        return None
+    key = PurePosixPath(value.replace("\\", "/")).name
+    return key if key not in ("", ".", "..") else None
+
+
+def _referenced_photos(db_file: Path, uploads: Path) -> set[str]:
+    """DB의 진단 기록과 .pending 복구 초안이 참조하는 사진 파일명."""
+    keys: set[str] = set()
+    connection = sqlite3.connect(Path(db_file).resolve().as_uri() + "?mode=ro", uri=True)
+    try:
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(diagnoses)")}
+        wanted = [name for name in ("image_path", "refined_image_path") if name in columns]
+        if wanted:
+            for row in connection.execute(f"SELECT {', '.join(wanted)} FROM diagnoses"):
+                keys.update(key for value in row if (key := _file_key(value)))
+    finally:
+        connection.close()
+    pending = uploads / ".pending"
+    if pending.is_dir():
+        for draft in pending.glob("*.json"):
+            try:
+                fields = json.loads(draft.read_text(encoding="utf-8"))["fields"]
+                values = [fields.get(name) for name in ("image_path", "refined_image_path")]
+            except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+                # cleanup_uploads.py와 같이, 읽을 수 없는 초안을 추측해서 넘기지 않는다.
+                raise BackupError(f"복구 초안을 읽을 수 없습니다: {draft.name}") from exc
+            keys.update(key for value in values if (key := _file_key(value)))
+    return keys
+
+
+def _check_references(out_dir: Path, upload_dir: Path) -> dict:
+    """백업 안의 DB·초안이 참조하는 사진이 백업에 있는지 확인한다.
+
+    운영 폴더에는 있는데 백업에 없으면 백업 도중 생긴 파일이므로 실패한다.
+    """
+    backup_uploads = out_dir / "uploads"
+    missing = sorted(key for key in _referenced_photos(out_dir / "cropcare.db", backup_uploads)
+                     if not (backup_uploads / key).is_file())
+    raced = [key for key in missing if (upload_dir / key).is_file()]
+    if raced:
+        raise BackupError(
+            f"백업하는 동안 새 사진·복구 초안이 생겨 DB와 사진의 시점이 맞지 않습니다 ({len(raced)}개, 예: {raced[0]}). "
+            "서비스를 멈추고 다시 실행하세요."
+        )
+    return {"missing_referenced_files": len(missing), "missing_referenced_examples": missing[:20]}
+
+
+def _copy_uploads(upload_dir: Path, dest: Path) -> dict:
+    """업로드 사진을 dest로 복사한다. 링크·정션·특수 파일은 따라가지도, 복사하지도 않는다."""
+    stats = {"upload_file_count": 0, "copied_files": 0, "copied_bytes": 0}
+    dest.mkdir(parents=True, exist_ok=True)
+    for relative, info in _iter_upload_files(upload_dir):
+        source, target = upload_dir / relative, dest / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        stats["copied_files"] += 1
+        stats["copied_bytes"] += info.st_size
+        stats["upload_file_count"] += 1
+    return stats
 
 
 @contextmanager
