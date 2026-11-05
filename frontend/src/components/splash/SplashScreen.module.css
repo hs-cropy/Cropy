@@ -231,9 +231,9 @@
   background-size: 300% 100%;
   background-position: 100% center;
 
-  /* PNG 로고 모양 안에서만 섬광 표시 */
-  -webkit-mask-image: url("/brand/cropy-splash-logo.png");
-  mask-image: url("/brand/cropy-splash-logo.png");
+  /* SVG 로고 모양 안에서만 섬광 표시 */
+  -webkit-mask-image: url("/brand/cropy-splash-logo.svg");
+  mask-image: url("/brand/cropy-splash-logo.svg");
 
   -webkit-mask-size: 100% 100%;
   mask-size: 100% 100%;
@@ -398,6 +398,7 @@
   color: #1a1a1a;
   font-size: 16px;
   font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
 
   transition:

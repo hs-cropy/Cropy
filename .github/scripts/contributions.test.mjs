@@ -23,3 +23,25 @@ test('existing section is replaced in place', () => {
 test('missing section goes above the first section', () =>
   assert.equal(replaceSection('# A\n\nintro\n\n## 기능\n\nbody\n', 'X'), '# A\n\nintro\n\n## 팀원별 기여\n\nX\n\n## 기능\n\nbody\n'));
 test('readme without sections gets the block at the end', () => assert.match(replaceSection('# A\n', 'X'), /## 팀원별 기여\n\nX\n\n$/));
+test('both Seongho emails are grouped under the same member', () => {
+  const log = [
+    '@117083460+hs-2171392-parkseongho@users.noreply.github.com',
+    '',
+    '10\t2\tbackend/app/services/example.py',
+    '@parksungho02@gmail.com',
+    '',
+    '5\t1\tbackend/tests/test_example.py',
+  ].join('\n');
+
+  const rows = byName(summarize(log, []));
+  const member = rows['박성호'];
+
+  assert.deepEqual(
+    [member.commits, member.added, member.deleted],
+    [2, 15, 3],
+  );
+  assert.equal(
+    Object.values(rows).reduce((sum, row) => sum + row.commits, 0),
+    2,
+  );
+});

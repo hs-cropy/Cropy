@@ -39,3 +39,75 @@ export function summarize(bundle, predictions, crop) {
     policy_version: `${bundle.policy.version}:low=${bundle.policy.low_confidence_threshold}`, content_status: 'snapshot', content_version: bundle.version,
   };
 }
+// 설치 안내 화면 중 무엇을 보일지. 설치 방법은 창 폭이 아니라 기기·브라우저에 달려 있어 UA 로 가른다.
+// 휴대폰: 이미 설치한 앱으로 열었으면 설치 완료, 아이폰·아이패드는 홈 화면 추가 안내,
+// 안드로이드는 설치 버튼이다. 아이패드 Safari 는 맥 UA 를 쓰므로 터치 수로 가린다.
+// PC: 설치한 앱이면 설치 완료, Chrome·Edge(설치창 이벤트가 늦게 와도)는 앱 설치,
+// Mac Safari 는 Dock 에 추가 안내, 그 밖의 브라우저는 설치 도움말이다.
+// Chrome·Edge UA 에도 "Safari" 가 들어 있어 Chromium 을 먼저 가리고 Safari 는 Version/ 으로 확인한다.
+// 큰 안드로이드 태블릿은 데스크톱 UA(Linux, Android 없음)를 보내므로 터치가 있으면 휴대폰으로 본다 (크롬북 CrOS 제외)
+// 같은 판별(deviceKind)을 오프라인 준비 화면의 PC 문구도 쓴다
+export const DESKTOP_VIEWS = ['pc', 'mac', 'pc-help', 'pc-installed'];
+export function deviceKind({ userAgent, touchPoints = 0 }) {
+  if (/iPhone|iPad|iPod/.test(userAgent) || (/Macintosh/.test(userAgent) && touchPoints > 1)) return 'ios';
+  if (/Android/.test(userAgent) || (/Linux/.test(userAgent) && !/CrOS/.test(userAgent) && touchPoints > 1)) return 'android';
+  return 'desktop';
+}
+export const isDesktopDevice = (userAgent, touchPoints = 0) => deviceKind({ userAgent, touchPoints }) === 'desktop';
+export function installView({ userAgent, standalone, promptable, touchPoints = 0 }) {
+  const kind = deviceKind({ userAgent, touchPoints });
+  if (kind !== 'desktop') return standalone ? 'installed' : kind;
+  if (standalone) return 'pc-installed';
+  if (promptable || /Chrome|Chromium|Edg\//.test(userAgent)) return 'pc';
+  if (/Macintosh/.test(userAgent) && /Version\/[\d.]+.*Safari/.test(userAgent)) return 'mac';
+  return 'pc-help';
+}
+// 오프라인 파일 받기가 실패했을 때 보일 상태. 받기가 중단됐거나 연결이 끊겼으면 다시 받기,
+// 저장 공간이 모자라면 공간 관리, 나머지(묶음 없음·검증 실패 등)는 실패 안내다
+export function failurePhase(error, online) {
+  if (error?.name === 'AbortError' || (error instanceof TypeError && !online)) return 'paused';
+  if (error?.name === 'QuotaExceededError') return 'storage-full';
+  return 'failed';
+}
+// 오프라인 화면은 한 페이지에서 주소의 # 로 나눈다: 준비(기본)·새 진단·진단 결과·진단 기록.
+// 예전 사진 분석 주소(#analyze)는 새 진단으로 연다
+export function viewFromHash(hash) {
+  const name = String(hash || '').replace(/^#/, '');
+  if (name === 'analyze') return 'new';
+  return name === 'new' || name === 'result' || name === 'records' ? name : 'prepare';
+}
+// 서버에 새 진단 파일 묶음이 있는지. version 은 모델·전처리·병해 안내·정책을 합친 64자리 해시라 순서가 없어 다르면 새것이다.
+// 받아 둔 묶음이 없거나 서버 값이 이상하면 묻지 않는다
+export function updateAvailable(currentVersion, serverVersion) {
+  return Boolean(currentVersion) && /^[0-9a-f]{64}$/.test(String(serverVersion)) && currentVersion !== serverVersion;
+}
+// 진단 기록 화면 위에 띄울 동기화 안내. 전송에 실패한 기록이 있으면 실패, 연결이 없는데 보낼 기록이 있으면 대기다
+export function recordsNotice(records, online) {
+  if (records.some(record => record.sync_status === 'failed')) return 'sync-failed';
+  if (!online && records.some(record => record.sync_status === 'pending')) return 'sync-pending';
+  return null;
+}
+// 판별 불가(9_기타): 작물 잎을 알아보지 못한 결과 (lib/diagnosis.ts 의 isNotCrop)
+export const isNotCrop = result => result?.category === 'other';
+// 진단 결과 화면의 등급 배지 (DiagnosisResultView.tsx 의 gradeOf 와 같다). 위험·주의는 같은 색이고 라벨로 구분한다.
+// 정상 판정이면 "정상", 판별 불가나 등급이 없으면 null
+const SEVERITY = { high: { label: '위험', tone: 'attention' }, medium: { label: '주의', tone: 'attention' }, low: { label: '낮음', tone: 'low' } };
+export function gradeOf(result) {
+  if (isNotCrop(result)) return null;
+  if (result?.category === 'normal' || result?.category === 'healthy') return { label: '정상', tone: 'low' };
+  return SEVERITY[result?.severity] || null;
+}
+// "2026년 10월 6일 오후 2:18에 확인한 결과예요." (DiagnosisResultView.tsx). 날짜를 읽지 못하면 null
+export function resultTimeSentence(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return null;
+  const hours = date.getHours(), minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 ${hours < 12 ? '오전' : '오후'} ${hours % 12 || 12}:${minutes}에 확인한 결과예요.`;
+}
+// "2026.10.22 · 19:25" (RecentDiagnosisCard.tsx 의 recentDate). 날짜를 읽지 못하면 null
+export function recordTime(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return null;
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} · ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
