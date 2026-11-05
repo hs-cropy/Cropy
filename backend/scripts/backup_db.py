@@ -635,6 +635,36 @@ def _sidecars(db_path: Path) -> list[Path]:
             if db_path.with_name(db_path.name + suffix).exists()]
 
 
+def _safety_backup(db_path: Path, upload_dir: Path, safety_dir: Path) -> None:
+    """복원 직전 상태를 비어 있는 safety_dir에 독립 사본으로 남긴다.
+
+    DB가 손상돼도 읽지 않고 원시 파일 그대로 보존한다. 폴더 생성은 호출자가 한다.
+    """
+    manifest = {
+        "tool": TOOL_NAME, "format": MANIFEST_FORMAT, "kind": "pre_restore", "raw_copy": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "source_db": str(db_path), "source_uploads": str(upload_dir),
+        "db_backed_up": db_path.is_file(), "sidecars": [], "linked_files": 0,
+        "sequence": _next_sequence(safety_dir.parent, db_path, upload_dir),
+    }
+    if db_path.is_file():
+        shutil.copy2(db_path, safety_dir / "cropcare.db")
+    for sidecar in _sidecars(db_path):
+        # DB를 cropcare.db로 저장하므로 저널도 같은 이름에 맞춘다. 원래 이름(예: app.db-wal)으로
+        # 두면 SQLite가 이 DB의 저널로 인식하지 못해 WAL에만 있는 커밋이 복원에서 빠진다.
+        name = "cropcare.db" + sidecar.name[len(db_path.name):]
+        shutil.copy2(sidecar, safety_dir / name)
+        manifest["sidecars"].append(name)
+    if upload_dir.is_dir():
+        manifest.update(_copy_uploads(upload_dir, safety_dir / "uploads", None))
+    else:
+        manifest["upload_file_count"] = 0
+        manifest["warning_uploads_missing"] = True
+    # 이 안전 백업만 믿고 운영 데이터를 교체하므로, 교체 전에 저장장치에 내린다
+    _sync_tree(safety_dir)
+    _write_manifest(safety_dir, manifest)
+
+
 def restore(backup_dir: Path, db_path: Path, upload_dir: Path) -> dict:
     """backup_dir로 복원하면 무엇이 바뀌는지 미리 본다. 아무것도 바꾸지 않는다.
 
