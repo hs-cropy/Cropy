@@ -7,6 +7,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import threading
 import time
 from contextlib import closing
 from pathlib import Path
@@ -20,6 +21,8 @@ from scripts.backup_db import (
     UnsupportedDatabaseUrlError,
     backup,
     find_latest_backup,
+    prune_backups,
+    run_backup,
     sqlite_path_from_url,
 )
 
@@ -777,3 +780,225 @@ def test_full_option_copies_without_linking(live):
     assert manifest["base_backup"] is None
     assert manifest["linked_files"] == 0
     assert not os.path.samefile(root / "b1" / "uploads" / "a.jpg", root / "b2" / "uploads" / "a.jpg")
+
+
+# ---- retention ----
+
+
+def _set_created_at(directory: Path, value) -> None:
+    manifest = _manifest(directory)
+    manifest["created_at"] = value
+    (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def _drop_sequence(directory: Path) -> None:
+    """순번(sequence)을 기록하기 전의 예전 백업처럼 만든다."""
+    manifest = _manifest(directory)
+    del manifest["sequence"]
+    (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def test_backups_get_increasing_sequence_numbers(live):
+    db_path, upload_dir, root = live
+    assert [backup(db_path, upload_dir, root / name)["sequence"] for name in ("b1", "b2", "b3")] == [0, 1, 2]
+
+
+def test_prune_keeps_newest_backups_and_survivors_stay_readable(live):
+    db_path, upload_dir, root = live
+    for index, name in enumerate(["b1", "b2", "b3", "b4"]):
+        backup(db_path, upload_dir, root / name)
+        _set_created_at(root / name, f"2026-10-0{index + 1}T00:00:00+00:00")
+
+    removed = prune_backups(root, 2, db_path, upload_dir, protect=root / "b4")
+
+    assert sorted(path.name for path in removed) == ["b1", "b2"]
+    assert _entries(root) == ["b3", "b4"]
+    # b3·b4의 하드링크 원본이 b1이었어도 데이터는 남아 있어야 한다.
+    assert (root / "b4" / "uploads" / "a.jpg").read_bytes() == b"photo-a"
+    assert _read_marker(root / "b3" / "cropcare.db") == "original"
+
+
+def test_prune_orders_legacy_backups_by_real_time_across_utc_offsets(live):
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "utc")
+    backup(db_path, upload_dir, root / "seoul")
+    # 서울 10:00(+09:00) = UTC 01:00 이므로 UTC 02:00 백업이 더 최신이다. 문자열 정렬은 반대다.
+    _set_created_at(root / "seoul", "2026-10-15T10:00:00+09:00")
+    _set_created_at(root / "utc", "2026-10-15T02:00:00+00:00")
+    for name in ("seoul", "utc"):
+        _drop_sequence(root / name)
+
+    removed = prune_backups(root, 1, db_path, upload_dir)
+    assert [path.name for path in removed] == ["seoul"]
+
+
+def test_clock_going_back_does_not_make_an_old_backup_look_newest(live):
+    # 3차 리뷰 3: RTC 없는 보드가 재부팅 뒤 과거 시각으로 돌아가면, 시각 정렬은 실제로 오래된
+    # "미래 시각" 백업을 남기고 최근 백업을 지우며, 증분 기준도 그 오래된 백업으로 잡는다.
+    db_path, upload_dir, root = live
+    for name, created in [("old_future", "2030-01-01T00:00:00+00:00"),
+                          ("recent1", "2020-01-01T00:00:00+00:00"),
+                          ("recent2", "2020-01-02T00:00:00+00:00")]:
+        backup(db_path, upload_dir, root / name)
+        _set_created_at(root / name, created)
+
+    assert find_latest_backup(root, db_path, upload_dir) == (root / "recent2").resolve()
+    removed = prune_backups(root, 2, db_path, upload_dir, protect=root / "recent2")
+    assert [path.name for path in removed] == ["old_future"]
+
+
+@pytest.mark.parametrize("missing", ["db", "uploads"])
+def test_failed_backup_never_prunes_good_backups(live, tmp_path, missing):
+    # 리뷰 1: 잘못된 경로로 실행해도 정상 백업이 지워지면 안 된다.
+    db_path, upload_dir, root = live
+    run_backup(db_path, upload_dir, root / "good", keep=1)
+    wrong_db = tmp_path / "typo.db" if missing == "db" else db_path
+    wrong_uploads = tmp_path / "typo_uploads" if missing == "uploads" else upload_dir
+
+    with pytest.raises(BackupError):
+        run_backup(wrong_db, wrong_uploads, root / "empty", keep=1)
+    assert _entries(root) == ["good"]
+
+
+def test_backup_that_restore_would_reject_does_not_prune_good_backups(live):
+    # 3차 리뷰 2: 외래 키 위반 DB의 백업이 "완료"되면 보관 정리가 정상 백업을 지운다.
+    db_path, upload_dir, root = live
+    run_backup(db_path, upload_dir, root / "good", keep=1)
+    with closing(sqlite3.connect(str(db_path))) as conn:
+        conn.executescript("""
+            CREATE TABLE diseases (id INTEGER PRIMARY KEY);
+            CREATE TABLE findings (disease_id INTEGER REFERENCES diseases(id));
+            INSERT INTO findings VALUES (999);
+        """)
+
+    with pytest.raises(BackupError, match="외래 키"):
+        run_backup(db_path, upload_dir, root / "bad", keep=1)
+    assert not (root / "bad").exists()
+    assert _entries(root) == ["good"]
+
+
+def test_prune_never_touches_unmarked_safety_foreign_or_other_source_folders(live, tmp_path):
+    db_path, upload_dir, root = live
+    legacy = root / "20260928T061946Z"  # 이 기능 이전 형식(표시 없음)의 실제 백업
+    (legacy / "uploads").mkdir(parents=True)
+    (legacy / "manifest.json").write_text(json.dumps({"created_at": "2026-09-28T06:19:46+00:00"}), encoding="utf-8")
+    (root / "notes").mkdir()
+    (root / "notes" / "readme.txt").write_text("keep me", encoding="utf-8")
+    other_db = tmp_path / "other" / "cropcare.db"
+    other_db.parent.mkdir()
+    _make_sqlite_db(other_db, "other")
+    other_uploads = tmp_path / "other" / "uploads"
+    other_uploads.mkdir()
+    backup(other_db, other_uploads, root / "other-set")
+    bad_time = root / "bad-time"
+    backup(db_path, upload_dir, bad_time)
+    _set_created_at(bad_time, "2026-10-01T00:00:00")  # 시간대 없음
+    backup(db_path, upload_dir, root / "b1")
+    backup(db_path, upload_dir, root / "b2")
+
+    removed = prune_backups(root, 1, db_path, upload_dir, protect=root / "b2")
+
+    assert [path.name for path in removed] == ["b1"]
+    assert set(_entries(root)) == {"20260928T061946Z", "notes", "other-set", "bad-time", "b2"}
+
+
+def test_prune_with_zero_keep_disables_deletion(live):
+    db_path, upload_dir, root = live
+    for name in ["b1", "b2", "b3"]:
+        backup(db_path, upload_dir, root / name)
+    assert prune_backups(root, 0, db_path, upload_dir) == []
+    assert len(_entries(root)) == 3
+
+
+def test_prune_never_removes_the_backup_just_created(live):
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "new")
+    backup(db_path, upload_dir, root / "newer")
+    _set_created_at(root / "new", "2027-01-01T00:00:00+00:00")  # 시계가 틀어진 경우
+    for name in ("new", "newer"):
+        _drop_sequence(root / name)  # 순번이 없으면 시각으로만 정렬되어 "newer"가 더 오래돼 보인다
+    assert prune_backups(root, 1, db_path, upload_dir, protect=root / "newer") == []
+    assert (root / "newer").exists()
+
+
+def test_prune_rejects_negative_keep(live):
+    db_path, upload_dir, root = live
+    with pytest.raises(ValueError):
+        prune_backups(root, -1, db_path, upload_dir)
+
+
+class _PausedJob:
+    """백업·복원 작업을 스레드에서 돌리다 backup_db의 한 함수에 처음 들어갈 때 멈춰 둔다.
+
+    멈춘 동안 다른 작업을 시도해 본다. 두 번째 호출부터는 멈추지 않으므로, 잠금이 없으면 뒤의 작업이
+    실제로 끝까지 진행되어 테스트가 실패한다. 스레드의 예외는 끝날 때 다시 올린다.
+    """
+
+    def __init__(self, monkeypatch, function_name, job):
+        self.inside, self.release = threading.Event(), threading.Event()
+        self.result = self.error = None
+        real = getattr(backup_db, function_name)
+
+        def paused(*args, **kwargs):
+            if not self.inside.is_set():
+                self.inside.set()
+                if not self.release.wait(30):
+                    raise AssertionError("테스트가 멈춘 작업을 재개하지 않았다")
+            return real(*args, **kwargs)
+
+        def run():
+            try:
+                self.result = job()
+            except BaseException as exc:  # 스레드 밖에서 다시 올린다
+                self.error = exc
+
+        monkeypatch.setattr(backup_db, function_name, paused)
+        self._unpatch = lambda: monkeypatch.setattr(backup_db, function_name, real)
+        self.thread = threading.Thread(target=run)
+
+    def __enter__(self):
+        self.thread.start()
+        if not self.inside.wait(30):
+            self._finish()  # with 본문과 __exit__이 실행되지 않으므로 여기서 정리한다
+            raise AssertionError("작업이 멈출 지점에 오지 않았다")
+        return self
+
+    def __exit__(self, exc_type, *_):
+        self._finish()
+        if self.error is not None and exc_type is None:
+            raise self.error
+
+    def _finish(self):
+        self.release.set()
+        try:
+            self.thread.join(30)
+            assert not self.thread.is_alive()
+        finally:
+            self._unpatch()
+
+
+def test_backups_to_the_same_folder_never_run_at_once(live, monkeypatch):
+    # 4차 리뷰 1: 같은 출력 폴더를 쓰는 두 실행 중 실패한 쪽이 다른 쪽의 완료 백업을 지웠다.
+    # 같은 백업 폴더의 작업은 작업 잠금으로 막고, 뒤의 작업은 기다리지 않고 실패한다
+    db_path, upload_dir, root = live
+    out = root / "20261104T000000Z"
+    with _PausedJob(monkeypatch, "_snapshot_db", lambda: backup(db_path, upload_dir, out)) as first:
+        with pytest.raises(BackupError, match="실행 중"):
+            backup(db_path, upload_dir, out)
+        with pytest.raises(BackupError, match="실행 중"):
+            backup(db_path, upload_dir, root / "other")
+
+    assert first.result["kind"] == "backup"
+    assert (out / "manifest.json").is_file() and (out / "cropcare.db").is_file()
+    assert _entries(root) == ["20261104T000000Z"]
+    backup(db_path, upload_dir, root / "next")  # 잠금은 작업이 끝나면 풀린다
+
+
+def test_backup_and_prune_hold_the_folder_lock_together(live, monkeypatch):
+    # 정리가 다른 작업이 증분 기준으로 쓰는 백업을 지우지 않도록 백업과 정리를 한 잠금 안에서 한다
+    db_path, upload_dir, root = live
+    with _PausedJob(monkeypatch, "_snapshot_db", lambda: backup(db_path, upload_dir, root / "b1")):
+        with pytest.raises(BackupError, match="실행 중"):
+            run_backup(db_path, upload_dir, root / "b2", keep=1)
+    manifest, removed = run_backup(db_path, upload_dir, root / "b2", keep=1)
+    assert [path.name for path in removed] == ["b1"] and manifest["base_backup"] == "b1"

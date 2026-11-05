@@ -31,14 +31,18 @@ WAL 모드에서는 최근 커밋이 cropcare.db-wal에 있으므로 DB 파일�
 수정 시각이 같은 파일이 있으면 복사하지 않고 하드링크로 연결한다. 내용까지 비교하지는
 않으므로 사진을 제자리에서 고치는 운영은 하지 않는다. 하드링크가 안 되면 복사한다.
 
+보관 개수 제한: 백업이 끝난 뒤, 이 스크립트가 같은 원본(DB·업로드 경로)으로 만든 정기
+백업만 최근 --keep개를 남기고 지운다. 복원 직전 안전 백업(pre_restore_*), 표시가 없는
+예전 백업, 다른 원본의 백업, 링크 폴더는 지우지 않는다.
+
 지원하지 않는 구성: DB 파일이 업로드 폴더 안에 있는 경우.
 
 Usage (backend 디렉터리에서):
-    # 백업 (backups/<timestamp>/ 에 생성)
+    # 백업 (backups/<timestamp>/ 에 생성, 같은 원본의 최근 7개만 유지)
     python scripts/backup_db.py backup
 
-    # 직전 백업과 연결하지 않고 전체 복사
-    python scripts/backup_db.py backup --full
+    # 직전 백업과 연결하지 않고 전체 복사 / 보관 개수 제한 끄기
+    python scripts/backup_db.py backup --full --keep 0
 """
 
 import argparse
@@ -61,6 +65,7 @@ else:
 DEFAULT_DATABASE_URL = "sqlite:///./cropcare.db"
 DEFAULT_UPLOAD_DIR = "./uploads"
 BACKUP_ROOT = Path(__file__).resolve().parent.parent / "backups"
+DEFAULT_KEEP = 7
 # 이 스크립트가 만든 백업의 표시. 증분 기준과 보관 정리는 이 표시가 있는 폴더만 다룬다.
 TOOL_NAME = "cropy-backup"
 MANIFEST_FORMAT = 2
@@ -160,6 +165,11 @@ def _own_backups(backup_root: Path, db_path: Path, upload_dir: Path,
             sequence = manifest.get("sequence")
             found.append((sequence if type(sequence) is int and sequence >= 0 else -1, created, directory.name, directory))
     return found
+
+
+def _next_sequence(backup_root: Path, db_path: Path, upload_dir: Path) -> int:
+    existing = _own_backups(backup_root, db_path, upload_dir, {"backup", "pre_restore"})
+    return max((entry[0] for entry in existing), default=-1) + 1
 
 
 def find_latest_backup(backup_root: Path, db_path: Path, upload_dir: Path, exclude: Path | None = None) -> Path | None:
@@ -490,6 +500,7 @@ def _backup(db_path: Path, upload_dir: Path, out_dir: Path, *, incremental: bool
         "source_uploads": str(upload_dir),
         "db_backed_up": True,
         "base_backup": base.name if base else None,
+        "sequence": _next_sequence(out_dir.parent, db_path, upload_dir),
     }
     try:
         with _writes_blocked(db_path) as journal_mode:
@@ -513,6 +524,50 @@ def _backup(db_path: Path, upload_dir: Path, out_dir: Path, *, incremental: bool
     return manifest
 
 
+def prune_backups(backup_root: Path, keep: int, db_path: Path, upload_dir: Path,
+                  protect: Path | None = None) -> list[Path]:
+    """같은 원본의 정기 백업 중 최근 keep개만 남기고 지운다. 지운 폴더 목록을 반환한다.
+
+    keep이 0이면 아무것도 지우지 않는다. 표시 없는 폴더, 안전 백업, 다른 원본의 백업,
+    생성 시각을 해석할 수 없는 폴더, 링크 폴더는 대상이 아니다. 하드링크로 연결된
+    파일은 다른 백업에 링크가 남아 있으면 지워도 데이터가 사라지지 않는다.
+    """
+    if keep < 0:
+        raise ValueError("keep must be zero or positive")
+    if keep == 0:
+        return []
+    ours = sorted(_own_backups(backup_root, Path(db_path).resolve(), Path(upload_dir).resolve(), {"backup"}),
+                  reverse=True)
+    removed = []
+    for *_, directory in ours[keep:]:
+        if protect is not None and _norm(directory) == _norm(protect):
+            continue  # 방금 만든 백업은 어떤 경우에도 남긴다
+        shutil.rmtree(directory)
+        removed.append(directory)
+    return removed
+
+
+def run_backup(db_path: Path, upload_dir: Path, out_dir: Path, keep: int, incremental: bool = True):
+    """백업이 끝까지 성공했을 때만 보관 정리를 한다. (manifest, 지운 폴더 목록).
+
+    백업과 보관 정리를 한 작업 잠금 안에서 한다. 사이에 다른 작업이 끼어들면 그 작업이 증분
+    기준으로 쓰는 백업을 정리가 지울 수 있다.
+    """
+    db_path, upload_dir, out_dir = _check_backup_paths(db_path, upload_dir, out_dir)
+    backup_root = out_dir.parent
+    with _exclusive(backup_root, db_path, upload_dir):
+        manifest = _backup(db_path, upload_dir, out_dir, incremental=incremental)
+        removed = prune_backups(backup_root, keep, db_path, upload_dir, protect=out_dir)
+    return manifest, removed
+
+
+def _non_negative_int(value: str) -> int:
+    number = int(value)
+    if number < 0:
+        raise argparse.ArgumentTypeError("0 이상의 정수여야 합니다")
+    return number
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--database-url", default=os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL))
@@ -523,6 +578,8 @@ def _build_parser() -> argparse.ArgumentParser:
     backup_parser = sub.add_parser("backup", help="현재 DB·업로드를 백업한다")
     backup_parser.add_argument("--out", type=Path, default=None, help=f"기본: {BACKUP_ROOT}/<타임스탬프>")
     backup_parser.add_argument("--full", action="store_true", help="직전 백업과 연결하지 않고 전체 복사한다")
+    backup_parser.add_argument("--keep", type=_non_negative_int, default=DEFAULT_KEEP,
+                               help=f"같은 원본의 최근 N개 정기 백업만 남긴다 (기본 {DEFAULT_KEEP}, 0이면 지우지 않음)")
 
     return parser
 
@@ -535,11 +592,13 @@ def main() -> None:
     try:
         if args.command == "backup":
             out_dir = args.out or (BACKUP_ROOT / _timestamp())
-            manifest = backup(db_path, upload_dir, out_dir, incremental=not args.full)
+            manifest, removed = run_backup(db_path, upload_dir, out_dir, args.keep, incremental=not args.full)
             print(f"백업 완료: {out_dir}")
             print(json.dumps(manifest, ensure_ascii=False, indent=2))
             if manifest.get("warning"):
                 print(f"경고: {manifest['warning']}", file=sys.stderr)
+            for path in removed:
+                print(f"보관 개수({args.keep}개) 초과로 삭제: {path}")
     except (BackupError, FileExistsError, FileNotFoundError, sqlite3.Error, OSError) as exc:
         sys.exit(f"{args.command} 실패 ({type(exc).__name__}): {exc}")
 
