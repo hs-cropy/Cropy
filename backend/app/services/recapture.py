@@ -3,6 +3,12 @@
 1차 진단의 상위 두 후보가 시각적으로 유사한 혼동쌍이고 신뢰도 마진이 좁으면,
 그 두 병을 가르는 특정 식물 부위를 사용자에게 다시 촬영하도록 안내한다.
 
+trigger="top1"인 쌍은 마진·2순위와 무관하게 1순위가 쌍에 속하기만 하면 안내한다.
+무 두 질병은 모델이 확신하며 틀리고(오답 노균병 확률 중앙값 0.79), 오답의 절반은
+2순위가 쌍 상대가 아니어서 마진 조건으로는 잡히지 않는다(docs/MODEL_SPEC.md 분석 노트,
+작업자 분리 시험셋). 두 병을 합친 recall은 94~99%라 1순위만으로 충분히 좁혀진다.
+재촬영을 이미 반영한 결과에는 적용하지 않는다(같은 안내가 반복되지 않게).
+
 혼동쌍은 model_class_id(폴더 앞 숫자) 기준으로 정의한다:
     1 고추흰가루병 · 2 무검은무늬병 · 3 무노균병 · 4 배추검은썩음병 · 5 배추노균병
 
@@ -19,8 +25,10 @@ DEFAULT_MARGIN = 0.20
 FUSE_WEIGHT_SECOND = 0.6
 
 # frozenset(model_class_id 쌍) -> 판별부위·촬영지침·클래스별 시각단서
+# trigger: "margin"(기본, 상위 두 후보가 쌍이고 마진이 좁을 때) | "top1"(1순위가 쌍에 속하면 항상)
 CONFUSION_PAIRS: dict[frozenset[int], dict] = {
     frozenset({2, 3}): {
+        "trigger": "top1",
         "region": "잎 뒷면",
         "instruction": "잎을 뒤집어 병반이 있는 부위의 뒷면을 근접 촬영하세요.",
         "cues": {
@@ -43,30 +51,42 @@ def check_recapture(
     predictions: list[tuple[int, float]],
     class_names: dict[int, str],
     margin_threshold: float = DEFAULT_MARGIN,
+    refined: bool = False,
 ) -> RecaptureGuidance | None:
-    """상위 두 후보가 혼동쌍이고 마진이 좁으면 유도 지침을, 아니면 None을 반환."""
-    if len(predictions) < 2:
+    """판별부위 재촬영이 필요하면 유도 지침을, 아니면 None을 반환.
+
+    refined=True(재촬영 결과를 이미 융합한 분포)이면 top1 조건은 건너뛰고 마진 조건만 본다.
+    """
+    if not predictions:
         return None
 
-    (c1, p1), (c2, p2) = predictions[0], predictions[1]
+    c1, p1 = predictions[0]
+    p2 = predictions[1][1] if len(predictions) > 1 else 0.0
     margin = p1 - p2
-    if margin >= margin_threshold:
-        return None
 
+    if not refined:
+        entry = next((e for ids, e in CONFUSION_PAIRS.items()
+                      if e.get("trigger") == "top1" and c1 in ids), None)
+        if entry is not None:
+            order = sorted(entry["cues"], key=lambda cid: cid != c1)  # 1순위 단서를 먼저
+            return _guidance(entry, order, class_names, margin)
+
+    if len(predictions) < 2 or margin >= margin_threshold:
+        return None
+    c2 = predictions[1][0]
     entry = CONFUSION_PAIRS.get(frozenset({c1, c2}))
     if entry is None:
         return None
+    return _guidance(entry, [cid for cid in entry["cues"] if cid in (c1, c2)], class_names, margin)
 
-    candidates = [
-        RecaptureCandidate(name=class_names.get(cid, str(cid)), cue=cue)
-        for cid, cue in entry["cues"].items()
-        if cid in (c1, c2)
-    ]
+
+def _guidance(entry: dict, class_ids, class_names: dict[int, str], margin: float) -> RecaptureGuidance:
     return RecaptureGuidance(
         region=entry["region"],
         instruction=entry["instruction"],
         margin=round(margin, 4),
-        candidates=candidates,
+        candidates=[RecaptureCandidate(name=class_names.get(cid, str(cid)), cue=entry["cues"][cid])
+                    for cid in class_ids],
     )
 
 

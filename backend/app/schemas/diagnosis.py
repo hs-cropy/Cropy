@@ -17,7 +17,7 @@ DIAGNOSIS_EXAMPLE = {
     "created_at": "2026-10-15T00:00:00Z", "updated_at": "2026-10-15T00:00:00Z",
     "image_url": "/uploads/4da54046-bae9-4249-a4b3-85d17b83ee40.jpg",
     "recapture": None, "is_refined": False, "content_status": "snapshot",
-    "decision_status": "disease", "decision_reasons": [], "policy_version": "decision-v2:low=0.8",
+    "decision_status": "disease", "decision_reasons": [], "policy_version": "decision-v3:low=0.8",
     "save_status": "saved", "recovery_token": None,
     "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
     "management_actions": ["감염 부위 제거"],
@@ -117,6 +117,13 @@ class DiagnoseResponse(TimestampedResponse):
     initial_predictions: list[PredictionItem] = Field(default_factory=list, description="재촬영 전 최초 예측 후보")
     save_status: Literal["saved", "failed"] = Field("saved", description="DB 저장 상태. failed여도 진단 결과는 반환될 수 있음")
     recovery_token: str | None = Field(None, description="저장 실패 시 /api/v1/results/{token}/save에 사용할 토큰")
+
+
+class SpeechScript(BaseModel):
+    """음성으로 읽어줄 문장. TTS 서버가 없을 때 프론트가 브라우저 음성으로 읽는 데도 쓴다."""
+
+    sentences: list[str]
+    text: str
 
 
 class DiagnosisSummary(TimestampedResponse):
