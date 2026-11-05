@@ -19,6 +19,7 @@ from scripts.backup_db import (
     BackupError,
     UnsupportedDatabaseUrlError,
     backup,
+    find_latest_backup,
     sqlite_path_from_url,
 )
 
@@ -245,7 +246,7 @@ def live(tmp_path):
 
 
 def _copy(upload_dir: Path, dest: Path) -> dict:
-    return backup_db._copy_uploads(upload_dir, dest)
+    return backup_db._copy_uploads(upload_dir, dest, None)  # 기준 백업 없이 전체 복사
 
 
 def test_uploads_and_pending_drafts_are_copied(live, tmp_path):
@@ -630,3 +631,149 @@ def test_backup_fails_at_once_while_another_job_holds_the_lock(live):
             backup(db_path, upload_dir, root / "b1")
     assert _entries(root) == []
     backup(db_path, upload_dir, root / "b1")  # 잠금이 풀리면 다시 된다
+
+
+# ---- incremental ----
+
+
+def _hard_links_supported(directory: Path) -> bool:
+    source, target = directory / ".link-probe", directory / ".link-probe-2"
+    source.write_bytes(b"x")
+    try:
+        os.link(source, target)
+        return True
+    except OSError:
+        return False
+    finally:
+        target.unlink(missing_ok=True)
+        source.unlink(missing_ok=True)
+
+
+@pytest.fixture
+def needs_hard_links(tmp_path):
+    if not _hard_links_supported(tmp_path):
+        pytest.skip("이 파일시스템은 하드링크를 지원하지 않는다 (복사 대체는 별도 테스트)")
+
+
+def test_first_backup_has_no_base_and_links_nothing(live):
+    db_path, upload_dir, root = live
+    manifest = backup(db_path, upload_dir, root / "b1")
+    assert manifest["base_backup"] is None
+    assert (manifest["linked_files"], manifest["copied_files"]) == (0, 3)
+
+
+def test_unchanged_uploads_are_hard_linked_to_the_previous_backup(live, needs_hard_links):
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "b1")
+    (upload_dir / "c.jpg").write_bytes(b"photo-c")
+    manifest = backup(db_path, upload_dir, root / "b2")
+
+    assert manifest["base_backup"] == "b1"
+    assert (manifest["linked_files"], manifest["copied_files"]) == (3, 1)
+    assert manifest["copied_bytes"] == len(b"photo-c")
+    assert os.path.samefile(root / "b1" / "uploads" / "a.jpg", root / "b2" / "uploads" / "a.jpg")
+    assert (root / "b2" / "uploads" / "c.jpg").read_bytes() == b"photo-c"
+    # 증분 연결은 이전 백업끼리만 한다. 운영 원본과는 같은 파일이면 안 된다.
+    assert not os.path.samefile(upload_dir / "a.jpg", root / "b2" / "uploads" / "a.jpg")
+
+
+def test_changed_upload_is_copied_and_previous_backup_keeps_old_content(live):
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "b1")
+    (upload_dir / "a.jpg").write_bytes(b"photo-a-edited")
+    manifest = backup(db_path, upload_dir, root / "b2")
+
+    assert manifest["copied_bytes"] >= len(b"photo-a-edited")
+    assert (root / "b2" / "uploads" / "a.jpg").read_bytes() == b"photo-a-edited"
+    assert (root / "b1" / "uploads" / "a.jpg").read_bytes() == b"photo-a"
+
+
+def test_deleted_upload_is_not_carried_into_the_next_backup(live):
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "b1")
+    (upload_dir / "b.jpg").unlink()
+    backup(db_path, upload_dir, root / "b2")
+    assert not (root / "b2" / "uploads" / "b.jpg").exists()
+    assert (root / "b1" / "uploads" / "b.jpg").exists()
+
+
+def test_incomplete_backup_without_manifest_is_never_used_as_base(live):
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "b1")
+    partial = root / "zz_partial" / "uploads"
+    partial.mkdir(parents=True)
+    (partial / "a.jpg").write_bytes(b"truncated")
+
+    assert find_latest_backup(root, db_path, upload_dir) == (root / "b1").resolve()
+    assert backup(db_path, upload_dir, root / "b2")["base_backup"] == "b1"
+
+
+@pytest.mark.parametrize("change", [
+    {"tool": "other-app"},
+    {"format": 1},
+    {"source_uploads": "/elsewhere/uploads"},
+    {"source_db": "/elsewhere/cropcare.db"},
+    {"created_at": "not-a-date"},
+])
+def test_foreign_or_unidentified_folder_is_never_used_as_base(live, change):
+    # 리뷰 6: 같은 경로·크기·시각의 다른 내용을 하드링크하면 백업이 엉뚱한 사진을 담는다.
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "foreign")
+    (root / "foreign" / "uploads" / "a.jpg").write_bytes(b"other-app-a")  # 같은 크기 아님은 중요치 않다
+    os.utime(root / "foreign" / "uploads" / "a.jpg", ns=(0, (upload_dir / "a.jpg").stat().st_mtime_ns))
+    manifest = _manifest(root / "foreign")
+    manifest.update(change)
+    (root / "foreign" / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    result = backup(db_path, upload_dir, root / "b2")
+    assert result["base_backup"] is None
+    assert (root / "b2" / "uploads" / "a.jpg").read_bytes() == b"photo-a"
+
+
+def _link_directory(link: Path, target: Path) -> None:
+    """Windows는 권한 없이 만들 수 있는 정션을, 그 외는 심볼릭 링크를 만든다."""
+    if os.name == "nt":
+        import _winapi
+        _winapi.CreateJunction(str(target), str(link))
+    else:
+        link.symlink_to(target, target_is_directory=True)
+
+
+def test_link_inside_base_backup_never_hard_links_live_files(live, needs_hard_links):
+    # 2차 리뷰 4: 기준 백업의 중간 폴더가 운영 .pending을 가리키는 링크면 운영 원본에 연결된다.
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "b1")
+    shutil.rmtree(root / "b1" / "uploads" / ".pending")
+    try:
+        _link_directory(root / "b1" / "uploads" / ".pending", upload_dir / ".pending")
+    except OSError as exc:
+        pytest.skip(f"링크를 만들 수 없는 환경: {exc}")
+
+    backup(db_path, upload_dir, root / "b2")
+
+    live_draft, new_draft = upload_dir / ".pending" / "draft.json", root / "b2" / "uploads" / ".pending" / "draft.json"
+    assert not os.path.samefile(live_draft, new_draft)
+    live_draft.write_text(json.dumps({"fields": {"image_path": "a.jpg"}}), encoding="utf-8")
+    assert json.loads(new_draft.read_text(encoding="utf-8"))["fields"]["image_path"] == "b.jpg"
+
+
+def test_hard_link_failure_falls_back_to_copy(live, monkeypatch):
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "b1")
+
+    def no_links(source, target):
+        raise OSError("hard links unsupported")
+
+    monkeypatch.setattr(backup_db.os, "link", no_links)
+    manifest = backup(db_path, upload_dir, root / "b2")
+    assert (manifest["linked_files"], manifest["copied_files"]) == (0, 3)
+    assert (root / "b2" / "uploads" / "a.jpg").read_bytes() == b"photo-a"
+
+
+def test_full_option_copies_without_linking(live):
+    db_path, upload_dir, root = live
+    backup(db_path, upload_dir, root / "b1")
+    manifest = backup(db_path, upload_dir, root / "b2", incremental=False)
+    assert manifest["base_backup"] is None
+    assert manifest["linked_files"] == 0
+    assert not os.path.samefile(root / "b1" / "uploads" / "a.jpg", root / "b2" / "uploads" / "a.jpg")
