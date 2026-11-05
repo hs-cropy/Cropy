@@ -1,6 +1,7 @@
 """backup_db.py 테스트. 실제 sqlite 파일을 tmp_path에 만들어 검증하므로 프로젝트의
 진짜 DB·업로드는 건드리지 않는다."""
 
+import hashlib
 import json
 import os
 import shutil
@@ -22,6 +23,7 @@ from scripts.backup_db import (
     backup,
     find_latest_backup,
     prune_backups,
+    restore,
     run_backup,
     sqlite_path_from_url,
 )
@@ -1002,3 +1004,125 @@ def test_backup_and_prune_hold_the_folder_lock_together(live, monkeypatch):
             run_backup(db_path, upload_dir, root / "b2", keep=1)
     manifest, removed = run_backup(db_path, upload_dir, root / "b2", keep=1)
     assert [path.name for path in removed] == ["b1"] and manifest["base_backup"] == "b1"
+
+
+# ---- restore: 미리보기 ----
+
+
+def _file_hashes(root: Path) -> dict[str, str]:
+    return {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(root.rglob("*")) if path.is_file()}
+
+
+@pytest.fixture
+def snapshot_to_restore(tmp_path):
+    """복원 대상: 새 DB·사진이 담긴 정상 백업."""
+    src_db = tmp_path / "src" / "cropcare.db"
+    src_db.parent.mkdir()
+    _make_sqlite_db(src_db, "new-data")
+    src_uploads = tmp_path / "src" / "uploads"
+    src_uploads.mkdir()
+    (src_uploads / "new.jpg").write_bytes(b"new")
+    backup_dir = tmp_path / "backups" / "snap1"
+    backup(src_db, src_uploads, backup_dir)
+    return backup_dir
+
+
+def test_restore_preview_validates_but_does_not_touch_anything(live, snapshot_to_restore):
+    db_path, upload_dir, _ = live
+    before = _snapshot(db_path, upload_dir)
+    plan = restore(snapshot_to_restore, db_path, upload_dir)
+    assert plan["applied"] is False
+    assert plan["upload_file_count"] == 1
+    assert _snapshot(db_path, upload_dir) == before
+
+
+@pytest.mark.parametrize("damage", ["db", "uploads", "count", "corrupt_db", "manifest"])
+def test_incomplete_or_damaged_backup_is_rejected(live, snapshot_to_restore, damage):
+    # 리뷰 4: 구성 파일이 빠진 백업으로 DB·사진 시점을 섞으면 안 된다.
+    db_path, upload_dir, _ = live
+    if damage == "db":
+        (snapshot_to_restore / "cropcare.db").unlink()
+    elif damage == "uploads":
+        shutil.rmtree(snapshot_to_restore / "uploads")
+    elif damage == "count":
+        (snapshot_to_restore / "uploads" / "new.jpg").unlink()
+    elif damage == "corrupt_db":
+        (snapshot_to_restore / "cropcare.db").write_bytes(b"garbage")
+    else:
+        (snapshot_to_restore / "manifest.json").write_text("{broken", encoding="utf-8")
+    before = _snapshot(db_path, upload_dir)
+
+    with pytest.raises(BackupError):
+        restore(snapshot_to_restore, db_path, upload_dir)
+    assert _snapshot(db_path, upload_dir) == before
+
+
+def test_restore_rejects_a_backup_inside_the_upload_folder(live, snapshot_to_restore):
+    # 리뷰 2: 업로드 폴더를 바꾸는 복원이 입력 백업까지 지우면 안 된다.
+    db_path, upload_dir, _ = live
+    nested = upload_dir / "backups" / "snap"
+    shutil.copytree(snapshot_to_restore, nested)
+    with pytest.raises(BackupError):
+        restore(nested, db_path, upload_dir)
+
+
+def test_restore_rejects_a_db_inside_the_upload_folder(live, snapshot_to_restore):
+    _, upload_dir, _ = live
+    with pytest.raises(BackupError, match="업로드 폴더 안"):
+        restore(snapshot_to_restore, upload_dir / "cropcare.db", upload_dir)
+
+
+def test_backup_with_links_is_rejected(live, snapshot_to_restore, tmp_path):
+    db_path, upload_dir, _ = live
+    outside = tmp_path / "outside.txt"
+    outside.write_text("outside", encoding="utf-8")
+    try:
+        (snapshot_to_restore / "uploads" / "evil.jpg").symlink_to(outside)
+    except OSError as exc:
+        pytest.skip(f"심볼릭 링크를 만들 수 없는 환경: {exc}")
+    with pytest.raises(BackupError, match="링크"):
+        restore(snapshot_to_restore, db_path, upload_dir)
+
+
+def test_backup_with_foreign_key_violation_is_rejected(live, snapshot_to_restore):
+    db_path, upload_dir, _ = live
+    with closing(sqlite3.connect(str(snapshot_to_restore / "cropcare.db"))) as conn:
+        conn.executescript("""
+            CREATE TABLE diseases (id INTEGER PRIMARY KEY);
+            CREATE TABLE findings (disease_id INTEGER REFERENCES diseases(id));
+            INSERT INTO findings VALUES (999);
+        """)
+    with pytest.raises(BackupError, match="외래 키"):
+        restore(snapshot_to_restore, db_path, upload_dir)
+
+
+def test_restore_without_manifest_raises(tmp_path):
+    empty_dir = tmp_path / "not_a_backup"
+    empty_dir.mkdir()
+    with pytest.raises(FileNotFoundError):
+        restore(empty_dir, tmp_path / "db.sqlite", tmp_path / "uploads")
+
+
+def test_backup_with_a_hot_rollback_journal_is_checked_on_a_copy(live, snapshot_to_restore):
+    # 4차 리뷰 2: 강제 종료로 남은 rollback 저널을 그대로 열어 검사하면 SQLite가 되돌리려다
+    # 읽기 전용 오류를 내, 복구할 수 있는 백업을 미리보기 단계에서 거부했다
+    db_path, upload_dir, _ = live
+    backup_db_file = snapshot_to_restore / "cropcare.db"
+    crash = (
+        "import os, sqlite3, sys\n"
+        "c = sqlite3.connect(sys.argv[1], isolation_level=None)\n"
+        "c.execute('PRAGMA journal_mode=DELETE')\n"
+        "c.execute('CREATE TABLE filler (v TEXT)')\n"
+        "c.execute('PRAGMA cache_size=1')\n"  # 바뀐 페이지를 DB 파일에 내보내 진짜 hot journal을 만든다
+        "c.execute('BEGIN')\n"
+        "c.execute(\"UPDATE marker SET value='uncommitted'\")\n"
+        "c.executemany('INSERT INTO filler VALUES (?)', [('x' * 500,)] * 2000)\n"
+        "os._exit(1)\n"
+    )
+    assert subprocess.run([sys.executable, "-c", crash, str(backup_db_file)], check=False).returncode == 1
+    assert (snapshot_to_restore / "cropcare.db-journal").stat().st_size > 0
+    before = _file_hashes(snapshot_to_restore)
+
+    assert restore(snapshot_to_restore, db_path, upload_dir)["applied"] is False
+    assert _file_hashes(snapshot_to_restore) == before  # 검사는 사본에서 했다
