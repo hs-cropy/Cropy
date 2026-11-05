@@ -4,7 +4,10 @@ Runs the exact graphs the browser runs (embed_tokens + decoder_model_merged with
 with greedy decoding we drive ourselves, so <hs_*> tokens are never dropped. The subset is the same 300 validation
 rows the RKLLM simulation used (seed 20261105 over validation order), so float / int8 / q4 are directly comparable.
 
-Writes to --out-dir: web_<dtype>_cases.jsonl, web_<dtype>_metrics.json
+Writes to --out-dir: web_<dtype><tag>_cases.jsonl, web_<dtype><tag>_metrics.json
+
+--texts swaps each row's typed utterance for STT output (stt_roundtrip/roundtrip.py jsonl) of one --condition, keeping
+the labels; --strip-punct removes the punctuation SenseVoice adds (training text has none), as the app should.
 """
 import argparse
 import hashlib
@@ -28,6 +31,11 @@ ap.add_argument("--sim-n", type=int, default=300, help="-1 = all validation rows
 ap.add_argument("--reference-cases", default="", help="float outputs (case_id -> actual) of the same model")
 ap.add_argument("--device", default="cuda")
 ap.add_argument("--seed", type=int, default=20261105)
+ap.add_argument("--texts", default="", help="roundtrip.py jsonl: case_id, condition, stt_text, stt_raw")
+ap.add_argument("--condition", default="clean")
+ap.add_argument("--text-field", default="stt_text", help="stt_text (after term correction) or stt_raw")
+ap.add_argument("--strip-punct", action="store_true")
+ap.add_argument("--tag", default="")
 args = ap.parse_args()
 
 import onnxruntime as ort  # noqa: E402
@@ -48,6 +56,14 @@ STOP_IDS = {END_ID, *(eos if isinstance(eos, list) else [eos])}
 raw = Path(args.data).read_bytes()
 assert hashlib.sha256(raw).hexdigest() == args.data_sha
 val = [r for r in map(json.loads, lzma.decompress(raw).decode("utf-8").splitlines()) if r["split"] == "validation"]
+PUNCT = re.compile(r"[.,?!~…·:;\"'()\[\]]")
+if args.texts:
+    heard = {d["case_id"]: d[args.text_field] for d in map(json.loads, Path(args.texts).read_text(encoding="utf-8").splitlines())
+             if d["condition"] == args.condition}
+    val = [dict(r, typed_text=r["user_text"], user_text=heard[r["case_id"]]) for r in val if r["case_id"] in heard]
+    assert val, "--texts에 이 조건의 문장이 없습니다"
+if args.strip_punct:
+    val = [dict(r, user_text=" ".join(PUNCT.sub(" ", r["user_text"]).split())) for r in val]
 cases = val if args.sim_n < 0 else random.Random(args.seed).sample(val, min(args.sim_n, len(val)))
 ref = {}
 if args.reference_cases and Path(args.reference_cases).exists():
@@ -145,7 +161,8 @@ for i, r in enumerate(cases, 1):
     ids = prompt_ids(r)
     text, prefill, total = greedy(ids)
     got, gold = parse_call(text), parse_call(r["output"])
-    rows.append(dict(case_id=r["case_id"], function=r["function"], user_text=r["user_text"], expected=r["output"],
+    rows.append(dict(case_id=r["case_id"], function=r["function"], user_text=r["user_text"], typed_text=r.get("typed_text"),
+                     expected=r["output"],
                      actual=text, float_actual=ref.get(r["case_id"]), prompt_tokens=len(ids), prefill_s=round(prefill, 3),
                      total_s=round(total, 3), format_valid=got is not None,
                      function_correct=bool(got) and got[0] == gold[0], exact_correct=text == r["output"]))
@@ -153,19 +170,21 @@ for i, r in enumerate(cases, 1):
         per = (time.time() - start) / i
         print(f"  {i}/{len(cases)} 건당 {per:.2f}초 (prefill {prefill:.2f}초) | {text}")
 
-with (out / f"web_{args.dtype}_cases.jsonl").open("w", encoding="utf-8") as f:
+with (out / f"web_{args.dtype}{args.tag}_cases.jsonl").open("w", encoding="utf-8") as f:
     for row in rows:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
 rate = lambda key, rs=rows: round(sum(r[key] for r in rs) / max(1, len(rs)), 4)  # noqa: E731
 with_ref = [r for r in rows if r["float_actual"] is not None]
 per_fn = {fn: dict(support=len(rs), function=rate("function_correct", rs), exact=rate("exact_correct", rs))
           for fn in sorted({r["function"] for r in rows}) for rs in [[r for r in rows if r["function"] == fn]]}
-metrics = dict(dtype=args.dtype, providers=dec.get_providers(), support=len(rows), format_valid=rate("format_valid"),
+metrics = dict(dtype=args.dtype, tag=args.tag, texts=Path(args.texts).name if args.texts else None,
+               condition=args.condition if args.texts else "typed", text_field=args.text_field if args.texts else None,
+               strip_punct=args.strip_punct, providers=dec.get_providers(), support=len(rows), format_valid=rate("format_valid"),
                function=rate("function_correct"), exact=rate("exact_correct"),
                float_exact_same_rows=round(sum(r["float_actual"] == r["expected"] for r in with_ref) / len(with_ref), 4) if with_ref else None,
                same_as_float=round(sum(r["actual"] == r["float_actual"] for r in with_ref) / len(with_ref), 4) if with_ref else None,
                mean_prefill_s=round(float(np.mean([r["prefill_s"] for r in rows])), 3),
                mean_total_s=round(float(np.mean([r["total_s"] for r in rows])), 3), per_function=per_fn)
-(out / f"web_{args.dtype}_metrics.json").write_text(json.dumps(metrics, ensure_ascii=False, indent=2))
+(out / f"web_{args.dtype}{args.tag}_metrics.json").write_text(json.dumps(metrics, ensure_ascii=False, indent=2))
 print(json.dumps({k: metrics[k] for k in ("dtype", "support", "format_valid", "function", "exact", "float_exact_same_rows",
                                           "same_as_float", "mean_prefill_s")}, ensure_ascii=False))
