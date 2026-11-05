@@ -48,10 +48,41 @@ def test_misheard_terms_are_corrected(lexicon, heard, expected):
         "농약 희석 배수가 얼마예요",  # 배수가 배추로 바뀌면 안 된다
         "확률 이 몇 퍼센트로 나왔어요.",
         "고추 잎에 갈색 반점이 생겼어요",
+        # 두 글자 용어와 자모 하나 차이인 일상어 (PR #145 리뷰)
+        "잎을 살펴봐야 하나요",  # 살포
+        "다시 고쳐 주세요",  # 고추
+        "병이 퍼지는 걸 방지하려면",  # 방제
+        "물이 배출이 안 돼요",  # 배추
+        "배치 해 주세요",  # 배추
+        "모델 점수의 해석 한계를 알려주세요",  # 희석
+        "약 후보 이름과 개수를 알려주세요",  # 배수
+        # 세 글자 이상 용어의 일부·단어 경계를 넘는 비교 (Qwen v2 학습 발화에서 찾은 것)
+        "방금 배추를 촬영했어요",  # 재촬영 (두 글자만)
+        "다시 촬영 안내가 어디서 나온 건가요",  # 재촬영 (단어 중간 "시 촬영")
+        "추가 촬영이 필요한 이유만 알려주세요",  # 재촬영
+        "토마토 무슨 병이야",  # 무름병 (띄어쓰기를 넘으면 자모 하나 차이까지만)
+        "토마토 무슨병이야",  # 무름병 (세 글자 용어는 자모 하나 차이까지만)
+        "빈 화분인데 작물 병으로 설명해주세요",  # 무름병
+        "사용 방법을 자료에서 확인해주세요",  # 수확 ("서 확")
+        "예방 자료의 내용을 알려주세요",  # 방제 ("방 자")
     ],
 )
 def test_correct_sentences_are_left_unchanged(lexicon, text):
     assert lexicon.correct(text) == (text, [])
+
+
+def test_alias_lines_map_heard_forms_to_term():
+    lexicon = Lexicon(["희석 = 휘석, 히 석", "배수"])
+    assert [t for t, _, _ in lexicon.terms] == ["희석", "배수"]
+    assert lexicon.aliases == {"휘석": "희석", "히석": "희석"}
+    text, corrections = lexicon.correct("농약 히 석 배수")
+    assert text == "농약 희석 배수"
+    assert [(c.heard, c.term) for c in corrections] == [("히 석", "희석")]
+
+
+def test_two_syllable_terms_are_not_fuzzy_matched():
+    # 별칭이 없으면 자모 하나 차이라도 바꾸지 않는다
+    assert Lexicon(["살포"]).correct("살퍼 해요") == ("살퍼 해요", [])
 
 
 def test_correction_reports_what_was_heard(lexicon):
