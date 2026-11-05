@@ -1,0 +1,49 @@
+function	arguments	context	utterance
+chit_chat		photo_ready	너 이름이 뭐니
+chit_chat		no_photo	당신 이름은 뭐예요
+chit_chat		result	넌 누구야
+chit_chat		no_photo	누구랑 얘기하고 있는 건가요
+chit_chat		photo_ready	너를 뭐라고 부르면 돼요
+chit_chat		analyzing	이름 있어요
+chit_chat		no_photo	너는 사람이에요 기계예요
+chit_chat		result	넌 뭐 하는 애야
+chit_chat		no_photo	당신은 무슨 일을 하는 프로그램이에요
+chit_chat		error	너 누가 만들었어요
+chit_chat		no_photo	너는 어디 살아
+chit_chat		result	니 이름 좀 알려 줘요
+chit_chat		analyzing	너는 하루 종일 뭐 해요
+chit_chat		no_photo	너도 밥 먹어요
+chit_chat		photo_ready	넌 고향이 어디예요
+chit_chat		error	됐다 됐어 괜찮아요
+chit_chat		result	알았어 됐어요
+get_diagnosis	topic=provenance	result_model	이 결과가 임시로 띄운 건지 실제로 분석한 건지 알려 주세요
+get_diagnosis	topic=provenance	result_legacy	지금 나온 게 진짜 모델 결과예요 아니면 예전 방식 결과예요
+get_diagnosis	topic=provenance	result_model	이 병명 인공지능이 판단한 거 맞아요
+get_diagnosis	topic=provenance	result_legacy	이 결과는 어떤 방식으로 나온 거예요
+get_diagnosis	topic=provenance	result_model	임시 답인지 분류 결과인지 헷갈려요
+get_diagnosis	topic=provenance	result_legacy	이거 사진 보고 판단한 건가요 그냥 정해진 답인가요
+get_diagnosis	topic=provenance	result_model	이 진단은 무슨 모델로 나온 거예요
+get_diagnosis	topic=provenance	result_legacy	임시 결과라고 돼 있는데 무슨 뜻이에요
+get_diagnosis	topic=result	result_model	그래서 무슨 병이라고 나왔어요
+get_diagnosis	topic=result	result_normal	병이에요 정상이에요
+clarify_request	target=crop	mismatch_recapture	고추 골랐는데 무 잎을 다시 찍으라고 나와요
+clarify_request	target=crop	mismatch_recapture	나는 고추를 찍었는데 왜 무 사진을 다시 찍으래요
+clarify_request	target=crop	mismatch	고추를 키우는데 무 병 관리법을 따라 해도 돼요
+clarify_request	target=crop	mismatch	내 작물은 고추인데 무 약을 쳐도 되나요
+clarify_request	target=crop	disease_only	우리 밭은 배추인데 이 무 안내대로 하면 돼요
+clarify_request	target=crop	disease_only	배추 키우는데 무 병이라고 나온 걸 믿어도 돼요
+clarify_request	target=crop	mismatch_recapture	작물을 고추로 했는데 다른 작물 부위를 찍으라고 하네요
+clarify_request	target=crop	mismatch	고추로 골랐는데 결과는 무라고 나왔어요
+get_recapture_guidance	topic=certainty	result_confusion	안내한 부위를 잘 찍으면 병명이 확정돼요
+get_recapture_guidance	topic=certainty	result_confusion	잎 뒷면 다시 찍으면 정확하게 나와요
+get_recapture_guidance	topic=certainty	result_confusion	다시 찍으면 이번엔 확실해지나요
+get_recapture_guidance	topic=provenance	result_confusion	다시 찍으라는 근거가 뭐예요
+get_recapture_guidance	topic=provenance	result_confusion	재촬영 안내가 어디에 근거해서 나온 거예요
+get_recapture_guidance	topic=why	result_confusion	왜 다시 찍어야 돼요
+get_usage_guidance	topic=retry, delivery=step_by_step	error	다시 하는 순서를 하나씩 알려 주세요
+get_usage_guidance	topic=retry, delivery=step_by_step	error	실패했는데 처음부터 차례대로 알려 주세요
+get_usage_guidance	topic=retry, delivery=brief	error	다시 하려면 뭐 누르면 돼요
+get_usage_guidance	topic=next_step, delivery=brief	result	이거 보고 이제 뭐 하면 돼요
+get_usage_guidance	topic=next_step, delivery=brief	result	다 봤는데 이제 뭐 해요
+get_care_information	topic=prevention	result_model	약 말고 지금 해 볼 관리 방법이 뭐예요
+get_care_information	topic=prevention	result_model	약 안 쓰고 관리하는 방법 있어요

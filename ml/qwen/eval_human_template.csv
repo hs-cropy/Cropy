@@ -1,0 +1,4 @@
+﻿eval_id,작성자,context_preset,발화,의도한 함수,인자,말투(존칭/반말/사투리),간접발화(Y/N),메모,검수자,검수결과(ok/수정/삭제)
+EX01,예시,P05_result_disease_one_product,이 약은 물에 얼마나 타서 뿌려,get_pesticide_information,"topic=dilution, product=current",반말,N,예시 행. 지우지 말고 아래부터 작성,,
+EX02,예시,P07_result_confusion_recapture,잎을 뒤집어 보면 되는 거여,get_recapture_guidance,topic=where,사투리,Y,예시 행,,
+EX03,예시,P01_no_photo,아이고 오늘 허리가 끊어지겠네,chit_chat,,반말,Y,예시 행,,

@@ -1,0 +1,13 @@
+{
+  "P01_no_photo": {"ui_stage": "no_photo"},
+  "P02_photo_ready": {"ui_stage": "photo_ready", "selected_crop": "배추"},
+  "P03_analyzing": {"ui_stage": "analyzing", "selected_crop": "무"},
+  "P04_error": {"ui_stage": "error"},
+  "P05_result_disease_one_product": {"ui_stage": "result", "selected_crop": "고추", "predicted_crop": "고추", "crop_mismatch": false, "prediction_mode": "model", "category": "disease", "disease_name": "고추 탄저병", "confidence": 0.91, "top_predictions": [{"name": "고추 탄저병", "confidence": 0.91}, {"name": "고추 흰가루병", "confidence": 0.05}], "severity": "high", "pesticides": ["포룸디 (디메토모르프.디티아논 수화제)"]},
+  "P06_result_disease_many_products": {"ui_stage": "result", "selected_crop": "배추", "predicted_crop": "배추", "crop_mismatch": false, "prediction_mode": "model", "category": "disease", "disease_name": "배추 노균병", "confidence": 0.84, "pesticides": ["메가폰 (가스가마이신 입상수화제)", "차트라 (가스가마이신.폴리옥신디 입상수화제)", "미리스타 (디메토모르프 수화제)"]},
+  "P07_result_confusion_recapture": {"ui_stage": "result", "selected_crop": "무", "predicted_crop": "무", "crop_mismatch": false, "prediction_mode": "model", "category": "disease", "disease_name": "무 노균병", "confidence": 0.51, "top_predictions": [{"name": "무 노균병", "confidence": 0.51}, {"name": "무 검은무늬병", "confidence": 0.46}], "decision_status": "confusion", "recapture": {"region": "잎 뒷면"}},
+  "P08_result_normal": {"ui_stage": "result", "selected_crop": "배추", "predicted_crop": "배추", "crop_mismatch": false, "prediction_mode": "model", "category": "normal", "disease_name": "배추 정상", "confidence": 0.97},
+  "P09_result_crop_mismatch": {"ui_stage": "result", "selected_crop": "고추", "predicted_crop": "무", "crop_mismatch": true, "prediction_mode": "model", "category": "disease", "disease_name": "무 검은무늬병", "confidence": 0.72, "decision_status": "crop_mismatch"},
+  "P10_result_low_confidence": {"ui_stage": "result", "selected_crop": "무", "predicted_crop": "무", "crop_mismatch": false, "prediction_mode": "model", "category": "disease", "disease_name": "무 검은무늬병", "confidence": 0.38, "decision_status": "low_confidence"},
+  "P11_result_save_failed": {"ui_stage": "result", "selected_crop": "고추", "predicted_crop": "고추", "crop_mismatch": false, "prediction_mode": "model", "category": "disease", "disease_name": "고추 흰가루병", "confidence": 0.88, "save_status": "failed"}
+}

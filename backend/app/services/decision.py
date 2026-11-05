@@ -1,7 +1,8 @@
 """One UI decision policy for server and browser inference results."""
 from app.core.config import settings
 
-POLICY_VERSION = "decision-v2"
+# v3: 무 질병은 1순위만으로 잎 뒷면 재촬영 안내(recapture.py trigger="top1")
+POLICY_VERSION = "decision-v3"
 
 
 def crop_mismatch(selected_crop, predicted_crop, category):
