@@ -1,4 +1,3 @@
-
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { redirect } from "next/navigation";
 import HomePage from "./page";

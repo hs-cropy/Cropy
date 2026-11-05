@@ -37,7 +37,7 @@ describe("AppShell", () => {
   });
 
 
-  it("모바일은 화면 높이에 맞추고 데스크톱은 콘텐츠 높이를 허용한다", () => {
+  it("모바일과 데스크톱 모두 화면 높이에 맞춰 레이아웃을 유지한다", () => {
     render(<AppShell data-testid="shell">화면</AppShell>);
 
     const shell = classes(screen.getByTestId("shell"));
@@ -50,12 +50,11 @@ describe("AppShell", () => {
         "min-h-0",
         "overflow-hidden",
         "supports-[height:100dvh]:h-dvh",
-        "lg:h-auto",
-        "lg:min-h-screen",
-        "lg:overflow-visible",
         "bg-cropy-surface",
       ]),
     );
+    expect(shell).not.toContain("lg:h-auto");
+    expect(shell).not.toContain("lg:overflow-visible");
   });
 
   it("인쇄할 때 높이 제한과 잘림 없이 콘텐츠를 표시한다", () => {
@@ -214,10 +213,13 @@ describe("AppShellPage", () => {
     expect(classes(region)).toEqual(
       expect.arrayContaining([
         "min-h-0",
+        "min-w-0",
         "flex-1",
+        "overflow-x-hidden",
         "overflow-y-auto",
         "overscroll-contain",
-        "lg:overflow-visible",
+        "lg:pb-6",
+        "print:!overflow-visible",
       ]),
     );
 

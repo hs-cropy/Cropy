@@ -57,7 +57,6 @@ function getHistoryScrollElement(): HTMLElement | null {
   if (window.matchMedia("(min-width: 1024px)").matches) {
     return null;
   }
-
   return region;
 }
 

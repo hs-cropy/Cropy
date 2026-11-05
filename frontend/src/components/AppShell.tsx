@@ -14,7 +14,6 @@ const BACKGROUND_DESKTOP = "/background/farm-desktop.webp";
 const ROOT =
   "relative isolate flex h-screen min-h-0 flex-col overflow-hidden bg-cropy-surface " +
   "supports-[height:100dvh]:h-dvh " +
-  "lg:h-auto lg:min-h-screen lg:overflow-visible " +
   "print:!h-auto print:!min-h-0 print:!overflow-visible";
 
 interface AppShellProps extends ComponentPropsWithRef<"div"> {
@@ -163,9 +162,9 @@ export function AppShellPage({
         tabIndex={-1}
         className={cn(
           "min-h-0 min-w-0 flex-1",
-          "overflow-y-auto overscroll-contain",
+          "overflow-x-hidden overflow-y-auto overscroll-contain",
           "px-6 pb-5",
-          "lg:overflow-visible lg:pb-6 xl:px-16",
+          "lg:pb-6 xl:px-16",
           "print:!overflow-visible",
         )}
       >
