@@ -40,7 +40,10 @@ docker compose exec -T backend ls -l /backups
    docker compose exec -T backend python scripts/backup_db.py restore /backups/<타임스탬프>
    ```
 
-2. 여유 공간을 확인한다. 복원하는 동안 사진 용량이 잠시 약 3배 필요하다(#147).
+2. 미리보기 결과의 `disk_space`로 여유 공간을 확인한다. 교체 전까지 원래 사진, 백업에서 꺼낸 준비 사본, 복원 직전 안전 백업이 함께 있어 사진 용량이 잠시 **약 3배** 든다.
+   - `needed_bytes`는 복원이 새로 쓸 양(백업의 DB·사진 + 현재 DB·사진), `free_bytes`는 남은 공간이다. 디스크별로 한 줄씩 나온다.
+   - `enough`가 `false`면 "공간이 부족합니다" 경고가 함께 나오고, `--apply`는 아무것도 바꾸지 않고 바로 실패한다. 오래된 백업을 지우거나(`backup --keep`) 백업 볼륨을 서버 밖으로 옮긴 뒤 다시 한다.
+   - 계산은 파일 크기의 합이라 실제보다 조금 적다. 여유가 빠듯하면 정리부터 한다.
 3. 백엔드를 멈추고, 같은 설정의 일회용 컨테이너로 복원한다. `exec`는 실행 중인 컨테이너가 있어야 하므로 여기서는 `run`을 쓴다.
 
    ```bash

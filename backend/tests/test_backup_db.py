@@ -12,6 +12,7 @@ import threading
 import time
 from contextlib import closing
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -1534,3 +1535,39 @@ def test_backup_command_writes_under_backup_root_env(monkeypatch, tmp_path):
     backup_db.main()
     backups = [p for p in root.iterdir() if p.is_dir()]
     assert len(backups) == 1 and (backups[0] / "manifest.json").is_file()  # 볼륨 쪽에 완료된 백업이 생겼다
+
+
+# ---- 복원에 필요한 공간 ----
+
+
+def _tree_size(path: Path) -> int:
+    return sum(p.stat().st_size for p in path.rglob("*") if p.is_file())
+
+
+def test_restore_preview_reports_the_space_the_apply_will_write(live, snapshot_to_restore):
+    # 준비 사본(백업의 DB·사진)과 안전 백업(현재 DB·사진)을 새로 쓴다. 원래 사진까지 합쳐 약 3배
+    db_path, upload_dir, _ = live
+    plan = restore(snapshot_to_restore, db_path, upload_dir, apply=False)
+    expected = ((snapshot_to_restore / "cropcare.db").stat().st_size + _tree_size(snapshot_to_restore / "uploads")
+                + db_path.stat().st_size + _tree_size(upload_dir))
+    [space] = plan["disk_space"]  # 테스트 폴더는 모두 같은 디스크
+    assert space["needed_bytes"] == expected
+    assert space["free_bytes"] > 0 and space["enough"] is True
+
+
+def test_restore_apply_refuses_to_start_without_enough_space(live, snapshot_to_restore, monkeypatch, capsys):
+    db_path, upload_dir, _ = live
+    before = _snapshot(db_path, upload_dir)
+    monkeypatch.setattr(backup_db.shutil, "disk_usage", lambda path: SimpleNamespace(free=0))
+
+    # 미리보기는 그대로 보여 주고, 명령은 경고를 낸다
+    monkeypatch.setattr(sys, "argv", ["backup_db.py", "--database-url", f"sqlite:///{db_path}",
+                                      "--upload-dir", str(upload_dir), "restore", str(snapshot_to_restore)])
+    backup_db.main()
+    assert "공간이 부족" in capsys.readouterr().err
+
+    with pytest.raises(BackupError, match="공간이 부족"):
+        restore(snapshot_to_restore, db_path, upload_dir, apply=True)
+    assert _snapshot(db_path, upload_dir) == before
+    assert not list(snapshot_to_restore.parent.glob("pre_restore_*"))  # 안전 백업도 시작하지 않았다
+    assert not list(upload_dir.parent.glob(".restore-*"))

@@ -41,6 +41,8 @@ WAL 모드에서는 최근 커밋이 cropcare.db-wal에 있으므로 DB 파일�
 완전히 준비·검증한 다음 교체한다. 교체 직전 현재 DB(손상돼도)와 저널 파일은 원시 파일
 그대로, 사진은 전체 복사로 안전 백업에 남긴다. 교체 중 실패하면 원래 상태로 되돌리고,
 되돌리지 못한 단계가 있으면 서비스를 시작하지 말라는 안내와 함께 경로를 출력한다.
+교체 전까지 원래 사진·준비 사본·안전 백업이 함께 있어 사진 용량이 잠시 약 3배 든다. 미리보기가
+새로 쓸 양과 남은 공간(disk_space)을 보여 주고, 모자라면 --apply는 시작하지 않고 실패한다.
 
 지원하지 않는 구성: DB 파일이 업로드 폴더 안에 있는 경우, 링크가 들어 있는 백업.
 
@@ -52,7 +54,7 @@ Usage (backend 디렉터리에서):
     # 직전 백업과 연결하지 않고 전체 복사 / 보관 개수 제한 끄기
     python scripts/backup_db.py backup --full --keep 0
 
-    # 어떤 파일이 복원될지만 보기 (기본, 아무것도 안 건드림. 백업 구성은 검증한다)
+    # 어떤 파일이 복원될지만 보기 (기본, 아무것도 안 건드림. 백업 구성과 필요한 공간은 확인한다)
     python scripts/backup_db.py restore backups/20260928T120000Z
 
     # 실제 복원
@@ -676,6 +678,57 @@ def _safety_backup(db_path: Path, upload_dir: Path, safety_dir: Path) -> None:
     _write_manifest(safety_dir, manifest)
 
 
+def _tree_bytes(path: Path) -> int:
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for name in files:
+            try:
+                total += (Path(root) / name).lstat().st_size
+            except FileNotFoundError:
+                pass
+    return total
+
+
+def _existing_ancestor(path: Path) -> Path:
+    while not path.exists() and path.parent != path:
+        path = path.parent
+    return path
+
+
+def _disk_space(backup_dir: Path, db_path: Path, upload_dir: Path, safety_parent: Path) -> list[dict]:
+    """복원(--apply)이 새로 쓰는 양을 파일시스템별로 모아 남은 공간과 비교한다.
+
+    교체 전까지 원래 사진·준비한 사본·안전 백업이 함께 있어 사진 용량이 잠시 약 3배 든다.
+    새로 쓰는 것은 준비 사본(백업의 DB·사진)과 안전 백업(현재 DB·저널·사진)이다.
+    파일 크기의 합이라 블록 단위 낭비를 빼므로 실제로 필요한 양보다 작거나 같다 — 이보다 남은 공간이
+    적으면 복원은 반드시 중간에 실패한다.
+    """
+    current_db = sum(path.stat().st_size for path in [db_path, *_sidecars(db_path)] if path.is_file())
+    writes = [
+        (db_path.parent, (backup_dir / "cropcare.db").stat().st_size),
+        (upload_dir.parent, _tree_bytes(backup_dir / "uploads")),
+        (safety_parent, current_db + (_tree_bytes(upload_dir) if upload_dir.is_dir() else 0)),
+    ]
+    by_device: dict[int, dict] = {}
+    for target, size in writes:
+        probe = _existing_ancestor(target)
+        entry = by_device.setdefault(probe.stat().st_dev, {"path": str(probe), "needed_bytes": 0})
+        entry["needed_bytes"] += size
+    for entry in by_device.values():
+        entry["free_bytes"] = shutil.disk_usage(entry["path"]).free
+        entry["enough"] = entry["free_bytes"] >= entry["needed_bytes"]
+    return list(by_device.values())
+
+
+def _space_shortage(plan: dict) -> str | None:
+    short = [entry for entry in plan.get("disk_space", []) if not entry["enough"]]
+    if not short:
+        return None
+    return "; ".join(
+        f"{entry['path']}에 {entry['needed_bytes'] / 2**20:.1f}MB가 필요한데 {entry['free_bytes'] / 2**20:.1f}MB만 남았습니다"
+        for entry in short)
+
+
 def restore(backup_dir: Path, db_path: Path, upload_dir: Path, apply: bool) -> dict:
     """backup_dir의 내용을 db_path·upload_dir로 복원한다. 서비스를 멈춘 뒤 실행한다.
 
@@ -712,10 +765,15 @@ def _restore(backup_dir: Path, db_path: Path, upload_dir: Path, apply: bool) -> 
         "will_restore_db": True,
         "will_restore_uploads": True,
         "upload_file_count": manifest["upload_file_count"],
+        "disk_space": _disk_space(backup_dir, db_path, upload_dir, safety_dir.parent),
         "applied": False,
     }
     if not apply:
         return plan
+    shortage = _space_shortage(plan)
+    if shortage:
+        # 공간이 모자라면 준비나 안전 백업 중에 실패한다. 데이터는 안전하지만 시간만 쓰므로 시작하지 않는다
+        raise BackupError(f"복원할 공간이 부족해 시작하지 않습니다: {shortage}")
 
     staged_db = db_path.with_name(f".restore-{token}-{db_path.name}")
     staged_uploads = upload_dir.with_name(f".restore-{token}-{upload_dir.name}")
@@ -847,6 +905,9 @@ def main() -> None:
         elif args.command == "restore":
             plan = restore(args.backup_dir, db_path, upload_dir, apply=args.apply)
             print(json.dumps(plan, ensure_ascii=False, indent=2))
+            shortage = _space_shortage(plan)
+            if shortage and not args.apply:
+                print(f"경고: 복원할 공간이 부족합니다. --apply는 시작하지 않고 실패합니다. {shortage}", file=sys.stderr)
             if not args.apply:
                 print("\n미리보기입니다. 서비스를 멈춘 뒤 --apply를 추가하면 복원합니다.")
     except (BackupError, FileExistsError, FileNotFoundError, sqlite3.Error, OSError) as exc:
