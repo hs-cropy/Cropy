@@ -9,6 +9,7 @@ notebook always runs against the exact data it was built with.
 """
 import hashlib
 import json
+import os
 import lzma
 from pathlib import Path
 
@@ -20,9 +21,13 @@ KEEP = ("case_id", "split", "group", "function", "user_text", "context", "output
 DATA_VERSION = "v2c"  # v2: first run (v2_r16_e2), v2b: + apply_eval_fixes.py, v2c: without score-meaning rows
 DATA_FILE = f"qwen_{DATA_VERSION}_data.jsonl.xz"
 SHORT_PROMPT = False  # v3s (True): same v2c data, one-line prompt; args fell to 80.8%, see README
-VERSION = "v3s" if SHORT_PROMPT else DATA_VERSION
-MODEL_ID = "Qwen/Qwen3.5-2B"
-MODEL_REF = "15852e8c16360a2fea060d615a32b45270f8a8fc"  # revision used by the v14~v18 runs
+# QWEN_BASE=0.8b python build_train_notebook.py -> same data and recipe on Qwen3.5-0.8B (browser offline candidate)
+BASES = {"2b": ("Qwen/Qwen3.5-2B", "15852e8c16360a2fea060d615a32b45270f8a8fc"),  # revision used by the v14~v18 runs
+         "0.8b": ("Qwen/Qwen3.5-0.8B", "2fc06364715b967f1860aea9cf38778875588b17")}
+BASE = os.environ.get("QWEN_BASE", "2b")
+MODEL_ID, MODEL_REF = BASES[BASE]
+VERSION = ("v3s" if SHORT_PROMPT else DATA_VERSION) + ("" if BASE == "2b" else "_" + BASE.replace(".", ""))
+NOTEBOOK = "cropy_qwen_v2_train_colab.ipynb" if BASE == "2b" else f"cropy_qwen_v2_{BASE.replace('.', '')}_train_colab.ipynb"
 
 
 def payload():
@@ -348,7 +353,7 @@ def main():
     (DATA / DATA_FILE).write_bytes(data)
     sha = hashlib.sha256(data).hexdigest()
     nb = notebook(sha, counts)
-    out = HERE / "cropy_qwen_v2_train_colab.ipynb"
+    out = HERE / NOTEBOOK
     out.write_text(json.dumps(nb, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(dict(data_bytes=len(data), data_sha256=sha, notebook=str(out), **counts)))
 
