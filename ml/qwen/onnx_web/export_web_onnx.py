@@ -50,7 +50,9 @@ report = dict(ref=[args.ref_repo, args.ref_rev], base=[args.base_repo, args.base
 patterns = ["config.json", "generation_config.json", "chat_template.jinja"]
 for d in dtypes:
     patterns += [f"onnx/decoder_model_merged_{d}.onnx*", f"onnx/embed_tokens_{d}.onnx*"]
-ref_dir = Path(snapshot_download(args.ref_repo, revision=args.ref_rev, allow_patterns=patterns, cache_dir=args.cache_dir))
+# local_dir writes real files: the HF cache uses symlinks on Linux and onnx>=1.23 refuses symlinked external data.
+ref_dir = Path(snapshot_download(args.ref_repo, revision=args.ref_rev, allow_patterns=patterns,
+                                 local_dir=Path(args.cache_dir) / ("ref__" + args.ref_repo.replace("/", "__"))))
 base_dir = Path(snapshot_download(args.base_repo, revision=args.base_rev, allow_patterns=["*.safetensors", "*.json"],
                                   cache_dir=args.cache_dir))
 print("공식 ONNX", ref_dir, "| 기본 모델", base_dir)
