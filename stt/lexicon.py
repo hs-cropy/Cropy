@@ -14,6 +14,7 @@ SenseVoice는 한국어 일반 문장은 잘 받아 적지만 병명처럼 드�
 - 자모 비교는 단어 시작에서, 용어와 같은 글자 수로만 한다("다시 촬영"의 "시 촬영"이나 "촬영" 두 글자를
   재촬영으로 보지 않는다).
 - 세 글자 용어와 띄어쓰기를 넘는 비교는 자모 하나 차이까지만 고친다("무슨 병"은 무름병과 둘 차이).
+- 끝 글자가 용어와 같을 때만 고친다("검은무늬가 생겼어요"의 "검은무늬가"를 검은무늬병으로 보지 않는다).
 """
 
 from dataclasses import dataclass
@@ -123,6 +124,11 @@ class Lexicon:
             for start in range(len(compact) - n + 1):
                 window = compact[start:start + n]
                 if window == term_compact or not word_start[start] or not all(is_hangul(ch) for ch in window):
+                    continue
+                # 끝 글자는 같아야 한다. 병명 앞부분은 증상 표현과 같아서("검은무늬가 생겼어요"), 끝 글자까지
+                # 자모 거리로 비교하면 조사가 붙은 증상이 병명으로 바뀐다. 실제 오인식은 끝 글자 "병"이 맞게
+                # 들렸다(탄접병·무음병·검은썩금병·고충탄접병)
+                if window[-1] != term_compact[-1]:
                     continue
                 spans_space = chars[start + n - 1][1] - chars[start][1] != n - 1
                 d = _distance(to_jamo(window), term_jamo)

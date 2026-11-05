@@ -29,6 +29,14 @@ def make_wav(samples, rate=16000, channels=1, width=2) -> bytes:
     return buf.getvalue()
 
 
+def zero_rate_wav() -> bytes:
+    """헤더의 샘플레이트가 0인 wav (wave 모듈로는 만들 수 없어 직접 쓴다)."""
+    import struct
+    data = b"\x00\x01" * 100
+    fmt = struct.pack("<HHIIHH", 1, 1, 0, 0, 2, 16)
+    return b"RIFF" + struct.pack("<I", 36 + len(data)) + b"WAVEfmt " + struct.pack("<I", 16) + fmt + b"data" + struct.pack("<I", len(data)) + data
+
+
 def speech(seconds, rate=16000):
     return 0.3 * np.ones(int(seconds * rate), dtype=np.float32)
 
@@ -167,8 +175,9 @@ def test_stereo_44k_is_converted_to_16k_mono(client, engine):
         (b"not a wav file", 400),
         (make_wav(speech(0.5), width=4), 400),
         (make_wav(speech(server.MAX_SECONDS + 1, rate=8000), rate=8000), 400),
+        (zero_rate_wav(), 400),
     ],
-    ids=["empty", "not-wav", "32bit", "too-long"],
+    ids=["empty", "not-wav", "32bit", "too-long", "zero-rate"],
 )
 def test_bad_audio_is_rejected_before_decoding(client, engine, body, status):
     assert post(client, body).status_code == status

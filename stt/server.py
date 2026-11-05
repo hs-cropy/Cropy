@@ -57,6 +57,8 @@ def read_wav(data: bytes) -> tuple[np.ndarray, int]:
             channels, width, rate, frames = wav.getnchannels(), wav.getsampwidth(), wav.getframerate(), wav.getnframes()
             if width != 2:
                 raise AudioError("16비트 PCM wav만 받습니다.")
+            if rate <= 0 or channels <= 0:
+                raise AudioError("wav 헤더가 올바르지 않습니다.")
             if frames / rate > MAX_SECONDS:
                 raise AudioError(f"{MAX_SECONDS}초보다 긴 음성은 받지 않습니다.")
             pcm = np.frombuffer(wav.readframes(frames), dtype="<i2")
