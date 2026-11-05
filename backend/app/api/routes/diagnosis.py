@@ -202,28 +202,45 @@ async def _synthesize_within_budget(limiter: asyncio.Semaphore, text: str, deadl
 
     def finished(done: asyncio.Future) -> None:
         limiter.release()
-        if not done.cancelled() and done.exception() is not None:
-            # 응답이 이미 503으로 끝난 뒤의 실패는 기록만 남긴다
-            logger.warning("Background TTS synthesis failed: %s", done.exception())
+        _log_late_failure(done)
 
     task.add_done_callback(finished)
     return await asyncio.wait_for(asyncio.shield(task), max(deadline - loop.time(), 0))
 
 
+async def _before_deadline(deadline: float, func, *args):
+    """캐시 조회·잇기 같은 스레드 작업도 같은 마감 시각까지만 기다린다. 넘기면 TimeoutError.
+
+    스레드는 중간에 멈출 수 없어 끝까지 돌지만, 응답은 그 끝을 기다리지 않는다.
+    """
+    loop = asyncio.get_running_loop()
+    task = asyncio.ensure_future(run_in_threadpool(func, *args))
+    task.add_done_callback(_log_late_failure)
+    return await asyncio.wait_for(asyncio.shield(task), max(deadline - loop.time(), 0))
+
+
+def _log_late_failure(done: asyncio.Future) -> None:
+    if not done.cancelled() and done.exception() is not None:
+        # 응답이 이미 503으로 끝난 뒤의 실패는 기록만 남긴다
+        logger.warning("Background TTS work failed: %s", done.exception())
+
+
 async def _speech_wav(limiter: asyncio.Semaphore, sentences: list[str]) -> bytes:
     """문장마다 캐시를 쓰거나 합성해 하나로 잇는다. 예산은 요청 전체에 한 번만 쓴다.
 
+    캐시 조회와 잇기도 같은 마감 시각 안에 끝나야 한다 — 디스크나 스레드풀이 밀려도
+    프록시 제한 전에 503을 보내 프론트가 브라우저 음성으로 대신 읽게 한다.
     예산 안에 다 만들지 못해도 그때까지 만든 문장은 캐시에 남는다. 다음 요청은 남은 문장만
     합성하므로, 합성이 느린 기기에서도 요청이 거듭될수록 완성된다.
     """
     deadline = asyncio.get_running_loop().time() + settings.tts_response_budget_seconds
     parts = []
     for sentence in sentences:
-        audio = await run_in_threadpool(tts_service.cached_audio, sentence)
+        audio = await _before_deadline(deadline, tts_service.cached_audio, sentence)
         if audio is None:
             audio = await _synthesize_within_budget(limiter, sentence, deadline)
         parts.append(audio)
-    return await run_in_threadpool(tts_service.join_wavs, parts)
+    return await _before_deadline(deadline, tts_service.join_wavs, parts)
 
 
 _SPEECH_NOT_FOUND = error_response("진단 기록을 찾을 수 없습니다.", "DIAGNOSIS_NOT_FOUND")

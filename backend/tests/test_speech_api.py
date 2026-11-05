@@ -236,6 +236,36 @@ def test_budget_covers_the_whole_request_not_each_sentence(client, diagnosis_id,
     assert len(done) == 2
 
 
+@pytest.mark.parametrize("step", ["cached_audio", "join_wavs"])
+def test_slow_cache_lookup_or_join_answers_503_within_budget(client, diagnosis_id, monkeypatch, tmp_path, step):
+    # 합성뿐 아니라 캐시 조회·잇기도 예산 안에 끝나야 한다 — 디스크나 스레드풀이 밀려도
+    # 프록시 제한 전에 503을 보내 프론트가 브라우저 음성으로 대신 읽게 한다
+    monkeypatch.setattr(settings, "tts_cache_dir", tmp_path)
+    assert client.get(f"/api/v1/diagnose/{diagnosis_id}/speech").status_code == 200  # 모든 문장 캐시
+    monkeypatch.setattr(settings, "tts_response_budget_seconds", 0.2)
+    release, finished = threading.Event(), threading.Event()
+    real = getattr(tts_service, step)
+
+    def slow(*args):
+        release.wait(30)
+        try:
+            return real(*args)
+        finally:
+            finished.set()
+
+    monkeypatch.setattr(tts_service, step, slow)
+    try:
+        started = time.monotonic()
+        res = client.get(f"/api/v1/diagnose/{diagnosis_id}/speech")
+        assert res.status_code == 503 and res.json()["code"] == "TTS_UNAVAILABLE"
+        assert time.monotonic() - started < 10  # 느린 조회·잇기(최대 30초)를 기다리지 않았다
+    finally:
+        release.set()
+        # 앞의 단정이 실패해도 스레드가 끝난 뒤 tmp_path 정리가 일어나게 한다
+        completed = finished.wait(10)
+    assert completed
+
+
 def test_cache_removed_after_lookup_still_answers_the_audio(client, diagnosis_id, monkeypatch, tmp_path):
     # 캐시를 찾은 뒤 응답을 보내기 전에 다른 요청의 보관 개수 정리가 파일을 지울 수 있다
     monkeypatch.setattr(settings, "tts_cache_dir", tmp_path)
