@@ -1,0 +1,85 @@
+topic	delivery	ui_stage	utterance
+next_step	brief	no_photo	처음인데 뭐부터 하면 돼요
+next_step	brief	no_photo	이거 어떻게 시작해
+next_step	brief	no_photo	이제 뭐 하면 돼
+next_step	brief	no_photo	처음 써 보는데 어떻게 하는 거예요
+next_step	step_by_step	no_photo	처음부터 하나씩 천천히 알려 줘
+next_step	step_by_step	no_photo	차근차근 순서대로 알려 주세요
+next_step	brief	photo_ready	사진 찍었는데 이제 뭐 해
+next_step	brief	photo_ready	다음은 뭘 눌러요
+next_step	brief	photo_ready	사진 골랐어 그다음은
+next_step	step_by_step	photo_ready	사진 넣었는데 다음 순서를 하나씩 알려 줘
+next_step	brief	result	결과 나왔는데 이제 어떻게 하면 돼요
+next_step	brief	result	그래서 이제 나는 뭘 해야 돼
+next_step	brief	result	다음에 할 일 알려 줘
+next_step	step_by_step	result	지금부터 할 일을 하나씩 말해 주세요
+next_step	brief	error	안 되는데 이제 어떡해
+capture	brief	no_photo	사진은 어떻게 찍어요
+capture	brief	no_photo	사진 찍는 버튼이 어디 있어
+capture	brief	no_photo	잎을 어떻게 찍어야 잘 나와요
+capture	brief	no_photo	가까이 찍어야 돼 멀리 찍어야 돼
+capture	brief	no_photo	갤러리에 있는 사진도 올릴 수 있어요
+capture	step_by_step	no_photo	사진 찍는 방법을 하나씩 알려 줘
+capture	brief	no_photo	잎 한 장만 찍으면 되는 거야
+capture	brief	no_photo	밝은 데서 찍어야 해요
+capture	brief	photo_ready	사진이 흐린데 다시 어떻게 찍어
+capture	step_by_step	no_photo	사진 찍는 걸 천천히 처음부터 알려 주세요
+crop_selection	brief	no_photo	작물은 어떻게 골라요
+crop_selection	brief	no_photo	작물 선택은 꼭 해야 돼
+crop_selection	brief	photo_ready	고추로 바꾸려면 어떻게 해
+crop_selection	brief	photo_ready	작물을 모르겠으면 어떻게 해요
+crop_selection	brief	no_photo	자동 감지가 뭐야
+crop_selection	brief	photo_ready	무로 바꾸고 싶은데 어디서 바꿔요
+crop_selection	step_by_step	no_photo	작물 고르는 방법을 하나씩 알려 줘
+crop_selection	brief	photo_ready	배추 선택하는 데가 어디야
+analysis_status	brief	analyzing	아직 멀었어
+analysis_status	brief	analyzing	지금 분석하고 있는 거예요
+analysis_status	brief	analyzing	왜 이렇게 오래 걸려
+analysis_status	brief	analyzing	얼마나 더 기다려야 돼요
+analysis_status	brief	analyzing	멈춘 거 아니지
+analysis_status	brief	analyzing	진행되고 있는 거 맞아요
+analysis_status	brief	analyzing	결과 언제 나와
+analysis_status	brief	analyzing	화면이 그대로인데 돌아가고 있는 거야
+retry	brief	error	오류 났는데 다시 하려면 어떻게 해요
+retry	brief	error	안 돼 다시 해 볼래
+retry	brief	error	다시 시도하는 방법 알려 줘
+retry	brief	error	사진이 안 올라가요 어떻게 해야 돼요
+retry	step_by_step	error	다시 하는 방법을 하나씩 알려 주세요
+retry	brief	error	실패했다고 나오는데 뭘 다시 눌러
+retry	brief	error	인터넷이 끊겼었는데 다시 하면 돼
+repeat	brief	result	다시 말해 줘
+repeat	brief	result	못 들었어요 한 번 더 말해 주세요
+repeat	brief	result	방금 뭐라고 했어
+repeat	brief	result	다시 한번 알려 줄래
+repeat	step_by_step	result	방금 말한 거 천천히 다시 해 줘
+repeat	brief	photo_ready	한 번만 더 말해 줘요
+repeat	brief	no_photo	아까 그거 다시 말해 줘
+repeat	step_by_step	result	너무 빨라 하나씩 다시 말해 주세요
+next_step	brief	no_photo	어디부터 누르면 돼
+next_step	brief	photo_ready	이 다음엔 어떻게 해요
+next_step	brief	result	이거 보고 이제 뭐 해야 돼요
+next_step	step_by_step	result	할 일을 순서대로 천천히 알려 줘
+next_step	brief	error	오류가 났는데 이제 뭘 하면 돼요
+capture	brief	no_photo	사진 찍으려면 어떻게 해야 돼
+capture	brief	no_photo	잎 앞면 찍어요 뒷면 찍어요
+capture	brief	no_photo	병든 부분을 크게 찍으면 돼
+capture	brief	no_photo	사진 여러 장 찍어야 돼요
+capture	step_by_step	no_photo	찍는 법 하나하나 알려 줘
+crop_selection	brief	no_photo	고추를 고르려면 어디를 눌러요
+crop_selection	brief	photo_ready	작물을 잘못 골랐는데 어떻게 바꿔
+crop_selection	brief	no_photo	무는 어디서 선택해
+crop_selection	brief	photo_ready	작물 안 고르고 해도 돼요
+analysis_status	brief	analyzing	다 됐어
+analysis_status	brief	analyzing	아직 하는 중이에요
+analysis_status	brief	analyzing	빙글빙글 돌기만 하는데
+analysis_status	brief	analyzing	조금만 기다리면 돼
+retry	brief	error	다시 하려면 뭘 눌러요
+retry	brief	error	또 실패했어 어떻게 다시 해
+retry	brief	error	처음부터 다시 하고 싶어요
+retry	brief	error	사진 다시 보내려면 어떻게 해
+repeat	brief	result	뭐라고요
+repeat	brief	result	잘 안 들려 다시 말해 봐
+repeat	brief	result	아까 말한 거 한 번 더
+repeat	step_by_step	result	다시 천천히 말해 줘요
+repeat	brief	photo_ready	방금 그거 다시 알려 주세요
+repeat	brief	no_photo	뭐라고 했는지 모르겠어
