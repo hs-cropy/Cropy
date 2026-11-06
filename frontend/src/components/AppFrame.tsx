@@ -77,6 +77,11 @@ function Frame({ children }: { children: ReactNode }) {
     requestNewDiagnosis();
   };
 
+  // 음성 모드는 전용 전체 화면을 사용한다.
+  // DiagnosisSessionProvider는 상위 AppFrame에서 유지한다.
+  if (pathname === "/voice-mode") {
+    return <>{children}</>;
+  }
   return (
     <AppShell
       ref={shellRef}
