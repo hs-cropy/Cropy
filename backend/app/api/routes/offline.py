@@ -134,9 +134,14 @@ def import_record(db, metadata, content, extension, refined_content, refined_ext
     second = settings.upload_dir / f"{uuid4()}{refined_extension}" if refined_content else None
     names = {d["model_class_id"]: d["name"] for d in bundle["diseases"]}
     guidance = None
-    pair = next((pair for pair in policy.get("pairs", []) if set(pair["ids"]) == {i for i, _ in dist[:2]}), None)
+    pairs = policy.get("pairs", [])
     margin = dist[0][1] - dist[1][1]
-    if pair and margin < policy.get("confusion_margin", .2) and primary.category != "other":
+    # Same rule as recapture.check_recapture; bundles without "trigger" keep the margin rule.
+    pair = None if m.refined_predictions else next(
+        (pair for pair in pairs if pair.get("trigger") == "top1" and dist[0][0] in pair["ids"]), None)
+    if pair is None and margin < policy.get("confusion_margin", .2):
+        pair = next((pair for pair in pairs if set(pair["ids"]) == {i for i, _ in dist[:2]}), None)
+    if pair and primary.category != "other":
         guidance = RecaptureGuidance(region=pair["region"], instruction=pair["instruction"], margin=round(margin, 4),
             candidates=[dict(name=names[i], cue=pair["cues"][str(i)]) for i in pair["ids"]])
     snapshot["decision"] = decision(dist[0][1], crop_mismatch(m.selected_crop, source["crop_type"], source["category"]),

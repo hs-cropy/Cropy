@@ -1,9 +1,16 @@
 """진단 결과를 음성으로 읽어줄 문장으로 바꾼다.
 
+화면과 음성이 같은 근거(DiagnoseResponse)에서 나오도록 템플릿으로만 만든다.
+수치는 DB 값만 쓰고, 확정되지 않은 진단에는 방제 안내를 붙이지 않는다.
 TTS 모델은 숫자·기호 발음이 불안정하므로 합성 전에 한글로 풀어 쓴다.
 """
 
 import re
+
+from app.schemas.diagnosis import DiagnoseResponse, PesticideInfo
+
+# 귀로만 듣는 안내라 길면 앞부분을 잊는다. 나머지는 화면에서 확인하도록 넘긴다
+MAX_ACTIONS = 2
 
 
 def _has_final_consonant(word: str) -> bool:
@@ -147,3 +154,137 @@ def normalize_for_tts(text: str) -> str:
     text = _NUMBER.sub(replace, text)
     text = _MARKED_JOSA.sub(_repick_josa, text).replace(_JOSA_MARK, "")
     return re.sub(r"\s{2,}", " ", text).strip()
+
+
+# ── 문장 구성 ────────────────────────────────────────────────────────────────
+
+_ORDINALS = ["첫째", "둘째", "셋째"]
+
+
+def _headline(result: DiagnoseResponse, uncertain: bool) -> list[str]:
+    if result.category == "normal":
+        # crop_type은 사용자가 고른 작물일 수 있다. 건강하다고 말하는 대상은 모델이 본 작물이다
+        crop = result.predicted_crop or result.crop_type or "작물"
+        lines = [f"{crop}{josa(crop, '은', '는')} 건강한 상태로 보여요."]
+        if uncertain:
+            lines.append("다만 확실하지 않으니 잎 상태를 한 번 더 살펴봐 주세요.")
+        return lines
+
+    name = result.disease_name
+    if uncertain:
+        return [f"{name}일 가능성이 있지만, 비슷한 병해가 여럿 나와 아직 확실하지 않아요."]
+    return [f"{name}{euro(name)} 보여요."]
+
+
+def _usable_pesticides(result: DiagnoseResponse) -> list[PesticideInfo]:
+    """지금 안내해도 되는 농약. 이력 화면과 같이 현재 카탈로그의 검증된 사용 조건만 쓴다.
+
+    음성은 저장된 기록에서 만든다. 저장 당시 목록(pesticides)은 그 뒤 등록이 해제되거나
+    조건이 바뀌었을 수 있고 검증되지 않은 제품도 있어, 현재 사용 지침으로 읽지 않는다.
+    """
+    return [p for p in result.current_pesticides if p.verification_status == "verified"]
+
+
+def _pesticide_lines(pesticides: list[PesticideInfo]) -> list[str]:
+    first = pesticides[0]
+    name = strip_parenthetical(first.name)
+    lines = [f"등록 농약으로는 {name}{josa(name, '이', '가')} 있어요."]
+    # 경엽처리·관주처리 같은 사용 방법을 템플릿이 정하지 않는다. 카탈로그 값만 그대로 읽는다
+    if first.usage:
+        lines.append(f"사용 방법은 {first.usage}{josa(first.usage, '이에요', '예요')}.")
+    if first.dilution:
+        lines.append(f"희석 배수는 {first.dilution}{josa(first.dilution, '이에요', '예요')}.")
+    if first.safety.phi_days is not None:
+        lines.append(f"수확 {first.safety.phi_days}일 전까지만 쓸 수 있어요.")
+    if len(pesticides) > 1:
+        lines.append("다른 농약과 자세한 사용법은 화면에서 확인해 주세요.")
+    else:
+        lines.append("자세한 사용법은 화면에서 확인해 주세요.")
+    return lines
+
+
+def _actions(result: DiagnoseResponse) -> list[str]:
+    """지금 할 일. 귀로 듣기 좋은 설명 문장을 먼저 쓰고, 없는 이전 기록은 제목·예방법으로 대신한다.
+
+    화면(DiagnosisResultView)과 같이 할 일 제목을 기준으로, 같은 자리의 설명이 그 제목의 것일 때만
+    설명을 읽는다. 어긋난 설명을 읽으면 화면에 없는 할 일을 귀로만 듣게 된다.
+    """
+    details = result.management_action_details
+    actions = [
+        details[index].description
+        if index < len(details) and details[index].title == title and details[index].description.strip()
+        else title
+        for index, title in enumerate(result.management_actions)
+    ]
+    return (actions or result.prevention)[:MAX_ACTIONS]
+
+
+def _numbered(items: list[str]) -> list[str]:
+    return [f"{_ORDINALS[i]}, {item.rstrip('.')}." for i, item in enumerate(items)]
+
+
+def build_script(result: DiagnoseResponse) -> list[str]:
+    """진단 결과 → 낭독 문장 목록 (병명 → 지금 해야 할 일 순).
+
+    판단은 화면과 같은 decision_status·decision_reasons를 따른다. 임계값을 여기서 다시
+    계산하면 서버 설정(LOW_CONFIDENCE_THRESHOLD)과 음성의 단정 수준이 어긋난다.
+    서버(decision.decision)는 상태를 항상 사유의 첫 항목으로 두고, 혼동(confusion)은 재촬영
+    안내와 함께 저장한다. 그래도 음성은 방제를 단정해 읽으므로 둘 중 한쪽만 확실하지 않다고
+    해도 확실하지 않은 쪽으로 읽는다.
+    """
+    is_normal = result.category == "normal"
+    states = {result.decision_status, *result.decision_reasons}
+    # 재촬영 안내 없이 혼동만 남은 기록도 후보를 가리지 못한 상태다
+    confused_without_guidance = "confusion" in states and not result.recapture
+    uncertain = "low_confidence" in states or confused_without_guidance
+    lines: list[str] = []
+
+    if result.prediction_mode == "mock":
+        lines.append("지금은 시험용 결과예요. 실제 진단이 아니에요.")
+
+    # 작물 잎으로 알아볼 수 없으면 병명도 작물도 말하지 않고 다시 찍는 방법만 알린다
+    if "not_crop" in states or result.category == "other":
+        lines.append("사진에서 작물 잎을 찾지 못했어요.")
+        tips = _actions(result)
+        if tips:
+            lines.append("이렇게 다시 찍어 주세요.")
+            lines += _numbered(tips)
+        else:
+            lines.append("잎이 잘 보이게 다시 찍어 주세요.")
+        return [normalize_for_tts(line) for line in lines]
+
+    # 고른 작물과 사진 속 작물이 다르면 진단 전체가 의심스럽다. 정상 단정·방제 안내 없이
+    # 작물 확인부터 요청한다
+    if "crop_mismatch" in states or result.crop_mismatch:
+        selected = result.selected_crop or result.crop_type or "선택하신 작물"
+        predicted = result.predicted_crop or "다른 작물"
+        lines.append(f"선택하신 작물은 {selected}인데, 사진은 {predicted} 잎으로 보여요.")
+        lines.append("작물을 확인하고 다시 찍어 주세요.")
+        return [normalize_for_tts(line) for line in lines]
+
+    lines += _headline(result, uncertain)
+
+    # 재촬영이 필요하면 그것이 지금 할 일의 전부다 — 확정 전에 방제를 권하지 않는다
+    if result.recapture:
+        lines.append("정확히 가리려면 사진을 한 장 더 찍어 주세요.")
+        lines.append(result.recapture.instruction)
+        return [normalize_for_tts(line) for line in lines]
+
+    if confused_without_guidance:
+        lines.append("정확히 가리려면 병든 부위가 잘 보이게 사진을 한 장 더 찍어 주세요.")
+        return [normalize_for_tts(line) for line in lines]
+
+    if not is_normal and uncertain:
+        lines.append("방제하기 전에 가까운 농업기술센터에 확인해 보세요.")
+        return [normalize_for_tts(line) for line in lines]
+
+    actions = _actions(result)
+    if actions:
+        lines.append("관리 요령을 알려드릴게요." if is_normal else "지금 할 일을 알려드릴게요.")
+        lines += _numbered(actions)
+
+    pesticides = _usable_pesticides(result)
+    if not is_normal and pesticides:
+        lines += _pesticide_lines(pesticides)
+
+    return [normalize_for_tts(line) for line in lines]

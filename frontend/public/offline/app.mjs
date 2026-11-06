@@ -449,7 +449,7 @@ async function refine() {
     const second = await predict(file);
     const combined = fuse(base.predictions,second,bundle.policy.second_photo_weight);
     const record = {...base,refined_file:file,refined_predictions:second,sync_status:'pending',saved:false,
-      result:summarize(bundle,combined,base.selected_crop)};
+      result:summarize(bundle,combined,base.selected_crop,true)};
     result(record); if (await storeRecord(record)) $('state').textContent = '';
   } catch (error) { analysisFailed(error, 'result'); }
   finally { setBusy(false); }
