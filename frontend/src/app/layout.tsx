@@ -13,6 +13,9 @@ export const metadata: Metadata = {
     apple: { url: "/offline/icons/apple-touch-icon.png", sizes: "180x180" },
   },
   formatDetection: { telephone: false },
+  // 설치 앱은 온라인 화면(/)으로 시작한다. 연결이 없으면 public/sw.js가 기기 진단(/offline/)으로 돌린다.
+  // id는 "/offline/" 그대로 둬서 이미 설치한 기기에 앱이 하나 더 생기지 않게 한다.
+  manifest: "/offline/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {

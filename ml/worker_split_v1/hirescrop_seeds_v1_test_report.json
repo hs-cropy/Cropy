@@ -1,0 +1,140 @@
+{
+ "runs": {
+  "low448_s1": {
+   "epoch": 7,
+   "accuracy": 0.5759,
+   "recall_2": 0.4717,
+   "recall_3": 0.859,
+   "balanced": 0.6653
+  },
+  "hi448_s1": {
+   "epoch": 6,
+   "accuracy": 0.6517,
+   "recall_2": 0.6038,
+   "recall_3": 0.7821,
+   "balanced": 0.6929
+  },
+  "low448_s2": {
+   "epoch": 10,
+   "accuracy": 0.6586,
+   "recall_2": 0.6085,
+   "recall_3": 0.7949,
+   "balanced": 0.7017
+  },
+  "hi448_s2": {
+   "epoch": 3,
+   "accuracy": 0.731,
+   "recall_2": 0.75,
+   "recall_3": 0.6795,
+   "balanced": 0.7147
+  },
+  "low448_s3": {
+   "epoch": 8,
+   "accuracy": 0.6069,
+   "recall_2": 0.5,
+   "recall_3": 0.8974,
+   "balanced": 0.6987
+  },
+  "hi448_s3": {
+   "epoch": 10,
+   "accuracy": 0.5276,
+   "recall_2": 0.3962,
+   "recall_3": 0.8846,
+   "balanced": 0.6404
+  }
+ },
+ "mcnemar_s1_low_vs_hi": {
+  "only_first": 21,
+  "only_second": 43,
+  "p": 0.0081
+ },
+ "mcnemar_s2_low_vs_hi": {
+  "only_first": 15,
+  "only_second": 36,
+  "p": 0.0046
+ },
+ "mcnemar_s3_low_vs_hi": {
+  "only_first": 34,
+  "only_second": 11,
+  "p": 0.0008
+ },
+ "summary": {
+  "low448_accuracy": {
+   "mean": 0.6138,
+   "std": 0.0341,
+   "values": [
+    0.5759,
+    0.6586,
+    0.6069
+   ]
+  },
+  "low448_recall_2": {
+   "mean": 0.5267,
+   "std": 0.059,
+   "values": [
+    0.4717,
+    0.6085,
+    0.5
+   ]
+  },
+  "low448_recall_3": {
+   "mean": 0.8504,
+   "std": 0.0423,
+   "values": [
+    0.859,
+    0.7949,
+    0.8974
+   ]
+  },
+  "low448_balanced": {
+   "mean": 0.6886,
+   "std": 0.0165,
+   "values": [
+    0.6653,
+    0.7017,
+    0.6987
+   ]
+  },
+  "hi448_accuracy": {
+   "mean": 0.6368,
+   "std": 0.0837,
+   "values": [
+    0.6517,
+    0.731,
+    0.5276
+   ]
+  },
+  "hi448_recall_2": {
+   "mean": 0.5833,
+   "std": 0.1452,
+   "values": [
+    0.6038,
+    0.75,
+    0.3962
+   ]
+  },
+  "hi448_recall_3": {
+   "mean": 0.7821,
+   "std": 0.0837,
+   "values": [
+    0.7821,
+    0.6795,
+    0.8846
+   ]
+  },
+  "hi448_balanced": {
+   "mean": 0.6827,
+   "std": 0.0312,
+   "values": [
+    0.6929,
+    0.7147,
+    0.6404
+   ]
+  }
+ },
+ "pair_images": {
+  "train": 391,
+  "val": 65,
+  "test": 290
+ }
+}

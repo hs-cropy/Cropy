@@ -29,7 +29,9 @@ def capabilities():
         "crops": ["고추", "무", "배추"],
         "decision": {"version": POLICY_VERSION, "low_confidence_threshold": settings.low_confidence_threshold,
                      "confusion_margin": DEFAULT_MARGIN, "second_photo_weight": FUSE_WEIGHT_SECOND,
-                     "confusion_pairs": [sorted(pair) for pair in CONFUSION_PAIRS]},
+                     "confusion_pairs": [sorted(pair) for pair in CONFUSION_PAIRS],
+                     "top1_recapture_pairs": [sorted(pair) for pair, entry in CONFUSION_PAIRS.items()
+                                              if entry.get("trigger") == "top1"]},
         "execution": {"server_inference": is_model_ready(), "browser_bundle_available": (settings.offline_bundle_dir / "manifest.json").is_file(),
                       "browser_inference": "device_validation_required",
                       "voice_commands": False},

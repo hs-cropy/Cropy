@@ -9,13 +9,36 @@ from app.schemas.llm_response import LLMGuidanceResponse
 LLMCaller = Callable[[dict], Awaitable[str]]
 
 
+def _is_not_crop(context: DiagnosisLLMInput) -> bool:
+    return (
+        context.category == "other"
+        or context.decision_status == "not_crop"
+        or "not_crop" in context.decision_reasons
+    )
+
+
 def _template(context: DiagnosisLLMInput) -> str:
     # 기존 판정 결과를 표시한다. 임계값이나 판정 정책을 여기서 재계산하지 않는다.
     lines = []
     if context.prediction_mode == "mock":
         lines.append("데모(Mock) 결과입니다. 실제 모델 진단 결과가 아닙니다.")
-    elif context.prediction_mode != "model":
+    elif context.prediction_mode not in {"model", "browser"}:
         lines.append("추론 출처가 확인되지 않아 진단 확정 안내를 제공하지 않습니다.")
+    if _is_not_crop(context):
+        lines.append(
+            "사진에서 대상 작물의 잎을 알아보기 어렵습니다. "
+            "병해 여부를 판단하지 않고 재촬영을 안내합니다."
+        )
+        if context.management_actions:
+            lines.append(
+                "재촬영 방법: " + "; ".join(context.management_actions)
+            )
+        else:
+            lines.append(
+                "고추·무·배추 잎 한 장이 화면을 가득 채우도록 "
+                "밝은 곳에서 초점을 맞춰 다시 찍어 주세요."
+            )
+        return "\n".join(lines)
     if context.crop_mismatch or context.decision_status == "crop_mismatch" or "crop_mismatch" in context.decision_reasons:
         lines.append(f"작물 불일치: 선택 작물 {context.selected_crop or '미지정'}, 예측 작물 {context.predicted_crop or '미확인'}")
         lines.append("선택한 작물과 촬영 대상을 확인해 주세요.")
@@ -25,7 +48,7 @@ def _template(context: DiagnosisLLMInput) -> str:
         lines.append("기존 판정 정책에 따라 후보 구분을 위한 재촬영이 필요합니다.")
     if context.decision_reasons:
         lines.append("판정 사유: " + "; ".join(context.decision_reasons))
-    confirmed = (context.prediction_mode == "model" and not context.crop_mismatch
+    confirmed = (context.prediction_mode in {"model", "browser"} and not context.crop_mismatch
                  and context.decision_status in {"normal", "disease"} and not context.decision_reasons)
     if confirmed:
         lines.append(f"모델 분류 결과: {context.disease_name}")
@@ -60,6 +83,9 @@ async def generate_guidance(
 
     def fallback(reason):
         return LLMGuidanceResponse(text=_template(context), source="template", fallback_reason=reason)
+
+    if _is_not_crop(context):
+        return fallback("not_crop")
 
     if caller is None:
         return fallback("unavailable")

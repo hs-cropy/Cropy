@@ -1,0 +1,398 @@
+/* 오프라인 화면(설치 안내·오프라인 준비) 공용 스타일.
+   이 화면들은 인터넷 없이 열려야 해서 Next 앱 CSS 를 쓰지 못한다. 값은 tailwind.config.js 의
+   cropy-* 토큰(Figma 변수)과 같게 두고, 토큰을 바꾸면 여기도 함께 바꾼다.
+   크기는 rem 이라 큰 글자 모드(html[data-textsize=large] = 125%)에서 함께 커진다. */
+:root {
+  --cropy-green-50: #edf7f1;
+  --cropy-green-600: #2e8b57;
+  --cropy-text-primary: #191919;
+  --cropy-text-secondary: #6b6b6b;
+  --cropy-text-on-action: #ffffff;
+  --cropy-surface: #ffffff;
+  --cropy-border: #ececef;
+  --cropy-action-hover: #26784b;
+  --cropy-action-pressed: #1f633d;
+  --cropy-surface-canvas: #f7f7f8;
+  --cropy-status-attention: #d92d20;
+  --cropy-status-attention-surface: #fff1f0;
+  --signal-med-tint: #fbefcf;
+  --signal-med-ink: #8d650e;
+  /* 아래 셋은 이 화면 Figma 에만 있는 색이라 tailwind 토큰에 없다 */
+  --offline-guide-border: #a9cdb7; /* 다른 기기 안내 버튼 테두리 */
+  --offline-guide-text: #246d47;
+  --offline-progress-track: #e5ede8;
+}
+html { font-size: 100%; }
+html[data-textsize="large"] { font-size: 125%; }
+* { box-sizing: border-box; }
+/* Pretendard 는 앱(globals.css)과 같이 CDN 에서 받는다. 오프라인이면 시스템 글꼴로 보인다 */
+body {
+  margin: 0; min-height: 100dvh; background: var(--cropy-surface); color: var(--cropy-text-primary);
+  font: 400 1rem/1.5 Pretendard, system-ui, -apple-system, sans-serif; word-break: keep-all; overflow-wrap: break-word;
+}
+/* 화면 뒤의 농장 사진. Figma 는 흰 바탕 위 24% 불투명도다 */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .24;
+  background: url('/background/farm-mobile.webp') center bottom / cover no-repeat;
+}
+a { color: inherit; }
+img { max-width: 100%; }
+[hidden], .hidden { display: none !important; }
+
+/* 화면 틀. 앱의 max-w-app(30rem)과 같은 폭으로 가운데에 둔다 */
+.page { display: flex; flex-direction: column; width: 100%; max-width: 30rem; min-height: calc(100dvh - 4.75rem); margin: 0 auto; padding: 0 1.5rem 1rem; }
+/* 헤더는 화면 폭 전체에 두고 안쪽 내용만 본문과 같은 폭으로 맞춘다 (넓은 화면에서 아래 테두리가 끝까지 간다) */
+.header { display: flex; align-items: center; gap: .5rem; max-width: 30rem; height: 4.75rem; margin: 0 auto; padding: 1rem 1.5rem; }
+.header-nav, .label-web { display: none; }
+/* 큰 글자에서 좁은 휴대폰(360px)도 넘치지 않게 로고는 줄고 스위치는 고정 폭을 푼다 (Header.tsx·AppFrame.tsx 와 같다) */
+.header .logo { min-width: 0; flex-shrink: 1; }
+html[data-textsize="large"] .switch { width: auto; }
+.header .logo { width: 4.375rem; height: 2.75rem; object-fit: contain; margin-right: auto; }
+
+/* Cropy/V2/Toggle (Switch.tsx). 라벨과 스위치가 한 버튼이다 */
+.switch {
+  display: inline-flex; align-items: center; justify-content: center; gap: .375rem; width: 5.625rem; min-height: 2.75rem; padding: .5rem;
+  border: 1px solid var(--cropy-border); border-radius: .75rem; background: var(--cropy-surface);
+  color: var(--cropy-text-secondary); font-family: inherit; font-size: .75rem; line-height: 1.125rem; font-weight: 500; cursor: pointer;
+}
+.switch .track { position: relative; width: 1.875rem; height: 1.125rem; flex-shrink: 0; border-radius: 999px; background: var(--cropy-border); transition: background-color .2s; }
+.switch .track::after { content: ''; position: absolute; left: .125rem; top: .125rem; width: .875rem; height: .875rem; border-radius: 50%; background: var(--cropy-surface); transition: transform .2s; }
+.switch[aria-checked="true"] .track { background: var(--cropy-green-600); }
+.switch[aria-checked="true"] .track::after { transform: translateX(.75rem); }
+.switch:hover, .switch:active { background: var(--cropy-surface); }
+
+/* 페이지 제목 */
+.title { margin: .75rem 0 0; font-size: 1.5rem; line-height: 2rem; font-weight: 700; }
+.lead { margin: .5rem 0 0; color: var(--cropy-text-secondary); font-size: .875rem; line-height: 1.375rem; }
+.lead.tight { margin-top: .25rem; } /* 설치 안내는 제목과 4px, 오프라인 준비는 8px */
+.phase { margin: 1.625rem 0 0; color: var(--cropy-green-600); font-size: .8125rem; line-height: 1.25rem; font-weight: 700; }
+/* 진단 결과일 때만 오른쪽에 마스코트(PageHeader.tsx: 64px, 넓은 화면 88px)와 넓은 화면 부제가 보인다 */
+.page-head { display: flex; align-items: flex-start; gap: 1rem; }
+.head-text { flex: 1; min-width: 0; }
+.head-mascot { display: none; width: 4rem; height: 4rem; flex-shrink: 0; margin-top: .75rem; object-fit: contain; }
+#phase-lead-wide { display: none; }
+[data-mode="result"] .head-mascot { display: block; }
+[data-mode="result"] #phase-lead { white-space: pre-line; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* 버튼 (Button.tsx). 기본은 primary, .secondary 는 흰 바탕 테두리 버튼 */
+button, .button {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 3rem; padding: .5rem 1rem;
+  border: 1px solid transparent; border-radius: .875rem; background: var(--cropy-green-600); color: var(--cropy-text-on-action);
+  font-family: inherit; font-size: 1rem; line-height: 1.5rem; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer;
+}
+button:hover, .button:hover { background: var(--cropy-action-hover); }
+button:active, .button:active { background: var(--cropy-action-pressed); }
+button:disabled { opacity: .48; cursor: not-allowed; }
+button.secondary, .button.secondary { border-color: var(--cropy-border); border-radius: .75rem; background: var(--cropy-surface); color: var(--cropy-text-primary); }
+button.secondary:hover, .button.secondary:hover { background: var(--cropy-green-50); }
+.button.large { min-height: 3.25rem; }
+.button.guide { border-color: var(--offline-guide-border); border-radius: .75rem; background: var(--cropy-surface); color: var(--offline-guide-text); }
+.button.guide:hover { background: var(--cropy-green-50); }
+.button svg { width: 1.25rem; height: 1.25rem; flex-shrink: 0; }
+button:focus-visible, .button:focus-visible, .switch:focus-visible, summary:focus-visible, .nav a:focus-visible {
+  outline: 2px solid var(--cropy-green-600); outline-offset: 2px;
+}
+.full { width: 100%; }
+/* 화면이 바뀔 때 포커스를 옮겨 두는 제목. 눌러서 가는 곳이 아니라 테두리를 그리지 않는다 */
+[tabindex="-1"]:focus { outline: none; }
+
+/* 단계 카드 (설치 안내) */
+.steps { display: flex; flex-direction: column; gap: 1rem; margin-top: 2.375rem; }
+.card { display: flex; flex-direction: column; align-items: stretch; gap: .75rem; padding: 1.25rem; border: 1px solid var(--cropy-border); border-radius: 1.25rem; background: var(--cropy-surface); }
+.card h2, .card h3 { margin: 0; }
+.card p { margin: 0; }
+.step-label { color: var(--cropy-green-600); font-size: .75rem; line-height: 1.375rem; font-weight: 700; white-space: pre-wrap; }
+.card-title { font-size: 1.25rem; line-height: 1.75rem; font-weight: 700; }
+.body { color: var(--cropy-text-secondary); font-size: .875rem; line-height: 1.375rem; }
+.body-strong { font-size: .875rem; line-height: 1.375rem; font-weight: 700; }
+.caption { color: var(--cropy-text-secondary); font-size: .75rem; line-height: 1.375rem; }
+.ios-steps { display: flex; flex-direction: column; gap: .75rem; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.ios-steps li { display: flex; gap: .75rem; font-size: .875rem; line-height: 1.375rem; font-weight: 700; counter-increment: step; }
+.ios-steps li::before { content: counter(step); }
+/* PC 설치 안내의 카드 묶음과 순서 목록. 좁은 창에서는 모바일 카드와 같은 크기다 */
+.card-head, .card-body, .card-size { display: flex; flex-direction: column; gap: .75rem; }
+.card-size { gap: .25rem; }
+.pc-steps { display: flex; flex-direction: column; gap: .5rem; margin: 0; padding: 0; list-style: none; counter-reset: step; color: var(--cropy-text-secondary); font-size: .875rem; line-height: 1.375rem; }
+.pc-steps li { display: flex; gap: .75rem; counter-increment: step; }
+.pc-steps:not(.plain) li::before { content: counter(step); }
+.size-strong { margin: 0; font-size: .875rem; line-height: 1.375rem; font-weight: 700; }
+.size-note { margin: 0; color: var(--cropy-text-secondary); font-size: .75rem; line-height: 1.375rem; }
+/* 비어 있어도 접근성 트리에는 남겨 둔다. 처음에 숨겨 두면 나중에 넣은 문구를 스크린리더가 읽지 않는다 */
+[data-install-note]:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+details.more summary { list-style: none; }
+details.more summary::-webkit-details-marker { display: none; }
+details.more[open] summary { margin-bottom: .75rem; }
+/* 하단 이동 버튼은 화면 아래에 붙는다 (Figma bottom 16, 카드와 8). main 이 남은 높이를 채워야 margin-top:auto 가 듣는다 */
+.install-page > main { display: flex; flex-direction: column; flex: 1; }
+.bottom { display: flex; flex-direction: column; gap: .75rem; margin-top: auto; padding-top: .5rem; }
+
+/* 오프라인 상태 카드 (Cropy/Offline/Mobile/inline/*, InlineFeedback.tsx) */
+.feedback { display: flex; flex-direction: column; align-items: center; gap: .75rem; margin-top: 2.125rem; padding: 1.25rem; border: 1px solid var(--cropy-border); border-radius: 1.125rem; background: var(--cropy-surface); text-align: center; }
+.feedback .mascot { width: 4rem; height: 4rem; object-fit: contain; }
+.feedback h2 { margin: -.25rem 0 0; font-size: 1.125rem; line-height: 1.45; font-weight: 700; }
+/* 본문은 Figma 처럼 글자 단위로 줄을 바꾼다 (어절 단위면 한 줄이 더 생긴다) */
+.feedback p { margin: 0; color: var(--cropy-text-secondary); font-size: .9375rem; line-height: 1.45; word-break: normal; }
+.feedback .progress { align-self: stretch; text-align: left; }
+.feedback .progress p { margin-top: .25rem; font-size: .8125rem; line-height: 1.25rem; }
+progress { display: block; width: 100%; height: .375rem; border: 0; border-radius: .1875rem; background: var(--offline-progress-track); -webkit-appearance: none; appearance: none; }
+progress::-webkit-progress-bar { border-radius: .1875rem; background: var(--offline-progress-track); }
+progress::-webkit-progress-value { border-radius: .1875rem; background: var(--cropy-green-600); }
+progress::-moz-progress-bar { border-radius: .1875rem; background: var(--cropy-green-600); }
+/* compact 44px 버튼. 둘이면 반씩, 하나면(.single, app.mjs 가 붙인다) 가운데에 152px 로 둔다 */
+.actions { display: flex; justify-content: center; gap: .5rem; align-self: stretch; }
+.actions > *, .actions > .secondary { flex: 1 1 0; min-height: 2.75rem; padding: .5rem .75rem; border-radius: .625rem; font-size: .9375rem; line-height: 1.45; }
+.actions.single > *, .actions.single > .secondary { flex: 0 0 9.5rem; }
+.update { align-self: center; min-height: 2.75rem; border: 0; background: none; color: var(--cropy-text-secondary); font-size: .8125rem; font-weight: 500; text-decoration: underline; }
+.view > .update { display: flex; margin: .5rem auto 0; } /* 상태 카드 아래 (화면 묶음은 flex 가 아니라 align-self 가 듣지 않는다) */
+.update:hover, .update:active { background: none; color: var(--cropy-text-primary); }
+
+/* 사진 진단·기기 기록 (app.mjs 가 그리는 결과와 목록 포함) */
+.section { margin-top: 1rem; }
+/* 안내 카드가 없으면 상태 라벨도 없어 부제 바로 아래다. 상태 카드와 같은 간격을 둔다 */
+.view > .section:first-child, .view > [hidden] + .section { margin-top: 2.125rem; }
+.section h2 { font-size: 1.25rem; line-height: 1.75rem; }
+.section label { font-size: .875rem; font-weight: 700; }
+select, input[type="file"] { max-width: 100%; font: inherit; font-size: .875rem; }
+select { min-height: 2.75rem; margin-left: .5rem; padding: 0 .5rem; border: 1px solid var(--cropy-border); border-radius: .75rem; background: var(--cropy-surface); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.row > button { flex: 1 1 auto; }
+.muted { color: var(--cropy-text-secondary); font-size: .875rem; line-height: 1.375rem; }
+.status { padding: .75rem; border-radius: .75rem; background: var(--cropy-green-50); font-size: .875rem; }
+.status.danger { background: #fff1f0; }
+#preview { max-height: 17.5rem; border-radius: .75rem; object-fit: contain; }
+#state:empty { display: none; }
+/* 문구가 있으면 그 아래 결과·사진 고르기는 간격을 줄인다 */
+.state { margin: 2.125rem 0 0; }
+.state:not(:empty) ~ #result-view, .state:not(:empty) ~ #diagnosis, .state:not(:empty) ~ #result-empty { margin-top: 1rem; }
+#result:empty { display: none; }
+
+/* 진단 결과 (온라인 DiagnosisResultView.tsx · 모바일 M-03). 넓은 화면 배치는 아래 1024px 규칙에 있다 */
+#result-view, #diagnosis { margin-top: 2.125rem; }
+.result-view, #result, .rv-notices, .rv-grid, .rv-main { display: flex; flex-direction: column; gap: 1rem; }
+.rv-main { min-width: 0; }
+.rv-notices { gap: .75rem; }
+.rv-notice { margin: 0; padding: 1rem; border-radius: .75rem; background: var(--cropy-green-50); font-size: 1rem; line-height: 1.5rem; }
+.rv-notice p { margin: 0; color: var(--cropy-text-secondary); }
+.rv-notice .rv-notice-title { margin-bottom: .5rem; color: var(--cropy-text-primary); font-weight: 600; }
+.rv-notice.warn { background: var(--signal-med-tint); color: var(--signal-med-ink); font-size: .9375rem; line-height: 1.625; }
+.rv-caption { margin: 0; color: var(--cropy-text-secondary); font-size: .75rem; line-height: 1.125rem; font-weight: 500; }
+/* 요약 카드: 모서리 20, 안쪽 16, 사진 68 */
+.rv-grid .rv-photo, .rv-grid .rv-title { display: none; }
+.rv-summary, .rv-todo { gap: .5rem; padding: 1rem; }
+.rv-sum-row { display: flex; align-items: center; gap: .75rem; }
+.rv-thumb { width: 4.25rem; height: 4.25rem; flex-shrink: 0; overflow: hidden; border: 1px solid var(--cropy-border); border-radius: 1rem; background: var(--cropy-surface); }
+.rv-thumb img, .rv-photo-main img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rv-sum-text { display: flex; flex-direction: column; gap: .125rem; flex: 1; min-width: 0; }
+.rv-sum-text h2 { font-size: 1.5rem; line-height: 2rem; font-weight: 700; }
+.rv-badges { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+/* 등급 배지 (Badge.tsx): 높이 28, 좁은 화면은 둥근 pill, 넓은 화면 제목 옆은 72px 칸 */
+.badge { display: inline-flex; align-items: center; justify-content: center; min-width: 3rem; min-height: 1.75rem; padding: .125rem .75rem; border-radius: 999px; font-size: .75rem; line-height: 1.125rem; font-weight: 700; }
+.badge.attention { background: var(--cropy-status-attention-surface); color: var(--cropy-status-attention); }
+.badge.low { background: var(--cropy-green-50); color: var(--cropy-green-600); }
+.rv-uncertain { display: flex; align-items: flex-start; gap: .5rem; margin: 0; color: var(--signal-med-ink); font-size: .8125rem; line-height: 1.25rem; }
+.rv-uncertain svg { width: 1rem; height: 1rem; flex-shrink: 0; margin-top: .125rem; }
+/* 두 사진으로 다시 확인한 결과는 사진 두 장을 함께 보인다 */
+.rv-pair { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.rv-pair figure { min-width: 0; margin: 0; overflow: hidden; border-radius: .75rem; background: var(--cropy-surface-canvas); }
+.rv-pair img { display: block; width: 100%; height: 7rem; object-fit: cover; }
+.rv-pair figcaption { padding: .5rem; color: var(--cropy-text-secondary); font-size: .8125rem; line-height: 1.25rem; font-weight: 700; }
+.rv-pair-note { margin: 0; padding: .75rem; border-radius: .75rem; background: var(--cropy-green-50); color: var(--cropy-action-hover); font-size: .8125rem; line-height: 1.25rem; }
+.rv-pair-note.warn { background: var(--signal-med-tint); color: var(--signal-med-ink); }
+/* 지금 해야 할 일: 제목 18/26, 번호 28px 원 */
+.rv-todo-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.rv-todo h2 { font-size: 1.125rem; line-height: 1.625rem; font-weight: 700; }
+.rv-todo-count { flex-shrink: 0; color: var(--cropy-green-600); font-size: .75rem; line-height: 1.125rem; }
+.rv-todo ol { display: flex; flex-direction: column; gap: .25rem; margin: 0; padding: 0; list-style: none; counter-reset: todo; }
+.rv-todo li { display: flex; align-items: center; gap: .5rem; min-height: 3rem; font-size: .9375rem; line-height: 1.5rem; font-weight: 700; counter-increment: todo; }
+.rv-todo li::before {
+  content: counter(todo); display: flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; flex-shrink: 0;
+  border-radius: 50%; background: var(--cropy-green-600); color: var(--cropy-text-on-action); font-size: .75rem; line-height: 1.125rem;
+}
+/* 상세 정보 (DiagnosisDetails.tsx·Accordion.tsx). 같은 이름의 details 라 한 번에 하나만 열린다 */
+.rv-details { display: flex; flex-direction: column; gap: .75rem; }
+.rv-details > h2 { margin: 0; color: var(--cropy-text-secondary); font-size: .875rem; line-height: 1.375rem; font-weight: 700; }
+.rv-details details { overflow: hidden; border: 1px solid var(--cropy-border); border-radius: 1rem; background: var(--cropy-surface); }
+.rv-details summary { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-height: 3rem; padding: .75rem 1rem; font-size: .9375rem; line-height: 1.375rem; font-weight: 700; list-style: none; cursor: pointer; }
+.rv-details summary::-webkit-details-marker { display: none; }
+.rv-details summary svg { width: 1.25rem; height: 1.25rem; flex-shrink: 0; color: var(--cropy-text-secondary); transition: transform .2s; }
+.rv-details details[open] summary svg { transform: rotate(180deg); }
+.rv-panel { display: flex; flex-direction: column; gap: .75rem; padding: 0 1rem 1.125rem; color: var(--cropy-text-secondary); font-size: .875rem; line-height: 1.375rem; }
+.rv-panel p { margin: 0; }
+.rv-panel .rv-strong { color: var(--cropy-text-primary); font-size: 1rem; line-height: 1.5rem; white-space: pre-line; }
+.rv-dots, .rv-steps { display: flex; flex-direction: column; gap: .75rem; margin: 0; padding: 0; list-style: none; color: var(--cropy-text-primary); font-size: 1rem; line-height: 1.5rem; }
+.rv-dots li { display: flex; align-items: flex-start; gap: .75rem; }
+.rv-dots li::before { content: ''; width: .375rem; height: .375rem; flex-shrink: 0; margin-top: .5625rem; border-radius: 50%; background: var(--cropy-green-600); }
+.rv-steps { gap: 1rem; counter-reset: step; }
+.rv-steps li { display: flex; align-items: flex-start; gap: .75rem; padding-top: .125rem; counter-increment: step; }
+.rv-steps li::before {
+  content: counter(step, decimal-leading-zero); display: flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; flex-shrink: 0; margin-top: -.125rem;
+  border-radius: 50%; background: var(--cropy-green-50); color: var(--cropy-green-600); font-size: .875rem; line-height: 1.375rem; font-weight: 700;
+}
+/* 판별 불가: 병해 결과 대신 다시 찍는 방법 (LowConfidencePanel.tsx) */
+.rv-notcrop { gap: 1rem; }
+.rv-notcrop .rv-photo-main { height: 10rem; overflow: hidden; border-radius: .75rem; background: var(--cropy-surface-canvas); }
+.rv-notcrop-text { display: flex; flex-direction: column; gap: .75rem; min-width: 0; }
+.rv-notcrop h2 { font-size: 1.125rem; line-height: 1.625rem; }
+.rv-tips { display: flex; flex-direction: column; gap: .5rem; margin: 0; padding: 0; list-style: none; color: var(--cropy-text-secondary); font-size: .875rem; line-height: 1.5rem; }
+.rv-tips li { display: flex; gap: .5rem; }
+.rv-tips li::before { content: '✓'; flex-shrink: 0; color: var(--cropy-green-600); font-weight: 700; }
+#refine-area h2 { font-size: 1.125rem; line-height: 1.625rem; }
+.result-tools { display: flex; flex-direction: column; gap: .5rem; }
+/* 새 사진으로 진단하기: 배경 없는 글자 버튼 */
+.text-button { min-height: 2.75rem; border: 0; background: none; color: var(--cropy-text-primary); font-size: .875rem; line-height: 1.375rem; font-weight: 500; }
+.text-button:hover, .text-button:active { background: var(--cropy-surface-canvas); }
+#history article { display: flex; flex-direction: column; gap: .5rem; padding: 1rem 0; border-top: 1px solid var(--cropy-border); }
+#history article:first-child { border-top: 0; }
+#history h3 { margin: 0; font-size: 1rem; }
+#history img { width: 5.625rem; height: 5.625rem; border-radius: .75rem; object-fit: cover; }
+#history .row > button { min-height: 2.75rem; padding: .5rem .75rem; border-radius: .625rem; font-size: .875rem; }
+.note { margin: 1rem 0 0; }
+#analyze-card:not([hidden]) ~ .note, #result-empty:not([hidden]) ~ .note { display: none; } /* 분석 실패·빈 진단 결과 화면은 안내 카드만 보인다 */
+
+/* 하단 내비 (Cropy/V2/Mobile/Navigation, MobileNav.tsx). 높이 72px, 아이콘 24px, 라벨 12px */
+.with-nav { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+.nav { position: fixed; left: 0; right: 0; bottom: 0; background: var(--cropy-surface); padding-bottom: env(safe-area-inset-bottom); }
+.nav ul { display: flex; align-items: center; max-width: 30rem; height: 4.5rem; margin: 0 auto; padding: .5rem 1.5rem; list-style: none; }
+.nav li { flex: 1; min-width: 0; }
+.nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; height: 3.5rem; border-radius: .5rem; color: var(--cropy-text-secondary); font-size: .75rem; line-height: 1.125rem; font-weight: 500; text-decoration: none; }
+.nav a[aria-current="page"] { color: var(--cropy-green-600); font-weight: 700; }
+.nav svg { width: 1.5rem; height: 1.5rem; }
+
+/* 기기 저장 완료 토스트 (Cropy/Offline/Mobile/toast/local-saved). 하단 내비 위 34px, 본문 폭 */
+.toast {
+  position: fixed; left: 50%; bottom: calc(6.625rem + env(safe-area-inset-bottom)); z-index: 1; transform: translateX(-50%);
+  width: calc(100% - 3rem); max-width: 27rem; margin: 0; padding: .875rem 1rem; border-radius: .75rem;
+  background: #1f3829; color: var(--cropy-surface); font-size: .9375rem; line-height: 1.45; text-align: center;
+}
+/* 비어 있어도 접근성 트리에는 남긴다. 처음에 숨겨 두면 나중에 넣은 문구를 스크린리더가 읽지 않는다 */
+.toast:empty { padding: 0; clip-path: inset(50%); }
+
+/* 업데이트 다이얼로그 (Cropy/Offline/Mobile/dialog/model-update). 화면 가운데, 뒤는 검정 30% */
+.dialog { width: calc(100% - 3rem); max-width: 27rem; padding: 0; border: 0; background: none; overflow: visible; }
+.dialog::backdrop { background: rgba(0, 0, 0, .3); }
+.dialog .feedback { width: auto; margin: 0; }
+.dialog .feedback h2 { margin-top: 0; }
+/* Figma 는 다이얼로그 뒤에 준비 카드가 없다 */
+body:has(#update-dialog[open]) [data-view="prepare"] { visibility: hidden; }
+
+/* ── 넓은 화면 (Figma "데스크탑 · 앱 설치 및 오프라인 이용", 1440×960) ──
+   기준점은 앱과 같다: md(768) 스위치 라벨, lg(1024) 헤더 내비·2열 카드, xl(1280) Figma 여백 그대로 */
+@media (min-width: 768px) {
+  /* Switch.tsx 의 웹 크기: 라벨 13px, 트랙 20×36, 손잡이 16 */
+  .label-mobile { display: none; }
+  .label-web { display: inline; }
+  .switch { width: auto; gap: .5rem; font-size: .8125rem; line-height: 1.25rem; }
+  .switch .track { width: 2.25rem; height: 1.25rem; }
+  .switch .track::after { width: 1rem; height: 1rem; }
+  .switch[aria-checked="true"] .track::after { transform: translateX(1rem); }
+}
+@media (min-width: 1024px) {
+  body::before { background-image: url('/background/farm-desktop.webp'); }
+  /* Header.tsx: 높이 80(테두리 포함), 내용 최대 1200, 로고 84×56 */
+  /* 배경은 없다. 앱 헤더(Header.tsx)처럼 농장 배경이 비친다 */
+  .site-header { padding: 0 1.5rem; border-bottom: 1px solid var(--cropy-border); }
+  .header { max-width: 75rem; height: calc(5rem - 1px); padding: 0; gap: 1rem; }
+  .header .logo { width: 5.25rem; height: 3.5rem; margin-right: 0; }
+  .header-nav { display: block; margin-right: auto; }
+  .header-nav ul { display: flex; align-items: center; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+  .header-nav a {
+    display: flex; align-items: center; justify-content: center; gap: .5rem; padding: .75rem; border-radius: .5rem; white-space: nowrap;
+    color: var(--cropy-text-secondary); font-size: .875rem; line-height: 1.375rem; font-weight: 500; text-decoration: none;
+  }
+  .header-nav a:hover { background: var(--cropy-green-50); }
+  .header-nav a[aria-current="page"] { background: var(--cropy-green-50); color: var(--cropy-green-600); font-weight: 700; }
+  .header-nav svg { width: 1.25rem; height: 1.25rem; flex-shrink: 0; }
+  .header-nav a:focus-visible { outline: 2px solid var(--cropy-green-600); outline-offset: 2px; }
+
+  /* 본문은 헤더 내용과 같은 1200 폭 */
+  /* content-box 라 min-height 에 아래 여백(2rem)이 더해진다. 헤더(5rem)와 함께 빼야 짧은 화면에 스크롤이 생기지 않는다 */
+  .page { box-sizing: content-box; width: auto; max-width: 75rem; min-height: calc(100dvh - 7rem); padding: 0 1.5rem 2rem; }
+  .title { margin-top: 2rem; font-size: 2rem; line-height: 2.25rem; }
+  .lead, .lead.tight { margin-top: .875rem; font-size: 1rem; line-height: 1.75rem; }
+
+  /* 하단 내비는 헤더 내비가 대신한다 */
+  .nav { display: none; }
+  .with-nav { padding-bottom: 2rem; }
+  .toast { bottom: 2rem; width: 30rem; }
+  .dialog { max-width: 30rem; }
+
+  /* 오프라인 준비: 제목 32/42, 부제 16/23, 상태 카드 480 가운데, 마스코트 80 */
+  .with-nav .title { line-height: 2.625rem; }
+  .with-nav .lead { margin-top: .5rem; line-height: 1.4375rem; }
+  .phase { margin-top: .9375rem; }
+  .feedback { width: 30rem; margin: 3.125rem auto 0; }
+  .feedback .mascot { width: 5rem; height: 5rem; }
+  /* Figma 에 없는 사진 진단·기록은 상태 카드와 같은 열에 둔다 */
+  .with-nav .section, .with-nav .note { width: 30rem; margin-left: auto; margin-right: auto; }
+  /* 기록 목록만 상태 카드보다 넓다 (Figma 데스크탑 local-saved) */
+  .with-nav #records { width: 44rem; max-width: 100%; }
+  .with-nav .state { width: 30rem; margin-left: auto; margin-right: auto; }
+
+  /* 진단 결과 (DiagnosisResultView.tsx · 데스크탑 D-03): 머리에 진단 시각과 88px 마스코트,
+     본문은 왼쪽 320px 사진·정보 카드와 오른쪽(제목, 3열 할 일, 상세 정보)을 32px 간격으로 둔다 */
+  [data-mode="result"] #phase-lead { display: none; }
+  [data-mode="result"] #phase-lead-wide { display: block; }
+  .head-mascot { width: 5.5rem; height: 5.5rem; margin-top: 2rem; }
+  .rv-notices { gap: 1rem; }
+  .rv-notcrop { flex-direction: row; align-items: flex-start; gap: 2rem; padding: 1.5rem; }
+  .rv-notcrop .rv-photo-main { flex: 0 0 20rem; height: 13rem; }
+  .rv-notcrop-text { flex: 1; }
+  .rv-grid { display: grid; grid-template-columns: 20rem minmax(0, 1fr); align-items: start; gap: 2rem; }
+  .rv-main { gap: 1.25rem; }
+  .rv-grid .rv-summary { display: none; }
+  .rv-grid .rv-photo { display: flex; gap: 1rem; padding: 1.5rem; }
+  .rv-grid .rv-title { display: flex; gap: .5rem; padding: 1.25rem; }
+  .rv-photo h2 { font-size: 1rem; line-height: 1.5rem; }
+  .rv-photo-main { height: 13rem; overflow: hidden; border-radius: .75rem; background: var(--cropy-surface-canvas); }
+  .rv-meta { display: flex; flex-direction: column; gap: 1rem; margin: 0; }
+  .rv-meta div { display: flex; align-items: center; gap: .75rem; }
+  .rv-meta dt { width: 4.75rem; flex-shrink: 0; color: var(--cropy-text-secondary); font-size: .8125rem; line-height: 1.25rem; }
+  .rv-meta dd { flex: 1; min-width: 0; margin: 0; text-align: right; font-size: .875rem; line-height: 1.375rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rv-title-row { display: flex; align-items: center; gap: 1rem; }
+  .rv-title h2 { flex: 1; min-width: 0; font-size: 1.75rem; line-height: 2.25rem; letter-spacing: -.015em; }
+  .rv-title .badge { width: 4.5rem; min-width: 0; padding: .125rem 0; border-radius: .5rem; font-size: .8125rem; line-height: 1.25rem; }
+  .rv-todo { gap: .75rem; padding: 1.25rem; }
+  .rv-todo-count { display: none; }
+  .rv-todo ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+  .rv-todo li {
+    display: grid; grid-template-rows: 1.125rem 1fr; row-gap: .75rem; align-items: start; min-height: 5.875rem; padding: .75rem;
+    border-radius: .75rem; background: var(--cropy-surface-canvas); font-size: .875rem; line-height: 1.375rem;
+  }
+  .rv-todo li::before { content: counter(todo, decimal-leading-zero); display: block; width: auto; height: auto; border-radius: 0; background: none; color: var(--cropy-text-primary); font-size: .875rem; line-height: 1.125rem; font-variant-numeric: tabular-nums; }
+  .rv-details > h2 { color: var(--cropy-text-primary); font-size: 1.125rem; line-height: 1.625rem; }
+  .rv-details summary { min-height: 3.5rem; padding: 1rem; font-size: 1rem; line-height: 1.5rem; }
+  .rv-panel { padding-bottom: 1.25rem; }
+  .result-tools { flex-direction: row; justify-content: flex-end; }
+  .result-tools > * { flex: 0 0 auto; min-width: 10rem; }
+  #result-view:not([hidden]) ~ .note, .view:has(#result-view:not([hidden])) .state { width: auto; }
+
+  /* 설치 안내: 카드 두 장을 나란히(각 588, 간격 24), 아래 버튼 줄은 280씩 */
+  .steps { flex-direction: row; align-items: stretch; gap: 1.5rem; margin-top: 3.625rem; }
+  .steps > .card { flex: 1 1 0; min-width: 0; }
+  .card-lg { gap: 1.5rem; padding: 2rem; border-radius: 1.125rem; }
+  .card-lg .card-body { gap: 1rem; }
+  .card-lg .card-size { gap: .5rem; }
+  .card-lg .step-label { font-size: .875rem; line-height: 1.75rem; }
+  .card-lg .card-title { font-size: 1.75rem; line-height: 2.25rem; }
+  .card-lg .body, .card-lg .pc-steps { font-size: 1.125rem; line-height: 1.75rem; }
+  .card-lg .pc-steps { gap: 0; line-height: 2.5rem; }
+  .card-lg .size-strong { font-size: 1.25rem; line-height: 1.75rem; }
+  .card-lg .size-note { font-size: 1rem; line-height: 1.75rem; }
+  .card-lg .button, .card-lg summary.button { min-height: 3.5rem; font-size: 1.125rem; }
+  .card-lg .caption { font-size: .875rem; }
+  .install-page .bottom { flex-direction: row; flex-wrap: wrap; gap: 1rem; margin-top: 0; padding-top: 1.5rem; }
+  .install-page .bottom > .button { flex: 0 0 17.5rem; min-height: 3.5rem; font-size: 1.125rem; }
+  .install-page .bottom > .guide { font-weight: 600; }
+  [data-view="pc-installed"] .bottom { padding-top: 5.875rem; }
+}
+@media (min-width: 1280px) {
+  /* Figma 값: 좌우 64, 로고와 내비 사이 40, 내비 항목 112, 스위치 132 */
+  .site-header { padding: 0 4rem; }
+  .page { padding-left: 4rem; padding-right: 4rem; }
+  .header .logo { margin-right: 1.5rem; }
+  .header-nav a { width: 7rem; }
+  .switch { width: 8.25rem; justify-content: space-between; gap: .75rem; padding: .5rem .9375rem; }
+}
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

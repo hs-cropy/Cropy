@@ -102,3 +102,39 @@ def test_policy_lists_are_independent(diagnosis):
     result.management_actions.append("changed")
     assert diagnosis.decision_reasons == ["confusion"]
     assert diagnosis.management_actions == ["등록된 관리 안내"]
+
+def test_not_crop_preserves_null_severity_and_recapture_actions(diagnosis):
+    actions = [
+        "잎 한 장이 화면을 가득 채우도록 가까이에서 찍기",
+        "초점이 맞을 때까지 잠깐 멈췄다가 촬영하기",
+        "밝은 곳에서 그림자 없이 찍기",
+    ]
+    diagnosis = DiagnoseResponse.model_validate({
+        **diagnosis.model_dump(),
+        "disease_name": "판별 불가",
+        "crop_type": "기타",
+        "category": "other",
+        "severity": None,
+        "predicted_crop": None,
+        "decision_status": "not_crop",
+        "decision_reasons": ["not_crop"],
+        "management_actions": actions,
+        "description": "대상 작물의 잎으로 알아보기 어렵습니다.",
+        "causes": [],
+        "prevention": [],
+        "pesticides": [],
+        "recapture": None,
+    })
+
+    context = build_llm_input(diagnosis)
+
+    assert context.severity is None
+    assert context.category == "other"
+    assert context.decision_status == "not_crop"
+    assert context.decision_reasons == ["not_crop"]
+    assert context.management_actions == actions
+    assert context.pesticides == []
+    assert (
+        DiagnosisLLMInput.model_validate_json(context.model_dump_json())
+        == context
+    )

@@ -13,7 +13,11 @@ import { ApiError, diagnoseImage, fetchDiagnosisDetail, refineDiagnosis } from "
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { AppFrame } from "../AppFrame";
 import { ANALYZING_MS, analyzingHold } from "./analyzingHold";
-import { gradeOf, resultTimeSentence } from "./DiagnosisResultView";
+import {
+  DiagnosisResultView,
+  gradeOf,
+  resultTimeSentence,
+} from "./DiagnosisResultView";
 
 vi.mock("next/navigation", async () => (await import("@/testing/fakeNavigation")).nextNavigation);
 vi.mock("next/link", async () => ({
@@ -1004,5 +1008,71 @@ describe("결과 표시 도우미", () => {
     expect(gradeOf(response({ category: "normal" }))?.label).toBe("정상");
     expect(gradeOf(response({ severity: "high" }))?.label).toBe("위험");
     expect(gradeOf(response({ severity: undefined }))).toBeNull();
+  });
+});
+describe.each([false, true])("결과 안내 표시 desktop=%s", (desktop) => {
+  it("응답의 한 줄 안내와 행동별 설명을 표시한다", () => {
+    render(
+      <DiagnosisResultView
+        result={response({
+          summary_message: "결과 카드 테스트 안내",
+          management_action_details: [
+            {
+              title: "감염 부위 제거",
+              description: "첫 번째 행동 테스트 설명",
+            },
+            {
+              title: "주변 포기 확인",
+              description: "두 번째 행동 테스트 설명",
+            },
+          ],
+        })}
+        photo={null}
+        desktop={desktop}
+      />,
+    );
+
+    expect(screen.getByText("결과 카드 테스트 안내")).toBeTruthy();
+    expect(screen.getByText("첫 번째 행동 테스트 설명")).toBeTruthy();
+    expect(screen.getByText("두 번째 행동 테스트 설명")).toBeTruthy();
+  });
+
+  it("상세 설명이 없는 이전 기록은 행동 제목을 유지한다", () => {
+    render(
+      <DiagnosisResultView
+        result={response({
+          summary_message: null,
+          management_action_details: [],
+        })}
+        photo={null}
+        desktop={desktop}
+        isRecord
+      />,
+    );
+
+    expect(screen.getByText("감염 부위 제거")).toBeTruthy();
+    expect(screen.getByText("주변 포기 확인")).toBeTruthy();
+    expect(screen.queryByText("결과 카드 테스트 안내")).toBeNull();
+  });
+
+  it("행동 제목과 일치하지 않는 설명은 표시하지 않는다", () => {
+    render(
+      <DiagnosisResultView
+        result={response({
+          management_action_details: [
+            {
+              title: "다른 행동 제목",
+              description: "표시하면 안 되는 설명",
+            },
+          ],
+        })}
+        photo={null}
+        desktop={desktop}
+      />,
+    );
+
+    expect(screen.getByText("감염 부위 제거")).toBeTruthy();
+    expect(screen.queryByText("다른 행동 제목")).toBeNull();
+    expect(screen.queryByText("표시하면 안 되는 설명")).toBeNull();
   });
 });
