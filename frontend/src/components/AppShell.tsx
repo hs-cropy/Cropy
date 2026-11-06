@@ -9,7 +9,6 @@ const BACKGROUND_DESKTOP = "/background/farm-desktop.webp";
 
 // 모바일에서는 화면 높이에 맞춰 고정 영역과 스크롤 영역을 분리한다.
 // dvh를 지원하지 않는 브라우저에서는 vh를 사용한다.
-// 데스크톱에서는 기존 전체 페이지 스크롤 구조를 유지한다.
 // 인쇄 시에는 높이 제한과 overflow 제한을 해제한다.
 const ROOT =
   "relative isolate flex h-screen min-h-0 flex-col overflow-hidden bg-cropy-surface " +
@@ -37,10 +36,16 @@ interface AppShellProps extends ComponentPropsWithRef<"div"> {
  * - 하단 내비게이션 고정
  *
  * 데스크톱:
- * - 기존 콘텐츠 기반 페이지 스크롤 유지
+ * - 앱 공통 헤더는 본문 스크롤 영역 밖에 유지
+ * - AppShellPage의 제목과 본문은 region 내부에서 스크롤
+ * - 행동 버튼과 푸터는 본문 스크롤 영역 밖에 유지
  *
- * 모바일에서는 하단 내비게이션과 안전 영역만큼
- * 콘텐츠 영역의 여백을 확보한다.
+ * 모바일·데스크톱 공통:
+ * - 페이지 제목과 본문을 동일한 스크롤 region에 배치한다.
+ * - 제목은 본문과 함께 스크롤된다.
+ * - actions는 스크롤 영역 밖에 유지한다.
+ *
+ * region은 tabIndex=0으로 키보드 접근을 지원한다.
  */
 export function AppShell({
   header,
@@ -159,7 +164,7 @@ export function AppShellPage({
       <div
         role="region"
         aria-label={scrollLabel}
-        tabIndex={-1}
+        tabIndex={0}
         className={cn(
           "min-h-0 min-w-0 flex-1",
           "overflow-x-hidden overflow-y-auto overscroll-contain",

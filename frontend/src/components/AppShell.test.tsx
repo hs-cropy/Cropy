@@ -238,12 +238,14 @@ describe("AppShellPage", () => {
     expect(main.children[1].contains(actions)).toBe(true);
   });
 
-  it("본문은 일반 Tab 이동에서 제외하고 화면 전환 시 초점을 받을 수 있다", () => {
+  it("본문 스크롤 영역은 Tab 이동과 키보드 포커스를 지원한다", () => {
     renderPage();
 
-    const region = screen.getByRole("region", { name: "본문" });
+    const region = screen.getByRole("region", {
+      name: "본문",
+    });
 
-    expect(region.getAttribute("tabindex")).toBe("-1");
+    expect(region.getAttribute("tabindex")).toBe("0");
 
     region.focus();
     expect(document.activeElement).toBe(region);

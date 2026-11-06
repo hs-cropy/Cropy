@@ -37,32 +37,23 @@ const GRADE_OPTIONS: {
   { value: "low", label: "낮음" },
 ];
 
-
 /**
- * AppShellPage는 별도의 본문 스크롤을 사용하지 않는다.
- * 페이지 전체가 window 기준으로 스크롤되므로
- * 필터 및 페이지 변경 시 문서의 맨 위로 이동한다.
+ * 이력 페이지의 실제 스크롤 컨테이너.
+ * 모바일과 데스크톱 모두 AppShellPage의 region을 사용한다.
+ * window는 기본 스크롤 대상이 아니다.
  */
 function scrollHistoryToTop(): void {
   setHistoryScrollPosition(0);
 }
 
 function getHistoryScrollElement(): HTMLElement | null {
-  const region = document.querySelector<HTMLElement>(
+  return document.querySelector<HTMLElement>(
     '[role="region"][aria-label="진단 이력"]',
   );
-
-  // 모바일에서는 본문 region이 스크롤되고,
-  // 데스크톱에서는 window가 스크롤된다.
-  if (window.matchMedia("(min-width: 1024px)").matches) {
-    return null;
-  }
-  return region;
 }
 
 function getHistoryScrollPosition(): number {
-  const region = getHistoryScrollElement();
-  return region ? region.scrollTop : window.scrollY;
+  return getHistoryScrollElement()?.scrollTop ?? 0;
 }
 
 function setHistoryScrollPosition(position: number): void {
@@ -70,8 +61,6 @@ function setHistoryScrollPosition(position: number): void {
 
   if (region) {
     region.scrollTop = position;
-  } else {
-    window.scrollTo(0, position);
   }
 }
 

@@ -58,8 +58,6 @@ beforeEach(() => {
       dispatchEvent: vi.fn(),
     })),
   );
-
-  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -252,23 +250,19 @@ it("모바일에서 페이지를 변경하면 본문 스크롤을 맨 위로 이
   expect(region.scrollTop).toBe(0);
 });
 
-
-it("데스크톱에서는 window 스크롤 위치를 복원한다", async () => {
+it("데스크톱에서 이력 목록 복귀 시 본문 region의 스크롤 위치를 복원한다", async () => {
   vi.mocked(window.matchMedia).mockImplementation(
-    (query: string): MediaQueryList =>
-      ({
-        matches: query === "(min-width: 1024px)",
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(() => false),
-      }),
+    (query: string): MediaQueryList => ({
+      matches: query === "(min-width: 1024px)",
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(() => false),
+    }),
   );
-
-  const scrollTo = vi.mocked(window.scrollTo);
 
   sessionStorage.setItem(
     "cropy:history-view",
@@ -290,11 +284,17 @@ it("데스크톱에서는 window 스크롤 위치를 복원한다", async () => 
 
   render(<HistoryPage />);
 
+  const region = screen.getByRole("region", {
+    name: "진단 이력",
+  });
+
   await screen.findByText("저장된 진단");
 
   await waitFor(() => {
-    expect(scrollTo).toHaveBeenCalledWith(0, 640);
+    expect(region.scrollTop).toBe(640);
   });
+
+  expect(sessionStorage.getItem("cropy:history-view")).toBeNull();
 });
 
 it("모바일에서 진단 이력 상세로 이동하기 전에 본문 스크롤 위치를 저장한다", async () => {
