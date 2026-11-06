@@ -10,3 +10,4 @@ class LLMGuidanceResponse(BaseModel):
     fallback_reason: Literal[
         "unavailable", "timeout", "error", "invalid_response", "not_crop"
     ] | None = None
+

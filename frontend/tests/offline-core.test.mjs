@@ -19,6 +19,15 @@ test('crop mismatch and ambiguity retain separate reasons', () => {
   assert.equal(result.decision_status,'crop_mismatch'); assert.deepEqual(result.decision_reasons,['crop_mismatch','confusion']);
   assert.equal(result.recapture.region,'잎 뒷면');
 });
+test('top1 pair asks for recapture on a confident first photo but not after refinement', () => {
+  const top1 = { ...bundle, policy: { ...bundle.policy, pairs: [{ ...bundle.policy.pairs[0], trigger: 'top1' }] } };
+  const confident = [{class_id:3,confidence:.9},{class_id:2,confidence:.1}];
+  assert.equal(summarize(top1, confident, '무').recapture.region, '잎 뒷면');
+  assert.equal(summarize(top1, confident, '무', true).recapture, null);
+  assert.equal(summarize(top1, [{class_id:3,confidence:.5},{class_id:2,confidence:.45}], '무', true).recapture.region, '잎 뒷면');
+  // 기존 묶음(trigger 없음)은 마진 규칙 그대로
+  assert.equal(summarize(bundle, confident, '무').recapture, null);
+});
 test('판별 불가 overrides mismatch, confusion and low score', () => {
   const withOther = { ...bundle, diseases: [...bundle.diseases, {model_class_id: 9, name: '판별 불가', crop_type: '기타', category: 'other'}] };
   const result = summarize(withOther, [{class_id:9,confidence:.4},{class_id:2,confidence:.35},{class_id:3,confidence:.25}], '고추');

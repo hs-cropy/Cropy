@@ -148,10 +148,10 @@ def _crop(disease: Disease) -> str | None:
     return None if disease.category == "other" else disease.crop_type
 
 
-def _recapture(primary: Disease, predictions, diseases: dict[int, Disease]):
+def _recapture(primary: Disease, predictions, diseases: dict[int, Disease], refined=False):
     if primary.category == "other":
         return None
-    return check_recapture(predictions, {c: d.name for c, d in diseases.items()})
+    return check_recapture(predictions, {c: d.name for c, d in diseases.items()}, refined=refined)
 
 
 def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str | None,
@@ -235,7 +235,7 @@ def refine_diagnosis(db: Session, diagnosis_id: str, file_bytes: bytes, filename
         diagnosis.image_path = original_path.name
         diagnosis.refined_image_path = second_path.name
         diagnosis.original_predictions = [list(p) for p in dist1]
-        guidance = _recapture(primary, fused, diseases)
+        guidance = _recapture(primary, fused, diseases, refined=True)
         diagnosis.recapture = guidance.model_dump() if guidance else None
         diagnosis.content_snapshot = _content(db, primary)
         diagnosis.severity_snapshot = primary.severity
