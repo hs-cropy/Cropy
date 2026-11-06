@@ -699,13 +699,18 @@ def _disk_space(backup_dir: Path, db_path: Path, upload_dir: Path, safety_parent
     """복원(--apply)이 새로 쓰는 양을 파일시스템별로 모아 남은 공간과 비교한다.
 
     교체 전까지 원래 사진·준비한 사본·안전 백업이 함께 있어 사진 용량이 잠시 약 3배 든다.
-    새로 쓰는 것은 준비 사본(백업의 DB·사진)과 안전 백업(현재 DB·저널·사진)이다.
+    새로 쓰는 것은 준비 사본(백업의 DB·저널·사진)과 안전 백업(현재 DB·저널·사진)이다.
     파일 크기의 합이라 블록 단위 낭비를 빼므로 실제로 필요한 양보다 작거나 같다 — 이보다 남은 공간이
-    적으면 복원은 반드시 중간에 실패한다.
+    적으면 복원은 중간에 실패할 가능성이 크다. 남은 공간(disk_usage().free)은 root용 예약 공간을 뺀
+    값이라 root로 실행하면 실제로는 될 수도 있지만, 운영 디스크를 끝까지 채우지 않도록 안전한 쪽으로 거절한다.
     """
-    current_db = sum(path.stat().st_size for path in [db_path, *_sidecars(db_path)] if path.is_file())
+    def db_bytes(path: Path) -> int:
+        # 안전 백업으로 되돌릴 때는 저널(-wal·-journal)도 함께 있고, 준비 사본은 저널을 반영한 DB다
+        return sum(item.stat().st_size for item in [path, *_sidecars(path)] if item.is_file())
+
+    current_db = db_bytes(db_path)
     writes = [
-        (db_path.parent, (backup_dir / "cropcare.db").stat().st_size),
+        (db_path.parent, db_bytes(backup_dir / "cropcare.db")),
         (upload_dir.parent, _tree_bytes(backup_dir / "uploads")),
         (safety_parent, current_db + (_tree_bytes(upload_dir) if upload_dir.is_dir() else 0)),
     ]

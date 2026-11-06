@@ -1571,3 +1571,13 @@ def test_restore_apply_refuses_to_start_without_enough_space(live, snapshot_to_r
     assert _snapshot(db_path, upload_dir) == before
     assert not list(snapshot_to_restore.parent.glob("pre_restore_*"))  # 안전 백업도 시작하지 않았다
     assert not list(upload_dir.parent.glob(".restore-*"))
+
+
+def test_disk_space_counts_journal_files_next_to_both_dbs(live, snapshot_to_restore):
+    # 안전 백업으로 되돌릴 때는 백업 쪽에도 -wal·-journal이 있다. 빼면 필요한 공간을 적게 잡는다
+    db_path, upload_dir, _ = live
+    before = backup_db._disk_space(snapshot_to_restore, db_path, upload_dir, snapshot_to_restore.parent)
+    (snapshot_to_restore / "cropcare.db-wal").write_bytes(b"w" * 1000)
+    db_path.with_name(db_path.name + "-journal").write_bytes(b"j" * 300)
+    after = backup_db._disk_space(snapshot_to_restore, db_path, upload_dir, snapshot_to_restore.parent)
+    assert after[0]["needed_bytes"] - before[0]["needed_bytes"] == 1300
