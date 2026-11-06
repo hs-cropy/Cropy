@@ -31,12 +31,18 @@ export function VoiceMode({
   const router = useRouter();
 
   return (
-    <main className="relative isolate flex min-h-dvh flex-col overflow-hidden bg-cropy-surface">
-    {/* 하단 농장 배경: 화면 크기에 따라 이미지 변경 */}
-        <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 -z-10"
-        >
+    <main
+        className="
+            relative isolate flex min-h-screen flex-col
+            overflow-x-clip bg-cropy-surface
+            supports-[height:100dvh]:min-h-dvh
+        "
+    >
+    {/* 문서가 길어져도 농장 배경은 화면에 고정 */}
+    <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10 print:absolute"
+    >
         <picture>
             <source
                 media="(min-width: 1024px)"
@@ -48,7 +54,7 @@ export function VoiceMode({
                 className="absolute inset-0 size-full object-cover opacity-[0.24]"
             />
         </picture>
-        </div>
+    </div>
       <header className="flex items-center justify-between px-5 py-5">
         <Image
             src="/brand/cropy-logo.png"
@@ -67,7 +73,13 @@ export function VoiceMode({
         </button>
       </header>
 
-      <section className="mx-auto flex w-full max-w-[430px] flex-1 flex-col items-center justify-center gap-6 px-6 py-8 text-center">
+      <section
+        className="
+            mx-auto flex w-full max-w-[430px] flex-1
+            flex-col items-center
+            gap-6 px-6 pt-8 pb-6 text-center
+        "
+      >
         <span
           role="status"
           className="text-sm font-semibold text-[#25864F]"
@@ -127,9 +139,17 @@ export function VoiceMode({
               text="갈색 점이 둥글게 번지면 고추 탄저병일 수 있어요. 잎 사진으로 확인하면 더 정확히 알려드릴게요."
             />
             <VoiceWaveform active />
-            <p className="rounded-xl bg-[#25864F] px-5 py-3 text-sm font-semibold text-white">
-              사진 찍어 확인하기
-            </p>
+            <button
+                type="button"
+                disabled
+                className="
+                    rounded-xl bg-cropy-action-primary
+                    px-5 py-3 text-sm font-semibold text-white
+                    disabled:cursor-not-allowed
+                "
+            >
+                사진 찍어 확인하기
+            </button>
           </div>
         )}
       </section>
