@@ -40,7 +40,12 @@ export function summarize(bundle, predictions, crop, refined = false) {
     category: disease.category, severity: disease.severity, confidence: first.confidence,
     top_predictions: predictions.slice(0, 3).map(p => ({ name: bundle.diseases.find(d => d.model_class_id === p.class_id).name, confidence: p.confidence })),
     description: disease.description, causes: disease.causes, prevention: disease.prevention,
-    management_actions: disease.management_actions || [], pesticides: disease.pesticides || [],
+    management_actions: disease.management_actions || [],
+    summary_message: disease.summary_message ?? null,
+    management_action_details: (disease.management_action_details ?? []).map(
+      detail => ({ title: detail.title, description: detail.description }),
+    ),
+    pesticides: disease.pesticides || [],
     recapture, decision_status: reasons[0] || (disease.category === 'normal' ? 'normal' : 'disease'), decision_reasons: reasons,
     policy_version: `${bundle.policy.version}:low=${bundle.policy.low_confidence_threshold}`, content_status: 'snapshot', content_version: bundle.version,
   };
