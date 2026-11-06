@@ -1,88 +1,125 @@
+
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { setVoiceEnabled, VOICE_SETTING_KEY } from "../hooks/useVoiceSetting";
-import { installFakeSpeech, spokenTexts, type FakeSpeech } from "../testing/fakeSpeech";
+import {
+  isVoiceEnabled,
+  setVoiceEnabled,
+  VOICE_SETTING_KEY,
+} from "../hooks/useVoiceSetting";
+import {
+  installFakeSpeech,
+  type FakeSpeech,
+} from "../testing/fakeSpeech";
+import {
+  readVoiceReturn,
+  VOICE_RETURN_KEY,
+} from "@/components/voice-mode/voiceNavigation";
 import { VoiceToggle } from "./VoiceToggle";
 
-const navigation = vi.hoisted(() => ({ pathname: "/home" }));
-vi.mock("next/navigation", () => ({
-  usePathname: () => navigation.pathname,
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+const navigation = vi.hoisted(() => ({
+  push: vi.fn(),
 }));
 
-let synth: FakeSpeech;
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: navigation.push,
+  }),
+}));
+
+let speech: FakeSpeech;
 
 beforeEach(() => {
-  synth = installFakeSpeech();
+  speech = installFakeSpeech();
+
   setVoiceEnabled(false);
   localStorage.clear();
-  navigation.pathname = "/home";
+  sessionStorage.clear();
+
+  navigation.push.mockClear();
+
+  window.history.replaceState({}, "", "/home");
+  Object.defineProperty(window, "scrollY", {
+    configurable: true,
+    value: 0,
+  });
 });
 
-function toggleButton() {
-  return screen.getByRole("switch", { name: "음성 안내" });
+function voiceSwitch() {
+  return screen.getByRole("switch", { name: "음성 모드" });
 }
 
-describe("VoiceToggle", () => {
-  it('기본은 꺼짐이다. 이름은 "음성 안내"로 고정하고 상태는 aria-checked 로 알린다', () => {
+describe("VoiceToggle — 음성 모드 진입", () => {
+  it("기본은 OFF이며 음성 모드 스위치로 표시한다", () => {
     render(<VoiceToggle />);
 
-    expect(toggleButton().getAttribute("aria-checked")).toBe("false");
-    // 좁은 화면에서는 "음성", md 부터 "음성 안내"로 보인다
-    expect(Array.from(screen.getByText("음성").classList)).toContain("md:hidden");
-    expect(Array.from(screen.getByText("음성 안내").classList)).toEqual(
-      expect.arrayContaining(["hidden", "md:inline"]),
+    expect(voiceSwitch().getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("ON을 누르면 음성 모드로 이동한다", () => {
+    render(<VoiceToggle />);
+
+    fireEvent.click(voiceSwitch());
+
+    expect(navigation.push).toHaveBeenCalledExactlyOnceWith(
+      "/voice-mode",
     );
   });
 
-  it("켜면 저장하고, 홈에서는 켬 안내에 이어 홈 안내를 읽는다", () => {
+  it("진입 직전 경로와 스크롤 위치를 저장한다", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/history?page=2",
+    );
+
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      value: 420,
+    });
+
     render(<VoiceToggle />);
+    fireEvent.click(voiceSwitch());
 
-    fireEvent.click(toggleButton());
+    expect(readVoiceReturn()).toEqual({
+      path: "/history?page=2",
+      scrollY: 420,
+    });
 
-    expect(toggleButton().getAttribute("aria-checked")).toBe("true");
-    expect(localStorage.getItem(VOICE_SETTING_KEY)).toBe("on");
-    expect(spokenTexts(synth)).toEqual(["음성 안내를 켰어요", "작물을 고르고 잎을 찍어주세요"]);
+    expect(sessionStorage.getItem(VOICE_RETURN_KEY)).not.toBeNull();
   });
 
-  it("홈이 아닌 화면에서 켜면 켬 안내만 읽는다", () => {
-    navigation.pathname = "/history";
+  it.each([false, true])(
+    "기존 TTS 설정이 %s여도 진입 시 설정값을 유지한다",
+    (enabled) => {
+      setVoiceEnabled(enabled);
+
+      render(<VoiceToggle />);
+      fireEvent.click(voiceSwitch());
+
+      expect(isVoiceEnabled()).toBe(enabled);
+      expect(localStorage.getItem(VOICE_SETTING_KEY)).toBe(
+        enabled ? "on" : "off",
+      );
+      expect(navigation.push).toHaveBeenCalledWith(
+        "/voice-mode",
+      );
+    },
+  );
+
+  it("진입할 때 기존 TTS 재생을 중단한다", () => {
     render(<VoiceToggle />);
 
-    fireEvent.click(toggleButton());
+    fireEvent.click(voiceSwitch());
 
-    expect(spokenTexts(synth)).toEqual(["음성 안내를 켰어요"]);
+    expect(speech.cancel).toHaveBeenCalledTimes(1);
+    expect(speech.speak).not.toHaveBeenCalled();
   });
 
-  it("끄면 저장하고 읽던 문장을 끊는다", () => {
-    setVoiceEnabled(true);
-    render(<VoiceToggle />);
-
-    fireEvent.click(toggleButton());
-
-    expect(toggleButton().getAttribute("aria-checked")).toBe("false");
-    expect(localStorage.getItem(VOICE_SETTING_KEY)).toBe("off");
-    expect(synth.cancel).toHaveBeenCalledTimes(1);
-    expect(synth.speak).not.toHaveBeenCalled();
-  });
-
-  it("저장된 설정이 켜짐이면 켜진 상태로 보인다", () => {
-    setVoiceEnabled(true);
-    render(<VoiceToggle />);
-
-    expect(toggleButton().getAttribute("aria-checked")).toBe("true");
-  });
-
-  it("Web Speech를 지원하지 않는 브라우저에서는 스위치를 숨긴다", () => {
-    vi.unstubAllGlobals();
-    render(<VoiceToggle />);
-
-    expect(screen.queryByRole("switch")).toBeNull();
-  });
-
-  it("배치용 className 을 스위치에 전달한다", () => {
+  it("배치용 className을 스위치에 전달한다", () => {
     render(<VoiceToggle className="xl:w-[8.25rem]" />);
 
-    expect(Array.from(toggleButton().classList)).toContain("xl:w-[8.25rem]");
+    expect(
+      Array.from(voiceSwitch().classList),
+    ).toContain("xl:w-[8.25rem]");
   });
 });

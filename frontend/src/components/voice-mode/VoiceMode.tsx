@@ -6,6 +6,9 @@ import { VoiceMicButton } from "./VoiceMicButton";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { VoiceBubble } from "./VoiceBubble";
 import Image from "next/image";
+import { useEffect } from "react";
+import { cancelSpeech } from "@/features/voice/lib/speech";
+import { readVoiceReturn } from "./voiceNavigation";
 
 interface VoiceModeProps {
   state?: VoiceModeState;
@@ -29,7 +32,30 @@ export function VoiceMode({
   state = "idle",
 }: VoiceModeProps) {
   const router = useRouter();
+    // 음성 모드를 벗어날 때 재생 중인 음성을 중단
+    useEffect(() => {
+    return () => {
+        cancelSpeech();
 
+        // 실제 STT 녹음 및 TTS 재생 연결 시
+        // 녹음 스트림, 오디오 플레이어도 여기서 정리
+    };
+    }, []);
+
+    const handleReturn = () => {
+    cancelSpeech();
+
+    const previous = readVoiceReturn();
+
+    if (previous) {
+        // 헤더 스위치로 진입했다면 직전 페이지가
+        // 브라우저 히스토리에 있으므로 그곳으로 돌아간다
+        router.back();
+    } else {
+        // 주소 직접 입력이나 새 탭 진입 시 안전한 기본 경로
+        router.replace("/home");
+    }
+    };
   return (
     <main
         className="
@@ -66,7 +92,7 @@ export function VoiceMode({
         />
         <button
           type="button"
-          onClick={() => router.push("/home")}
+          onClick={handleReturn}
           className="rounded-lg bg-white px-4 py-2 text-sm font-medium"
         >
           기본 화면

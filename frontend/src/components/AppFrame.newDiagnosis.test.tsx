@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { setVoiceEnabled } from "@/features/voice/hooks/useVoiceSetting";
+import { setVoiceEnabled, isVoiceEnabled } from "@/features/voice/hooks/useVoiceSetting";
 import {
   installFakeSpeech,
   spokenTexts,
@@ -175,7 +175,13 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
     vi.mocked(diagnoseImage).mockResolvedValue(result("d1", "고추 탄저병"));
     const { container } = renderHome();
     await userEvent.click(screen.getByRole("switch", { name: /큰 글자/ }));
-    await userEvent.click(screen.getByRole("switch", { name: "음성 안내" }));
+
+    // 기존 TTS 음성 안내 설정을 직접 활성화한다.
+    // 헤더의 "음성 모드" 스위치와는 별개다.
+    act(() => {
+      setVoiceEnabled(true);
+    });
+
     pickPhoto(container);
     await startDiagnosis();
     await screen.findByRole("heading", { name: "고추 탄저병" });
@@ -190,9 +196,12 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
     expect(screen.getByRole("switch", { name: /큰 글자/ }).getAttribute("aria-checked")).toBe(
       "true",
     );
-    expect(screen.getByRole("switch", { name: "음성 안내" }).getAttribute("aria-checked")).toBe(
-      "true",
-    );
+    expect(isVoiceEnabled()).toBe(true);
+
+    // 기존 음성 안내 설정과 신규 음성 모드는 독립적이다.
+    expect(
+      screen.getByRole("switch", { name: "음성 모드" }).getAttribute("aria-checked"),
+    ).toBe("false");
   });
 
   it("카메라를 쓸 수 없다는 화면에서 새 진단을 누르면 사진 업로드로 돌아가 그 영역에 초점을 둔다", async () => {
