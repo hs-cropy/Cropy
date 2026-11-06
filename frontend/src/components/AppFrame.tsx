@@ -46,7 +46,7 @@ function Frame({ children }: { children: ReactNode }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const previousPathRef = useRef(pathname);
 
-  // 창이 아니라 본문 영역이 스크롤되므로, 화면을 옮긴 뒤 초점이 내비 링크에 남아 있으면
+  // 화면을 옮긴 뒤 초점이 내비 링크에 남아 있으면
   // 키보드(PageDown·스페이스)로 본문을 내릴 수 없다. 옮긴 화면의 본문으로 초점을 보낸다.
   // 옮긴 화면이 이미 자기 제목 등으로 초점을 옮겼다면(분석 시작·취소) 그대로 둔다
   useEffect(() => {

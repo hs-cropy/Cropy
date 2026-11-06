@@ -16,6 +16,21 @@
        본문뿐 아니라 버튼 높이와 터치 영역까지 비례해 함께 커진다.
        (그래서 코드에는 하드코딩 px 값을 두지 않는다) */
     font-size: 100%;
+
+    /* 문서가 스크롤되고 아래에 내비·행동 영역이 붙어 있으므로(AppShell), Tab 으로 옮긴 초점이
+       그 띠 뒤에 가려지지 않게 그만큼 띄워 스크롤한다.
+       모바일: 내비 72px + 행동 영역 최대 144px + 아래 안전 영역. lg: 행동 영역 80px */
+    scroll-padding-bottom: calc(13.5rem + env(safe-area-inset-bottom));
+
+    /* 문서 끝을 지나 당겨도 튕기지 않게 한다 (iOS 16+ 사파리). 그 아래 버전은 AppShell 의 fixed 내비와
+       ActionDock 의 바운스 처리로 대응한다.
+       부작용: 안드로이드 크롬 브라우저 탭의 당겨서 새로고침, 맥 트랙패드의 위아래 탄성 스크롤도 꺼진다 */
+    overscroll-behavior-y: none;
+  }
+  @media (min-width: 1024px) {
+    html {
+      scroll-padding-bottom: 5rem;
+    }
   }
   html[data-textsize="large"] {
     font-size: 125%;
