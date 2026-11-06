@@ -8,6 +8,9 @@ Writes to --out-dir: web_<dtype><tag>_cases.jsonl, web_<dtype><tag>_metrics.json
 
 --texts swaps each row's typed utterance for STT output (stt_roundtrip/roundtrip.py jsonl) of one --condition, keeping
 the labels; --strip-punct removes the punctuation SenseVoice adds (training text has none), as the app should.
+
+--prefix-state starts every row from prefix_state.py output (decoder state after the fixed system prompt) and prefills
+only the user turn, as the phone app does; compare its cases with a full-prefill run of the same rows.
 """
 import argparse
 import hashlib
@@ -36,6 +39,8 @@ ap.add_argument("--condition", default="clean")
 ap.add_argument("--text-field", default="stt_text", help="stt_text (after term correction) or stt_raw")
 ap.add_argument("--strip-punct", action="store_true")
 ap.add_argument("--tag", default="")
+ap.add_argument("--prefix-state", default="", help="prefix_<dtype>.json from prefix_state.py")
+ap.add_argument("--threads", type=int, default=0)
 args = ap.parse_args()
 
 import onnxruntime as ort  # noqa: E402
@@ -82,6 +87,8 @@ def prompt_ids(r):
 
 providers = (["CUDAExecutionProvider"] if args.device == "cuda" else []) + ["CPUExecutionProvider"]
 opts = ort.SessionOptions()
+if args.threads:
+    opts.intra_op_num_threads = args.threads
 embed = ort.InferenceSession(str(bundle / "onnx" / f"embed_tokens_{args.dtype}.onnx"), opts, providers=providers)
 dec = ort.InferenceSession(str(bundle / "onnx" / f"decoder_model_merged_{args.dtype}.onnx"), opts, providers=providers)
 print("providers", dec.get_providers())
@@ -126,9 +133,26 @@ def step(ids, start, state):
     return int(np.argmax(res["logits"][0, -1])), new_state
 
 
+PREFIX, PREFIX_STATE = None, None
+if args.prefix_state:
+    meta = json.loads(Path(args.prefix_state).read_text(encoding="utf-8"))
+    assert meta["dtype"] == args.dtype
+    assert meta["system_prompt_sha256"] == hashlib.sha256(SYSTEM.encode("utf-8")).hexdigest(), "다른 시스템 프롬프트의 상태입니다"
+    blob = Path(args.prefix_state).with_suffix(".bin").read_bytes()
+    PREFIX = meta["prefix_ids"]
+    PREFIX_STATE = {n: np.frombuffer(blob, np.dtype(t["dtype"]).newbyteorder("<"), int(np.prod(t["shape"])), t["offset"])
+                    .reshape(t["shape"]).astype(t["dtype"]) for n, t in meta["tensors"].items()}
+    assert sorted(PREFIX_STATE) == sorted(past_names)
+    print("prefix state", meta["prefix_len"], "tokens", round(len(blob) / 2**20, 1), "MB")
+
+
 def greedy(ids):
     t0 = time.time()
-    nxt, state = step(ids, 0, empty_state())
+    if PREFIX and ids[:len(PREFIX)] == PREFIX:
+        nxt, state = step(ids[len(PREFIX):], len(PREFIX), PREFIX_STATE)
+    else:
+        assert not PREFIX, "프롬프트 앞부분이 저장된 상태와 다릅니다"
+        nxt, state = step(ids, 0, empty_state())
     prefill = time.time() - t0
     new, pos = [nxt], len(ids)
     while new[-1] not in STOP_IDS and len(new) < 16:
@@ -177,7 +201,7 @@ rate = lambda key, rs=rows: round(sum(r[key] for r in rs) / max(1, len(rs)), 4) 
 with_ref = [r for r in rows if r["float_actual"] is not None]
 per_fn = {fn: dict(support=len(rs), function=rate("function_correct", rs), exact=rate("exact_correct", rs))
           for fn in sorted({r["function"] for r in rows}) for rs in [[r for r in rows if r["function"] == fn]]}
-metrics = dict(dtype=args.dtype, tag=args.tag, texts=Path(args.texts).name if args.texts else None,
+metrics = dict(dtype=args.dtype, tag=args.tag, prefix_state=bool(PREFIX), texts=Path(args.texts).name if args.texts else None,
                condition=args.condition if args.texts else "typed", text_field=args.text_field if args.texts else None,
                strip_punct=args.strip_punct, providers=dec.get_providers(), support=len(rows), format_valid=rate("format_valid"),
                function=rate("function_correct"), exact=rate("exact_correct"),
