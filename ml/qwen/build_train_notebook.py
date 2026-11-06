@@ -26,8 +26,16 @@ BASES = {"2b": ("Qwen/Qwen3.5-2B", "15852e8c16360a2fea060d615a32b45270f8a8fc"), 
          "0.8b": ("Qwen/Qwen3.5-0.8B", "2fc06364715b967f1860aea9cf38778875588b17")}
 BASE = os.environ.get("QWEN_BASE", "2b")
 MODEL_ID, MODEL_REF = BASES[BASE]
+# QWEN_SEED=N -> same recipe with another seed, for averaging several runs (model soup) like the deployed 2B
+DEFAULT_SEED = 20261027
+SEED = int(os.environ.get("QWEN_SEED", DEFAULT_SEED))
+SEED_TAG = "" if SEED == DEFAULT_SEED else f"_s{SEED}"
 VERSION = ("v3s" if SHORT_PROMPT else DATA_VERSION) + ("" if BASE == "2b" else "_" + BASE.replace(".", ""))
-NOTEBOOK = "cropy_qwen_v2_train_colab.ipynb" if BASE == "2b" else f"cropy_qwen_v2_{BASE.replace('.', '')}_train_colab.ipynb"
+NOTEBOOK = ("cropy_qwen_v2_train_colab" if BASE == "2b" else f"cropy_qwen_v2_{BASE.replace('.', '')}_train_colab") + SEED_TAG + ".ipynb"
+# 0.8B: 4-bit QLoRA on L4 gave 84.3% exact, bf16 LoRA on A100 90.3% -> never quantize the small model
+ALLOW_4BIT = BASE == "2b"
+RUNTIME_NOTE = ("**A100 권장**(L4·T4도 동작, 24GB 미만이면 4bit로 불러옴)." if ALLOW_4BIT else
+                "**A100**(4비트 학습을 쓰지 않음, A100 bf16으로 검증함).")
 
 
 def payload():
@@ -62,7 +70,7 @@ def notebook(data_sha, counts):
 - 데이터: train {counts['train']:,}행 / validation {counts['validation']:,}행 (validation은 사람 검수 완료)
 - 새 토큰 10개(`<hs_0>`~`<hs_8>`, `<hs_end>`)의 임베딩도 함께 학습한다.
 - 시스템 프롬프트: {'한 줄(`spec_v2.SHORT_PROMPT`). 규칙·함수 설명 없이 학습해 보드에서 매번 처리할 입력을 약 1,300 → 200 토큰으로 줄인다' if SHORT_PROMPT else '규칙과 함수 설명 전체(약 1,100 토큰)'}.
-- 런타임: **A100 권장**(L4·T4도 동작, 24GB 미만이면 4bit로 불러옴). 메뉴 런타임 → 런타임 유형 변경 → GPU.
+- 런타임: {RUNTIME_NOTE} 메뉴 런타임 → 런타임 유형 변경 → GPU.
 
 **실행 방법**
 1. Drive `내 드라이브/cropy_qwen_v2/`에 `{DATA_FILE}`가 있는지 확인한다.
@@ -82,7 +90,7 @@ DATA_SHA256 = '{data_sha}'
 MODEL_ID = '{MODEL_ID}'
 MODEL_REF = '{MODEL_REF}'
 
-RUN_NAME = '{VERSION}_r16_e2'      # 설정을 바꿔 새로 학습할 때만 이름을 바꾼다
+RUN_NAME = '{VERSION}_r16_e2{SEED_TAG}'      # 설정을 바꿔 새로 학습할 때만 이름을 바꾼다
 SHORT_PROMPT = {SHORT_PROMPT}       # True: 한 줄 시스템 프롬프트(보드 응답 속도용)
 EPOCHS = 2
 LEARNING_RATE = 2e-4
@@ -90,7 +98,8 @@ LORA_R, LORA_ALPHA, LORA_DROPOUT = 16, 32, 0.05
 EFFECTIVE_BATCH = 16
 WARMUP_SHARE = 0.03
 MAX_LENGTH = 2048
-SEED = 20261027
+SEED = {SEED}
+ALLOW_4BIT = {ALLOW_4BIT}     # 0.8B는 4비트 학습 금지(L4 4비트 84.3% vs A100 bf16 90.3%)
 EVAL_LIMIT = None            # None이면 validation 전체
 OUTPUT_DIR = DRIVE_DIR / RUN_NAME
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -108,7 +117,7 @@ random.seed(SEED); torch.manual_seed(SEED); torch.cuda.manual_seed_all(SEED)
 GPU = torch.cuda.get_device_name(0)
 VRAM = torch.cuda.get_device_properties(0).total_memory
 DTYPE = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
-QUANTIZE = VRAM < 30 * 1024**3
+QUANTIZE = ALLOW_4BIT and VRAM < 30 * 1024**3
 # 긴 시스템 프롬프트면 한 행이 약 1,300 토큰이고 어휘 25만 개 logits가 행마다 1GB 넘게 들어 A100 40GB에서 8은 OOM. 짧은 프롬프트는 약 200 토큰.
 PER_DEVICE = ((16, 8, 4) if SHORT_PROMPT else (4, 2, 1))[0 if VRAM >= 39 * 1024**3 else 1 if VRAM >= 22 * 1024**3 else 2]
 ACCUM = max(1, EFFECTIVE_BATCH // PER_DEVICE)
