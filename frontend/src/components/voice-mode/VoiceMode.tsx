@@ -31,7 +31,24 @@ export function VoiceMode({
   const router = useRouter();
 
   return (
-    <main className="relative flex min-h-dvh flex-col bg-[#F5FAF5]">
+    <main className="relative isolate flex min-h-dvh flex-col overflow-hidden bg-cropy-surface">
+    {/* 하단 농장 배경: 화면 크기에 따라 이미지 변경 */}
+        <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10"
+        >
+        <picture>
+            <source
+                media="(min-width: 1024px)"
+                srcSet="/background/farm-desktop.webp"
+            />
+            <img
+                src="/background/farm-mobile.webp"
+                alt=""
+                className="absolute inset-0 size-full object-cover opacity-[0.24]"
+            />
+        </picture>
+        </div>
       <header className="flex items-center justify-between px-5 py-5">
         <Image
             src="/brand/cropy-logo.png"
