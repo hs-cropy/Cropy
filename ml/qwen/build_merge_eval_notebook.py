@@ -20,11 +20,22 @@ import build_train_notebook as train
 import spec_v2
 
 HERE = Path(__file__).resolve().parent
-RUNS = ["v2_r16_e2", "v2b_r16_e2", "v2c_r16_e2"]  # same base, prompt and new-token ids; v3s used another prompt
-EXPORT = "v2_r16_e2"  # adapter chosen for the server (README "v2c 결과와 결정")
+SMALL = train.BASE != "2b"  # QWEN_BASE=0.8b: soup of the three 0.8B seeds (browser / phone candidate)
+if SMALL:
+    # same data v2c, bf16 LoRA on A100, seeds 20261027 / 20261106 / 20261107: exact 90.26% / 91.12% / 89.40% (2026-11-06)
+    RUNS = ["v2c_08b_a100_r16_e2", "v2c_08b_r16_e2_s20261106", "v2c_08b_r16_e2_s20261107"]
+    EXPORT = RUNS[0]  # only the tokenizer is read from it; no single-adapter merge
+    SOUP_NAME = "soup_08b_3seed"
+    OUT_DIR = "merge_eval_08b"
+    BASELINE = "비교 기준(같은 라벨): 0.8B 단일 seed 0.9026 / 0.9112 / 0.8940 (평균 0.9026), 2B 평균 모델 0.9690"
+else:
+    RUNS = ["v2_r16_e2", "v2b_r16_e2", "v2c_r16_e2"]  # same base, prompt and new-token ids; v3s used another prompt
+    EXPORT = "v2_r16_e2"  # adapter chosen for the server (README "v2c 결과와 결정")
+    SOUP_NAME = "soup_" + "_".join(r.split("_")[0] for r in RUNS)
+    OUT_DIR = "merge_eval"
+    BASELINE = "비교 기준(같은 라벨): v2 단독 0.9500, v2c 0.9483, 세 run 다수결 0.9664, 평균 모델(16개씩 생성) 0.9690"
 RUN_MERGE = False  # done on 2026-11-02 (v2_r16_e2/merged_hf)
 SAVE_SOUP = True
-SOUP_NAME = "soup_" + "_".join(r.split("_")[0] for r in RUNS)
 
 
 def notebook(data_sha, counts):
@@ -39,11 +50,11 @@ def notebook(data_sha, counts):
 학습은 하지 않는다. 이미 학습한 어댑터만 쓴다.
 
 1. **병합**: `{EXPORT}` 어댑터를 기본 모델에 합쳐 어댑터와 같은 답을 내는지 확인하고, 보드 RKLLM 변환용 Hugging Face 모델로 저장한다.
-2. **평균**: {', '.join(f'`{r}`' for r in RUNS)} 세 모델의 병합 가중치를 평균 낸 한 모델을 평가한다. 세 모델 다수결은 인자까지 96.6%였다(`{EXPORT}` 단독 95.0%).
+2. **평균**: {', '.join(f'`{r}`' for r in RUNS)} 세 모델의 병합 가중치를 평균 낸 한 모델을 평가한다. {BASELINE}.
 
 - 평가 기준: `{train.DATA_FILE}`의 validation {counts['validation']:,}행(학습 결과 비교에 써 온 라벨)
-- 런타임: **A100**, 메뉴 런타임 → 모두 실행. 결과는 `cropy_qwen_v2/merge_eval/`, 병합 모델은 `cropy_qwen_v2/{EXPORT}/merged_hf/`, 평균 모델은 `cropy_qwen_v2/{SOUP_NAME}/merged_hf/`(각 약 4~5GB, Drive 여유 공간 확인).
-- 이번 설정: 병합 {'실행' if RUN_MERGE else '건너뜀(11/2에 함)'}, 평균 모델 {'한 건씩 평가 후 저장' if SAVE_SOUP else '평가만'}.
+- 런타임: **A100**, 메뉴 런타임 → 모두 실행. 결과는 `cropy_qwen_v2/{OUT_DIR}/`, 병합 모델은 `cropy_qwen_v2/{EXPORT}/merged_hf/`, 평균 모델은 `cropy_qwen_v2/{SOUP_NAME}/merged_hf/`({'약 1.7GB' if SMALL else '각 약 4~5GB'}, Drive 여유 공간 확인).
+- 이번 설정: 병합 {'실행' if RUN_MERGE else '건너뜀' + ('' if SMALL else '(11/2에 함)')}, 평균 모델 {'한 건씩 평가 후 저장' if SAVE_SOUP else '평가만'}.
 """),
         code(f"""
 from google.colab import drive
@@ -62,7 +73,7 @@ RUN_MERGE = {RUN_MERGE}           # 단일 어댑터 병합·저장 (11/2에 함
 SAVE_MERGED = True          # False면 병합 모델을 Drive에 저장하지 않는다
 SAVE_SOUP = {SAVE_SOUP}           # 평균 모델을 한 건씩 평가하고 Drive에 저장
 SOUP_NAME = '{SOUP_NAME}'
-OUT = DRIVE_DIR / 'merge_eval'
+OUT = DRIVE_DIR / '{OUT_DIR}'
 OUT.mkdir(parents=True, exist_ok=True)
 for run in RUNS:
     assert (DRIVE_DIR / run / 'adapter' / 'adapter_config.json').exists(), f'{{run}} 어댑터가 Drive에 없습니다'
@@ -282,8 +293,8 @@ for path in sorted(OUT.glob('*_metrics.json')):
 (OUT / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2))
 for name, v in summary.items():
     print(f'{name:24s} 형식 {v["format_valid"]:.4f} 기능 {v["function"]:.4f} 인자까지 {v["exact"]:.4f}')
-print('비교 기준(같은 라벨): v2 단독 0.9500, v2c 0.9483, 세 run 다수결 0.9664, 평균 모델(16개씩 생성) 0.9690')
 """),
+        code(f"print({BASELINE!r})"),
     ]
     return {"cells": cells, "metadata": {"accelerator": "GPU", "colab": {"provenance": [], "gpuType": "A100"},
                                          "kernelspec": {"display_name": "Python 3", "name": "python3"},
@@ -295,7 +306,7 @@ def main():
     data, counts = train.payload()
     sha = hashlib.sha256(data).hexdigest()
     assert (train.DATA / train.DATA_FILE).read_bytes() == data, "build_train_notebook.py를 먼저 돌리세요"
-    out = HERE / "cropy_qwen_v2_merge_eval_colab.ipynb"
+    out = HERE / ("cropy_qwen_v2_08b_merge_eval_colab.ipynb" if SMALL else "cropy_qwen_v2_merge_eval_colab.ipynb")
     out.write_text(json.dumps(notebook(sha, counts), ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(dict(data_sha256=sha, notebook=str(out), runs=RUNS, export=EXPORT)))
 
