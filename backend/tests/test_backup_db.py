@@ -1511,3 +1511,26 @@ def test_restore_apply_waits_for_no_backup_on_the_same_folder(live, monkeypatch)
         with pytest.raises(BackupError, match="실행 중"):
             restore(good, db_path, upload_dir, apply=True)
         assert restore(good, db_path, upload_dir, apply=False)["applied"] is False
+
+
+def test_default_backup_root_follows_the_env(monkeypatch, tmp_path):
+    # 도커에서는 compose가 BACKUP_ROOT로 볼륨 경로를 준다 — 이미지 안 백업은 재생성 때 사라진다
+    monkeypatch.delenv(backup_db.BACKUP_ROOT_ENV, raising=False)
+    assert backup_db.default_backup_root() == backup_db.BACKUP_ROOT
+    monkeypatch.setenv(backup_db.BACKUP_ROOT_ENV, "  ")
+    assert backup_db.default_backup_root() == backup_db.BACKUP_ROOT
+    monkeypatch.setenv(backup_db.BACKUP_ROOT_ENV, str(tmp_path / "volume"))
+    assert backup_db.default_backup_root() == tmp_path / "volume"
+
+
+def test_backup_command_writes_under_backup_root_env(monkeypatch, tmp_path):
+    db_path, upload_dir = tmp_path / "data" / "cropcare.db", tmp_path / "data" / "uploads"
+    upload_dir.mkdir(parents=True)
+    sqlite3.connect(db_path).close()
+    root = tmp_path / "volume"
+    monkeypatch.setenv(backup_db.BACKUP_ROOT_ENV, str(root))
+    monkeypatch.setattr(sys, "argv", ["backup_db.py", "--database-url", f"sqlite:///{db_path}",
+                                      "--upload-dir", str(upload_dir), "backup"])
+    backup_db.main()
+    backups = [p for p in root.iterdir() if p.is_dir()]
+    assert len(backups) == 1 and (backups[0] / "manifest.json").is_file()  # 볼륨 쪽에 완료된 백업이 생겼다

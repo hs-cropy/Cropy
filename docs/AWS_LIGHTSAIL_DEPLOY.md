@@ -189,7 +189,7 @@ rm -rf ~/Cropy.old
   cd ~/Cropy && docker compose up -d --force-recreate
   ```
 
-진단 이력과 사진은 `cropy_cropcare-data` 볼륨에 있다. 백업은 저장소 밖에 만든다.
+진단 이력과 사진은 `cropy_cropcare-data` 볼륨에 있다. 서비스를 켠 채 백업·복원하는 방법과 백업 볼륨(`cropy_cropcare-backups`)은 [백업·복원](operations/BACKUP_RESTORE.md)을 따른다. 아래는 서비스를 멈추고 데이터 볼륨을 통째로 저장소 밖에 묶는 방법이다.
 
 ```bash
 mkdir -p ~/backups

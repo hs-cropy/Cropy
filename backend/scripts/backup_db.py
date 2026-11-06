@@ -45,7 +45,8 @@ WAL 모드에서는 최근 커밋이 cropcare.db-wal에 있으므로 DB 파일�
 지원하지 않는 구성: DB 파일이 업로드 폴더 안에 있는 경우, 링크가 들어 있는 백업.
 
 Usage (backend 디렉터리에서):
-    # 백업 (backups/<timestamp>/ 에 생성, 같은 원본의 최근 7개만 유지)
+    # 백업 (backups/<timestamp>/ 에 생성, 같은 원본의 최근 7개만 유지.
+    # 환경변수 BACKUP_ROOT가 있으면 그 아래. 도커 운영은 docs/operations/BACKUP_RESTORE.md)
     python scripts/backup_db.py backup
 
     # 직전 백업과 연결하지 않고 전체 복사 / 보관 개수 제한 끄기
@@ -79,6 +80,9 @@ else:
 DEFAULT_DATABASE_URL = "sqlite:///./cropcare.db"
 DEFAULT_UPLOAD_DIR = "./uploads"
 BACKUP_ROOT = Path(__file__).resolve().parent.parent / "backups"
+# 도커에서는 이미지 안(/app/backups)이 컨테이너를 다시 만들 때 사라지므로, compose가 이 변수로
+# 볼륨 경로를 준다. 복원 직전 안전 백업도 복원하는 백업 옆에 생겨 같은 볼륨에 남는다
+BACKUP_ROOT_ENV = "BACKUP_ROOT"
 DEFAULT_KEEP = 7
 # 이 스크립트가 만든 백업의 표시. 증분 기준과 보관 정리는 이 표시가 있는 폴더만 다룬다.
 TOOL_NAME = "cropy-backup"
@@ -791,6 +795,12 @@ def _restore(backup_dir: Path, db_path: Path, upload_dir: Path, apply: bool) -> 
     return plan
 
 
+def default_backup_root() -> Path:
+    """--out이 없을 때 백업을 만들 폴더. 환경변수 BACKUP_ROOT가 있으면 그 경로를 쓴다."""
+    configured = os.environ.get(BACKUP_ROOT_ENV, "").strip()
+    return Path(configured) if configured else BACKUP_ROOT
+
+
 def _non_negative_int(value: str) -> int:
     number = int(value)
     if number < 0:
@@ -806,7 +816,7 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     backup_parser = sub.add_parser("backup", help="현재 DB·업로드를 백업한다")
-    backup_parser.add_argument("--out", type=Path, default=None, help=f"기본: {BACKUP_ROOT}/<타임스탬프>")
+    backup_parser.add_argument("--out", type=Path, default=None, help=f"기본: {default_backup_root()}/<타임스탬프> (환경변수 {BACKUP_ROOT_ENV}로 바꿈)")
     backup_parser.add_argument("--full", action="store_true", help="직전 백업과 연결하지 않고 전체 복사한다")
     backup_parser.add_argument("--keep", type=_non_negative_int, default=DEFAULT_KEEP,
                                help=f"같은 원본의 최근 N개 정기 백업만 남긴다 (기본 {DEFAULT_KEEP}, 0이면 지우지 않음)")
@@ -825,7 +835,7 @@ def main() -> None:
 
     try:
         if args.command == "backup":
-            out_dir = args.out or (BACKUP_ROOT / _timestamp())
+            out_dir = args.out or (default_backup_root() / _timestamp())
             manifest, removed = run_backup(db_path, upload_dir, out_dir, args.keep, incremental=not args.full)
             print(f"백업 완료: {out_dir}")
             print(json.dumps(manifest, ensure_ascii=False, indent=2))
