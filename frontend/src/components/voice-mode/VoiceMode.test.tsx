@@ -67,6 +67,65 @@ describe("VoiceMode — 음성 모드 화면", () => {
     },
   );
 
+  it("thinking에서는 분석 포즈와 두 위치의 점 3개를 표시한다", () => {
+    render(<VoiceMode state="thinking" micDisabled />);
+
+    expect(
+      screen.getByRole("img", { name: "생각하는 크로피" }),
+    ).toBeTruthy();
+
+    expect(
+      screen.getByText(/생각하고 있어요/),
+    ).toBeTruthy();
+
+    const mascotDots = screen
+      .getByTestId("mascot-thinking-dots")
+      .querySelectorAll("span");
+
+    const micDots = screen
+      .getByTestId("mic-thinking-dots")
+      .querySelectorAll("span");
+
+    expect(mascotDots).toHaveLength(3);
+    expect(micDots).toHaveLength(3);
+
+    for (const dots of [mascotDots, micDots]) {
+      Array.from(dots).forEach((dot, index) => {
+        expect((dot as HTMLElement).style.animationDelay).toBe(
+          `${index * 200}ms`,
+        );
+      });
+    }
+  });
+
+  it("thinking에서는 마이크 버튼을 비활성화한다", () => {
+    render(<VoiceMode state="thinking" micDisabled />);
+
+    const button = screen.getByRole("button", {
+      name: "답변 준비 중",
+    }) as HTMLButtonElement;
+
+    expect(button.disabled).toBe(true);
+  });
+
+  it("speaking에서는 말하는 중 상태와 재생 중지 버튼을 표시한다", () => {
+    render(<VoiceMode state="speaking" />);
+
+    expect(
+      screen.getByText(/말하는 중/),
+    ).toBeTruthy();
+
+    expect(
+      screen.getByRole("button", {
+        name: "음성 재생 중지",
+      }),
+    ).toBeTruthy();
+
+    expect(
+      screen.getByText("누르면 멈추고 말할 수 있어요"),
+    ).toBeTruthy();
+  });
+
   it("복귀 정보가 있으면 기본 화면 버튼으로 뒤로 간다", () => {
     saveVoiceReturn("/history", 420);
     render(<VoiceMode />);

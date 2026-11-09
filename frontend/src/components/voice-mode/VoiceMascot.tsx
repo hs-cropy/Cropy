@@ -1,5 +1,5 @@
-
 import Image from "next/image";
+import styles from "./VoiceThinkingDots.module.css";
 
 export type VoiceModeState =
   | "idle"
@@ -88,15 +88,16 @@ export function VoiceMascot({
 
       {state === "thinking" && (
         <span
+          data-testid="mascot-thinking-dots"
           aria-hidden="true"
           className="absolute right-0 top-5 flex h-10 items-center justify-center gap-1 rounded-full bg-white px-3 shadow-sm"
         >
           {[0, 1, 2].map((index) => (
             <span
               key={index}
-              className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#25864F] motion-reduce:animate-none"
+              className={`h-1.5 w-1.5 rounded-full bg-[#25864F] ${styles.dot}`}
               style={{
-                animationDelay: `${index * 150}ms`,
+                animationDelay: `${index * 200}ms`,
               }}
             />
           ))}

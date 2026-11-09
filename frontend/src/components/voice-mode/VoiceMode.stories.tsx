@@ -6,6 +6,9 @@ const meta = {
   component: VoiceMode,
   parameters: {
     layout: "fullscreen",
+    nextjs: {
+      appDirectory: true,
+    },
   },
   argTypes: {
     state: {
@@ -24,18 +27,18 @@ type Story = StoryObj<typeof meta>;
 
 export const Interactive: Story = {};
 
-export const V01Idle: Story = {
+export const Idle: Story = {
   args: { state: "idle" },
 };
 
-export const V02Listening: Story = {
+export const Listening: Story = {
   args: { state: "listening" },
 };
 
-export const V03Thinking: Story = {
+export const Thinking: Story = {
   args: { state: "thinking" },
 };
 
-export const V04Speaking: Story = {
+export const Speaking: Story = {
   args: { state: "speaking" },
 };

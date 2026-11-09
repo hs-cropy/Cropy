@@ -1,5 +1,5 @@
-
 import type { VoiceModeState } from "./VoiceMascot";
+import styles from "./VoiceThinkingDots.module.css";
 
 interface VoiceMicButtonProps {
   state: VoiceModeState;
@@ -40,7 +40,11 @@ export function VoiceMicButton({
         : "음성 입력 시작";
 
   return (
-    <div className="relative flex h-20 w-20 shrink-0 items-center justify-center">
+    <div
+      className={`relative flex shrink-0 items-center justify-center ${
+        isThinking ? "h-[88px] w-[88px]" : "h-20 w-20"
+      }`}
+    >
       {/* 마이크 주변 음성 반응 파동 */}
       {isListening && (
         <div
@@ -80,27 +84,48 @@ export function VoiceMicButton({
         type="button"
         disabled={disabled}
         onClick={onClick}
-        aria-label={ariaLabel}
-        className={`relative z-10 flex h-20 w-20 items-center justify-center rounded-full transition-transform ${
-          isSpeaking || isThinking
-            ? "border border-[#25864F] bg-white text-[#25864F]"
-            : "bg-[#25864F] text-white"
+        aria-label={ariaLabel}        
+        className={`relative z-10 flex items-center justify-center rounded-full transition-transform ${
+          isThinking
+            ? "h-[88px] w-[88px] border-2 border-[#ECECEF] bg-white text-[#25864F]"
+            : isSpeaking
+              ? "h-20 w-20 border border-[#25864F] bg-white text-[#25864F]"
+              : "h-20 w-20 bg-[#25864F] text-white"
         } ${
           disabled
-            ? "cursor-not-allowed opacity-60"
+            ? isThinking
+              ? "cursor-not-allowed"
+              : "cursor-not-allowed opacity-60"
             : "active:scale-95"
         }`}
       >
-        <span
-          aria-hidden="true"
-          className={`h-8 w-8 ${
-            isSpeaking
-              ? "icon-[lucide--square]"
-              : isThinking
-                ? "icon-[lucide--ellipsis]"
-                : "icon-[lucide--mic]"
-          }`}
-        />
+        {isThinking ? (
+          <span
+            data-testid="mic-thinking-dots"
+            aria-hidden="true"
+            className="flex h-8 w-8 items-center justify-center gap-1"
+          >
+            {[0, 1, 2].map((index) => (
+              <span
+                key={index}
+                className={`h-1.5 w-1.5 rounded-full bg-[#25864F] ${styles.dot}`}
+                style={{
+                  animationDelay: `${index * 200}ms`,
+                }}
+              />
+            ))}
+          </span>
+        ) : isSpeaking ? (
+          <span
+            aria-hidden="true"
+            className="h-5 w-5 rounded-[4px] bg-[#25864F]"
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="icon-[lucide--mic] h-8 w-8"
+          />
+        )}
       </button>
     </div>
   );
