@@ -86,6 +86,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: undefined });
+  Reflect.deleteProperty(document, "scrollingElement");
 });
 
 describe("CaptureScreen — 새 진단 · 사진 선택 (M-01-0)", () => {
@@ -602,6 +603,32 @@ describe("CaptureScreen — 리뷰에서 짚은 경로", () => {
     await userEvent.click(action("허용"));
 
     expect(document.activeElement).toBe(action("사진 찍기"));
+  });
+
+  it("촬영 화면 내부에서 단계가 바뀌면 문서 스크롤을 맨 위로 올린다", async () => {
+    const scrollTo = vi.fn();
+
+    Object.defineProperty(document, "scrollingElement", {
+      configurable: true,
+      value: {
+        scrollTo,
+      },
+    });
+    getUserMedia.mockRejectedValue(refused());
+
+    renderScreen();
+
+    // 최초 렌더링에서는 스크롤을 초기화하지 않는다.
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    // 카메라 권한 거부로 화면이 바뀐다.
+    await toggleCamera();
+
+    expect(title()).toBe("카메라 권한");
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: 0,
+      behavior: "instant",
+    });
   });
 });
 

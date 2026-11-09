@@ -134,6 +134,7 @@ afterEach(() => {
   document.removeEventListener("click", stopNavigation);
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  Reflect.deleteProperty(document, "scrollingElement");
 });
 
 describe("진단 시작 안내 (M-03-1 · D-03-1)", () => {
@@ -291,6 +292,52 @@ describe("사진 분석 중 (M-02 · D-02)", () => {
       await act(async () => {});
       expect(title()).toBe("사진 분석 중");
     }
+
+    it.each([
+      ["성공", false],
+      ["실패", true],
+    ] as const)(
+      "분석 중 아래로 스크롤했더라도 %s 화면은 맨 위에서 시작한다",
+      async (_, failed) => {
+        const scrollTo = vi.fn();
+
+        Object.defineProperty(document, "scrollingElement", {
+          configurable: true,
+          value: {
+            scrollTo,
+          },
+        });
+        if (failed) {
+          vi.mocked(diagnoseImage).mockRejectedValue(
+            new TypeError("Failed to fetch"),
+          );
+        } else {
+          vi.mocked(diagnoseImage).mockResolvedValue(response());
+        }
+
+        await startDiagnosis();
+
+        // 분석 중 화면으로 이동하면서 발생한 호출은 제외한다.
+        scrollTo.mockClear();
+
+        await act(() => vi.advanceTimersByTimeAsync(ANALYZING_MS));
+
+        if (failed) {
+          expect(
+            screen.getByRole("alert", {
+              name: "인터넷 연결을 확인해주세요",
+            }),
+          ).toBeTruthy();
+        } else {
+          expect(title()).toBe("진단 결과");
+        }
+
+        expect(scrollTo).toHaveBeenCalledWith({
+          top: 0,
+          behavior: "instant",
+        });
+      },
+    );
 
     it("응답이 바로 와도 3초가 지나야 결과로 넘어간다", async () => {
       vi.mocked(diagnoseImage).mockResolvedValue(response());
@@ -524,6 +571,53 @@ describe("진단 결과 화면 새로고침", () => {
 
     expect(title()).toBe("진단 시작");
     expect(fetchDiagnosisDetail).not.toHaveBeenCalled();
+  });
+
+  it("새로고침 후 결과를 복원할 때는 문서 스크롤을 초기화하지 않는다", async () => {
+    const scrollTo = vi.fn();
+    const original = Object.getOwnPropertyDescriptor(document, "scrollingElement");
+
+    Object.defineProperty(document, "scrollingElement", {
+      configurable: true,
+      value: { scrollTo },
+    });
+
+    try {
+      let resolveDetail!: (value: DiagnoseResponse) => void;
+
+      vi.mocked(fetchDiagnosisDetail).mockReturnValue(
+        new Promise<DiagnoseResponse>((resolve) => {
+          resolveDetail = resolve;
+        }),
+      );
+
+      sessionStorage.setItem("cropy:lastDiagnosisId", "d1");
+      fakeNavigation.reset("/diagnosis");
+
+      renderHome();
+
+      // 복원 중 상태에서는 스크롤을 변경하지 않는다.
+      expect(
+        screen.getByText("마지막 진단 결과를 불러오고 있어요"),
+      ).toBeTruthy();
+      expect(scrollTo).not.toHaveBeenCalled();
+
+      // 저장된 진단 결과를 불러온다.
+      await act(async () => {
+        resolveDetail(response());
+      });
+
+      expect(title()).toBe("진단 결과");
+
+      // restoring → result 전환도 기존 스크롤 위치를 유지한다.
+      expect(scrollTo).not.toHaveBeenCalled();
+    } finally {
+      if (original) {
+        Object.defineProperty(document, "scrollingElement", original);
+      } else {
+        Reflect.deleteProperty(document, "scrollingElement");
+      }
+    }
   });
 });
 
