@@ -76,7 +76,7 @@ response = handle_function_output(
 
 모델 계약의 함수표에는 인자별 허용 개수가 들어 있다. handler의 정수별 의미는 현재 hs-call-v2 학습 계약을 따른다.
 
-구현된 기능은 인자 구성이 `topic` 하나이고 허용 개수가 예상과 일치하는지 추가 확인한다. 다르면 `InvalidFunctionContract`를 발생시킨다.
+핸들러는 인자 이름과 허용 개수를 추가 확인한다. 안내 기능은 `topic`, 확인 질문은 `target`을 사용한다. 다르면 `InvalidFunctionContract`를 발생시킨다.
 
 허용 개수만으로는 같은 개수 안에서 의미가 재배열된 변경까지 감지할 수 없다. 학습 계약의 인자 의미나 순서가 바뀌면 handler와 테스트도 함께 갱신해야 한다.
 
@@ -97,8 +97,6 @@ response = handle_function_output(
 - `get_care_information`
 
 - `get_pesticide_information`
-
-- `clarify_request`
 
 - `handle_scope_limit`
 
@@ -127,14 +125,16 @@ response = handle_function_output(
 현재 구현에서 사용하는 상태는 다음과 같다.
 
 | status | 의미 |
-
 |---|---|
-
 | `ok` | 저장된 근거나 명시적인 한계 설명으로 안내할 수 있음 |
-
 | `insufficient_information` | 요청한 내용을 안내할 근거가 부족함 |
+| `needs_clarification` | 답변에 필요한 대상을 사용자에게 다시 확인함 |
 
 `ok`는 확진이나 정보의 추가 검증이 완료됐다는 뜻이 아니다.
+
+## 확인 질문
+
+`clarify_request`는 작물, 병명, 질문 주제, 점수, 심각도, 진단 기록, 농약 제품, 음성 인식(`stt`) 순으로 여덟 가지 `target`을 지원한다. 예를 들어 `<hs_5>(target=7)<hs_end>`는 사용자에게 농약 제품 이름을 알려 달라고 요청한다. 어떤 작물이나 제품을 뜻하는지 추측하지 않는다.
 
 ## 재촬영 안내
 
