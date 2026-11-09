@@ -1,12 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  installFakeSpeech,
-  type FakeSpeech,
-} from "@/features/voice/testing/fakeSpeech";
-import {
-  saveVoiceReturn,
-} from "./voiceNavigation";
+import { installFakeSpeech, type FakeSpeech } from "@/features/voice/testing/fakeSpeech";
+import { saveVoiceReturn } from "./voiceNavigation";
 import { VoiceMode } from "./VoiceMode";
 
 const navigation = vi.hoisted(() => ({
@@ -50,9 +45,7 @@ describe("VoiceMode — 음성 모드 화면", () => {
   });
   it("기본 상태는 V-01 음성 대기 화면이다", () => {
     render(<VoiceMode />);
-    expect(
-      screen.getByRole("status").textContent,
-    ).toContain("음성 대기");
+    expect(screen.getByRole("status").textContent).toContain("음성 대기");
     expect(
       screen.getByRole("heading", {
         name: "무엇이 궁금하세요?",
@@ -66,44 +59,43 @@ describe("VoiceMode — 음성 모드 화면", () => {
     ["listening", "듣고 있어요"],
     ["thinking", "생각하고 있어요"],
     ["speaking", "말하는 중"],
-  ] as const)(
-    "%s 상태에서는 %s를 표시한다",
-    (state, status) => {
-      render(<VoiceMode state={state} />);
+  ] as const)("%s 상태에서는 %s를 표시한다", (state, status) => {
+    render(<VoiceMode state={state} />);
 
-      expect(
-        screen.getByRole("status").textContent,
-      ).toContain(status);
-    },
-  );
+    expect(screen.getByRole("status").textContent).toContain(status);
+  });
+
+  it("listening에서 음량 분석이 정상이면 자동 종료 안내를 표시한다", () => {
+    render(<VoiceMode state="listening" analysisAvailable />);
+
+    expect(screen.getByText("말을 마치면 자동으로 멈춰요")).toBeTruthy();
+  });
+
+  it("listening에서 음량 분석이 불가능하면 수동 종료를 안내한다", () => {
+    render(<VoiceMode state="listening" analysisAvailable={false} />);
+
+    expect(screen.getByText("말을 마친 뒤 마이크 버튼을 다시 눌러 주세요")).toBeTruthy();
+
+    expect(screen.queryByText("말을 마치면 자동으로 멈춰요")).toBeNull();
+  });
 
   it("thinking에서는 분석 포즈와 두 위치의 점 3개를 표시한다", () => {
     render(<VoiceMode state="thinking" micDisabled />);
 
-    expect(
-      screen.getByRole("img", { name: "생각하는 크로피" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("img", { name: "생각하는 크로피" })).toBeTruthy();
 
-    expect(
-      screen.getByText(/생각하고 있어요/),
-    ).toBeTruthy();
+    expect(screen.getByText(/생각하고 있어요/)).toBeTruthy();
 
-    const mascotDots = screen
-      .getByTestId("mascot-thinking-dots")
-      .querySelectorAll("span");
+    const mascotDots = screen.getByTestId("mascot-thinking-dots").querySelectorAll("span");
 
-    const micDots = screen
-      .getByTestId("mic-thinking-dots")
-      .querySelectorAll("span");
+    const micDots = screen.getByTestId("mic-thinking-dots").querySelectorAll("span");
 
     expect(mascotDots).toHaveLength(3);
     expect(micDots).toHaveLength(3);
 
     for (const dots of [mascotDots, micDots]) {
       Array.from(dots).forEach((dot, index) => {
-        expect((dot as HTMLElement).style.animationDelay).toBe(
-          `${index * 200}ms`,
-        );
+        expect((dot as HTMLElement).style.animationDelay).toBe(`${index * 200}ms`);
       });
     }
   });
@@ -117,18 +109,11 @@ describe("VoiceMode — 음성 모드 화면", () => {
 
     expect(button.disabled).toBe(true);
   });
-  
-  it("thinking에서는 인식된 사용자 문장을 표시한다", () => {
-    render(
-      <VoiceMode
-        state="thinking"
-        transcript="고추 잎에 갈색 점이 생겼어"
-      />,
-    );
 
-    expect(
-      screen.getByText("고추 잎에 갈색 점이 생겼어"),
-    ).toBeTruthy();
+  it("thinking에서는 인식된 사용자 문장을 표시한다", () => {
+    render(<VoiceMode state="thinking" transcript="고추 잎에 갈색 점이 생겼어" />);
+
+    expect(screen.getByText("고추 잎에 갈색 점이 생겼어")).toBeTruthy();
 
     expect(screen.getByText("내 말")).toBeTruthy();
   });
@@ -144,23 +129,16 @@ describe("VoiceMode — 음성 모드 화면", () => {
 
     expect(screen.getByText("사진으로 확인해 볼게요.")).toBeTruthy();
     expect(screen.getByText("크로피")).toBeTruthy();
-    expect(
-      screen.getByTestId("assistant-speaker-icon"),
-    ).toBeTruthy();
+    expect(screen.getByTestId("assistant-speaker-icon")).toBeTruthy();
 
-    expect(
-      screen.queryByText("고추 잎에 갈색 점이 생겼어"),
-    ).toBeNull();
+    expect(screen.queryByText("고추 잎에 갈색 점이 생겼어")).toBeNull();
     expect(screen.queryByText("내 말")).toBeNull();
   });
-
 
   it("speaking에서는 말하는 중 상태와 재생 중지 버튼을 표시한다", () => {
     render(<VoiceMode state="speaking" />);
 
-    expect(
-      screen.getByText(/말하는 중/),
-    ).toBeTruthy();
+    expect(screen.getByText(/말하는 중/)).toBeTruthy();
 
     expect(
       screen.getByRole("button", {
@@ -168,9 +146,7 @@ describe("VoiceMode — 음성 모드 화면", () => {
       }),
     ).toBeTruthy();
 
-    expect(
-      screen.getByText("누르면 멈추고 말할 수 있어요"),
-    ).toBeTruthy();
+    expect(screen.getByText("누르면 멈추고 말할 수 있어요")).toBeTruthy();
   });
 
   it("speaking에서 사진 찍기 버튼을 누르면 촬영 동작을 호출한다", () => {
@@ -208,9 +184,7 @@ describe("VoiceMode — 음성 모드 화면", () => {
 
     fireEvent.click(returnButton());
 
-    expect(navigation.replace).toHaveBeenCalledWith(
-      "/home",
-    );
+    expect(navigation.replace).toHaveBeenCalledWith("/home");
     expect(navigation.back).not.toHaveBeenCalled();
   });
 
@@ -226,9 +200,7 @@ describe("VoiceMode — 음성 모드 화면", () => {
   });
 
   it("화면에서 벗어나면 음성 재생을 중단한다", () => {
-    const { unmount } = render(
-      <VoiceMode state="speaking" />,
-    );
+    const { unmount } = render(<VoiceMode state="speaking" />);
 
     speech.cancel.mockClear();
 

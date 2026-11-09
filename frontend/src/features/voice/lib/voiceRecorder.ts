@@ -6,6 +6,7 @@ export interface VoiceRecording {
 
 export interface VoiceRecordingOptions {
   onLevel?: (level: number) => void;
+  onAnalysisUnavailable?: () => void;
 }
 
 export class VoiceRecorderError extends Error {
@@ -18,10 +19,7 @@ export class VoiceRecorderError extends Error {
 export async function startVoiceRecording(
   options: VoiceRecordingOptions = {},
 ): Promise<VoiceRecording> {
-  if (
-    !navigator.mediaDevices?.getUserMedia ||
-    typeof MediaRecorder === "undefined"
-  ) {
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
     throw new VoiceRecorderError();
   }
 
@@ -81,6 +79,19 @@ export async function startVoiceRecording(
     options.onLevel?.(0);
   };
 
+  let analysisUnavailableNotified = false;
+
+  const notifyAnalysisUnavailable = () => {
+    // 녹음 종료·취소 이후에는 실패 알림을 보내지 않는다.
+    if (released || cancelled || analysisUnavailableNotified) {
+      return;
+    }
+    analysisUnavailableNotified = true;
+    // 분석만 중단한다. MediaRecorder 녹음은 유지한다.
+    stopAnalysis();
+    options.onAnalysisUnavailable?.();
+  };
+
   const release = () => {
     if (released) return;
     released = true;
@@ -96,61 +107,66 @@ export async function startVoiceRecording(
   });
 
   // MediaRecorder의 녹음과 별개로 마이크 신호를 분석한다.
-  if (options.onLevel && typeof AudioContext !== "undefined") {
-    try {
-      audioContext = new AudioContext();
-      source = audioContext.createMediaStreamSource(stream);
-      analyser = audioContext.createAnalyser();
+  if (options.onLevel) {
+    if (typeof AudioContext === "undefined") {
+      notifyAnalysisUnavailable();
+    } else {
+      try {
+        audioContext = new AudioContext();
+        source = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
 
-      analyser.fftSize = 1024;
-      analyser.smoothingTimeConstant = 0.6;
+        analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = 0.6;
 
-      source.connect(analyser);
+        source.connect(analyser);
 
-      const samples = new Float32Array(analyser.fftSize);
-      const meter = analyser;
-      let lastUpdate = 0;
+        const samples = new Float32Array(analyser.fftSize);
+        const meter = analyser;
+        let lastUpdate = 0;
 
-      const measure = (timestamp: number) => {
-        if (released || cancelled) return;
+        const measure = (timestamp: number) => {
+          if (released || cancelled || analysisUnavailableNotified) {
+            return;
+          }
+
+          try {
+            // React 상태 갱신 횟수를 줄이기 위해 약 80ms 간격으로 전달
+            if (timestamp - lastUpdate >= 80) {
+              lastUpdate = timestamp;
+
+              meter.getFloatTimeDomainData(samples);
+
+              let sum = 0;
+
+              for (const sample of samples) {
+                sum += sample * sample;
+              }
+
+              const rms = Math.sqrt(sum / samples.length);
+
+              const level = Math.min(1, Math.max(0, (rms - 0.01) * 8));
+
+              options.onLevel?.(level);
+            }
+
+            frameId = requestAnimationFrame(measure);
+          } catch {
+            notifyAnalysisUnavailable();
+          }
+        };
 
         frameId = requestAnimationFrame(measure);
 
-        // React 상태 갱신 횟수를 줄이기 위해 약 80ms 간격으로 전달
-        if (timestamp - lastUpdate < 80) return;
-        lastUpdate = timestamp;
-
-        meter.getFloatTimeDomainData(samples);
-
-        // RMS: 오디오 신호의 평균 에너지 크기
-        let sum = 0;
-
-        for (const sample of samples) {
-          sum += sample * sample;
+        if (audioContext.state === "suspended") {
+          void audioContext.resume().catch(() => {
+            notifyAnalysisUnavailable();
+          });
         }
-
-        const rms = Math.sqrt(sum / samples.length);
-
-        // 작은 주변 잡음을 제외하고 화면 표현용으로 증폭
-        const level = Math.min(
-          1,
-          Math.max(0, (rms - 0.01) * 8),
-        );
-
-        options.onLevel?.(level);
-      };
-
-      frameId = requestAnimationFrame(measure);
-
-      if (audioContext.state === "suspended") {
-        void audioContext.resume().catch(() => {
-          // 분석 실패와 녹음 실패는 구분한다.
-          // 녹음 자체는 계속 진행할 수 있다.
-        });
+      } catch {
+        // 음량 분석을 사용할 수 없어도 녹음은 계속 가능하다.
+        notifyAnalysisUnavailable();
       }
-    } catch {
-      // 음량 분석을 사용할 수 없어도 녹음은 계속 가능하다.
-      stopAnalysis();
     }
   }
 

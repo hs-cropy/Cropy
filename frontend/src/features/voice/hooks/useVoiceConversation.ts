@@ -3,18 +3,10 @@
 // STT·답변 생성·TTS 연결은 아직 미구현
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { VoiceModeState } from "@/components/voice-mode/VoiceMascot";
-import {
-  startVoiceRecording,
-  type VoiceRecording,
-} from "@/features/voice/lib/voiceRecorder";
+import { startVoiceRecording, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
 
 const VAD_THRESHOLD = 0.06;
 const MIN_SPEECH_MS = 300;
@@ -28,6 +20,7 @@ const NO_SPEECH_ERROR = "말씀을 듣지 못했어요. 다시 시도해 주세�
 export function useVoiceConversation() {
   const [state, setState] = useState<VoiceModeState>("idle");
   const [inputLevel, setInputLevel] = useState(0);
+  const [analysisAvailable, setAnalysisAvailable] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [audio, setAudio] = useState<Blob | null>(null);
 
@@ -38,12 +31,13 @@ export function useVoiceConversation() {
   const busyRef = useRef(false);
 
   // VAD 관리
+  const analysisUnavailableRef = useRef(false);
   const vadTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const listeningStartedAtRef = useRef(0);
   const speechStartedAtRef = useRef<number | null>(null);
   const lastSpeechAtRef = useRef<number | null>(null);
   const speechDetectedRef = useRef(false);
-  
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -66,6 +60,7 @@ export function useVoiceConversation() {
     speechStartedAtRef.current = null;
     lastSpeechAtRef.current = null;
     speechDetectedRef.current = false;
+    analysisUnavailableRef.current = false;
   }, [clearVadTimer]);
 
   // 취소: 녹음 데이터를 폐기하고 즉시 자원 정리
@@ -78,6 +73,7 @@ export function useVoiceConversation() {
 
     busyRef.current = false;
     setInputLevel(0);
+    setAnalysisAvailable(true);
     setAudio(null);
     setError(null);
     updateState("idle");
@@ -157,6 +153,7 @@ export function useVoiceConversation() {
     const generation = ++generationRef.current;
 
     resetVad();
+    setAnalysisAvailable(true);
     setError(null);
     setAudio(null);
     setInputLevel(0);
@@ -164,10 +161,7 @@ export function useVoiceConversation() {
     try {
       const recording = await startVoiceRecording({
         onLevel: (level) => {
-          if (
-            generation !== generationRef.current ||
-            stateRef.current !== "listening"
-          ) {
+          if (generation !== generationRef.current || stateRef.current !== "listening") {
             return;
           }
 
@@ -180,15 +174,26 @@ export function useVoiceConversation() {
               speechStartedAtRef.current = now;
             }
 
-            if (
-              now - speechStartedAtRef.current >= MIN_SPEECH_MS
-            ) {
+            if (now - speechStartedAtRef.current >= MIN_SPEECH_MS) {
               speechDetectedRef.current = true;
               lastSpeechAtRef.current = now;
             }
           } else {
             speechStartedAtRef.current = null;
           }
+        },
+        onAnalysisUnavailable: () => {
+          if (generation !== generationRef.current) {
+            return;
+          }
+          analysisUnavailableRef.current = true;
+
+          // 분석 실패 이후에는 VAD로 발화를 판단하지 않는다.
+          speechStartedAtRef.current = null;
+          lastSpeechAtRef.current = null;
+          speechDetectedRef.current = false;
+          setInputLevel(0);
+          setAnalysisAvailable(false);
         },
       });
 
@@ -232,6 +237,7 @@ export function useVoiceConversation() {
         // 아무 발화도 감지하지 못한 경우
         if (
           !speechDetectedRef.current &&
+          !analysisUnavailableRef.current &&
           elapsed >= NO_SPEECH_MS
         ) {
           cancel();
@@ -241,7 +247,7 @@ export function useVoiceConversation() {
 
         // 무한 녹음 방지
         if (elapsed >= MAX_RECORDING_MS) {
-          if (speechDetectedRef.current) {
+          if (speechDetectedRef.current || analysisUnavailableRef.current) {
             void stop();
           } else {
             cancel();
@@ -285,6 +291,7 @@ export function useVoiceConversation() {
   return {
     state,
     inputLevel,
+    analysisAvailable,
     error,
     audio,
     start,

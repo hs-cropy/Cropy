@@ -1,8 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  startVoiceRecording,
-  VoiceRecorderError,
-} from "./voiceRecorder";
+import { startVoiceRecording, VoiceRecorderError } from "./voiceRecorder";
 
 describe("voiceRecorder", () => {
   const stopTrack = vi.fn();
@@ -89,12 +86,53 @@ describe("voiceRecorder", () => {
   });
 
   it("마이크 권한 거부 시 오류를 반환한다", async () => {
-    getUserMedia.mockRejectedValueOnce(
-      new DOMException("Permission denied", "NotAllowedError"),
-    );
+    getUserMedia.mockRejectedValueOnce(new DOMException("Permission denied", "NotAllowedError"));
 
-    await expect(startVoiceRecording()).rejects.toBeInstanceOf(
-      VoiceRecorderError,
-    );
+    await expect(startVoiceRecording()).rejects.toBeInstanceOf(VoiceRecorderError);
+  });
+
+  it("AudioContext가 없어도 녹음은 유지하고 분석 불가를 알린다", async () => {
+    vi.stubGlobal("AudioContext", undefined);
+
+    const onLevel = vi.fn();
+    const onAnalysisUnavailable = vi.fn();
+
+    const recording = await startVoiceRecording({
+      onLevel,
+      onAnalysisUnavailable,
+    });
+
+    expect(onAnalysisUnavailable).toHaveBeenCalledTimes(1);
+
+    const audio = await recording.stop();
+
+    expect(audio.size).toBeGreaterThan(0);
+    expect(audio.type).toBe("audio/webm");
+    expect(stopTrack).toHaveBeenCalledTimes(1);
+    expect(onAnalysisUnavailable).toHaveBeenCalledTimes(1);
+  });
+
+  it("AudioContext 생성 실패 시에도 녹음을 유지한다", async () => {
+    class FailingAudioContext {
+      constructor() {
+        throw new Error("AudioContext unavailable");
+      }
+    }
+
+    vi.stubGlobal("AudioContext", FailingAudioContext);
+
+    const onAnalysisUnavailable = vi.fn();
+
+    const recording = await startVoiceRecording({
+      onLevel: vi.fn(),
+      onAnalysisUnavailable,
+    });
+
+    expect(onAnalysisUnavailable).toHaveBeenCalledTimes(1);
+
+    const audio = await recording.stop();
+
+    expect(audio.size).toBeGreaterThan(0);
+    expect(stopTrack).toHaveBeenCalledTimes(1);
   });
 });

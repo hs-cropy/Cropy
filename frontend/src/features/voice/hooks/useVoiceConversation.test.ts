@@ -7,6 +7,7 @@ const recorderMock = vi.hoisted(() => ({
   stop: vi.fn(),
   cancel: vi.fn(),
   onLevel: null as ((level: number) => void) | null,
+  onAnalysisUnavailable: null as (() => void) | null,
 }));
 
 vi.mock("@/features/voice/lib/voiceRecorder", () => ({
@@ -19,14 +20,17 @@ describe("useVoiceConversation", () => {
     vi.clearAllMocks();
 
     recorderMock.onLevel = null;
+    recorderMock.onAnalysisUnavailable = null;
 
-    recorderMock.stop.mockResolvedValue(
-      new Blob(["recorded audio"], { type: "audio/webm" }),
-    );
+    recorderMock.stop.mockResolvedValue(new Blob(["recorded audio"], { type: "audio/webm" }));
 
     recorderMock.start.mockImplementation(
-      async (options: { onLevel?: (level: number) => void }) => {
+      async (options: {
+        onLevel?: (level: number) => void;
+        onAnalysisUnavailable?: () => void;
+      }) => {
         recorderMock.onLevel = options.onLevel ?? null;
+        recorderMock.onAnalysisUnavailable = options.onAnalysisUnavailable ?? null;
 
         return {
           stop: recorderMock.stop,
@@ -112,9 +116,7 @@ describe("useVoiceConversation", () => {
 
     expect(recorderMock.cancel).toHaveBeenCalled();
     expect(result.current.state).toBe("idle");
-    expect(result.current.error).toBe(
-      "말씀을 듣지 못했어요. 다시 시도해 주세요.",
-    );
+    expect(result.current.error).toBe("말씀을 듣지 못했어요. 다시 시도해 주세요.");
   });
 
   it("사용자가 취소하면 녹음과 음량 상태를 초기화한다", async () => {
@@ -136,9 +138,7 @@ describe("useVoiceConversation", () => {
   });
 
   it("마이크 권한 요청에 실패하면 idle로 돌아가고 오류를 설정한다", async () => {
-    recorderMock.start.mockRejectedValueOnce(
-      new Error("Permission denied"),
-    );
+    recorderMock.start.mockRejectedValueOnce(new Error("Permission denied"));
 
     const { result } = renderHook(() => useVoiceConversation());
 
@@ -147,15 +147,11 @@ describe("useVoiceConversation", () => {
     });
 
     expect(result.current.state).toBe("idle");
-    expect(result.current.error).toBe(
-      "음성 안내를 시작하지 못했어요",
-    );
+    expect(result.current.error).toBe("음성 안내를 시작하지 못했어요");
   });
 
   it("화면을 벗어나면 녹음을 취소한다", async () => {
-    const { result, unmount } = renderHook(
-      () => useVoiceConversation(),
-    );
+    const { result, unmount } = renderHook(() => useVoiceConversation());
 
     await act(async () => {
       await result.current.start();
@@ -168,36 +164,34 @@ describe("useVoiceConversation", () => {
 
   it("권한 요청 중 화면을 벗어나면 뒤늦게 획득한 마이크를 취소한다", async () => {
     let resolveRecording!: (recording: {
-        stop: typeof recorderMock.stop;
-        cancel: typeof recorderMock.cancel;
+      stop: typeof recorderMock.stop;
+      cancel: typeof recorderMock.cancel;
     }) => void;
 
     recorderMock.start.mockImplementationOnce(
-        () =>
+      () =>
         new Promise((resolve) => {
-            resolveRecording = resolve;
+          resolveRecording = resolve;
         }),
     );
 
-    const { result, unmount } = renderHook(
-        () => useVoiceConversation(),
-    );
+    const { result, unmount } = renderHook(() => useVoiceConversation());
 
     let startPromise!: Promise<void>;
 
     act(() => {
-        startPromise = result.current.start();
+      startPromise = result.current.start();
     });
 
     unmount();
 
     await act(async () => {
-        resolveRecording({
+      resolveRecording({
         stop: recorderMock.stop,
         cancel: recorderMock.cancel,
-        });
+      });
 
-        await startPromise;
+      await startPromise;
     });
 
     expect(recorderMock.cancel).toHaveBeenCalledTimes(1);
@@ -208,15 +202,15 @@ describe("useVoiceConversation", () => {
     const { result } = renderHook(() => useVoiceConversation());
 
     await act(async () => {
-        await result.current.start();
+      await result.current.start();
     });
 
     // 1초 간격으로 계속 발화가 감지되는 상황
     for (let i = 0; i < 30; i++) {
-        await act(async () => {
+      await act(async () => {
         recorderMock.onLevel?.(0.5);
         await vi.advanceTimersByTimeAsync(1000);
-        });
+      });
     }
 
     expect(recorderMock.stop).toHaveBeenCalledTimes(1);
@@ -229,73 +223,69 @@ describe("useVoiceConversation", () => {
     const { result } = renderHook(() => useVoiceConversation());
 
     await act(async () => {
-        await result.current.start();
+      await result.current.start();
     });
 
     act(() => {
-        recorderMock.onLevel?.(0.5);
-        vi.advanceTimersByTime(100);
-        recorderMock.onLevel?.(0);
+      recorderMock.onLevel?.(0.5);
+      vi.advanceTimersByTime(100);
+      recorderMock.onLevel?.(0);
     });
 
     await act(async () => {
-        await vi.advanceTimersByTimeAsync(8100);
+      await vi.advanceTimersByTimeAsync(8100);
     });
 
     expect(recorderMock.stop).not.toHaveBeenCalled();
     expect(recorderMock.cancel).toHaveBeenCalledTimes(1);
-    expect(result.current.error).toBe(
-        "말씀을 듣지 못했어요. 다시 시도해 주세요.",
-    );
+    expect(result.current.error).toBe("말씀을 듣지 못했어요. 다시 시도해 주세요.");
   });
 
   it("녹음 종료 중 취소하면 늦게 반환된 결과를 무시한다", async () => {
     let resolveStop!: (audio: Blob) => void;
 
     recorderMock.stop.mockImplementationOnce(
-        () =>
+      () =>
         new Promise<Blob>((resolve) => {
-            resolveStop = resolve;
+          resolveStop = resolve;
         }),
     );
 
     const { result } = renderHook(() => useVoiceConversation());
 
     await act(async () => {
-        await result.current.start();
+      await result.current.start();
     });
 
     let stopPromise!: Promise<void>;
 
     act(() => {
-        stopPromise = result.current.stop();
+      stopPromise = result.current.stop();
     });
 
     act(() => {
-        result.current.cancel();
+      result.current.cancel();
     });
 
     await act(async () => {
-        resolveStop(
-        new Blob(["late audio"], { type: "audio/webm" }),
-        );
-        await stopPromise;
+      resolveStop(new Blob(["late audio"], { type: "audio/webm" }));
+      await stopPromise;
     });
 
     expect(result.current.state).toBe("idle");
     expect(result.current.audio).toBeNull();
     expect(result.current.error).toBeNull();
   });
-    
-    it("수동 녹음 종료 후 thinking으로 전환한다", async () => {
-        const { result } = renderHook(() => useVoiceConversation());
 
-        await act(async () => {
-            await result.current.start();
+  it("수동 녹음 종료 후 thinking으로 전환한다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+
+    await act(async () => {
+      await result.current.start();
     });
 
     await act(async () => {
-        await result.current.stop();
+      await result.current.stop();
     });
 
     expect(recorderMock.stop).toHaveBeenCalledTimes(1);
@@ -305,23 +295,130 @@ describe("useVoiceConversation", () => {
     expect(result.current.error).toBeNull();
   });
 
-    it("빈 녹음 결과는 thinking으로 보내지 않는다", async () => {
-        recorderMock.stop.mockResolvedValueOnce(
-            new Blob([], { type: "audio/webm" }),
-    );
+  it("빈 녹음 결과는 thinking으로 보내지 않는다", async () => {
+    recorderMock.stop.mockResolvedValueOnce(new Blob([], { type: "audio/webm" }));
 
     const { result } = renderHook(() => useVoiceConversation());
 
     await act(async () => {
-        await result.current.start();
+      await result.current.start();
     });
 
     await act(async () => {
-        await result.current.stop();
+      await result.current.stop();
     });
 
     expect(result.current.state).toBe("idle");
     expect(result.current.audio).toBeNull();
     expect(result.current.error).not.toBeNull();
+  });
+
+  it("음량 분석 실패 시 수동 종료 안내 상태로 전환한다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    act(() => {
+      recorderMock.onAnalysisUnavailable?.();
+    });
+
+    expect(result.current.state).toBe("listening");
+    expect(result.current.analysisAvailable).toBe(false);
+    expect(result.current.inputLevel).toBe(0);
+    expect(result.current.error).toBeNull();
+  });
+
+  it("음량 분석 불가 시 8초가 지나도 녹음을 취소하지 않는다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    act(() => {
+      recorderMock.onAnalysisUnavailable?.();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8100);
+    });
+
+    expect(result.current.state).toBe("listening");
+    expect(result.current.analysisAvailable).toBe(false);
+    expect(result.current.error).toBeNull();
+    expect(recorderMock.cancel).not.toHaveBeenCalled();
+    expect(recorderMock.stop).not.toHaveBeenCalled();
+  });
+
+  it("음량 분석 불가 시 마이크 버튼으로 수동 종료할 수 있다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    act(() => {
+      recorderMock.onAnalysisUnavailable?.();
+    });
+
+    await act(async () => {
+      result.current.handleMicClick();
+      await Promise.resolve();
+    });
+
+    expect(recorderMock.stop).toHaveBeenCalledTimes(1);
+    expect(result.current.state).toBe("thinking");
+    expect(result.current.audio?.size).toBeGreaterThan(0);
+    expect(result.current.error).toBeNull();
+  });
+
+  it("음량 분석 불가 시 30초가 지나면 자동 종료한다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    act(() => {
+      recorderMock.onAnalysisUnavailable?.();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30100);
+    });
+
+    expect(recorderMock.stop).toHaveBeenCalledTimes(1);
+    expect(result.current.state).toBe("thinking");
+    expect(result.current.audio?.size).toBeGreaterThan(0);
+    expect(result.current.error).toBeNull();
+  });
+
+  it("새 녹음을 시작하면 이전 분석 실패 상태를 초기화한다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    act(() => {
+      recorderMock.onAnalysisUnavailable?.();
+    });
+
+    expect(result.current.analysisAvailable).toBe(false);
+
+    act(() => {
+      result.current.cancel();
+    });
+
+    expect(result.current.analysisAvailable).toBe(true);
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    expect(result.current.state).toBe("listening");
+    expect(result.current.analysisAvailable).toBe(true);
   });
 });
