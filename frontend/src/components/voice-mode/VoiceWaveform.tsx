@@ -1,5 +1,6 @@
 interface VoiceWaveformProps {
   active?: boolean;
+  level?: number; //0~1, TTS 출력 레벨
 }
 
 const HEIGHTS = [10, 18, 26, 14, 32, 20, 38, 16, 28, 12, 24];

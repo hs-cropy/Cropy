@@ -8,6 +8,8 @@ export type VoiceModeState =
 
 interface VoiceMascotProps {
   state: VoiceModeState;
+  inputLevel?: number; //0~1, 마이크 입력 레벨
+  outputLevel?: number; //0~1, TTS 출력 레벨
 }
 
 export function VoiceMascot({ state }: VoiceMascotProps) {

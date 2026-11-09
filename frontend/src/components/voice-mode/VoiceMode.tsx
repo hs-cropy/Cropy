@@ -12,13 +12,15 @@ import { readVoiceReturn } from "./voiceNavigation";
 
 interface VoiceModeProps {
   state?: VoiceModeState;
+  onMicClick?: () => void;
+  micDisabled?: boolean;
 }
 
 const STATUS: Record<VoiceModeState, string> = {
   idle: "음성 대기",
   listening: "듣고 있어요",
   thinking: "생각하고 있어요",
-  speaking: "말하는 중",
+  speaking: "누르면 멈추고 말할 수 있어요",
 };
 
 const HELPER: Record<VoiceModeState, string> = {
@@ -30,6 +32,8 @@ const HELPER: Record<VoiceModeState, string> = {
 
 export function VoiceMode({
   state = "idle",
+  onMicClick,
+  micDisabled = false,
 }: VoiceModeProps) {
   const router = useRouter();
     // 음성 모드를 벗어날 때 재생 중인 음성을 중단
@@ -181,7 +185,7 @@ export function VoiceMode({
       </section>
 
       <footer className="flex flex-col items-center gap-4 px-6 pb-10">
-        <VoiceMicButton state={state} />
+        <VoiceMicButton state={state} disabled={micDisabled} onClick={onMicClick}/>
 
         <p className="text-center text-sm text-[#647267]">
           {state === "idle"
