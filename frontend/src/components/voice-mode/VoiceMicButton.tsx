@@ -48,8 +48,9 @@ export function VoiceMicButton({
       }`}
     >
       {/* 마이크 주변 음성 반응 파동 */}
-      {isListening && (
+      {hasVoice && (
         <div
+          data-testid="mic-listening-waves"
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
         >
