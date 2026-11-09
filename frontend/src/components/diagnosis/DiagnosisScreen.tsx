@@ -138,6 +138,9 @@ export function useDiagnosisScreen({
     previousViewRef.current = view;
     // 새로고침 뒤 결과를 다시 불러온 것은 사용자 동작이 아니라 옮기지 않는다 (제목에 초점 테두리가 생긴다)
     if (previous === view || previous === "restoring" || view === "restoring") return;
+      // 같은 URL에서 진단 화면이 바뀌면 새 화면의 처음부터 보여준다.
+    document.scrollingElement?.scrollTo({ top: 0, behavior: "instant" });
+    // 기존 초점 이동 동작은 유지한다. 촬영 화면에서 넘어오며 초점이 body 에 남아 있으면 제목으로 옮긴다
     if (focusLost()) titleRef.current?.focus({ preventScroll: true });
   }, [view]);
   const focusTitle = () => titleRef.current?.focus({ preventScroll: true });
