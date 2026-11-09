@@ -14,26 +14,30 @@ interface VoiceModeProps {
   state?: VoiceModeState;
   onMicClick?: () => void;
   micDisabled?: boolean;
+  inputLevel?: number; //0~1, STT 입력 레벨
+  outputLevel?: number; //0~1, TTS 출력 레벨
 }
 
 const STATUS: Record<VoiceModeState, string> = {
   idle: "음성 대기",
   listening: "듣고 있어요",
   thinking: "생각하고 있어요",
-  speaking: "누르면 멈추고 말할 수 있어요",
+  speaking: "말하는 중",
 };
 
 const HELPER: Record<VoiceModeState, string> = {
   idle: "버튼을 누르고 말해보세요",
-  listening: "말을 마치면 자동으로 멈춰요",
+  listening: "말을 마치면 다시 버튼을 눌러주세요",
   thinking: "잠시만 기다려 주세요",
-  speaking: "음성 재생 기능 준비 중",
+  speaking: "누르면 멈추고 말할 수 있어요",
 };
 
 export function VoiceMode({
   state = "idle",
   onMicClick,
   micDisabled = false,
+  inputLevel,
+  outputLevel,
 }: VoiceModeProps) {
   const router = useRouter();
     // 음성 모드를 벗어날 때 재생 중인 음성을 중단
@@ -117,7 +121,7 @@ export function VoiceMode({
           ● {STATUS[state]}
         </span>
 
-        <VoiceMascot state={state} />
+        <VoiceMascot state={state} inputLevel={inputLevel} />
 
         {state === "idle" && (
           <>
@@ -150,7 +154,7 @@ export function VoiceMode({
               role="user"
               text="고추 잎에 갈색 점이 생겼어"
             />
-            <VoiceWaveform active />
+            <VoiceWaveform active level={inputLevel} />
           </div>
         )}
 
@@ -168,7 +172,7 @@ export function VoiceMode({
               role="assistant"
               text="갈색 점이 둥글게 번지면 고추 탄저병일 수 있어요. 잎 사진으로 확인하면 더 정확히 알려드릴게요."
             />
-            <VoiceWaveform active />
+            <VoiceWaveform active level={outputLevel} />
             <button
                 type="button"
                 disabled
@@ -185,12 +189,10 @@ export function VoiceMode({
       </section>
 
       <footer className="flex flex-col items-center gap-4 px-6 pb-10">
-        <VoiceMicButton state={state} disabled={micDisabled} onClick={onMicClick}/>
+        <VoiceMicButton state={state} disabled={micDisabled} onClick={onMicClick} inputLevel={inputLevel} />
 
         <p className="text-center text-sm text-[#647267]">
-          {state === "idle"
-            ? "음성 입력 기능 준비 중"
-            : HELPER[state]}
+            {HELPER[state]}
         </p>
       </footer>
     </main>
