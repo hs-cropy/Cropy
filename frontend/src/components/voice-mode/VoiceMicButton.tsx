@@ -53,30 +53,29 @@ export function VoiceMicButton({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
         >
-          {/* 바깥 원: 최대 160px */}
+          {/* 바깥쪽 파동 */}
           <span
-            className="absolute inset-0 rounded-full bg-[#25864F]/10 transition-[transform,opacity] duration-100 motion-reduce:transition-none"
+            className="
+              absolute inset-[-24px]
+              rounded-full bg-[#25864F]/10
+              transition-transform duration-100
+              motion-reduce:transition-none
+            "
             style={{
-              transform: `scale(${1.25 + intensity * 0.75})`,
-              opacity: hasVoice ? 1 : 0,
+              transform: `scale(${1 + intensity * 0.08})`,
             }}
           />
 
-          {/* 가운데 원 */}
+          {/* 안쪽 파동 */}
           <span
-            className="absolute inset-0 rounded-full bg-[#25864F]/15 transition-[transform,opacity] duration-100 motion-reduce:transition-none"
+            className="
+              absolute inset-[-12px]
+              rounded-full bg-[#25864F]/15
+              transition-transform duration-100
+              motion-reduce:transition-none
+            "
             style={{
-              transform: `scale(${1.15 + intensity * 0.5})`,
-              opacity: hasVoice ? 1 : 0,
-            }}
-          />
-
-          {/* 안쪽 원 */}
-          <span
-            className="absolute inset-0 rounded-full bg-[#25864F]/20 transition-[transform,opacity] duration-100 motion-reduce:transition-none"
-            style={{
-              transform: `scale(${1.05 + intensity * 0.25})`,
-              opacity: hasVoice ? 1 : 0,
+              transform: `scale(${1 + intensity * 0.05})`,
             }}
           />
         </div>

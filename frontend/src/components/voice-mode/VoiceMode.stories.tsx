@@ -32,11 +32,11 @@ export const Idle: Story = {
 };
 
 export const Listening: Story = {
-  args: { state: "listening" },
+  args: { state: "listening", transcript: "고추 잎에 갈색 점이 생겼어", inputLevel: 0.5 },
 };
 
 export const Thinking: Story = {
-  args: { state: "thinking" },
+  args: { state: "thinking", micDisabled: true, transcript: "고추 잎에 갈색 점이 생겼어" },
 };
 
 export const Speaking: Story = {

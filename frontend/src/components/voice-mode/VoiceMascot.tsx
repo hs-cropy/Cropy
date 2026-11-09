@@ -103,13 +103,29 @@ export function VoiceMascot({
           ))}
         </span>
       )}
-
       {state === "speaking" && (
         <span
           aria-hidden="true"
-          className="absolute right-0 top-5 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#25864F] shadow-sm"
+          className="
+            absolute right-0 top-0 z-10
+            flex h-14 w-14 items-center justify-center
+            rounded-[24px]
+            border border-cropy-border
+            bg-cropy-surface
+            text-cropy-action-primary
+          "
         >
-          <span className="icon-[lucide--audio-lines] h-5 w-5" />
+          {/* 음파 아이콘 */}
+          <span className="icon-[lucide--audio-lines] h-7 w-7" />
+          {/* 말풍선 아래의 작은 원형 꼬리 */}
+          <span
+            className="
+              absolute -bottom-3 left-1
+              h-3 w-3 rounded-full
+              border border-cropy-border
+              bg-cropy-surface
+            "
+          />
         </span>
       )}
     </div>

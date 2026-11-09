@@ -5,10 +5,11 @@ import { VoiceMascot, type VoiceModeState } from "./VoiceMascot";
 import { VoiceMicButton } from "./VoiceMicButton";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { VoiceBubble } from "./VoiceBubble";
-import Image from "next/image";
+import { Header } from "@/components/Header";
 import { useEffect } from "react";
 import { cancelSpeech } from "@/features/voice/lib/speech";
 import { readVoiceReturn } from "./voiceNavigation";
+import { Button } from "@/components/Button";
 
 interface VoiceModeProps {
   state?: VoiceModeState;
@@ -99,24 +100,33 @@ export function VoiceMode({
             />
         </picture>
     </div>
-      <header className="flex items-center justify-between px-5 py-5">
-        <Image
-            src="/brand/cropy-logo.png"
-            alt="Cropy"
-            width={88}
-            height={36}
-            priority
-            className="h-auto w-[88px] object-contain"
-        />
-        <button
-          type="button"
-          onClick={handleReturn}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium"
-        >
-          기본 화면
-        </button>
-      </header>
-
+      <Header
+        className="bg-cropy-surface-canvas lg:border-b-0"
+        actions={
+          <button
+            type="button"
+            onClick={handleReturn}
+            className="
+              inline-flex min-h-11 shrink-0
+              items-center justify-center gap-2
+              whitespace-nowrap rounded-xl
+              border-2 border-cropy-border
+              bg-cropy-surface px-4 py-2
+              test-sm font-medium text-cropy-text-secondary
+              focus-visible:outline
+              focus-visible:outline-2
+              focus-visible:outline-offset-2
+              focus-visible:outline-cropy-action-primary
+            "
+          >
+            <span
+              aria-hidden="true"
+              className="icon-[lucide--chevron-left] h-5 w-5 shrink-0"
+            />
+            기본 화면
+          </button>
+        }
+      />
       <section
         className="
             mx-auto flex w-full max-w-[430px] flex-1
@@ -149,10 +159,10 @@ export function VoiceMode({
 
             <div className="flex flex-wrap justify-center gap-2 text-sm">
               <span className="rounded-full bg-white px-4 py-2">
-                고추 잎에 점이 생겼어
+                "고추 잎에 점이 생겼어"
               </span>
               <span className="rounded-full bg-white px-4 py-2">
-                사진 찍는 법 알려줘
+                "사진 찍는 법 알려줘"
               </span>
             </div>
           </>
@@ -160,16 +170,19 @@ export function VoiceMode({
 
         {state === "listening" && (
           <div className="w-full space-y-5">
-            <VoiceBubble
-              role="user"
-              text="고추 잎에 갈색 점이 생겼어"
-            />
+            {transcript.trim() && (
+              <VoiceBubble role="user" text={transcript} />
+            )}
             <VoiceWaveform active level={inputLevel} />
           </div>
         )}
 
         {state === "thinking" && (
-          <div className="space-y-4">
+          <div className="w-full space-y-5">
+            {transcript.trim() && (
+              <VoiceBubble role="user" text={transcript} />
+            )}
+
             <p className="text-base text-[#647267]">
               잠시만요, 크로피가 알아보고 있어요.
             </p>
@@ -178,31 +191,20 @@ export function VoiceMode({
 
         {state === "speaking" && (
           <div className="w-full space-y-5">
-            {/* 사용자가 말한 문장 */}
-            {transcript.trim() && (
-              <VoiceBubble
-                role="user"
-                text={transcript}
-              />
-            )}
             <VoiceBubble
               role="assistant"
               text={assistantText}
             />
-            <VoiceWaveform active level={outputLevel} />
-            <button
-                type="button"
-                onClick={onPhotoClick}
-                disabled={!onPhotoClick}
-                className="
-                    min-h-12 w-full rounded-xl
-                    bg-cropy-action-primary
-                    px-5 py-3 text-base font-semibold text-white
-                    disabled:cursor-not-allowed
-                "
+            <VoiceWaveform active level={outputLevel} />            
+            <Button
+              variant="primary"
+              size="default"
+              fullWidth
+              onClick={onPhotoClick}
+              disabled={!onPhotoClick}
             >
-                사진 찍어 확인하기
-            </button>
+              사진 찍어 확인하기
+            </Button>
           </div>
         )}
       </section>
