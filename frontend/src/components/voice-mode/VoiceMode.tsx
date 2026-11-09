@@ -16,6 +16,7 @@ interface VoiceModeProps {
   micDisabled?: boolean;
   inputLevel?: number; //0~1, STT 입력 레벨
   outputLevel?: number; //0~1, TTS 출력 레벨
+  onExit?: () => void;
 }
 
 const STATUS: Record<VoiceModeState, string> = {
@@ -27,7 +28,7 @@ const STATUS: Record<VoiceModeState, string> = {
 
 const HELPER: Record<VoiceModeState, string> = {
   idle: "버튼을 누르고 말해보세요",
-  listening: "말을 마치면 다시 버튼을 눌러주세요",
+  listening: "말을 마치면 자동으로 멈춰요",
   thinking: "잠시만 기다려 주세요",
   speaking: "누르면 멈추고 말할 수 있어요",
 };
