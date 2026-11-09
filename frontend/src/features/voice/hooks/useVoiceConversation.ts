@@ -1,6 +1,6 @@
-//음성 모드의 상태와 녹음 버튼 동작 관리
-//아직 STT API 연결 안해서 녹음이 끝나도 thinking으로 넘어가지 않음
-
+// 음성 모드의 상태와 녹음 버튼 동작 관리
+// 정상 녹음 종료 시 thinking으로 전환
+// STT·답변 생성·TTS 연결은 아직 미구현
 "use client";
 
 import {
@@ -111,17 +111,31 @@ export function useVoiceConversation() {
       }
 
       recordingRef.current = null;
-      setAudio(result);
       setInputLevel(0);
       resetVad();
 
-      // STT 연동 전이므로 녹음 종료 후 대기 상태 복귀
-      updateState("idle");
+      // 빈 녹음은 다음 단계로 전달하지 않음
+      if (result.size === 0) {
+        setAudio(null);
+        setError(VOICE_ERROR);
+        updateState("idle");
+        return;
+      }
+
+      // 녹음 결과 보관 및 분석 화면 진입
+      setAudio(result);
+      setError(null);
+      updateState("thinking");
+
+      // TODO: STT 및 답변 생성 API 연결
+      // API 처리 중에는 thinking 상태를 유지
+      // 성공 후 TTS 재생을 시작할 때 speaking으로 전환
     } catch {
       if (generation === generationRef.current) {
         recordingRef.current?.cancel();
         recordingRef.current = null;
 
+        setAudio(null);
         setInputLevel(0);
         resetVad();
         setError(VOICE_ERROR);

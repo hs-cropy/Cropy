@@ -94,7 +94,7 @@ describe("useVoiceConversation", () => {
     });
 
     expect(recorderMock.stop).toHaveBeenCalledTimes(1);
-    expect(result.current.state).toBe("idle");
+    expect(result.current.state).toBe("thinking");
     expect(result.current.audio?.size).toBeGreaterThan(0);
     expect(result.current.error).toBeNull();
   });
@@ -220,7 +220,7 @@ describe("useVoiceConversation", () => {
     }
 
     expect(recorderMock.stop).toHaveBeenCalledTimes(1);
-    expect(result.current.state).toBe("idle");
+    expect(result.current.state).toBe("thinking");
     expect(result.current.audio).toBeInstanceOf(Blob);
   });
 
@@ -285,5 +285,43 @@ describe("useVoiceConversation", () => {
     expect(result.current.state).toBe("idle");
     expect(result.current.audio).toBeNull();
     expect(result.current.error).toBeNull();
+  });
+    
+    it("수동 녹음 종료 후 thinking으로 전환한다", async () => {
+        const { result } = renderHook(() => useVoiceConversation());
+
+        await act(async () => {
+            await result.current.start();
+    });
+
+    await act(async () => {
+        await result.current.stop();
+    });
+
+    expect(recorderMock.stop).toHaveBeenCalledTimes(1);
+    expect(result.current.state).toBe("thinking");
+    expect(result.current.audio?.size).toBeGreaterThan(0);
+    expect(result.current.inputLevel).toBe(0);
+    expect(result.current.error).toBeNull();
+  });
+
+    it("빈 녹음 결과는 thinking으로 보내지 않는다", async () => {
+        recorderMock.stop.mockResolvedValueOnce(
+            new Blob([], { type: "audio/webm" }),
+    );
+
+    const { result } = renderHook(() => useVoiceConversation());
+
+    await act(async () => {
+        await result.current.start();
+    });
+
+    await act(async () => {
+        await result.current.stop();
+    });
+
+    expect(result.current.state).toBe("idle");
+    expect(result.current.audio).toBeNull();
+    expect(result.current.error).not.toBeNull();
   });
 });
