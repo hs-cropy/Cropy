@@ -23,7 +23,7 @@ export function VoiceMicButton({
     : 0;
 
   // 작은 주변 잡음에는 반응하지 않도록 설정
-  const threshold = 0.04;
+  const threshold = 0.06;
   const hasVoice = isListening && level > threshold;
 
   // threshold 이상의 입력을 0~1 범위로 다시 변환

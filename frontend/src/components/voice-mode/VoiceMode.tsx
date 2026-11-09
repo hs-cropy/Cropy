@@ -159,10 +159,10 @@ export function VoiceMode({
 
             <div className="flex flex-wrap justify-center gap-2 text-sm">
               <span className="rounded-full bg-white px-4 py-2">
-                "고추 잎에 점이 생겼어"
+                &quot;고추 잎에 점이 생겼어&quot;
               </span>
               <span className="rounded-full bg-white px-4 py-2">
-                "사진 찍는 법 알려줘"
+                &quot;사진 찍는 법 알려줘&quot;
               </span>
             </div>
           </>
