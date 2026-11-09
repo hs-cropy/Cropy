@@ -36,9 +36,10 @@ const HELPER: Record<VoiceModeState, string> = {
 export function VoiceMode({
   state = "idle",
   onMicClick,
+  onExit,
   micDisabled = false,
-  inputLevel,
-  outputLevel,
+  inputLevel = 0,
+  outputLevel = 0,
 }: VoiceModeProps) {
   const router = useRouter();
     // 음성 모드를 벗어날 때 재생 중인 음성을 중단
@@ -47,23 +48,25 @@ export function VoiceMode({
         cancelSpeech();
 
         // 실제 STT 녹음 및 TTS 재생 연결 시
-        // 녹음 스트림, 오디오 플레이어도 여기서 정리
+        // 오디오 플레이어도 여기서 정리
     };
     }, []);
 
     const handleReturn = () => {
-    cancelSpeech();
+      // 화면을 이동하기 전에 녹음을 먼저 중단한다.
+      onExit?.();
+      cancelSpeech();
 
-    const previous = readVoiceReturn();
+      const previous = readVoiceReturn();
 
-    if (previous) {
-        // 헤더 스위치로 진입했다면 직전 페이지가
-        // 브라우저 히스토리에 있으므로 그곳으로 돌아간다
-        router.back();
-    } else {
-        // 주소 직접 입력이나 새 탭 진입 시 안전한 기본 경로
-        router.replace("/home");
-    }
+      if (previous) {
+          // 헤더 스위치로 진입했다면 직전 페이지가
+          // 브라우저 히스토리에 있으므로 그곳으로 돌아간다
+          router.back();
+      } else {
+          // 주소 직접 입력이나 새 탭 진입 시 안전한 기본 경로
+          router.replace("/home");
+      }
     };
   return (
     <main
