@@ -165,4 +165,125 @@ describe("useVoiceConversation", () => {
 
     expect(recorderMock.cancel).toHaveBeenCalledTimes(1);
   });
+
+  it("권한 요청 중 화면을 벗어나면 뒤늦게 획득한 마이크를 취소한다", async () => {
+    let resolveRecording!: (recording: {
+        stop: typeof recorderMock.stop;
+        cancel: typeof recorderMock.cancel;
+    }) => void;
+
+    recorderMock.start.mockImplementationOnce(
+        () =>
+        new Promise((resolve) => {
+            resolveRecording = resolve;
+        }),
+    );
+
+    const { result, unmount } = renderHook(
+        () => useVoiceConversation(),
+    );
+
+    let startPromise!: Promise<void>;
+
+    act(() => {
+        startPromise = result.current.start();
+    });
+
+    unmount();
+
+    await act(async () => {
+        resolveRecording({
+        stop: recorderMock.stop,
+        cancel: recorderMock.cancel,
+        });
+
+        await startPromise;
+    });
+
+    expect(recorderMock.cancel).toHaveBeenCalledTimes(1);
+    expect(recorderMock.stop).not.toHaveBeenCalled();
+  });
+  //최대 30초 녹음 제한 -> 마지막 발화 이후 무음이 길어지지 않도록 주기적으로 onLevel 호풓
+  it("발화가 계속 감지되어도 30초가 지나면 녹음을 종료한다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+
+    await act(async () => {
+        await result.current.start();
+    });
+
+    // 1초 간격으로 계속 발화가 감지되는 상황
+    for (let i = 0; i < 30; i++) {
+        await act(async () => {
+        recorderMock.onLevel?.(0.5);
+        await vi.advanceTimersByTimeAsync(1000);
+        });
+    }
+
+    expect(recorderMock.stop).toHaveBeenCalledTimes(1);
+    expect(result.current.state).toBe("idle");
+    expect(result.current.audio).toBeInstanceOf(Blob);
+  });
+
+  //VAD 최소 발화 조건
+  it("300ms 미만의 짧은 소음은 발화로 인정하지 않는다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+
+    await act(async () => {
+        await result.current.start();
+    });
+
+    act(() => {
+        recorderMock.onLevel?.(0.5);
+        vi.advanceTimersByTime(100);
+        recorderMock.onLevel?.(0);
+    });
+
+    await act(async () => {
+        await vi.advanceTimersByTimeAsync(8100);
+    });
+
+    expect(recorderMock.stop).not.toHaveBeenCalled();
+    expect(recorderMock.cancel).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBe(
+        "말씀을 듣지 못했어요. 다시 시도해 주세요.",
+    );
+  });
+
+  it("녹음 종료 중 취소하면 늦게 반환된 결과를 무시한다", async () => {
+    let resolveStop!: (audio: Blob) => void;
+
+    recorderMock.stop.mockImplementationOnce(
+        () =>
+        new Promise<Blob>((resolve) => {
+            resolveStop = resolve;
+        }),
+    );
+
+    const { result } = renderHook(() => useVoiceConversation());
+
+    await act(async () => {
+        await result.current.start();
+    });
+
+    let stopPromise!: Promise<void>;
+
+    act(() => {
+        stopPromise = result.current.stop();
+    });
+
+    act(() => {
+        result.current.cancel();
+    });
+
+    await act(async () => {
+        resolveStop(
+        new Blob(["late audio"], { type: "audio/webm" }),
+        );
+        await stopPromise;
+    });
+
+    expect(result.current.state).toBe("idle");
+    expect(result.current.audio).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
 });
