@@ -76,7 +76,7 @@ response = handle_function_output(
 
 모델 계약의 함수표에는 인자별 허용 개수가 들어 있다. handler의 정수별 의미는 현재 hs-call-v2 학습 계약을 따른다.
 
-구현된 기능은 인자 구성이 `topic` 하나이고 허용 개수가 예상과 일치하는지 추가 확인한다. 다르면 `InvalidFunctionContract`를 발생시킨다.
+구현된 기능은 인자 이름과 허용 개수가 예상과 일치하는지 추가 확인한다. 다르면 `InvalidFunctionContract`를 발생시킨다.
 
 허용 개수만으로는 같은 개수 안에서 의미가 재배열된 변경까지 감지할 수 없다. 학습 계약의 인자 의미나 순서가 바뀌면 handler와 테스트도 함께 갱신해야 한다.
 
@@ -92,6 +92,8 @@ response = handle_function_output(
 
 | `get_recapture_guidance` | where, why, certainty, provenance |
 
+`handle_scope_limit`은 `reason` 인자로 지원 범위를 안내한다.
+
 다음 기능은 파서에서 유효하게 분석되더라도 아직 handler가 구현되어 있지 않다.
 
 - `get_care_information`
@@ -99,8 +101,6 @@ response = handle_function_output(
 - `get_pesticide_information`
 
 - `clarify_request`
-
-- `handle_scope_limit`
 
 - `get_usage_guidance`
 
@@ -225,6 +225,16 @@ response = handle_function_output(
 현재 입력만으로 실제 피해량, 식용 안전, 회복·악화 추세를 판단하지 않는다.
 
 해당 한계를 설명하고 `insufficient_information`을 반환한다.
+
+## 지원 범위 안내
+
+`handle_scope_limit`은 `unsupported_scope`를 반환하며, `reason`에 따라 다음을 안내한다.
+
+- `1` (crop): 진단 대상은 고추·무·배추다.
+- `2` (action): 앱은 물 주기, 주문, 기기 조작을 직접 실행하지 않는다.
+- `3` (input): 진단할 작물의 잎을 밝은 곳에서 초점을 맞춰 촬영하도록 안내한다.
+
+예를 들어 `<hs_6>(reason=2)<hs_end>`는 동작을 실행할 수 없는 이유를 안내한다.
 
 ## 점수 안내
 
