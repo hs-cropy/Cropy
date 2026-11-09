@@ -22,10 +22,13 @@ export function VoiceBubble({
             : "border border-[#E2EBE4] bg-white text-[#212A23]"
         }`}
       >
-        <p className="mb-1 text-xs font-semibold text-[#25864F]">
+        <p
+          className={`mb-1 text-xs font-semibold ${
+            isUser ? "text-[#1F6B3B]" : "text-[#25864F]"
+          }`}
+        >
           {isUser ? "내 말" : "크로피"}
         </p>
-
         <p className="text-sm leading-relaxed">{text}</p>
       </div>
     </div>

@@ -42,7 +42,9 @@ export function VoiceMicButton({
   return (
     <div
       className={`relative flex shrink-0 items-center justify-center ${
-        isThinking ? "h-[88px] w-[88px]" : "h-20 w-20"
+        isThinking || isSpeaking
+          ? "h-[88px] w-[88px]"
+          : "h-20 w-20"
       }`}
     >
       {/* 마이크 주변 음성 반응 파동 */}
@@ -84,16 +86,16 @@ export function VoiceMicButton({
         type="button"
         disabled={disabled}
         onClick={onClick}
-        aria-label={ariaLabel}        
+        aria-label={ariaLabel}                
         className={`relative z-10 flex items-center justify-center rounded-full transition-transform ${
           isThinking
             ? "h-[88px] w-[88px] border-2 border-[#ECECEF] bg-white text-[#25864F]"
             : isSpeaking
-              ? "h-20 w-20 border border-[#25864F] bg-white text-[#25864F]"
+              ? "h-[88px] w-[88px] border-2 border-[#25864F] bg-white text-[#25864F]"
               : "h-20 w-20 bg-[#25864F] text-white"
         } ${
           disabled
-            ? isThinking
+            ? isThinking || isSpeaking
               ? "cursor-not-allowed"
               : "cursor-not-allowed opacity-60"
             : "active:scale-95"

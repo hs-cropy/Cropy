@@ -17,6 +17,9 @@ interface VoiceModeProps {
   inputLevel?: number; //0~1, STT 입력 레벨
   outputLevel?: number; //0~1, TTS 출력 레벨
   onExit?: () => void;
+  transcript?: string;
+  assistantText?: string;
+  onPhotoClick?: () => void;
 }
 
 const STATUS: Record<VoiceModeState, string> = {
@@ -40,6 +43,9 @@ export function VoiceMode({
   micDisabled = false,
   inputLevel = 0,
   outputLevel = 0,
+  transcript = "",
+  assistantText = "",
+  onPhotoClick,
 }: VoiceModeProps) {
   const router = useRouter();
     // 음성 모드를 벗어날 때 재생 중인 음성을 중단
@@ -172,17 +178,26 @@ export function VoiceMode({
 
         {state === "speaking" && (
           <div className="w-full space-y-5">
+            {/* 사용자가 말한 문장 */}
+            {transcript.trim() && (
+              <VoiceBubble
+                role="user"
+                text={transcript}
+              />
+            )}
             <VoiceBubble
               role="assistant"
-              text="갈색 점이 둥글게 번지면 고추 탄저병일 수 있어요. 잎 사진으로 확인하면 더 정확히 알려드릴게요."
+              text={assistantText}
             />
             <VoiceWaveform active level={outputLevel} />
             <button
                 type="button"
-                disabled
+                onClick={onPhotoClick}
+                disabled={!onPhotoClick}
                 className="
-                    rounded-xl bg-cropy-action-primary
-                    px-5 py-3 text-sm font-semibold text-white
+                    min-h-12 w-full rounded-xl
+                    bg-cropy-action-primary
+                    px-5 py-3 text-base font-semibold text-white
                     disabled:cursor-not-allowed
                 "
             >

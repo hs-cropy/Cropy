@@ -40,5 +40,10 @@ export const Thinking: Story = {
 };
 
 export const Speaking: Story = {
-  args: { state: "speaking" },
+  args: {
+    state: "speaking",
+    assistantText:
+      "갈색 점이 둥글게 번지면 고추 탄저병일 수 있어요. 잎 사진으로 확인하면 더 정확히 알려드릴게요.",
+    outputLevel: 0.6,
+  },
 };
