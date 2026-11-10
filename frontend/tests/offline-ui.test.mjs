@@ -206,3 +206,97 @@ for(const failure of ['model','asset read']){
   assert.equal(historyCalls,1);assert.match($('ready').textContent,/failed/);
  });
 }
+test('result renders summary and matching action descriptions', () => {
+  const h = setup({escape: escapeHtml});
+  h.context.result(h.record('guidance', {
+    result: {
+      ...full,
+      summary_message: '아래 관리 방법을 참고하세요.',
+      management_actions: ['감염 부위 제거', '통풍 관리'],
+      management_action_details: [
+        {title: '감염 부위 제거', description: '증상이 있는 부위를 확인해 주세요.'},
+        {title: '통풍 관리', description: '바람이 통하도록 관리해 주세요.'},
+      ],
+    },
+  }));
+
+  const html = h.$('result').innerHTML;
+  assert.match(html, /아래 관리 방법을 참고하세요/);
+  assert.match(html, /증상이 있는 부위를 확인해 주세요/);
+  assert.match(html, /바람이 통하도록 관리해 주세요/);
+  assert.ok(html.indexOf('감염 부위 제거') < html.indexOf('통풍 관리'));
+});
+
+test('legacy result keeps action titles without guidance fields', () => {
+  const h = setup({escape: escapeHtml});
+  h.context.result(h.record('legacy', {result: {...full}}));
+
+  const html = h.$('result').innerHTML;
+  for (const title of full.management_actions) {
+    assert.ok(html.includes(escapeHtml(title)));
+  }
+  assert.match(html, /진단 요약을 확인하고, 아래 관리 방법을 참고해주세요/);
+  assert.doesNotMatch(html, /undefined|null/);
+});
+
+test('result does not attach descriptions with mismatched titles', () => {
+  const h = setup({escape: escapeHtml});
+  h.context.result(h.record('mismatch', {
+    result: {
+      ...full,
+      management_actions: ['감염 부위 제거', '통풍 관리'],
+      management_action_details: [
+        {title: '다른 제목', description: '표시하면 안 되는 설명'},
+        {title: '통풍 관리', description: '일치하는 설명'},
+        {title: '제목 없는 추가 항목', description: '추가하면 안 되는 설명'},
+      ],
+    },
+  }));
+
+  const html = h.$('result').innerHTML;
+  assert.match(html, /감염 부위 제거/);
+  assert.match(html, /일치하는 설명/);
+  assert.doesNotMatch(html, /표시하면 안 되는 설명|추가하면 안 되는 설명/);
+});
+
+test('result escapes HTML in summary, action titles and descriptions', () => {
+  const h = setup({escape: escapeHtml});
+  const summary = '<script>alert(1)</script>';
+  const title = '<b>감염 부위 제거</b>';
+  const description = '<img src=x onerror=alert(1)>';
+
+  h.context.result(h.record('escaped', {
+    result: {
+      ...full,
+      summary_message: summary,
+      management_actions: [title],
+      management_action_details: [{title, description}],
+    },
+  }));
+
+  const html = h.$('result').innerHTML;
+  for (const text of [summary, title, description]) {
+    assert.ok(html.includes(escapeHtml(text)));
+    assert.ok(!html.includes(text));
+  }
+});
+
+test('not-crop result keeps retake guidance instead of management guidance', () => {
+  const h = setup({escape: escapeHtml});
+  h.context.result(h.record('not-crop', {
+    result: {
+      ...full,
+      category: 'other',
+      severity: null,
+      summary_message: '노출되면 안 되는 관리 요약',
+      management_actions: ['노출되면 안 되는 행동'],
+      management_action_details: [
+        {title: '노출되면 안 되는 행동', description: '노출되면 안 되는 설명'},
+      ],
+    },
+  }));
+
+  const html = h.$('result').innerHTML;
+  assert.match(html, /잎이 잘 보이게 다시 찍어 주세요/);
+  assert.doesNotMatch(html, /노출되면 안 되는/);
+});

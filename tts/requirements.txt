@@ -12,6 +12,10 @@ pecab==1.0.8
 # numpy<2로 묶어서, 최신을 받으면 기동할 때 import가 실패한다(pip check로는 잡히지 않음).
 # NumPy 1.26에서 동작하는 마지막 버전으로 고정한다
 pyarrow==25.0.1
+# MeloTTS가 쓰는 librosa 0.9.1·cn2an이 pkg_resources를 조건 없이 import한다. torch 등이 setuptools를
+# 버전 없이 요구해 최신이 깔리는데, 82부터 pkg_resources가 빠져 기동할 때 import가 실패한다
+# (pip check로는 잡히지 않음). 제거 직전 버전인 81을 피해 80대로 고정한다
+setuptools<81
 
 fastapi==0.142.2
 uvicorn[standard]==0.54.0

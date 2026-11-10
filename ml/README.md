@@ -148,3 +148,21 @@ train↔val 동일 이미지 2쌍, train↔test 4쌍을 발견했고 원본 SHA2
 ## 256 입력 비교 결과 확인 (2026-09-24)
 
 앞 절의 준비 상태 이후 Colab 실행 결과를 확보했다. 같은 val 785장에서 224는 721장 정답(91.85%), 256은 726장 정답(92.48%)이다. 개선 17건·악화 12건이며 단일 seed의 val 비교다. test 평가 및 서비스 모델 교체는 하지 않았다. [256 분석 보고서](../output/colab/group256_analysis_20260924/report.md)를 참조한다.
+
+## 작업자 분리 시험셋과 기준선 (2026-10-28)
+
+- 공식 Validation 4,070장 중 4,063장이 Training과 같은 작업자·날짜 묶음이라 val 99.6%는 새 촬영자 성능을 말해 주지 않는다.
+- `plan_worker_split.py`로 작업자 78명을 통째로 train/val/test에 배정했다. 배정표 `worker_split_v1/workers.json`, 집계 `worker_split_v1/split_summary.json`. 사진별 목록은 `output/colab/worker_testset_20261028/worker_split_v1.csv`(미커밋).
+- `cropy_testset_baseline_colab.ipynb`: 재분할 → 서버 모델과 같은 설정으로 8 epoch 학습 → 시험 작업자 사진으로 새 모델·서버 모델 평가. 결과 `worker_split_v1/baseline_v1_test_report.json`, Drive `cropy_testset/baseline_v1/`.
+- 기준선(시험 11,434장): 정확도 98.0%, macro F1 0.899, 무검은무늬병 recall 53.8%, 무노균병 74.4%. 무 질병 작업자 정확도 57~63%. 상세와 한계는 [모델 명세](../docs/MODEL_SPEC.md#작업자-분리-시험셋과-기준선-2026-10-28).
+- 이후 모델 실험은 이 시험셋으로 판정한다. 서비스 모델은 교체하지 않았다.
+- 실험 1(백본 ConvNeXt-Tiny, `cropy_testset_convnext_colab.ipynb` + `train_full_colab_convnext.py`): macro F1 0.905, 무검은무늬병 52.4%, 무노균병 80.8%. 판정 기준(10%p) 미달로 기각. 결과 `worker_split_v1/convnext_v1_test_report.json`, Drive `cropy_testset/convnext_v1/`.
+- 실험 2(입력 448px, `cropy_testset_hires448_colab.ipynb`): macro F1 0.917, 무검은무늬병 54.2%, 무노균병 88.5%(+14.1%p). 무노균병만 기준 통과, 채택 후보. 서버 교체 전 전체 데이터 재학습과 추론 시간 측정 필요. 결과 `worker_split_v1/hires448_v1_test_report.json`, Drive `cropy_testset/hires448_v1/`.
+- 교체 후보 재학습: `cropy_full448_colab.ipynb`가 서버 모델과 같은 전체 데이터(10클래스)로 448px ResNet50을 학습하고 공식 val로 서버 모델과 비교한다. 백엔드는 체크포인트 `img_size`를 읽으므로 코드 수정 불필요. CPU 추론 256px 78ms → 448px 185ms(배치 1).
+- 재학습 결과(2026-11-02): 공식 val 99.68% / Macro F1 0.962. 전체 지표는 개선됐고 무노균병은 1장 줄었다(16/24, 잡음 범위). 교체 절차 [MODEL_SWAP_448.md](../docs/operations/MODEL_SWAP_448.md). 결과 `worker_split_v1/full448_v1_val_report.json`, 모델 Drive `cropy_testset/cropy_448_handoff_20261102/`.
+- 실험 3(무 질병 전용 2단계 분류기, `cropy_testset_pair_colab.ipynb`): 시험셋 무 질병 290장에서 전용 단독은 본 모델과 차이 없음(McNemar p=0.47), 재분배 규칙 적용 시 악화. 기각. 오류는 11월 중순 이후·피해 정도 2~3 검은무늬병에 집중, 학습 데이터에 심한 검은무늬병이 거의 없음 → 데이터 수집이 다음 단계. 결과 `worker_split_v1/pair_v1_test_report.json`.
+- 실험 4(병반 박스 crop, `cropy_testset_boxcrop_colab.ipynb`): AI Hub 박스로 질병 사진을 잘라 학습·평가. 병반만 봐도 무검은무늬병 65.6% / 무노균병 69.2%로 혼동이 그대로라 배경 단서 가설 기각. 정상 클래스를 자르지 않은 설계 때문에 crop 모델은 전체 사진에 쓸 수 없음. 결과 `worker_split_v1/boxcrop_v1_test_report.json`, `boxcrop_v1_box_stats.json`.
+- 실험 5(원본 해상도 crop, `make_radish_hires_crops.py` + `cropy_testset_hirescrop_colab.ipynb`): 원본 crop(긴 변 1024)으로 학습한 무 질병 전용 분류기가 512 묶음 crop 학습보다 시험셋에서 정확도 54.5%→70.3%, 무검은무늬병 43.4%→65.6%(McNemar p<0.001). 768 입력은 불안정. seed 반복으로 재현 확인 필요. 결과 `worker_split_v1/hirescrop_v1_test_report.json`, crop 요약 `radish_hires_crops_summary.json`, crop zip은 `output/colab/worker_testset_20261028/radish_hires_crops.zip`(미커밋).
+- 실험 6(실험 5 seed 3회 반복, `cropy_testset_hirescrop_seeds_colab.ipynb` + `train_full_colab_seed.py`): 균형 정확도 평균 low 68.9±1.7% vs hi 68.3±3.1%, seed별 McNemar 방향이 2:1로 갈림. 원본 crop 효과 재현 실패 → 기각. 모델 쪽 실험 종료, 데이터 수집·라벨 재검토로 전환. 결과 `worker_split_v1/hirescrop_seeds_v1_test_report.json`.
+- 라벨 재검토: 전문가용 키트 `make_radish_relabel_kit.py`(review.html + 원본 crop 789장, zip은 미커밋). 1차 육안 양상 분류 결과 `worker_split_v1/radish_test_visual_audit_v1.csv`(시험셋 290장): 노균병 라벨은 일관, 검은무늬병 라벨은 절반 이상이 사진에 근거 없음(노균 양상 31·후기 25·병반 없음 56). 라벨 일치 166장에서 448px 모델 78%.
+- 라벨 재검토 2차·정리본 재학습(`cropy_testset_cleanlabel_colab.ipynb`, 생성기 `make_cleanlabel_nb.py`): 학습·검증 무 질병 499장도 같은 기준으로 분류(`worker_split_v1/radish_trainval_visual_audit_v1.csv`), 라벨·양상 불일치 153장을 뺀 분할로 448px 모델을 seed 3회 학습하고 대조군 seed 2회와 비교한다. 제외·일치 목록 `worker_split_v1/radish_audit_v1.json`. 결과(`worker_split_v1/cleanlabel_v1_test_report.json`): 일치 166장 균형 정확도 76.8→78.2(+1.4%p)로 기준 10%p 미달, 검은무늬 재현율 +11.8%p·노균 재현율 −9.0%p로 경계 이동에 그침 → **기각**, 배포 모델 `hires448_v1` 유지.

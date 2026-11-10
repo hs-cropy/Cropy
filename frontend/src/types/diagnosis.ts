@@ -33,6 +33,11 @@ export interface RecaptureGuidance {
   candidates: RecaptureCandidate[];
 }
 
+export interface ManagementActionDetail {
+  title: string;
+  description: string;
+}
+
 export interface DiagnoseResponse {
   id: string;
   disease_name: string;
@@ -58,6 +63,8 @@ export interface DiagnoseResponse {
   updated_at?: string | null;
   recapture?: RecaptureGuidance | null;
   management_actions?: string[];
+  summary_message?: string | null;
+  management_action_details?: ManagementActionDetail[];
   content_status?: "snapshot" | "current_reference";
   content_version?: string | null;
   current_pesticides?: PesticideInfo[];

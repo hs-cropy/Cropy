@@ -22,7 +22,7 @@ def _template(context: DiagnosisLLMInput) -> str:
     lines = []
     if context.prediction_mode == "mock":
         lines.append("데모(Mock) 결과입니다. 실제 모델 진단 결과가 아닙니다.")
-    elif context.prediction_mode != "model":
+    elif context.prediction_mode not in {"model", "browser"}:
         lines.append("추론 출처가 확인되지 않아 진단 확정 안내를 제공하지 않습니다.")
     if _is_not_crop(context):
         lines.append(
@@ -48,7 +48,7 @@ def _template(context: DiagnosisLLMInput) -> str:
         lines.append("기존 판정 정책에 따라 후보 구분을 위한 재촬영이 필요합니다.")
     if context.decision_reasons:
         lines.append("판정 사유: " + "; ".join(context.decision_reasons))
-    confirmed = (context.prediction_mode == "model" and not context.crop_mismatch
+    confirmed = (context.prediction_mode in {"model", "browser"} and not context.crop_mismatch
                  and context.decision_status in {"normal", "disease"} and not context.decision_reasons)
     if confirmed:
         lines.append(f"모델 분류 결과: {context.disease_name}")

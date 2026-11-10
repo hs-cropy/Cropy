@@ -14,6 +14,9 @@ out/
 # Database & uploads
 *.db
 backend/uploads/
+backend/backups/
+# backup_db.py가 DB·업로드 폴더 옆에 두는 작업 잠금 파일
+*.cropy-backup.lock
 ml/checkpoints/*.pth
 
 # Env

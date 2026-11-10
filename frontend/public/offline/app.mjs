@@ -333,6 +333,17 @@ function resultHtml(record, photos, refinable) {
   const r = record.result, grade = gradeOf(r);
   const percent = Number.isFinite(r.confidence) ? Math.round(r.confidence * 100) + '%' : '-';
   const actions = r.management_actions || [], causes = r.causes || [], prevention = r.prevention || [];
+  const summary = r.summary_message?.trim();
+  const actionDetails = r.management_action_details ?? [];
+  const actionsHtml = actions.map((title, index) => {
+    const detail = actionDetails[index];
+    const description = detail?.title === title
+      ? detail.description?.trim()
+      : '';
+    return `<li><strong>${escape(title)}</strong>${
+      description ? `<p>${escape(description)}</p>` : ''
+    }</li>`;
+  }).join('');
   const badge = grade ? `<span class="badge ${grade.tone}"><span class="sr-only">위험 등급 </span>${escape(grade.label)}</span>` : '';
   const uncertain = r.decision_reasons?.includes('low_confidence')
     ? `<p class="rv-uncertain">${ALERT}사진만으로는 확실하지 않아요. 병징이 잘 보이는 사진으로 다시 확인하고, 방제 전에 가까운 농업기술센터에 문의해 보세요.</p>` : '';
@@ -367,11 +378,12 @@ function resultHtml(record, photos, refinable) {
         <div class="rv-sum-row"><div class="rv-thumb">${photo ? `<img src="${photo}" alt="진단한 작물">` : ''}</div>
           <div class="rv-sum-text">${r.crop_type ? `<p class="rv-caption">${escape(r.crop_type)}</p>` : ''}<h2>${escape(r.disease_name)}</h2>
             <div class="rv-badges">${badge}<p class="rv-caption">신뢰도 ${percent}</p></div></div></div>
+        ${summary ? `<p>${escape(summary)}</p>` : ''}
         ${uncertain}${pair}</section>
       <section class="card rv-title"><div class="rv-title-row"><h2>${escape(r.disease_name)}</h2>${badge}</div>
-        <p class="muted">진단 요약을 확인하고, 아래 관리 방법을 참고해주세요.</p>${uncertain}</section>
+      <p class="muted">${summary ? escape(summary) : '진단 요약을 확인하고, 아래 관리 방법을 참고해주세요.'}</p>${uncertain}</section>
       ${actions.length ? `<section class="card rv-todo" aria-labelledby="rv-todo-title"><div class="rv-todo-head"><h2 id="rv-todo-title">지금 해야 할 일</h2><p class="rv-todo-count">${actions.length}가지</p></div>
-        <ol>${actions.map(action => `<li>${escape(action)}</li>`).join('')}</ol></section>` : ''}
+        <ol>${actionsHtml}</ol></section>` : ''}
       <section class="rv-details" aria-labelledby="rv-details-title"><h2 id="rv-details-title">상세 정보</h2>
         ${detail('증상', r.description ? `<p class="rv-strong">${escape(r.description)}</p><p>사진 속 증상과 비교해 주세요. AI 진단은 참고용입니다.</p>` : missing('이 병해의 증상 설명을 확인할 수 없어요.'))}
         ${detail('원인', causes.length ? `<ul class="rv-dots">${causes.map(x => `<li>${escape(x)}</li>`).join('')}</ul>` : missing('이 병해의 발병 원인 정보를 확인할 수 없어요.'))}
@@ -449,7 +461,7 @@ async function refine() {
     const second = await predict(file);
     const combined = fuse(base.predictions,second,bundle.policy.second_photo_weight);
     const record = {...base,refined_file:file,refined_predictions:second,sync_status:'pending',saved:false,
-      result:summarize(bundle,combined,base.selected_crop)};
+      result:summarize(bundle,combined,base.selected_crop,true)};
     result(record); if (await storeRecord(record)) $('state').textContent = '';
   } catch (error) { analysisFailed(error, 'result'); }
   finally { setBusy(false); }

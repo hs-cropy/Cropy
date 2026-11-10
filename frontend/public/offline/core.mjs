@@ -12,13 +12,19 @@ export function fuse(first, second, weight) {
   return first.map(p => ({ class_id: p.class_id, confidence: (1 - weight) * p.confidence + weight * map.get(p.class_id) }))
     .sort((a, b) => b.confidence - a.confidence);
 }
-export function summarize(bundle, predictions, crop) {
+// refined: 재촬영 사진을 이미 합친 결과. 서버 recapture.check_recapture 와 같은 규칙이다.
+// trigger "top1" 쌍은 첫 사진에서 1순위가 쌍에 속하면 마진과 무관하게 재촬영을 안내한다.
+export function summarize(bundle, predictions, crop, refined = false) {
   const disease = bundle.diseases.find(d => d.model_class_id === predictions[0].class_id);
   const other = disease.category === 'other';
   const [first, second] = predictions;
-  const pair = !other && second && bundle.policy.pairs.find(p => p.ids.includes(first.class_id) && p.ids.includes(second.class_id));
   const margin = second ? first.confidence - second.confidence : 1;
-  const recapture = pair && margin < bundle.policy.confusion_margin ? {
+  const pairs = bundle.policy.pairs;
+  const pair = other ? null
+    : (!refined && pairs.find(p => p.trigger === 'top1' && p.ids.includes(first.class_id)))
+      || (second && margin < bundle.policy.confusion_margin
+        && pairs.find(p => p.ids.includes(first.class_id) && p.ids.includes(second.class_id)));
+  const recapture = pair ? {
     region: pair.region, instruction: pair.instruction, margin,
     candidates: pair.ids.map(id => ({ name: bundle.diseases.find(d => d.model_class_id === id).name, cue: pair.cues[id] })),
   } : null;
@@ -34,7 +40,12 @@ export function summarize(bundle, predictions, crop) {
     category: disease.category, severity: disease.severity, confidence: first.confidence,
     top_predictions: predictions.slice(0, 3).map(p => ({ name: bundle.diseases.find(d => d.model_class_id === p.class_id).name, confidence: p.confidence })),
     description: disease.description, causes: disease.causes, prevention: disease.prevention,
-    management_actions: disease.management_actions || [], pesticides: disease.pesticides || [],
+    management_actions: disease.management_actions || [],
+    summary_message: disease.summary_message ?? null,
+    management_action_details: (disease.management_action_details ?? []).map(
+      detail => ({ title: detail.title, description: detail.description }),
+    ),
+    pesticides: disease.pesticides || [],
     recapture, decision_status: reasons[0] || (disease.category === 'normal' ? 'normal' : 'disease'), decision_reasons: reasons,
     policy_version: `${bundle.policy.version}:low=${bundle.policy.low_confidence_threshold}`, content_status: 'snapshot', content_version: bundle.version,
   };

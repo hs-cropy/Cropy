@@ -207,6 +207,12 @@ export function DiagnosisResultView({
   const photo = photoOf(result, fallbackPhoto);
   const isRefined = Boolean(photo && result.refined_image_url);
   const actions = result.management_actions ?? [];
+  const summary = result.summary_message?.trim();
+  const actionDetails = result.management_action_details ?? [];
+  const descriptionOf = (title: string, index: number) => {
+    const detail = actionDetails[index];
+    return detail?.title === title ? detail.description.trim() : "";
+  };
   // 판별 불가의 점수는 "알아볼 수 없음"의 확률이라 병해 신뢰도처럼 보이지 않게 숨긴다
   const confidence = isNotCrop(result) ? MISSING : percent(result.confidence);
 
@@ -255,9 +261,11 @@ export function DiagnosisResultView({
                 </h2>
                 <GradeBadge result={result} desktop />
               </div>
-              <p className="break-keep text-cropy-helper text-cropy-text-secondary">
-                진단 요약을 확인하고, 아래 관리 방법을 참고해주세요.
-              </p>
+              {summary && (
+                <p className="break-keep text-cropy-helper text-cropy-text-secondary">
+                  {summary}
+                </p>
+              )}
               <UncertainNote result={result} />
             </section>
 
@@ -281,9 +289,14 @@ export function DiagnosisResultView({
                       <span className="tnum">
                         {String(index + 1).padStart(2, "0")}
                       </span>
-                      <span className="min-w-0 [overflow-wrap:break-word]">
-                        {action}
-                      </span>
+                      <div className="min-w-0 [overflow-wrap:break-word]">
+                        <p>{action}</p>
+                        {descriptionOf(action, index) && (
+                          <p className="mt-2 text-cropy-helper font-normal text-cropy-text-secondary">
+                            {descriptionOf(action, index)}
+                          </p>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ol>
@@ -332,6 +345,11 @@ export function DiagnosisResultView({
             </div>
           </div>
         </div>
+        {summary && (
+          <p className="break-keep text-cropy-helper text-cropy-text-secondary">
+            {summary}
+          </p>
+        )}
         <UncertainNote result={result} />
         {isRefined && <RefinedPhotos result={result} photo={photo} />}
       </section>
@@ -361,9 +379,16 @@ export function DiagnosisResultView({
                 >
                   {index + 1}
                 </span>
-                <p className="min-w-0 flex-1 break-keep text-[0.9375rem] font-bold leading-6 text-cropy-text-primary [overflow-wrap:break-word]">
-                  {action}
-                </p>
+                 <div className="min-w-0 flex-1 break-keep [overflow-wrap:break-word]">
+                  <p className="text-[0.9375rem] font-bold leading-6 text-cropy-text-primary">
+                    {action}
+                  </p>
+                  {descriptionOf(action, index) && (
+                    <p className="mt-1 text-cropy-helper leading-6 text-cropy-text-secondary">
+                      {descriptionOf(action, index)}
+                    </p>
+                  )}
+                </div>
               </li>
             ))}
           </ol>

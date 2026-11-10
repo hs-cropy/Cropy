@@ -19,12 +19,67 @@ test('crop mismatch and ambiguity retain separate reasons', () => {
   assert.equal(result.decision_status,'crop_mismatch'); assert.deepEqual(result.decision_reasons,['crop_mismatch','confusion']);
   assert.equal(result.recapture.region,'잎 뒷면');
 });
+test('top1 pair asks for recapture on a confident first photo but not after refinement', () => {
+  const top1 = { ...bundle, policy: { ...bundle.policy, pairs: [{ ...bundle.policy.pairs[0], trigger: 'top1' }] } };
+  const confident = [{class_id:3,confidence:.9},{class_id:2,confidence:.1}];
+  assert.equal(summarize(top1, confident, '무').recapture.region, '잎 뒷면');
+  assert.equal(summarize(top1, confident, '무', true).recapture, null);
+  assert.equal(summarize(top1, [{class_id:3,confidence:.5},{class_id:2,confidence:.45}], '무', true).recapture.region, '잎 뒷면');
+  // 기존 묶음(trigger 없음)은 마진 규칙 그대로
+  assert.equal(summarize(bundle, confident, '무').recapture, null);
+});
 test('판별 불가 overrides mismatch, confusion and low score', () => {
   const withOther = { ...bundle, diseases: [...bundle.diseases, {model_class_id: 9, name: '판별 불가', crop_type: '기타', category: 'other'}] };
   const result = summarize(withOther, [{class_id:9,confidence:.4},{class_id:2,confidence:.35},{class_id:3,confidence:.25}], '고추');
   assert.equal(result.decision_status, 'not_crop'); assert.deepEqual(result.decision_reasons, ['not_crop']);
   assert.equal(result.recapture, null); assert.equal(result.crop_mismatch, false); assert.equal(result.crop_type, '고추');
   assert.equal(summarize(withOther, [{class_id:9,confidence:.9}], '').crop_type, null);
+});
+test('new bundle preserves result guidance without sharing detail objects', () => {
+  const withGuidance = structuredClone(bundle);
+  const disease = withGuidance.diseases[0];
+  disease.management_actions = ['감염 부위 제거'];
+  disease.summary_message = '아래 관리 방법을 참고하세요.';
+  disease.management_action_details = [
+    { title: '감염 부위 제거', description: '증상이 있는 부위를 확인해 주세요.' },
+  ];
+
+  const result = summarize(
+    withGuidance,
+    [{ class_id: 2, confidence: 0.95 }, { class_id: 3, confidence: 0.05 }],
+    '무',
+  );
+
+  assert.equal(result.summary_message, disease.summary_message);
+  assert.deepEqual(
+    result.management_action_details,
+    disease.management_action_details,
+  );
+  assert.deepEqual(
+    result.management_action_details.map(detail => detail.title),
+    result.management_actions,
+  );
+
+  result.management_action_details[0].description = '변경된 설명';
+  assert.equal(
+    disease.management_action_details[0].description,
+    '증상이 있는 부위를 확인해 주세요.',
+  );
+});
+
+test('legacy bundle keeps existing actions without inventing guidance', () => {
+  const legacy = structuredClone(bundle);
+  legacy.diseases[0].management_actions = ['감염 부위 제거'];
+
+  const result = summarize(
+    legacy,
+    [{ class_id: 2, confidence: 0.95 }, { class_id: 3, confidence: 0.05 }],
+    '무',
+  );
+
+  assert.equal(result.summary_message, null);
+  assert.deepEqual(result.management_action_details, []);
+  assert.deepEqual(result.management_actions, ['감염 부위 제거']);
 });
 test('install view follows the installed state, then the platform', () => {
   const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)';
