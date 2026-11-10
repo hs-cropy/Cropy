@@ -31,6 +31,13 @@ const STATUS: Record<VoiceModeState, string> = {
   speaking: "말하는 중",
 };
 
+const STATUS_ICON: Record<VoiceModeState, string> = {
+	idle: "icon-[lucide--mic]",
+	listening: "icon-[lucide--ear]",
+	thinking: "icon-[lucide--loader-circle]",
+	speaking: "icon-[lucide--volume-2]",
+};
+
 const HELPER: Record<VoiceModeState, string> = {
   idle: "버튼을 누르고 말해보세요",
   listening: "말을 마치면 자동으로 멈춰요",
@@ -127,10 +134,22 @@ export function VoiceMode({
             gap-6 px-6 pt-8 pb-6 text-center
         "
       >
-        <span role="status" className="text-sm font-semibold text-[#25864F]">
-          ● {STATUS[state]}
+        <span
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="
+            inline-flex items-center justify-center gap-2
+            rounded-full bg-[#E5F4E6] px-4 py-2
+            text-sm font-semibold text-[#25864F]
+          "
+        >
+          <span
+            aria-hidden="true"
+            className={`h-4 w-4 ${STATUS_ICON[state]}`}
+          />
+          {STATUS[state]}
         </span>
-
         <VoiceMascot state={state} inputLevel={inputLevel} />
 
         {state === "idle" && (

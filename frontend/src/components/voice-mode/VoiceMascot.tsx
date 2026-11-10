@@ -25,37 +25,51 @@ export function VoiceMascot({
 }: VoiceMascotProps) {
   const analyzing = state === "thinking";
   const listening = state === "listening";
-  const hasInputLevel = inputLevel !== undefined;
   const level = clampLevel(inputLevel ?? 0);
 
+  // 마이크 버튼과 같은 임계값을 적용한다.
+	const threshold = 0.06;
+	const intensity = listening && level > threshold
+		? Math.min(1, (level - threshold) / (1 - threshold))
+		: 0;
+
   return (
-    <div className="relative flex h-60 w-60 shrink-0 items-center justify-center">
+    <div className="relative flex h-60 w-60 shrink-0 items-center justify-center">          
+      {/* 마스코트 주변 원형 링 2겹 */}
       {listening && (
-        <>
+        <div
+          data-testid="mascot-listening-rings"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+        >
+          {/* 바깥 링 */}
           <div
-            aria-hidden="true"
-            className={`absolute inset-0 rounded-full border-2 border-[#70AC82]/50 motion-reduce:animate-none ${
-              hasInputLevel ? "" : "animate-pulse"
-            }`}
-            style={
-              hasInputLevel
-                ? { transform: `scale(${1 + level * 0.12})` }
-                : undefined
-            }
+            className="
+              absolute inset-4 rounded-full
+              border-2 border-[#70AC82]/50
+              transition-transform duration-150 ease-out
+              motion-reduce:!transform-none
+              motion-reduce:!transition-none
+            "
+            style={{
+              transform: `scale(${1 + intensity * 0.18})`,
+            }}
           />
 
+          {/* 안쪽 링 */}
           <div
-            aria-hidden="true"
-            className={`absolute inset-3 rounded-full border-2 border-[#70AC82]/40 motion-reduce:animate-none ${
-              hasInputLevel ? "" : "animate-pulse"
-            }`}
-            style={
-              hasInputLevel
-                ? { transform: `scale(${1 + level * 0.08})` }
-                : undefined
-            }
+            className="
+              absolute inset-4 rounded-full
+              border-2 border-[#70AC82]/40
+              transition-transform duration-150 ease-out
+              motion-reduce:!transform-none
+              motion-reduce:!transition-none
+            "
+            style={{
+              transform: `scale(${1 + intensity * 0.1})`,
+            }}
           />
-        </>
+        </div>
       )}
 
       <div className="flex h-52 w-52 items-center justify-center rounded-full bg-[#E5F4E6]">

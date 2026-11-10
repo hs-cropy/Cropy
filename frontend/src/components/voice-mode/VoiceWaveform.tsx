@@ -33,7 +33,7 @@ export function VoiceWaveform({
         return (
           <span
             key={index}
-            className={`w-1 rounded-full bg-[#58A576] motion-reduce:animate-none motion-reduce:transition-none ${
+            className={`w-1 rounded-full bg-[#58A576] motion-reduce:!animate-none motion-reduce:!transition-none motion-reduce:!h-2 ${
               active && !hasLevel ? "animate-pulse" : ""
             } ${hasLevel ? "transition-[height] duration-75" : ""}`}
             style={{

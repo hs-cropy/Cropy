@@ -24,10 +24,9 @@ export function VoiceMicButton({
 
   // 작은 주변 잡음에는 반응하지 않도록 설정
   const threshold = 0.06;
-  const hasVoice = isListening && level > threshold;
 
   // threshold 이상의 입력을 0~1 범위로 다시 변환
-  const intensity = hasVoice
+  const intensity = isListening && level > threshold
     ? (level - threshold) / (1 - threshold)
     : 0;
 
@@ -47,36 +46,36 @@ export function VoiceMicButton({
           : "h-20 w-20"
       }`}
     >
-      {/* 마이크 주변 음성 반응 파동 */}
-      {hasVoice && (
+      {/* 마이크 주변 음성 반응 파동: 단색 원 2겹 */}
+      {isListening && (
         <div
           data-testid="mic-listening-waves"
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
         >
-          {/* 바깥쪽 파동 */}
+          {/* 바깥 파동 */}
           <span
             className="
-              absolute inset-[-24px]
-              rounded-full bg-[#25864F]/10
-              transition-transform duration-100
-              motion-reduce:transition-none
+              absolute inset-0 rounded-full bg-[#25864F]/10
+              transition-transform duration-150 ease-out
+              motion-reduce:!transform-none
+              motion-reduce:!transition-none
             "
             style={{
-              transform: `scale(${1 + intensity * 0.08})`,
+              transform: `scale(${1 + intensity * 1.2})`,
             }}
           />
 
           {/* 안쪽 파동 */}
           <span
             className="
-              absolute inset-[-12px]
-              rounded-full bg-[#25864F]/15
-              transition-transform duration-100
-              motion-reduce:transition-none
+              absolute inset-0 rounded-full bg-[#25864F]/20
+              transition-transform duration-150 ease-out
+              motion-reduce:!transform-none
+              motion-reduce:!transition-none
             "
             style={{
-              transform: `scale(${1 + intensity * 0.05})`,
+              transform: `scale(${1 + intensity * 0.65})`,
             }}
           />
         </div>
