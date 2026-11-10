@@ -49,6 +49,12 @@ docker compose exec -T backend ls -l /backups
    - 계산은 파일 크기의 합이라 실제보다 조금 적다. 여유가 빠듯하면 정리부터 한다.
 3. 배포 잠금을 잡는다. 복원하는 동안 자동 배포(`docker compose up -d --force-recreate`)가 돌면 멈춰 둔 백엔드가 다시 떠서 복원 중인 DB·사진에 쓸 수 있다. 스크립트의 잠금은 백업·복원끼리만 막고 앱이나 배포는 막지 못한다.
 
+   잠금은 셸이 쥐고 있어서 SSH가 끊기면 셸과 함께 풀린다. 그러면 복원 도중에 자동 배포가 들어올 수 있으므로, 3~5단계는 `tmux`(또는 `screen`) 세션 안에서 한다. 끊기면 다시 접속해 `tmux attach -t restore`로 이어 간다.
+
+   ```bash
+   tmux new -s restore
+   ```
+
    ```bash
    exec 9>~/.cropy-deploy.lock && flock 9
    ```
@@ -71,7 +77,7 @@ docker compose exec -T backend ls -l /backups
    docker compose start backend
    ```
 
-5. 이력·사진과 `GET /api/v1/ready`를 확인한 뒤 셸을 닫아(`exit`) 배포 잠금을 푼다.
+5. 이력·사진과 `GET /api/v1/ready`를 확인한 뒤 셸을 닫아(`exit`, tmux 세션도 함께 끝난다) 배포 잠금을 푼다.
 
 - 복원 직전 상태는 `/backups/pre_restore_*`에 남는다. 복원이 잘못됐으면 이 폴더로 같은 방법으로 되돌린다.
 - 복원에 쓴 백업과 안전 백업은 아래 "안전 백업 정리"의 조건을 채울 때까지 지우지 않는다.
