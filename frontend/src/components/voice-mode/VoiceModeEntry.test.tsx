@@ -1,20 +1,19 @@
-
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isVoiceEnabled,
   setVoiceEnabled,
   VOICE_SETTING_KEY,
-} from "../hooks/useVoiceSetting";
+} from "../../features/voice/hooks/useVoiceSetting";
 import {
   installFakeSpeech,
   type FakeSpeech,
-} from "../testing/fakeSpeech";
+} from "../../features/voice/testing/fakeSpeech";
 import {
   readVoiceReturn,
   VOICE_RETURN_KEY,
 } from "@/components/voice-mode/voiceNavigation";
-import { VoiceToggle } from "./VoiceToggle";
+import { VoiceModeEntry } from "@/components/voice-mode/VoiceModeEntry";
 
 const navigation = vi.hoisted(() => ({
   push: vi.fn(),
@@ -44,21 +43,24 @@ beforeEach(() => {
   });
 });
 
-function voiceSwitch() {
-  return screen.getByRole("switch", { name: "음성 모드" });
+function voiceButton() {
+  return screen.getByRole("button", { name: "음성 대화" });
 }
 
-describe("VoiceToggle — 음성 모드 진입", () => {
-  it("기본은 OFF이며 음성 모드 스위치로 표시한다", () => {
-    render(<VoiceToggle />);
+describe("VoiceModeEntry — 음성 모드 진입", () => {
+  it("음성 모드 진입 요소는 버튼이다", () => {
+    render(<VoiceModeEntry />);
 
-    expect(voiceSwitch().getAttribute("aria-checked")).toBe("false");
+    expect(voiceButton()).toBeTruthy();
+    expect(
+      screen.queryByRole("switch", { name: "음성 모드" }),
+    ).toBeNull();
   });
 
-  it("ON을 누르면 음성 모드로 이동한다", () => {
-    render(<VoiceToggle />);
+  it("버튼을 누르면 음성 모드로 이동한다", () => {
+    render(<VoiceModeEntry />);
 
-    fireEvent.click(voiceSwitch());
+    fireEvent.click(voiceButton());
 
     expect(navigation.push).toHaveBeenCalledExactlyOnceWith(
       "/voice-mode",
@@ -77,8 +79,8 @@ describe("VoiceToggle — 음성 모드 진입", () => {
       value: 420,
     });
 
-    render(<VoiceToggle />);
-    fireEvent.click(voiceSwitch());
+    render(<VoiceModeEntry />);
+    fireEvent.click(voiceButton());
 
     expect(readVoiceReturn()).toEqual({
       path: "/history?page=2",
@@ -93,8 +95,8 @@ describe("VoiceToggle — 음성 모드 진입", () => {
     (enabled) => {
       setVoiceEnabled(enabled);
 
-      render(<VoiceToggle />);
-      fireEvent.click(voiceSwitch());
+      render(<VoiceModeEntry />);
+      fireEvent.click(voiceButton());
 
       expect(isVoiceEnabled()).toBe(enabled);
       expect(localStorage.getItem(VOICE_SETTING_KEY)).toBe(
@@ -107,19 +109,42 @@ describe("VoiceToggle — 음성 모드 진입", () => {
   );
 
   it("진입할 때 기존 TTS 재생을 중단한다", () => {
-    render(<VoiceToggle />);
+    render(<VoiceModeEntry />);
 
-    fireEvent.click(voiceSwitch());
+    fireEvent.click(voiceButton());
 
     expect(speech.cancel).toHaveBeenCalledTimes(1);
     expect(speech.speak).not.toHaveBeenCalled();
   });
+  it("모바일에서는 아이콘 버튼, 데스크톱에서는 텍스트를 함께 표시한다", () => {
+    render(<VoiceModeEntry />);
 
-  it("배치용 className을 스위치에 전달한다", () => {
-    render(<VoiceToggle className="xl:w-[8.25rem]" />);
+    const button = voiceButton();
 
-    expect(
-      Array.from(voiceSwitch().classList),
-    ).toContain("xl:w-[8.25rem]");
+    expect(button.classList.contains("min-h-cropy-control-md")).toBe(true);
+    expect(button.classList.contains("min-w-11")).toBe(true);
+
+    const label = screen.getByText("음성 대화");
+    expect(label.classList.contains("hidden")).toBe(true);
+    expect(label.classList.contains("lg:inline")).toBe(true);
+
+    expect(button.getAttribute("aria-label")).toBe("음성 대화");
+  });
+
+  it("sessionStorage 저장이 실패해도 음성 모드로 이동한다", () => {
+    const spy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("Storage blocked");
+      });
+
+    try {
+      render(<VoiceModeEntry />);
+      fireEvent.click(voiceButton());
+
+      expect(navigation.push).toHaveBeenCalledWith("/voice-mode");
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

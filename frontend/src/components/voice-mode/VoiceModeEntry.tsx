@@ -1,24 +1,20 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { cancelSpeech } from "@/features/voice/lib/speech";
+import { saveVoiceReturn } from "./voiceNavigation";
 
 export function VoiceModeEntry() {
   const router = useRouter();
-  const pathname = usePathname();
 
   const enterVoiceMode = () => {
-    // 돌아올 화면과 문서 스크롤 위치 저장
-    sessionStorage.setItem(
-      "cropy:voice-return",
-      JSON.stringify({
-        path: pathname + window.location.search,
-        scrollY: window.scrollY,
-      }),
+    // 기존 화면과 스크롤 위치를 저장한다.
+    saveVoiceReturn(
+      window.location.pathname + window.location.search,
+      window.scrollY,
     );
 
-    // 기존 음성 안내가 재생 중이라면 중단
-    // 단, 음성 안내 설정 자체는 변경하지 않음
+    // 현재 재생 중인 TTS만 중단하고 설정은 유지한다.
     cancelSpeech();
 
     router.push("/voice-mode");
@@ -28,20 +24,31 @@ export function VoiceModeEntry() {
     <button
       type="button"
       onClick={enterVoiceMode}
+      aria-label="음성 대화"
       className="
-        inline-flex min-h-11 items-center gap-2
+        inline-flex min-h-cropy-control-md min-w-11
+        items-center justify-center gap-1.5
         rounded-xl border border-cropy-border
-        bg-cropy-surface px-4
-        text-cropy-body-lg font-semibold
-        text-cropy-text-primary
+        bg-cropy-surface p-2
+        text-cropy-label-xs font-medium
+        text-cropy-text-secondary
+        transition-colors
         hover:bg-cropy-action-subtle
+        focus-visible:outline
+        focus-visible:outline-2
+        focus-visible:outline-offset-2
+        focus-visible:outline-cropy-action-primary
+        lg:gap-2
+        lg:text-cropy-caption
       "
     >
       <span
         aria-hidden="true"
-        className="icon-[lucide--mic] h-5 w-5"
+        className="icon-[lucide-20--mic] h-5 w-5 shrink-0"
       />
-      음성 대화
+      <span className="hidden lg:inline whitespace-nowrap">
+        음성 대화
+      </span>
     </button>
   );
 }

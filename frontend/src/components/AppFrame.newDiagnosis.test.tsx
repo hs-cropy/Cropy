@@ -198,10 +198,18 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
     );
     expect(isVoiceEnabled()).toBe(true);
 
-    // 기존 음성 안내 설정과 신규 음성 모드는 독립적이다.
+    // 새 진단을 시작해도 TTS 설정은 유지된다.
+    expect(isVoiceEnabled()).toBe(true);
+
     expect(
-      screen.getByRole("switch", { name: "음성 모드" }).getAttribute("aria-checked"),
-    ).toBe("false");
+      screen.getByRole("switch", { name: "음성 안내" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+
+    // 음성 모드 진입은 별도의 버튼이다.
+    expect(
+      screen.getByRole("button", { name: "음성 대화" }),
+    ).toBeTruthy();
   });
 
   it("카메라를 쓸 수 없다는 화면에서 새 진단을 누르면 사진 업로드로 돌아가 그 영역에 초점을 둔다", async () => {

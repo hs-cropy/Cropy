@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
-import { VoiceToggle } from "@/features/voice";
 import { APP_NAV_ITEMS, currentNavKey } from "./appNav";
 import { AppShell, AppShellFooter } from "./AppShell";
 import { Header } from "./Header";
@@ -13,6 +12,7 @@ import { requestNewDiagnosis } from "./newDiagnosis";
 import { TextSizeToggle } from "./TextSizeToggle";
 import {  clearVoiceReturn, readVoiceReturn, } from "./voice-mode/voiceNavigation";
 import { VoiceGuideToggle } from "@/features/voice/components/VoiceGuideToggle";
+import { VoiceModeEntry } from "./voice-mode/VoiceModeEntry";
 
 const HEADER_SWITCH_CLASS =
   "min-w-[5.625rem] " +
@@ -136,15 +136,9 @@ function Frame({ children }: { children: ReactNode }) {
             <>
               <TextSizeToggle className={HEADER_SWITCH_CLASS} />
 
-              {/* 모바일: 전체 화면 음성 모드 */}
-              <div className="lg:hidden">
-                <VoiceToggle className={HEADER_SWITCH_CLASS} />
-              </div>
+              <VoiceGuideToggle className={HEADER_SWITCH_CLASS} />
 
-              {/* 데스크톱: 기존 TTS 음성 안내 */}
-              <div className="hidden lg:block">
-                <VoiceGuideToggle className={HEADER_SWITCH_CLASS} />
-              </div>
+              <VoiceModeEntry />
             </>
           }
         />

@@ -1,4 +1,3 @@
-export { VoiceToggle } from "./components/VoiceToggle";
 export { useCameraVoiceGuide } from "./hooks/useCameraVoiceGuide";
 export { useVoiceGuide } from "./hooks/useVoiceGuide";
 export { VOICE_SETTING_KEY, useVoiceSetting } from "./hooks/useVoiceSetting";

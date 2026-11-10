@@ -11,7 +11,14 @@ export function saveVoiceReturn(path: string, scrollY: number) {
     scrollY: Math.max(0, scrollY),
   };
 
-  sessionStorage.setItem(VOICE_RETURN_KEY, JSON.stringify(data));
+  try {
+    sessionStorage.setItem(
+      VOICE_RETURN_KEY,
+      JSON.stringify(data),
+    );
+  } catch {
+    // 저장소 접근이 차단되어도 음성 모드 진입을 막지 않는다.
+  }
 }
 
 export function readVoiceReturn(): VoiceReturn | null {
@@ -47,5 +54,9 @@ export function readVoiceReturn(): VoiceReturn | null {
 }
 
 export function clearVoiceReturn() {
-  sessionStorage.removeItem(VOICE_RETURN_KEY);
+  try {
+    sessionStorage.removeItem(VOICE_RETURN_KEY);
+  } catch {
+    // 저장소 접근이 차단되어도 화면 복귀는 유지한다.
+  }
 }

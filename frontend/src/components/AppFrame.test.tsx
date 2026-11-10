@@ -134,23 +134,23 @@ describe("AppFrame", () => {
     expect(screen.getByRole("link", { name: "Cropy 홈" }).getAttribute("href")).toBe("/home");
   });
 
-  it("헤더 오른쪽에는 큰 글자·모바일 음성 모드·데스크톱 음성 안내 스위치가 잇다", () => {
+  it("헤더에 설정 스위치 2개와 음성 대화 버튼이 있다", () => {
     render(<AppFrame>화면</AppFrame>);
     const header = within(screen.getByRole("banner"));
-    expect(header.getAllByRole("switch")).toHaveLength(3);
+    expect(header.getAllByRole("switch")).toHaveLength(2);
 
     expect(
       header.getByRole("switch", { name: /큰 글자/ }),
     ).toBeTruthy();
 
     expect(
-      header.getByRole("switch", { name: "음성 모드" }),
+      header.getByRole("switch", { name: "음성 안내" }),
     ).toBeTruthy();
 
     expect(
-      header.getByRole("switch", { name: "음성 안내" }),
+      header.getByRole("button", { name: "음성 대화" }),
     ).toBeTruthy();
-    expect(header.queryByRole("button")).toBeNull();
+
     // 로고와 내비 항목 말고는 링크가 없다 (기기 진단 링크는 진단 화면 본문으로 옮겼다)
     expect(header.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
       "/home",
@@ -160,22 +160,31 @@ describe("AppFrame", () => {
     ]);
   });
 
-  it("모바일은 음성 모드, 데스크톱은 기존 TTS 토글을 표시하도록 구분한다", () => {
+  it("모바일과 데스크톱 모두 TTS 스위치와 음성 대화 버튼을 제공한다", () => {
     render(<AppFrame>화면</AppFrame>);
 
-    const mobileVoice = screen.getByRole("switch", {
-      name: "음성 모드",
-    });
+    const header = within(screen.getByRole("banner"));
 
-    const desktopVoice = screen.getByRole("switch", {
+    const voiceGuide = header.getByRole("switch", {
       name: "음성 안내",
     });
 
-    expect(mobileVoice.closest(".lg\\:hidden")).not.toBeNull();
+    const voiceEntry = header.getByRole("button", {
+      name: "음성 대화",
+    });
 
-    const desktopWrapper = desktopVoice.closest(".lg\\:block");
-    expect(desktopWrapper).not.toBeNull();
-    expect(desktopWrapper?.classList.contains("hidden")).toBe(true);
+    // 기존 TTS 스위치가 모바일에서 숨겨지지 않는다.
+    expect(voiceGuide.closest(".hidden")).toBeNull();
+    expect(voiceGuide.closest(".lg\\:block")).toBeNull();
+
+    // 음성 모드 진입 버튼도 반응형으로 숨기지 않는다.
+    expect(voiceEntry.closest(".hidden")).toBeNull();
+    expect(voiceEntry.classList.contains("hidden")).toBe(false);
+
+    // 음성 모드 진입은 설정 스위치가 아니다.
+    expect(
+      header.queryByRole("switch", { name: "음성 모드" }),
+    ).toBeNull();
   });
 
   it("헤더 스위치는 Figma 크기를 쓴다: 모바일 90px, 넓은 데스크탑 132px·좌우 15px·양끝 정렬", () => {
@@ -249,7 +258,7 @@ describe("AppFrame", () => {
         <AppShellPage scrollLabel="진단하기">홈</AppShellPage>
       </AppFrame>,
     );
-    const voice = screen.getByRole("switch", { name: "음성 모드" });
+    const voice = screen.getByRole("button", { name: "음성 대화" });
     voice.focus();
     rerender(
       <AppFrame>

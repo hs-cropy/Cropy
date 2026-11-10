@@ -1,6 +1,6 @@
 // 음성 모드의 상태와 녹음 버튼 동작 관리
-// 정상 녹음 종료 시 thinking으로 전환
-// STT·답변 생성·TTS 연결은 아직 미구현
+// STT·답변 생성·TTS 연결 전까지 정상 녹음 종료 시 idle로 복귀
+// API 연동 후 thinking → speaking 상태 전환 구현 예정
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -117,15 +117,16 @@ export function useVoiceConversation() {
         updateState("idle");
         return;
       }
-
-      // 녹음 결과 보관 및 분석 화면 진입
-      setAudio(result);
-      setError(null);
-      updateState("thinking");
+      // STT·답변 생성 API 연동 전 임시 처리.
+      // 녹음은 정상 종료했지만 아직 분석할 수 없으므로
+      // thinking 상태에 머물지 않고 대기 화면으로 복귀한다.
+      setAudio(null);
+      setError("음성 분석 기능을 준비하고 있어요.");
+      updateState("idle");
 
       // TODO: STT 및 답변 생성 API 연결
-      // API 처리 중에는 thinking 상태를 유지
-      // 성공 후 TTS 재생을 시작할 때 speaking으로 전환
+      // API 연동 후에는 녹음 결과를 전달하고 thinking으로 전환한다.
+      // 성공 후 TTS를 재생할 때 speaking으로 전환한다.
     } catch {
       if (generation === generationRef.current) {
         recordingRef.current?.cancel();
