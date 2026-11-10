@@ -16,6 +16,13 @@ export class VoiceRecorderError extends Error {
   }
 }
 
+export class VoicePermissionError extends VoiceRecorderError {
+  constructor() {
+    super("마이크 권한이 거부되었어요. 설정에서 마이크 사용을 허용해 주세요.");
+    this.name = "VoicePermissionError";
+  }
+}
+
 export async function startVoiceRecording(
   options: VoiceRecordingOptions = {},
 ): Promise<VoiceRecording> {
@@ -33,7 +40,22 @@ export async function startVoiceRecording(
       },
       video: false,
     });
-  } catch {
+  } catch (error) {
+    const errorName =
+      error !== null &&
+      typeof error === "object" &&
+      "name" in error &&
+      typeof error.name === "string"
+        ? error.name
+        : null;
+
+    if (
+      errorName === "NotAllowedError" ||
+      errorName === "PermissionDeniedError"
+    ) {
+      throw new VoicePermissionError();
+    }
+
     throw new VoiceRecorderError();
   }
 
@@ -157,11 +179,23 @@ export async function startVoiceRecording(
         };
 
         frameId = requestAnimationFrame(measure);
+        const context = audioContext;
+        if (context.state === "suspended") {
+          void context
+            .resume()
+            .then(() => {
+              if (released || cancelled) return;
 
-        if (audioContext.state === "suspended") {
-          void audioContext.resume().catch(() => {
-            notifyAnalysisUnavailable();
-          });
+              if (context.state !== "running") {
+                notifyAnalysisUnavailable();
+              }
+            })
+            .catch(() => {
+              if (released || cancelled) return;
+              notifyAnalysisUnavailable();
+            });
+        } else if (context.state !== "running") {
+          notifyAnalysisUnavailable();
         }
       } catch {
         // 음량 분석을 사용할 수 없어도 녹음은 계속 가능하다.

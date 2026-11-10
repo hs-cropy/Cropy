@@ -69,7 +69,7 @@ export function VoiceMode({
     const previous = readVoiceReturn();
 
     if (previous) {
-      // 헤더 스위치로 진입했다면 직전 페이지가
+      // 헤더 음성 대화 버튼으로 진입했다면 직전 페이지가
       // 브라우저 히스토리에 있으므로 그곳으로 돌아간다
       router.back();
     } else {
@@ -108,7 +108,7 @@ export function VoiceMode({
               whitespace-nowrap rounded-xl
               border-2 border-cropy-border
               bg-cropy-surface px-4 py-2
-              test-sm font-medium text-cropy-text-secondary
+              text-sm font-medium text-cropy-text-secondary
               focus-visible:outline
               focus-visible:outline-2
               focus-visible:outline-offset-2

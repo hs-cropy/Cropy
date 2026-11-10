@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { VoiceModeState } from "@/components/voice-mode/VoiceMascot";
-import { startVoiceRecording, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
+import { startVoiceRecording, VoicePermissionError, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
 
 const VAD_THRESHOLD = 0.06;
 const MIN_SPEECH_MS = 300;
@@ -256,11 +256,17 @@ export function useVoiceConversation() {
           }
         }
       }, 100);
-    } catch {
+    } catch (error) {
       if (generation === generationRef.current) {
         resetVad();
         setInputLevel(0);
-        setError(VOICE_ERROR);
+
+        setError(
+          error instanceof VoicePermissionError
+            ? error.message
+            : VOICE_ERROR,
+        );
+
         updateState("idle");
       }
     } finally {

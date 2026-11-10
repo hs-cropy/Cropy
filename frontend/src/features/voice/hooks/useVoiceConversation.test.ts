@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useVoiceConversation } from "./useVoiceConversation";
+import { VoicePermissionError } from "@/features/voice/lib/voiceRecorder";
 
 const recorderMock = vi.hoisted(() => ({
   start: vi.fn(),
@@ -10,9 +11,15 @@ const recorderMock = vi.hoisted(() => ({
   onAnalysisUnavailable: null as (() => void) | null,
 }));
 
-vi.mock("@/features/voice/lib/voiceRecorder", () => ({
-  startVoiceRecording: recorderMock.start,
-}));
+vi.mock("@/features/voice/lib/voiceRecorder", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/features/voice/lib/voiceRecorder")>();
+
+  return {
+    ...actual,
+    startVoiceRecording: recorderMock.start,
+  };
+});
 
 describe("useVoiceConversation", () => {
   beforeEach(() => {
@@ -50,6 +57,22 @@ describe("useVoiceConversation", () => {
     expect(result.current.state).toBe("idle");
     expect(result.current.inputLevel).toBe(0);
     expect(result.current.error).toBeNull();
+  });
+
+  it("마이크 권한이 거부되면 브라우저 설정 안내를 표시한다", async () => {
+    recorderMock.start.mockRejectedValueOnce(
+        new VoicePermissionError(),
+    );
+
+    const { result } = renderHook(() => useVoiceConversation());
+
+    await act(async () => {
+        await result.current.start();
+    });
+
+    expect(result.current.state).toBe("idle");
+    expect(result.current.error).toContain("마이크 사용을 허용");
+    expect(result.current.audio).toBeNull();
   });
 
   it("마이크를 누르면 녹음을 시작하고 listening으로 전환한다", async () => {
