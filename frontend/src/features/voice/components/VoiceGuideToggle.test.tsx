@@ -73,11 +73,30 @@ describe("VoiceToggle", () => {
     expect(toggleButton().getAttribute("aria-checked")).toBe("true");
   });
 
-  it("Web Speech를 지원하지 않는 브라우저에서는 스위치를 숨긴다", () => {
+  it("Web Speech 미지원 브라우저에서도 스위치를 표시하고 비활성화한다", () => {
     vi.unstubAllGlobals();
     render(<VoiceGuideToggle />);
 
-    expect(screen.queryByRole("switch")).toBeNull();
+    const toggle = toggleButton();
+
+    // 미지원 환경에서도 스위치가 DOM에 존재한다.
+    expect(toggle).not.toBeNull();
+    expect(toggle.hasAttribute("disabled")).toBe(true);
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    expect(toggle.getAttribute("aria-describedby")).toBe(
+      "voice-guide-unsupported",
+    );
+
+    // 미지원 사유를 스크린리더에 제공한다.
+    expect(
+      screen.getByText("이 브라우저에서는 음성 안내를 지원하지 않아요."),
+    ).toBeTruthy();
+
+    // 비활성화된 스위치를 눌러도 저장 상태가 바뀌지 않는다.
+    fireEvent.click(toggle);
+
+    expect(localStorage.getItem(VOICE_SETTING_KEY)).toBeNull();
+    expect(synth.speak).not.toHaveBeenCalled();
   });
 
   it("배치용 className 을 스위치에 전달한다", () => {
