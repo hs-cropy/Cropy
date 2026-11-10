@@ -9,7 +9,7 @@ import type { VoiceModeState } from "@/components/voice-mode/VoiceMascot";
 import { startVoiceRecording, VoicePermissionError, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
 
 const VAD_THRESHOLD = 0.06;
-const MIN_SPEECH_MS = 300;
+const MIN_SPEECH_MS = 150;
 const SILENCE_MS = 1800;
 const NO_SPEECH_MS = 8000;
 const MAX_RECORDING_MS = 30000;

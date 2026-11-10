@@ -107,7 +107,7 @@ describe("useVoiceConversation", () => {
       await result.current.start();
     });
 
-    // 최소 발화 시간 300ms 충족
+    // 최소 발화 시간 150ms 충족
     act(() => {
       recorderMock.onLevel?.(0.5);
       vi.advanceTimersByTime(400);
@@ -248,7 +248,7 @@ describe("useVoiceConversation", () => {
   });
 
   //VAD 최소 발화 조건
-  it("300ms 미만의 짧은 소음은 발화로 인정하지 않는다", async () => {
+  it("150ms 미만의 짧은 소음은 발화로 인정하지 않는다", async () => {
     const { result } = renderHook(() => useVoiceConversation());
 
     await act(async () => {
@@ -269,7 +269,34 @@ describe("useVoiceConversation", () => {
     expect(recorderMock.cancel).toHaveBeenCalledTimes(1);
     expect(result.current.error).toBe("말씀을 듣지 못했어요. 다시 시도해 주세요.");
   });
+  it("200ms의 짧은 발화도 감지하고 무음 후 자동 종료한다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
 
+    await act(async () => {
+        await result.current.start();
+    });
+
+    // 짧은 발화 시작
+    act(() => {
+        recorderMock.onLevel?.(0.5);
+        vi.advanceTimersByTime(200);
+        recorderMock.onLevel?.(0.5);
+        recorderMock.onLevel?.(0);
+    });
+
+    // 발화 이후 1.8초 이상 무음
+    await act(async () => {
+        await vi.advanceTimersByTimeAsync(1900);
+    });
+
+    expect(recorderMock.stop).toHaveBeenCalledTimes(1);
+    expect(recorderMock.cancel).not.toHaveBeenCalled();
+    expect(result.current.state).toBe("idle");
+    expect(result.current.audio).toBeNull();
+    expect(result.current.error).toBe(
+        "음성 분석 기능을 준비하고 있어요.",
+    );
+  });
   it("녹음 종료 중 취소하면 늦게 반환된 결과를 무시한다", async () => {
     let resolveStop!: (audio: Blob) => void;
 
