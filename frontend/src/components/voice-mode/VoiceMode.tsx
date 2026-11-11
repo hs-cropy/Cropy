@@ -11,6 +11,7 @@ import { cancelSpeech } from "@/features/voice/lib/speech";
 import { readVoiceReturn } from "./voiceNavigation";
 import { Button } from "@/components/Button";
 import { Switch } from "@/components/Switch";
+import { VoiceCameraPreview, type VoiceCamera } from "./VoiceCameraPreview";
 
 interface VoiceModeProps {
   state?: VoiceModeState;
@@ -26,6 +27,8 @@ interface VoiceModeProps {
   /** 연속 대화: 답을 다 읽으면 버튼 없이 다시 듣는다. 넘기지 않으면 스위치를 보이지 않는다 */
   continuous?: boolean;
   onContinuousChange?: (next: boolean) => void;
+  /** 음성 모드 안 카메라 미리보기·셔터. 넘기지 않으면 보이지 않는다 */
+  camera?: VoiceCamera;
 }
 
 const STATUS: Record<VoiceModeState, string> = {
@@ -62,6 +65,7 @@ export function VoiceMode({
   analysisAvailable = true,
   continuous,
   onContinuousChange,
+  camera,
 }: VoiceModeProps) {
   const router = useRouter();
   // 음성 모드를 벗어날 때 재생 중인 음성을 중단
@@ -156,7 +160,7 @@ export function VoiceMode({
           />
           {STATUS[state]}
         </span>
-        <VoiceMascot state={state} inputLevel={inputLevel} />
+        {camera ? <VoiceCameraPreview {...camera} /> : <VoiceMascot state={state} inputLevel={inputLevel} />}
 
         {state === "idle" && (
           <>
@@ -171,6 +175,11 @@ export function VoiceMode({
             </div>
 
             <div className="flex flex-wrap justify-center gap-2 text-sm">
+              {camera && (
+                <span className="rounded-full bg-white px-4 py-2">
+                  &quot;찍어 줘&quot;
+                </span>
+              )}
               <span className="rounded-full bg-white px-4 py-2">
                 &quot;고추 잎에 점이 생겼어&quot;
               </span>

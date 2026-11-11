@@ -55,6 +55,13 @@ export async function selectFunction(
   return parse(res);
 }
 
+/** 진단 결과를 읽어 줄 문장(서버 speech_script). 음성 모드에서 방금 찍은 사진의 결과를 들려줄 때 쓴다 */
+export async function fetchSpeechScript(diagnosisId: string, signal?: AbortSignal): Promise<string[]> {
+  const res = await fetch(API_BASE + "/api/v1/diagnose/" + encodeURIComponent(diagnosisId) + "/speech/script", { signal });
+  const body = await parse<{ sentences: string[]; text: string }>(res);
+  return body.sentences;
+}
+
 export async function answerFunction(
   diagnosisId: string,
   functionCall: string,

@@ -6,10 +6,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { VoiceModeState } from "@/components/voice-mode/VoiceMascot";
-import { ApiError } from "@/lib/api";
+import { ApiError, diagnoseImage } from "@/lib/api";
+import { isCaptureCommand } from "@/features/voice/lib/captureIntent";
 import { cancelSpeech, speakAndWait } from "@/features/voice/lib/speech";
-import { answerFunction, selectFunction, transcribe } from "@/features/voice/lib/voiceApi";
-import { readVoiceScreen } from "@/features/voice/lib/voiceScreen";
+import { answerFunction, fetchSpeechScript, selectFunction, transcribe } from "@/features/voice/lib/voiceApi";
+import { LAST_DIAGNOSIS_KEY, readVoiceScreen, type VoiceScreen } from "@/features/voice/lib/voiceScreen";
 import { playListenCue } from "@/features/voice/lib/listenCue";
 import { releaseStream, startVoiceRecording, VoicePermissionError, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
 import { AudioConversionError, recordingToWav } from "@/features/voice/lib/wav";
@@ -40,7 +41,15 @@ const NO_SPEECH_ERROR = "말씀을 듣지 못했어요. 다시 시도해 주세�
 const UNHEARD_ERROR = "말씀을 알아듣지 못했어요. 다시 말씀해 주세요.";
 const NETWORK_ERROR = "서버와 연결되지 않아요. 연결을 확인하고 다시 시도해 주세요.";
 // 답변은 못 만들어도 사용자가 들을 문장. TTS로 읽히므로 짧게 둔다
-const NO_DIAGNOSIS_TEXT = "진단 결과 화면에서 물어봐 주시면 그 결과로 답해 드릴게요.";
+const NO_DIAGNOSIS_TEXT = "먼저 잎을 비추고 찍어 줘라고 말하거나 셔터를 누르면, 그 결과로 답해 드릴게요.";
+const NO_CAMERA_TEXT = "카메라가 꺼져 있어요. 카메라 켜기를 누른 뒤 다시 말씀해 주세요.";
+const CAPTURE_FAILED_TEXT = "사진을 찍지 못했어요. 잎이 보이게 비추고 다시 말씀해 주세요.";
+const CAPTURING_TEXT = "찍었어요. 잠시만요.";
+
+export interface UseVoiceConversationOptions {
+  /** 지금 카메라 장면을 사진 파일로. 카메라가 없거나 꺼져 있으면 null. 음성 모드 화면이 넘긴다 */
+  captureFrame?: () => Promise<File | null>;
+}
 const NOT_READY_TEXT = "그 질문은 아직 답을 준비하지 못했어요. 진단 결과나 재촬영에 대해 물어봐 주세요.";
 const UNSURE_TEXT = "질문을 잘 이해하지 못했어요. 다시 말씀해 주세요.";
 
@@ -56,7 +65,7 @@ function answerFailure(error: unknown): { say?: string; toast?: string } {
   return { toast: VOICE_ERROR };
 }
 
-export function useVoiceConversation() {
+export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptions = {}) {
   const [state, setState] = useState<VoiceModeState>("idle");
   const [inputLevel, setInputLevel] = useState(0);
   const [analysisAvailable, setAnalysisAvailable] = useState(true);
@@ -64,6 +73,13 @@ export function useVoiceConversation() {
   const [audio, setAudio] = useState<Blob | null>(null);
   const [transcript, setTranscript] = useState("");
   const [assistantText, setAssistantText] = useState("");
+  // 지금 이야기하는 진단. 진입 전 화면에서 읽고, 음성 모드 안에서 찍어 진단하면 그 결과로 바뀐다
+  const [screen, setScreen] = useState<VoiceScreen>(() => (typeof window === "undefined"
+    ? { diagnosisId: null, uiStage: "no_photo", path: null }
+    : readVoiceScreen()));
+  const screenRef = useRef(screen);
+  const captureFrameRef = useRef(captureFrame);
+  captureFrameRef.current = captureFrame;
   const abortRef = useRef<AbortController | null>(null);
   const speechOwner = useRef(Symbol("voice-mode"));
 
@@ -101,6 +117,17 @@ export function useVoiceConversation() {
 
   // 긴 async 함수 안에서 현재 상태를 다시 읽는다 (입구의 상태 검사로 좁혀진 타입에 묶이지 않도록)
   const isState = useCallback((expected: VoiceModeState) => stateRef.current === expected, []);
+
+  const adoptDiagnosis = useCallback((diagnosisId: string) => {
+    const next: VoiceScreen = { diagnosisId, uiStage: "result", path: screenRef.current.path };
+    screenRef.current = next;
+    setScreen(next);
+    try {
+      sessionStorage.setItem(LAST_DIAGNOSIS_KEY, diagnosisId); // 다른 화면도 이 진단을 이어서 쓴다
+    } catch {
+      // 저장이 막힌 환경 — 이 화면에서만 기억한다
+    }
+  }, []);
 
   const setContinuous = useCallback((next: boolean) => {
     continuousRef.current = next;
@@ -167,6 +194,63 @@ export function useVoiceConversation() {
     setError(null);
     updateState("idle");
   }, [clearAutoListen, resetVad, updateState]);
+
+  /**
+   * 지금 카메라 장면을 찍어 진단하고, 읽어 줄 문장을 돌려준다. 결과는 이 화면의 현재 진단이 된다.
+   * 카메라가 없거나 찍지 못하면 그 사정을 읽어 줄 문장으로 돌려준다(오류로 끊지 않는다).
+   */
+  const captureAndDescribe = useCallback(async (signal: AbortSignal): Promise<string | string[]> => {
+    const capture = captureFrameRef.current;
+    if (!capture) return NO_CAMERA_TEXT;
+    const file = await capture();
+    if (!file) return NO_CAMERA_TEXT;
+    setAssistantText(CAPTURING_TEXT);
+    const result = await diagnoseImage(file, undefined, { signal });
+    if (signal.aborted) return [];
+    adoptDiagnosis(result.id);
+    try {
+      return await fetchSpeechScript(result.id, signal);
+    } catch (cause) {
+      if (cause instanceof ApiError) {
+        // 문장을 못 받아도 병명은 읽어 준다
+        return `${result.disease_name}(으)로 분류됐어요. 확진을 뜻하지 않아요.`;
+      }
+      throw cause;
+    }
+  }, [adoptDiagnosis]);
+
+  /** 셔터 버튼: 듣는 중이 아니어도 찍어서 바로 진단하고 결과를 읽어 준다 */
+  const captureNow = useCallback(async () => {
+    if (busyRef.current || stateRef.current === "thinking") return;
+    if (stateRef.current !== "idle") cancel();
+    busyRef.current = true;
+    const generation = ++generationRef.current;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setError(null);
+    setTranscript("");
+    setAssistantText("");
+    updateState("thinking");
+    try {
+      const reply = await captureAndDescribe(controller.signal);
+      if (generation !== generationRef.current || controller.signal.aborted) return;
+      abortRef.current = null;
+      setAssistantText(Array.isArray(reply) ? reply.join(" ") : reply);
+      updateState("speaking");
+      busyRef.current = false;
+      await speakAndWait(reply, speechOwner.current);
+      if (generation === generationRef.current && isState("speaking")) {
+        updateState("idle");
+        scheduleAutoListen();
+      }
+    } catch (cause) {
+      if (generation !== generationRef.current || controller.signal.aborted) return;
+      setError(answerFailure(cause).toast ?? CAPTURE_FAILED_TEXT);
+      updateState("idle");
+    } finally {
+      if (generation === generationRef.current) busyRef.current = false;
+    }
+  }, [cancel, captureAndDescribe, isState, scheduleAutoListen, updateState]);
 
   // 수동 종료 및 VAD 자동 종료에서 공통 사용
   const stop = useCallback(async () => {
@@ -236,17 +320,22 @@ export function useVoiceConversation() {
       silentRoundsRef.current = 0;
       setTranscript(text);
 
-      // 2. 기능 고르기 → 3. 답변 문장. 화면 상태는 진입 전 화면(진단 결과·사진 없음)에서 읽는다
-      const screen = readVoiceScreen();
-      let reply: string;
+      // 2. 기능 고르기 → 3. 답변 문장. "찍어 줘"는 모델에 보내지 않고 앱이 바로 찍어 진단한다
+      const current = screenRef.current;
+      let reply: string | string[];
       try {
-        const selected = await selectFunction(text, screen, controller.signal);
-        if (!live()) return;
-        if (!screen.diagnosisId) {
-          // 진단 없이 답할 수 있는 기능(사용 안내·잡담)은 handler가 생기면 여기서 연결한다 (#162)
-          reply = NO_DIAGNOSIS_TEXT;
+        if (isCaptureCommand(text)) {
+          reply = await captureAndDescribe(controller.signal);
+          if (!live()) return;
         } else {
-          reply = (await answerFunction(screen.diagnosisId, selected.function_call, "server", controller.signal)).text;
+          const selected = await selectFunction(text, current, controller.signal);
+          if (!live()) return;
+          if (!current.diagnosisId) {
+            // 진단 없이 답할 수 있는 기능(사용 안내·잡담)은 handler가 생기면 여기서 연결한다 (#162)
+            reply = NO_DIAGNOSIS_TEXT;
+          } else {
+            reply = (await answerFunction(current.diagnosisId, selected.function_call, "server", controller.signal)).text;
+          }
         }
       } catch (cause) {
         if (!live()) return;
@@ -262,7 +351,7 @@ export function useVoiceConversation() {
 
       // 4. 읽기. 다 읽으면 다시 대기. 그 사이 마이크를 누르면 cancel()이 낭독을 끊고 idle로 돌린다
       abortRef.current = null;
-      setAssistantText(reply);
+      setAssistantText(Array.isArray(reply) ? reply.join(" ") : reply);
       updateState("speaking");
       busyRef.current = false;
       await speakAndWait(reply, speechOwner.current);
@@ -287,7 +376,7 @@ export function useVoiceConversation() {
         busyRef.current = false;
       }
     }
-  }, [clearVadTimer, isState, resetVad, scheduleAutoListen, updateState]);
+  }, [captureAndDescribe, clearVadTimer, isState, resetVad, scheduleAutoListen, updateState]);
 
   // 연속 대화 중 말이 없었을 때: 한 번은 조용히 다시 듣고, 계속 없으면 안내 뒤 대기로 돌아간다
   const giveUpOrRetry = useCallback(() => {
@@ -483,6 +572,9 @@ export function useVoiceConversation() {
     assistantText,
     continuous,
     setContinuous,
+    /** 지금 이야기하는 진단(없으면 null)과 화면 단계 */
+    screen,
+    captureNow,
     start,
     stop,
     cancel,

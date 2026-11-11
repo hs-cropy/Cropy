@@ -32,6 +32,8 @@ const pipeline = vi.hoisted(() => ({
   answerFunction: vi.fn(),
   speakAndWait: vi.fn(),
   cancelSpeech: vi.fn(),
+  fetchSpeechScript: vi.fn(),
+  diagnoseImage: vi.fn(),
   screen: { diagnosisId: "diag-1" as string | null, uiStage: "result" as UiStage, path: "/history/diag-1" as string | null },
 }));
 
@@ -44,16 +46,23 @@ vi.mock("@/features/voice/lib/voiceApi", () => ({
   transcribe: pipeline.transcribe,
   selectFunction: pipeline.selectFunction,
   answerFunction: pipeline.answerFunction,
+  fetchSpeechScript: pipeline.fetchSpeechScript,
 }));
+
+vi.mock("@/lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api")>();
+  return { ...actual, diagnoseImage: pipeline.diagnoseImage };
+});
 
 vi.mock("@/features/voice/lib/speech", () => ({
   speakAndWait: pipeline.speakAndWait,
   cancelSpeech: pipeline.cancelSpeech,
 }));
 
-vi.mock("@/features/voice/lib/voiceScreen", () => ({
-  readVoiceScreen: () => pipeline.screen,
-}));
+vi.mock("@/features/voice/lib/voiceScreen", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/voice/lib/voiceScreen")>();
+  return { ...actual, readVoiceScreen: () => pipeline.screen };
+});
 
 vi.mock("@/features/voice/lib/listenCue", () => ({
   playListenCue: vi.fn(),
@@ -66,6 +75,8 @@ function resetPipeline() {
   pipeline.answerFunction.mockReset().mockResolvedValue({ function_name: "get_diagnosis", status: "ok", text: "현재 진단은 고추 탄저병입니다." });
   pipeline.speakAndWait.mockReset().mockResolvedValue(undefined);
   pipeline.cancelSpeech.mockReset();
+  pipeline.fetchSpeechScript.mockReset().mockResolvedValue(["고추 탄저병으로 분류됐어요.", "병든 잎을 떼어 내세요."]);
+  pipeline.diagnoseImage.mockReset().mockResolvedValue({ id: "new-diag", disease_name: "고추 탄저병" });
   pipeline.screen = { diagnosisId: "diag-1", uiStage: "result", path: "/history/diag-1" };
 }
 
@@ -468,7 +479,7 @@ describe("useVoiceConversation", () => {
 
     expect(pipeline.selectFunction).toHaveBeenCalledTimes(1);
     expect(pipeline.answerFunction).not.toHaveBeenCalled();
-    expect(result.current.assistantText).toContain("진단 결과 화면에서");
+    expect(result.current.assistantText).toContain("찍어 줘라고 말하거나");
     expect(pipeline.speakAndWait).toHaveBeenCalledTimes(1);
     expect(result.current.error).toBeNull();
   });
@@ -520,6 +531,68 @@ describe("useVoiceConversation", () => {
 
     expect(pipeline.transcribe).not.toHaveBeenCalled();
     expect(result.current.error).toBe("녹음한 소리를 처리하지 못했어요");
+  });
+
+  it("\"찍어 줘\"라고 하면 모델에 보내지 않고 카메라로 찍어 진단하고 결과를 읽어 준다", async () => {
+    pipeline.transcribe.mockResolvedValueOnce("사진 찍어 줘");
+    pipeline.screen = { diagnosisId: null, uiStage: "no_photo", path: "/home" };
+    const file = new File(["jpg"], "leaf.jpg", { type: "image/jpeg" });
+    const captureFrame = vi.fn().mockResolvedValue(file);
+
+    const { result } = renderHook(() => useVoiceConversation({ captureFrame }));
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+
+    expect(captureFrame).toHaveBeenCalledTimes(1);
+    expect(pipeline.diagnoseImage).toHaveBeenCalledWith(file, undefined, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(pipeline.selectFunction).not.toHaveBeenCalled();
+    expect(pipeline.speakAndWait).toHaveBeenCalledWith(["고추 탄저병으로 분류됐어요.", "병든 잎을 떼어 내세요."], expect.any(Symbol));
+    expect(result.current.screen).toEqual({ diagnosisId: "new-diag", uiStage: "result", path: "/home" });
+    expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBe("new-diag");
+  });
+
+  it("찍은 뒤의 질문은 방금 찍은 진단으로 답한다", async () => {
+    pipeline.transcribe.mockResolvedValueOnce("찍어").mockResolvedValueOnce("이거 무슨 병이야");
+    pipeline.screen = { diagnosisId: null, uiStage: "no_photo", path: "/home" };
+    const captureFrame = vi.fn().mockResolvedValue(new File(["jpg"], "leaf.jpg", { type: "image/jpeg" }));
+
+    const { result } = renderHook(() => useVoiceConversation({ captureFrame }));
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); }); // 연속 대화로 다시 듣는 중
+    await act(async () => { await result.current.stop(); });
+
+    expect(pipeline.selectFunction).toHaveBeenCalledWith("이거 무슨 병이야", expect.objectContaining({ diagnosisId: "new-diag", uiStage: "result" }), expect.any(AbortSignal));
+    expect(pipeline.answerFunction).toHaveBeenCalledWith("new-diag", "<hs_0>(topic=1)<hs_end>", "server", expect.any(AbortSignal));
+  });
+
+  it("\"사진은 어떻게 찍어\"는 촬영이 아니라 모델에 보낸다", async () => {
+    pipeline.transcribe.mockResolvedValueOnce("사진은 어떻게 찍어");
+    const captureFrame = vi.fn();
+    const { result } = renderHook(() => useVoiceConversation({ captureFrame }));
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+    expect(captureFrame).not.toHaveBeenCalled();
+    expect(pipeline.selectFunction).toHaveBeenCalledTimes(1);
+  });
+
+  it("카메라가 꺼져 있으면 찍는 대신 카메라를 켜라고 읽어 준다", async () => {
+    pipeline.transcribe.mockResolvedValueOnce("찍어 줘");
+    const { result } = renderHook(() => useVoiceConversation({ captureFrame: async () => null }));
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+    expect(pipeline.diagnoseImage).not.toHaveBeenCalled();
+    expect(result.current.assistantText).toContain("카메라가 꺼져 있어요");
+  });
+
+  it("셔터 버튼(captureNow)은 듣지 않고도 찍어 진단하고 읽어 준다", async () => {
+    const captureFrame = vi.fn().mockResolvedValue(new File(["jpg"], "leaf.jpg", { type: "image/jpeg" }));
+    const { result } = renderHook(() => useVoiceConversation({ captureFrame }));
+    await act(async () => { await result.current.captureNow(); });
+    expect(pipeline.diagnoseImage).toHaveBeenCalledTimes(1);
+    expect(pipeline.speakAndWait).toHaveBeenCalledTimes(1);
+    expect(result.current.screen.diagnosisId).toBe("new-diag");
+    expect(result.current.state).toBe("idle");
   });
 
   it("두 번째 녹음부터는 열어 둔 마이크 스트림을 다시 쓴다", async () => {
