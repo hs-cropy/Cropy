@@ -266,4 +266,13 @@ Qwen 대신 같은 입력(발화 + 화면 상태 JSON)에서 같은 `<hs_N>(arg=
 
 validation 300행에서 5행을 잃고 실제 발화에서 9행(기능 기준 19행)을 얻는다. 양자화로 float와 달라지는 답은 실제 발화 12행이며, 농약 "전체 목록"(product=2)을 "지금 화면 제품"(product=1)으로 답하는 쪽이 많다. 오프라인 웹 묶음도 `web_onnx/2b_soup6`을 쓴다.
 
-**결정(2026-11-11): 보드·서버에는 6 run 평균 모델 `cropy_qwen_v2/soup_v2abc_v2d_6run/merged_hf`를 쓴다.** validation을 지키면서 실제 발화가 올랐다. 이전 모델은 Drive `soup_v2_v2b_v2c/merged_hf`에 그대로 있다. 데모·RKLLM·웹 ONNX 노트북 빌더는 새 모델을 가리키도록 바꿨고, RKLLM·웹 묶음은 새 모델로 다시 변환해야 한다.
+RKLLM W8A8(RK3588, PC 시뮬레이터, L4에서 변환 976초, 2.735 GB)도 새 모델로 다시 만들었다(`rkllm_soup6/cropy_qwen_w8a8_rk3588.rkllm`):
+
+| RKLLM W8A8 시뮬 (validation 300행) | 기능 | 인자까지 | 같은 행 float | float와 같은 답 |
+|---|---|---|---|---|
+| 이전 모델 (`rkllm/`) | 99.67% | 98.00% | 98.33% | 99.67% |
+| 6 run 평균 (`rkllm_soup6/`) | 99.33% | 97.00% | 97.33% | 98.33% |
+
+인자까지 3행 차이는 float 모델끼리의 차이(같은 300행 float 97.33% vs 98.33%)와 같다. 다만 float와 다른 답을 내는 행은 1행 → 5행으로 늘었다. 재촬영 안내 인자(100% → 92.7%)와 농약 인자(94.3% → 91.4%)에서 잃는다. 보드는 실제 발화 시뮬을 아직 재지 않았지만 웹 묶음과 같은 경향이면 실제 발화 이득이 더 크므로 보드도 `rkllm_soup6`을 쓴다.
+
+**결정(2026-11-11): 보드·서버에는 6 run 평균 모델 `cropy_qwen_v2/soup_v2abc_v2d_6run/merged_hf`를 쓴다.** validation을 지키면서 실제 발화가 올랐다. 이전 모델은 Drive `soup_v2_v2b_v2c/merged_hf`에 그대로 있다. 데모·RKLLM·웹 ONNX 노트북 빌더는 새 모델을 가리키도록 바꿨고, RKLLM(`rkllm_soup6`)·웹 묶음(`web_onnx/2b_soup6`)도 새 모델로 다시 변환했다(11/11).
