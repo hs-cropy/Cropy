@@ -1,0 +1,5 @@
+# 서버 테스트(tts/tests) 전용. 가짜 모델로 돌리므로 MeloTTS·PyTorch 없이 설치·실행된다
+fastapi==0.142.2
+numpy==1.26.4
+httpx==0.28.1
+pytest==9.1.1

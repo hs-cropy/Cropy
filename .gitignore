@@ -14,6 +14,9 @@ out/
 # Database & uploads
 *.db
 backend/uploads/
+backend/backups/
+# backup_db.py가 DB·업로드 폴더 옆에 두는 작업 잠금 파일
+*.cropy-backup.lock
 ml/checkpoints/*.pth
 
 # Env
@@ -98,6 +101,7 @@ backend/app/data/seed/*
 !backend/app/data/seed/diseases.json
 !backend/app/data/seed/pesticides.json
 !backend/app/data/seed/disease_pesticides.json
+!backend/app/data/seed/pesticide_catalog.json
 
 # Local CI test reports
 /frontend/test-results/
@@ -111,3 +115,9 @@ backend/app/data/seed/*
 
 /ml/test-results/
 /마음ai/test-results/
+
+# TTS 합성 캐시
+backend/tts_cache/
+
+# STT 모델 파일 (stt/download_models.py로 받음)
+stt/models/

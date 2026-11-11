@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { softmax, fuse, summarize } from '../public/offline/core.mjs';
+import { gradeOf, isNotCrop, resultTimeSentence, recordTime } from '../public/offline/core.mjs';
+import { softmax, fuse, summarize, installView, isDesktopDevice, DESKTOP_VIEWS, failurePhase, viewFromHash, recordsNotice, updateAvailable } from '../public/offline/core.mjs';
 const bundle = { model_version: 'm1', preprocessing_version: 'p1', version: 'v1',
   diseases: [{model_class_id: 2, name: '검은무늬병', crop_type: '무', category:'disease'},
              {model_class_id: 3, name:'노균병', crop_type:'무', category:'disease'}],
@@ -17,4 +18,159 @@ test('crop mismatch and ambiguity retain separate reasons', () => {
   const result = summarize(bundle,[{class_id:2,confidence:.51},{class_id:3,confidence:.43}],'고추');
   assert.equal(result.decision_status,'crop_mismatch'); assert.deepEqual(result.decision_reasons,['crop_mismatch','confusion']);
   assert.equal(result.recapture.region,'잎 뒷면');
+});
+test('top1 pair asks for recapture on a confident first photo but not after refinement', () => {
+  const top1 = { ...bundle, policy: { ...bundle.policy, pairs: [{ ...bundle.policy.pairs[0], trigger: 'top1' }] } };
+  const confident = [{class_id:3,confidence:.9},{class_id:2,confidence:.1}];
+  assert.equal(summarize(top1, confident, '무').recapture.region, '잎 뒷면');
+  assert.equal(summarize(top1, confident, '무', true).recapture, null);
+  assert.equal(summarize(top1, [{class_id:3,confidence:.5},{class_id:2,confidence:.45}], '무', true).recapture.region, '잎 뒷면');
+  // 기존 묶음(trigger 없음)은 마진 규칙 그대로
+  assert.equal(summarize(bundle, confident, '무').recapture, null);
+});
+test('판별 불가 overrides mismatch, confusion and low score', () => {
+  const withOther = { ...bundle, diseases: [...bundle.diseases, {model_class_id: 9, name: '판별 불가', crop_type: '기타', category: 'other'}] };
+  const result = summarize(withOther, [{class_id:9,confidence:.4},{class_id:2,confidence:.35},{class_id:3,confidence:.25}], '고추');
+  assert.equal(result.decision_status, 'not_crop'); assert.deepEqual(result.decision_reasons, ['not_crop']);
+  assert.equal(result.recapture, null); assert.equal(result.crop_mismatch, false); assert.equal(result.crop_type, '고추');
+  assert.equal(summarize(withOther, [{class_id:9,confidence:.9}], '').crop_type, null);
+});
+test('new bundle preserves result guidance without sharing detail objects', () => {
+  const withGuidance = structuredClone(bundle);
+  const disease = withGuidance.diseases[0];
+  disease.management_actions = ['감염 부위 제거'];
+  disease.summary_message = '아래 관리 방법을 참고하세요.';
+  disease.management_action_details = [
+    { title: '감염 부위 제거', description: '증상이 있는 부위를 확인해 주세요.' },
+  ];
+
+  const result = summarize(
+    withGuidance,
+    [{ class_id: 2, confidence: 0.95 }, { class_id: 3, confidence: 0.05 }],
+    '무',
+  );
+
+  assert.equal(result.summary_message, disease.summary_message);
+  assert.deepEqual(
+    result.management_action_details,
+    disease.management_action_details,
+  );
+  assert.deepEqual(
+    result.management_action_details.map(detail => detail.title),
+    result.management_actions,
+  );
+
+  result.management_action_details[0].description = '변경된 설명';
+  assert.equal(
+    disease.management_action_details[0].description,
+    '증상이 있는 부위를 확인해 주세요.',
+  );
+});
+
+test('legacy bundle keeps existing actions without inventing guidance', () => {
+  const legacy = structuredClone(bundle);
+  legacy.diseases[0].management_actions = ['감염 부위 제거'];
+
+  const result = summarize(
+    legacy,
+    [{ class_id: 2, confidence: 0.95 }, { class_id: 3, confidence: 0.05 }],
+    '무',
+  );
+
+  assert.equal(result.summary_message, null);
+  assert.deepEqual(result.management_action_details, []);
+  assert.deepEqual(result.management_actions, ['감염 부위 제거']);
+});
+test('install view follows the installed state, then the platform', () => {
+  const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)';
+  const galaxy = 'Mozilla/5.0 (Linux; Android 14; SM-S921N)';
+  const mac = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)';
+  assert.equal(installView({ userAgent: galaxy, standalone: true, promptable: true }), 'installed');
+  assert.equal(installView({ userAgent: iphone, standalone: false, promptable: false }), 'ios');
+  assert.equal(installView({ userAgent: mac, standalone: false, promptable: false, touchPoints: 5 }), 'ios');
+  assert.equal(installView({ userAgent: galaxy, standalone: false, promptable: false }), 'android');
+});
+test('desktop install view follows the browser', () => {
+  const windowsChrome = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  const windowsEdge = windowsChrome + ' Edg/130.0.0.0';
+  const windowsFirefox = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0';
+  const macSafari = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15';
+  const macChrome = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  // 설치창 이벤트가 아직 안 왔어도 Chromium 이면 앱 설치 화면이다
+  assert.equal(installView({ userAgent: windowsChrome, standalone: false, promptable: false }), 'pc');
+  assert.equal(installView({ userAgent: windowsEdge, standalone: false, promptable: false }), 'pc');
+  assert.equal(installView({ userAgent: macChrome, standalone: false, promptable: false }), 'pc');
+  assert.equal(installView({ userAgent: macSafari, standalone: false, promptable: false }), 'mac');
+  assert.equal(installView({ userAgent: windowsFirefox, standalone: false, promptable: false }), 'pc-help');
+  assert.equal(installView({ userAgent: windowsChrome, standalone: true, promptable: false }), 'pc-installed');
+  // 아이패드 Safari 는 맥 UA 지만 터치가 있어 휴대폰 안내다
+  assert.equal(installView({ userAgent: macSafari, standalone: false, promptable: false, touchPoints: 5 }), 'ios');
+  // 데스크톱 UA 를 보내는 안드로이드 태블릿은 터치로 가린다. 터치 노트북(리눅스·크롬북)과 구분한다
+  const linuxChrome = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  assert.equal(installView({ userAgent: linuxChrome, standalone: false, promptable: false, touchPoints: 5 }), 'android');
+  assert.equal(installView({ userAgent: linuxChrome, standalone: false, promptable: false }), 'pc');
+  assert.equal(installView({ userAgent: 'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', standalone: false, promptable: false, touchPoints: 10 }), 'pc');
+});
+test('the PC wording follows the same device check as the install view', () => {
+  const windows = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  const mac = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15';
+  const linux = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  const chromebook = 'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+  const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)';
+  const galaxy = 'Mozilla/5.0 (Linux; Android 14; SM-S921N)';
+  const cases = [[windows, 0, true], [mac, 0, true], [linux, 0, true], [chromebook, 10, true],
+    [iphone, 5, false], [galaxy, 5, false], [mac, 5, false], [linux, 5, false]];
+  for (const [userAgent, touchPoints, desktop] of cases) {
+    assert.equal(isDesktopDevice(userAgent, touchPoints), desktop, userAgent + ' / ' + touchPoints);
+    assert.equal(DESKTOP_VIEWS.includes(installView({ userAgent, touchPoints, standalone: false, promptable: false })), desktop);
+  }
+});
+test('a failed download maps to paused, storage-full or failed', () => {
+  const named = name => Object.assign(new Error(name), { name });
+  assert.equal(failurePhase(named('AbortError'), true), 'paused');
+  assert.equal(failurePhase(new TypeError('Failed to fetch'), false), 'paused');
+  assert.equal(failurePhase(new TypeError('Failed to fetch'), true), 'failed');
+  assert.equal(failurePhase(named('QuotaExceededError'), true), 'storage-full');
+  assert.equal(failurePhase(new Error('모델 검증에 실패했어요.'), true), 'failed');
+});
+test('the # in the address picks the prepare, new diagnosis, result or records screen', () => {
+  assert.equal(viewFromHash('#new'), 'new');
+  assert.equal(viewFromHash('#result'), 'result');
+  assert.equal(viewFromHash('#records'), 'records');
+  // 예전 사진 분석 주소는 새 진단으로 연다
+  assert.equal(viewFromHash('#analyze'), 'new');
+  for (const hash of ['', '#', '#prepare', '#unknown', undefined]) assert.equal(viewFromHash(hash), 'prepare');
+});
+test('records show sync-failed first, sync-pending only while offline', () => {
+  const records = (...statuses) => statuses.map(sync_status => ({ sync_status }));
+  assert.equal(recordsNotice(records('saved', 'failed', 'pending'), true), 'sync-failed');
+  assert.equal(recordsNotice(records('saved', 'failed', 'pending'), false), 'sync-failed');
+  assert.equal(recordsNotice(records('pending'), false), 'sync-pending');
+  assert.equal(recordsNotice(records('pending'), true), null);
+  assert.equal(recordsNotice(records('saved'), false), null);
+  assert.equal(recordsNotice([], false), null);
+});
+test('an update is offered only for a different, well-formed bundle version', () => {
+  const a = 'a'.repeat(64), b = 'b'.repeat(64);
+  assert.equal(updateAvailable(a, b), true);
+  assert.equal(updateAvailable(a, a), false);
+  assert.equal(updateAvailable(undefined, b), false);
+  for (const server of [undefined, null, '', 'v2', 'A'.repeat(64), b + '0']) assert.equal(updateAvailable(a, server), false);
+});
+test('result grade and time wording match the online result screen', () => {
+  assert.deepEqual(gradeOf({ severity: 'high' }), { label: '위험', tone: 'attention' });
+  assert.deepEqual(gradeOf({ severity: 'medium' }), { label: '주의', tone: 'attention' });
+  assert.deepEqual(gradeOf({ severity: 'low' }), { label: '낮음', tone: 'low' });
+  assert.deepEqual(gradeOf({ category: 'healthy', severity: 'high' }), { label: '정상', tone: 'low' });
+  assert.equal(gradeOf({}), null);
+  assert.equal(isNotCrop({ category: 'other' }), true);
+  assert.equal(isNotCrop(undefined), false);
+  assert.equal(gradeOf({ category: 'other', severity: 'high' }), null);
+  assert.equal(resultTimeSentence('2026-10-06T14:18:00'), '2026년 10월 6일 오후 2:18에 확인한 결과예요.');
+  assert.equal(resultTimeSentence('2026-10-06T00:05:00'), '2026년 10월 6일 오전 12:05에 확인한 결과예요.');
+  assert.equal(resultTimeSentence('2026-10-06T12:00:00'), '2026년 10월 6일 오후 12:00에 확인한 결과예요.');
+  assert.equal(resultTimeSentence('not a date'), null);
+  assert.equal(resultTimeSentence(undefined), null);
+  assert.equal(recordTime('2026-10-22T09:05:00'), '2026.10.22 · 09:05');
+  assert.equal(recordTime(''), null);
 });

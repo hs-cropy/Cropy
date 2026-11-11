@@ -36,35 +36,67 @@ describe("AppShell", () => {
     ]);
   });
 
-  it("화면 높이를 꽉 채우고 틀 자체는 스크롤되지 않는다", () => {
+  it("화면 높이를 최소로 채우고, 넘치면 헤더부터 문서 전체가 스크롤된다", () => {
     render(<AppShell data-testid="shell">화면</AppShell>);
+    const shell = classes(screen.getByTestId("shell"));
 
-    expect(classes(screen.getByTestId("shell"))).toEqual(
+    expect(shell).toEqual(
       expect.arrayContaining([
         "flex",
         "flex-col",
-        "h-screen",
-        "supports-[height:100dvh]:h-dvh",
-        "overflow-hidden",
+        "min-h-screen",
+        "supports-[height:100dvh]:min-h-dvh",
+        "overflow-x-clip",
         "bg-cropy-surface",
       ]),
     );
+    // 틀이 화면 높이에 갇혀 안쪽만 스크롤되던 고정 높이 규칙은 없다
+    expect(shell).not.toEqual(expect.arrayContaining(["h-screen"]));
+    expect(shell).not.toContain("overflow-hidden");
   });
 
-  it("인쇄할 때는 높이 고정을 풀어 본문 전체가 나온다", () => {
-    render(
-      <AppShell data-testid="shell">
-        <AppShellPage>화면</AppShellPage>
+  it("모바일 내비는 화면 아래에 고정된다 (바운스 때 문서와 함께 끌려가지 않게 sticky 가 아니다)", () => {
+    render(<AppShell nav={<nav data-testid="nav">내비</nav>}>화면</AppShell>);
+    const wrapper = classes(screen.getByTestId("nav").parentElement as HTMLElement);
+
+    expect(wrapper).toEqual(
+      expect.arrayContaining(["fixed", "inset-x-0", "bottom-0", "z-10", "lg:hidden", "print:static"]),
+    );
+    expect(wrapper).not.toContain("sticky");
+  });
+
+  it("내비가 있을 때만 화면 자리 아래에 내비 높이만큼 여백을 둔다", () => {
+    const { rerender } = render(
+      <AppShell nav={<nav>내비</nav>}>
+        <main>화면</main>
       </AppShell>,
     );
+    const slot = () => classes(screen.getByRole("main").parentElement as Element);
 
-    expect(classes(screen.getByTestId("shell"))).toEqual(
-      expect.arrayContaining(["print:!h-auto", "print:overflow-visible"]),
+    expect(slot()).toEqual(
+      expect.arrayContaining(["pb-[calc(4.5rem+env(safe-area-inset-bottom))]", "lg:pb-0", "print:pb-0"]),
     );
-    expect(classes(screen.getByRole("region"))).toContain("print:overflow-visible");
+
+    for (const nav of [null, false, undefined]) {
+      rerender(
+        <AppShell nav={nav}>
+          <main>화면</main>
+        </AppShell>,
+      );
+      expect(slot()).not.toContain("pb-[calc(4.5rem+env(safe-area-inset-bottom))]");
+    }
   });
 
-  it("화면 자리는 남은 높이를 차지하고 안쪽이 줄어들 수 있다", () => {
+  it("농장 배경은 문서 길이와 상관없이 화면에 고정된다", () => {
+    const { container } = render(<AppShell>화면</AppShell>);
+    const layer = (container.querySelector("img") as HTMLImageElement).closest("[aria-hidden]");
+
+    expect(classes(layer as Element)).toEqual(
+      expect.arrayContaining(["fixed", "inset-0", "-z-10", "print:absolute"]),
+    );
+  });
+
+  it("화면 자리는 남은 높이를 차지한다", () => {
     render(
       <AppShell>
         <main>화면</main>
@@ -72,7 +104,7 @@ describe("AppShell", () => {
     );
 
     expect(classes(screen.getByRole("main").parentElement as Element)).toEqual(
-      expect.arrayContaining(["flex", "min-h-0", "flex-1", "flex-col"]),
+      expect.arrayContaining(["flex", "flex-1", "flex-col"]),
     );
   });
 
@@ -83,7 +115,7 @@ describe("AppShell", () => {
       </AppShell>,
     );
     expect(classes(screen.getByRole("navigation").parentElement as Element)).toEqual(
-      expect.arrayContaining(["shrink-0", "lg:hidden"]),
+      expect.arrayContaining(["lg:hidden"]),
     );
 
     rerender(<AppShell data-testid="shell">화면</AppShell>);
@@ -148,26 +180,36 @@ describe("AppShellPage", () => {
   it("화면의 main이고 제목 영역 → 본문 → 행동 영역 순서로 놓는다", () => {
     const main = renderPage();
 
+    const actions = screen.getByTestId("actions");
+    const frame = actions.parentElement?.parentElement as HTMLElement;
     expect(Array.from(main.children)).toEqual([
       screen.getByTestId("head"),
       screen.getByRole("region", { name: "본문" }),
-      screen.getByTestId("actions"),
+      // 모바일에서 fixed 로 빠진 행동 영역 높이를 채우는 빈 칸
+      frame.previousElementSibling,
+      // 행동 영역은 ActionDock 의 틀 > 움직이는 안쪽 안에 들어간다
+      frame,
     ]);
+    expect((frame.previousElementSibling as HTMLElement).dataset.actionDockSpacer).toBe("");
   });
 
-  it("본문만 스크롤된다. 제목 영역과 행동 영역은 스크롤 영역 밖에 있다", () => {
+  it("행동 영역이 없으면 감싸는 틀도 그리지 않는다", () => {
+    render(<AppShellPage>본문</AppShellPage>);
+    expect(screen.getByRole("main").children).toHaveLength(1);
+  });
+
+  it("본문 영역은 따로 스크롤되지 않는다. 제목 영역과 함께 문서 스크롤로 흐른다", () => {
     renderPage();
-    const scroll = screen.getByRole("region", { name: "본문" });
+    const region = screen.getByRole("region", { name: "본문" });
 
-    expect(classes(scroll)).toEqual(
-      expect.arrayContaining(["min-h-0", "flex-1", "overflow-y-auto", "overflow-x-hidden"]),
-    );
-    expect(scroll.contains(screen.getByText("본문 하나"))).toBe(true);
-    expect(scroll.contains(screen.getByTestId("head"))).toBe(false);
-    expect(scroll.contains(screen.getByTestId("actions"))).toBe(false);
+    expect(classes(region)).toEqual(expect.arrayContaining(["flex-1", "overflow-x-hidden"]));
+    expect(classes(region)).not.toContain("overflow-y-auto");
+    expect(region.contains(screen.getByText("본문 하나"))).toBe(true);
+    expect(region.contains(screen.getByTestId("head"))).toBe(false);
+    expect(region.contains(screen.getByTestId("actions"))).toBe(false);
   });
 
-  it("본문 영역은 키보드로 스크롤할 수 있게 Tab으로 닿고, 이름을 바꿀 수 있다", () => {
+  it("본문 영역은 화면을 옮길 때 초점을 받도록 Tab으로 닿고, 이름을 바꿀 수 있다", () => {
     renderPage();
     expect(screen.getByRole("region", { name: "본문" }).getAttribute("tabindex")).toBe("0");
 
@@ -204,7 +246,7 @@ describe("AppShellPage", () => {
     expect(ref.current).toBe(screen.getByRole("main"));
     expect(ref.current?.id).toBe("content");
     expect(classes(ref.current as HTMLElement)).toEqual(
-      expect.arrayContaining(["bg-cropy-surface-canvas", "min-h-0", "flex-1"]),
+      expect.arrayContaining(["bg-cropy-surface-canvas", "flex-1"]),
     );
   });
 });
@@ -228,6 +270,9 @@ describe("AppShellFooter", () => {
       expect.arrayContaining([
         "hidden",
         "lg:flex",
+        // 행동 영역(z-10)과 겹치더라도 위에 그려진다
+        "relative",
+        "z-10",
         "min-h-16",
         "shrink-0",
         "border-t",

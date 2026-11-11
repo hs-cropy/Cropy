@@ -1,0 +1,21 @@
+# TTS 서버(server.py) 전용 — Python 3.11 가상환경에 설치한다. 백엔드와 섞지 않는다.
+# CPU 전용 PyTorch 휠 저장소 (GPU 빌드보다 수 GB 작다)
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# MeloTTS는 PyPI 배포가 없어 커밋으로 고정한다 (transformers 4.27.4 등 구버전에 묶여 있음)
+melotts @ git+https://github.com/myshell-ai/MeloTTS.git@209145371cff8fc3bd60d7be902ea69cbdb7965a
+torch==2.14.1+cpu
+torchaudio==2.11.0+cpu
+# 한국어 형태소 분석기 (순수 파이썬). server.py가 g2pkk의 eunjeon/mecab 자리에 연결한다
+pecab==1.0.8
+# pecab이 버전 없이 pyarrow를 요구한다. pyarrow 26부터는 NumPy 2가 필요한데 MeloTTS 의존성(gruut)이
+# numpy<2로 묶어서, 최신을 받으면 기동할 때 import가 실패한다(pip check로는 잡히지 않음).
+# NumPy 1.26에서 동작하는 마지막 버전으로 고정한다
+pyarrow==25.0.1
+# MeloTTS가 쓰는 librosa 0.9.1·cn2an이 pkg_resources를 조건 없이 import한다. torch 등이 setuptools를
+# 버전 없이 요구해 최신이 깔리는데, 82부터 pkg_resources가 빠져 기동할 때 import가 실패한다
+# (pip check로는 잡히지 않음). 제거 직전 버전인 81을 피해 80대로 고정한다
+setuptools<81
+
+fastapi==0.142.2
+uvicorn[standard]==0.54.0

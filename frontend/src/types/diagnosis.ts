@@ -33,6 +33,11 @@ export interface RecaptureGuidance {
   candidates: RecaptureCandidate[];
 }
 
+export interface ManagementActionDetail {
+  title: string;
+  description: string;
+}
+
 export interface DiagnoseResponse {
   id: string;
   disease_name: string;
@@ -44,8 +49,8 @@ export interface DiagnoseResponse {
   model_version?: string | null;
   preprocessing_version?: string | null;
   pair_model_version?: string | null;
-  category?: "disease" | "normal";
-  severity?: Severity;
+  category?: "disease" | "normal" | "other";
+  severity?: Severity | null;
   confidence: number;
   top_predictions: PredictionItem[];
   description?: string;
@@ -58,6 +63,8 @@ export interface DiagnoseResponse {
   updated_at?: string | null;
   recapture?: RecaptureGuidance | null;
   management_actions?: string[];
+  summary_message?: string | null;
+  management_action_details?: ManagementActionDetail[];
   content_status?: "snapshot" | "current_reference";
   content_version?: string | null;
   current_pesticides?: PesticideInfo[];
@@ -79,8 +86,8 @@ export interface DiagnosisSummary {
   refined_image_url?: string | null;
   prediction_mode?: "model" | "mock" | "legacy" | "browser";
   created_at: string;
-  severity?: Severity;
-  category?: "normal" | "disease";
+  severity?: Severity | null;
+  category?: "normal" | "disease" | "other";
   is_refined?: boolean;
   content_status?: string;
 }

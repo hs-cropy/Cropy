@@ -80,7 +80,7 @@ export function SplashScreen() {
         <div className={styles.logoWrap}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/cropy-splash-logo.png"
+            src="/brand/cropy-splash-logo.svg"
             alt="Cropy"
             className={styles.logo}
           />
@@ -88,10 +88,12 @@ export function SplashScreen() {
           <span className={styles.logoShine} aria-hidden="true" />
         </div>
 
-        {/* 타이핑 문구 */}
-        <p className={styles.tagline} aria-label={TAGLINE}>
-          <span className={styles.typingFrame} aria-hidden="true">
-            {/* 문구 전체 너비를 미리 확보해 위치가 흔들리지 않도록 함 */}
+        {/* 스크린리더에는 전체 문구를 한 번에 제공 */}
+        <p className="sr-only">{TAGLINE}</p>
+
+        {/* 화면에는 타이핑 애니메이션 표시 */}
+        <p className={styles.tagline} aria-hidden="true">
+          <span className={styles.typingFrame}>
             <span className={styles.typingPlaceholder}>
               {TAGLINE}
             </span>
@@ -114,13 +116,10 @@ export function SplashScreen() {
           시작하기
         </Link>
 
-        {/* PWA 설치 기능은 추후 연결 */}
-        <button
-          type="button"
-          className={styles.installButton}
-        >
+        {/* 설치 안내는 인터넷 없이도 열리는 정적 페이지라 Link 가 아닌 전체 페이지 이동이다 */}
+        <a href="/offline/install.html" className={styles.installButton}>
           앱 설치하기
-        </button>
+        </a>
       </div>
     </main>
   );

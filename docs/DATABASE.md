@@ -110,6 +110,7 @@ PSIS 제품 식별 정보. 기존 시드에는 23행이 있다. 제품의 사용
 | recapture | JSON | 재촬영 지침, 재촬영 완료 후 NULL |
 | updated_at | DATETIME | 마지막 갱신 UTC 시각 |
 | revision | INTEGER | 동시 수정 검출용 버전, 기본 1 |
+| device_id | VARCHAR(64) | 익명 기기 쿠키의 SHA-256 (쿠키 값 자체는 저장하지 않음). 기기 분리 이전 기록은 NULL이며 API로 조회되지 않음 |
 
 새 이미지 경로는 저장 루트에 독립적인 파일명만 기록한다. 기존 Windows·절대 경로는
 basename을 추출하여 현재 UPLOAD_DIR에서 읽는다. DB와 해당 이미지 파일을 함께 이전해야 한다.
@@ -162,3 +163,9 @@ SQLite가 반환하는 naive UTC 시각은 API에서 UTC offset을 명시한다.
 
 시딩 실패는 트랜잭션을 롤백한다. 운영 DB를 삭제해 재적재하지 말고
 [백업·복구 절차](BACKEND_OPERATIONS.md)를 따른다.
+
+### 진단 결과 안내 필드와 스냅샷
+
+진단 결과 카드: diseases.summary_message(TEXT), management_action_details(JSON)를
+추가하며 seed로 갱신한다. 새 진단 content_snapshot에 함께 보존한다. 기존 진단
+스냅샷·이전 기록에 없는 새 필드는 응답에서 null/[]이며 현재 문구를 소급하지 않는다.

@@ -21,6 +21,11 @@ _model_version: str | None = None
 _pair_model_version: str | None = None
 _mapping_validated = False
 _mapping_error = False
+# "판별 불가"(not a crop leaf, unusable photo). A 9-class checkpoint without it
+# stays valid so code can ship before the model file is replaced.
+OTHER_CLASS_ID = 9
+MODEL_CLASS_IDS = frozenset(range(10))
+OPTIONAL_CLASS_IDS = frozenset({OTHER_CLASS_ID})
 
 
 class ModelUnavailableError(RuntimeError):
@@ -34,8 +39,11 @@ def _model_path() -> Path:
     return model_path
 
 
-def _read_checkpoint(path: Path, expected_ids: set[int]):
-    """Load only tensor-safe data, validate metadata/state, and hash loaded bytes."""
+def _read_checkpoint(path: Path, expected_ids: set[int], optional_ids: frozenset[int] = frozenset()):
+    """Load only tensor-safe data, validate metadata/state, and hash loaded bytes.
+
+    The checkpoint must cover expected_ids exactly, or expected_ids minus optional_ids.
+    """
     import torch
     from torchvision import models
 
@@ -51,7 +59,7 @@ def _read_checkpoint(path: Path, expected_ids: set[int]):
         raise ValueError(f"Unsupported model architecture: {arch!r}")
     num_classes = checkpoint.get("num_classes")
     classes = checkpoint.get("classes")
-    if type(num_classes) is not int or num_classes != len(expected_ids):
+    if type(num_classes) is not int or num_classes not in (len(expected_ids), len(expected_ids - optional_ids)):
         raise ValueError("Checkpoint class count does not match the inference contract")
     if not isinstance(classes, (list, tuple)) or len(classes) != num_classes:
         raise ValueError("Checkpoint classes are missing or have the wrong length")
@@ -60,7 +68,7 @@ def _read_checkpoint(path: Path, expected_ids: set[int]):
         if not isinstance(name, str) or not re.fullmatch(r"(?:0|[1-9][0-9]*)_.+", name):
             raise ValueError("Checkpoint classes must have explicit numbered names")
         class_ids.append(int(name.split("_", 1)[0]))
-    if set(class_ids) != expected_ids or len(set(class_ids)) != num_classes:
+    if set(class_ids) not in (expected_ids, expected_ids - optional_ids) or len(set(class_ids)) != num_classes:
         raise ValueError("Checkpoint classes contain duplicates or unknown IDs")
     img_size = checkpoint.get("img_size", 224)
     if type(img_size) is not int or not 1 <= img_size <= 2048:
@@ -89,7 +97,7 @@ def _load_model():
     _mapping_error = False
     path = _model_path()
     try:
-        loaded, _model_version = _read_checkpoint(path, set(range(9)))
+        loaded, _model_version = _read_checkpoint(path, set(MODEL_CLASS_IDS), OPTIONAL_CLASS_IDS)
         return loaded
     except FileNotFoundError:
         logger.warning("Diagnosis model checkpoint is missing: %s", path)
@@ -120,7 +128,7 @@ def validate_model_mapping(expected_class_ids: set[int]) -> bool:
     """Check the seeded DB IDs against the loaded checkpoint before readiness."""
     global _mapping_validated, _mapping_error
     loaded = _load_model()
-    _mapping_validated = loaded is not None and set(loaded[1]) == expected_class_ids
+    _mapping_validated = loaded is not None and set(loaded[1]) in (expected_class_ids, expected_class_ids - OPTIONAL_CLASS_IDS)
     _mapping_error = loaded is not None and not _mapping_validated
     if _mapping_error:
         logger.error("Model classes do not match database model_class_id values")

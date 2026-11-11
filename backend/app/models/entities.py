@@ -17,8 +17,10 @@ class Disease(Base):
     description = Column(Text)
     causes = Column(JSON, default=list)
     prevention = Column(JSON, default=list)
-    severity = Column(String(20), default="medium")
+    severity = Column(String(20))  # 판별 불가(category other)는 NULL. seed가 항상 값을 준다
     management_actions = Column(JSON, default=list)
+    summary_message = Column(Text)
+    management_action_details = Column(JSON, default=list)
     model_class_id = Column(Integer, unique=True, index=True)
 
     pesticides = relationship(
@@ -80,6 +82,8 @@ class Diagnosis(Base):
     revision = Column(Integer, nullable=False, default=1, server_default="1")
     content_snapshot = Column(JSON)
     severity_snapshot = Column(String(20))
+    # 익명 기기 쿠키의 SHA-256 (app/core/device.py). 이전 기록은 NULL이라 어느 기기에도 보이지 않는다
+    device_id = Column(String(64), index=True)
 
     __mapper_args__ = {"version_id_col": revision}
 

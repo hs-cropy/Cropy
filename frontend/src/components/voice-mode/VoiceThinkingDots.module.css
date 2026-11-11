@@ -1,0 +1,38 @@
+.dot {
+  display: inline-block;
+  opacity: 0.55;
+  transform-origin: center;
+  animation: voice-thinking-bounce 1.35s ease-in-out infinite;
+}
+
+@keyframes voice-thinking-bounce {
+  0%,
+  55%,
+  100% {
+    opacity: 0.55;
+    transform: translateY(0);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translateY(-5px);
+  }
+
+  30% {
+    opacity: 0.75;
+    transform: translateY(1px);
+  }
+
+  38% {
+    opacity: 0.55;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

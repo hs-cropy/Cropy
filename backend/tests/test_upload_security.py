@@ -42,8 +42,9 @@ def test_actual_image_format_controls_storage_and_serving(client, fmt, suffix, m
     served = client.get(image_url)
     assert served.headers["content-type"] == mime
     assert served.headers["x-content-type-options"] == "nosniff"
-    # Preserve model input bytes: no re-encoding or implicit rotation.
-    assert served.content == content
+    # Preserve model input bytes: no re-encoding or implicit rotation. Data
+    # appended after the image is dropped with the metadata.
+    assert served.content == encoded_image(fmt)
 
 
 def test_legacy_html_upload_is_not_served_as_document(client):
@@ -101,6 +102,31 @@ def test_pillow_decompression_bomb_is_client_error(client, monkeypatch):
 def test_non_supported_image_format_rejected(client):
     response = upload(client, encoded_image("GIF"), "photo.gif")
     assert response.status_code == 400
+
+
+@pytest.mark.parametrize("refine", [False, True])
+def test_mpo_jpeg_primary_image_can_be_diagnosed(client, refine):
+    # Some phones save multi-picture JPEGs that Pillow reports as MPO.
+    output = BytesIO()
+    Image.new("RGB", (64, 64), "green").save(
+        output, format="MPO", save_all=True,
+        append_images=[Image.new("RGB", (64, 64), "red")],
+    )
+    content = output.getvalue()
+    with Image.open(BytesIO(content), formats=["JPEG"]) as image:
+        assert image.format == "MPO"
+    endpoint = "/api/v1/diagnose"
+    field = "image_url"
+    if refine:
+        first = upload(client, encoded_image("JPEG")).json()
+        endpoint += f"/{first['id']}/refine"
+        field = "refined_image_url"
+    response = upload(client, content, "phone.jpg", endpoint)
+    assert response.status_code == 200, response.text
+    served = client.get(response.json()[field])
+    assert served.headers["content-type"] == "image/jpeg"
+    with Image.open(BytesIO(served.content)) as image:
+        assert image.getpixel((32, 32))[1] > 100  # primary (green) frame
 
 
 @pytest.mark.parametrize("refine", [False, True])

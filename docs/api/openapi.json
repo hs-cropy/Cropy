@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "CropCare AI",
-    "description": "AI 기반 농작물 병해충 진단 및 스마트 방제 지원 API.\n\n## 사용 순서\n1. `/api/v1/capabilities`에서 지원 작물·업로드 한도·기능을 확인합니다.\n2. `/api/v1/ready`로 실제 모델의 추론 준비 상태를 확인합니다. `/health`는 생존 확인입니다.\n3. `/api/v1/diagnose`에 JPEG/PNG 사진을 multipart로 전송합니다.\n4. 재촬영 안내가 있으면 `/api/v1/diagnose/{diagnosis_id}/refine`을 사용합니다.\n5. HTTP 200이어도 `save_status=failed`이면 `recovery_token`으로 결과 저장을 재시도합니다.\n\n## 공통 규칙\n- 현재 애플리케이션에는 인증·사용자별 이력 분리 기능이 없습니다.\n- 진단 출처는 `prediction_mode`로 확인합니다. 개발용 `mock` 결과는 실제 모델 추론이 아닙니다.\n- 처리된 HTTP 오류·입력 검증 오류·DB 오류·사진 저장 오류는\n  `detail`, `code`, `retryable`, `request_id`를 반환합니다.\n  단, `/ready`의 503은 준비 상태 객체입니다. 응답의 `X-Request-ID`로 요청을 추적합니다.\n  처리되지 않은 서버 예외의 500 응답은 일반 텍스트일 수 있으며 공통 JSON 형식을 보장하지 않습니다.\n- 사진 파일 파트에는 `image/jpeg` 또는 `image/png` Content-Type을 사용합니다.\n  서버는 `image/*` MIME과 실제 JPEG/PNG 파일 내용을 모두 확인합니다.\n  전체 요청 본문 한도는 `upload.max_bytes + 65536`바이트이며,\n  `/api/v1/offline/records`는 `upload.max_bytes * 2 + 65536`바이트입니다.\n- `Idempotency-Key`는 진단·재촬영 요청에서 선택 사항입니다. 같은 키로 동일 요청을 재전송하면\n  보관된 결과를 재사용하며, 다른 사진/작물을 보내면 409입니다.\n- `/uploads/{filename}`은 응답의 이미지 URL을 제공하는 정적 경로입니다.\n  GET/HEAD로 JPEG/PNG를 제공하며 업무 API 목록에는 포함되지 않습니다.\n- Swagger의 **Try it out**은 실제 서버를 호출하므로 진단 및 저장 요청은 기록을 생성할 수 있습니다.\n",
+    "description": "AI 기반 농작물 병해충 진단 및 스마트 방제 지원 API.\n\n## 사용 순서\n1. `/api/v1/capabilities`에서 지원 작물·업로드 한도·기능을 확인합니다.\n2. `/api/v1/ready`로 실제 모델의 추론 준비 상태를 확인합니다. `/health`는 생존 확인입니다.\n3. `/api/v1/diagnose`에 JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진을 multipart로 전송합니다.\n4. 재촬영 안내가 있으면 `/api/v1/diagnose/{diagnosis_id}/refine`을 사용합니다.\n5. HTTP 200이어도 `save_status=failed`이면 `recovery_token`으로 결과 저장을 재시도합니다.\n\n## 공통 규칙\n- 현재 애플리케이션에는 인증·사용자별 이력 분리 기능이 없습니다.\n- 진단 출처는 `prediction_mode`로 확인합니다. 개발용 `mock` 결과는 실제 모델 추론이 아닙니다.\n- 처리된 HTTP 오류·입력 검증 오류·DB 오류·사진 저장 오류는\n  `detail`, `code`, `retryable`, `request_id`를 반환합니다.\n  단, `/ready`의 503은 준비 상태 객체입니다. 응답의 `X-Request-ID`로 요청을 추적합니다.\n  처리되지 않은 서버 예외의 500 응답은 일반 텍스트일 수 있으며 공통 JSON 형식을 보장하지 않습니다.\n- 사진 파일 파트에는 해당 형식의 `image/*` Content-Type을 사용합니다.\n  모바일에서 MIME을 알 수 없는 경우 누락 또는 `application/octet-stream`도 허용하되 실제 파일을 디코딩해 검사합니다.\n  HEIC/HEIF·DNG·WebP·AVIF 및 긴 변 4096픽셀 초과 사진은 JPEG로 변환합니다.\n  전체 요청 본문 한도는 `upload.max_bytes + 65536`바이트이며,\n  `/api/v1/offline/records`는 `upload.max_bytes * 2 + 65536`바이트입니다.\n- `Idempotency-Key`는 진단·재촬영 요청에서 선택 사항입니다. 같은 키로 동일 요청을 재전송하면\n  보관된 결과를 재사용하며, 다른 사진/작물을 보내면 409입니다.\n- `/uploads/{filename}`은 응답의 이미지 URL을 제공하는 정적 경로입니다.\n  GET/HEAD로 JPEG/PNG를 제공하며 업무 API 목록에는 포함되지 않습니다.\n- Swagger의 **Try it out**은 실제 서버를 호출하므로 진단 및 저장 요청은 기록을 생성할 수 있습니다.\n",
     "version": "1.0.0"
   },
   "paths": {
@@ -382,8 +382,18 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v1:low=0.5",
-                      "save_status": "saved"
+                      "policy_version": "decision-v2:low=0.5",
+                      "save_status": "saved",
+                      "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
+                      "management_actions": [
+                        "감염 부위 제거"
+                      ],
+                      "management_action_details": [
+                        {
+                          "title": "감염 부위 제거",
+                          "description": "병든 과실과 잔재를 주변에 남기지 마세요."
+                        }
+                      ]
                     }
                   },
                   "save_failed": {
@@ -420,9 +430,19 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v1:low=0.5",
+                      "policy_version": "decision-v2:low=0.5",
                       "save_status": "failed",
-                      "recovery_token": "ed6b3b3a-ecb4-4fc9-a681-4d870567fb62"
+                      "recovery_token": "ed6b3b3a-ecb4-4fc9-a681-4d870567fb62",
+                      "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
+                      "management_actions": [
+                        "감염 부위 제거"
+                      ],
+                      "management_action_details": [
+                        {
+                          "title": "감염 부위 제거",
+                          "description": "병든 과실과 잔재를 주변에 남기지 마세요."
+                        }
+                      ]
                     }
                   }
                 }
@@ -528,6 +548,30 @@
                   "detail": "같은 요청 키로 다른 사진이나 작물을 보낼 수 없습니다.",
                   "code": "IDEMPOTENCY_CONFLICT",
                   "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "사진 전송이 멈췄거나(UPLOAD_IDLE_TIMEOUT_SECONDS, 기본 20초) 전체 전송 시간(UPLOAD_TIMEOUT_SECONDS, 기본 300초)을 넘음",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "사진 전송 시간이 초과되었습니다. 연결 상태를 확인하고 다시 시도해 주세요.",
+                  "code": "UPLOAD_TIMEOUT",
+                  "retryable": true,
                   "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
                 },
                 "schema": {
@@ -655,8 +699,18 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v1:low=0.5",
+                      "policy_version": "decision-v2:low=0.5",
                       "save_status": "saved",
+                      "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
+                      "management_actions": [
+                        "감염 부위 제거"
+                      ],
+                      "management_action_details": [
+                        {
+                          "title": "감염 부위 제거",
+                          "description": "병든 과실과 잔재를 주변에 남기지 마세요."
+                        }
+                      ],
                       "refined_image_url": "/uploads/2ad7851e-375d-4099-b24b-872aa6a0ad04.jpg",
                       "initial_predictions": [
                         {
@@ -708,9 +762,19 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v1:low=0.5",
+                      "policy_version": "decision-v2:low=0.5",
                       "save_status": "failed",
                       "recovery_token": "ed6b3b3a-ecb4-4fc9-a681-4d870567fb62",
+                      "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
+                      "management_actions": [
+                        "감염 부위 제거"
+                      ],
+                      "management_action_details": [
+                        {
+                          "title": "감염 부위 제거",
+                          "description": "병든 과실과 잔재를 주변에 남기지 마세요."
+                        }
+                      ],
                       "refined_image_url": "/uploads/2ad7851e-375d-4099-b24b-872aa6a0ad04.jpg",
                       "initial_predictions": [
                         {
@@ -831,6 +895,30 @@
                   "detail": "모델 또는 진단이 변경되었습니다. 새 진단을 시작해 주세요.",
                   "code": "MODEL_VERSION_CONFLICT",
                   "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "사진 전송이 멈췄거나(UPLOAD_IDLE_TIMEOUT_SECONDS, 기본 20초) 전체 전송 시간(UPLOAD_TIMEOUT_SECONDS, 기본 300초)을 넘음",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "사진 전송 시간이 초과되었습니다. 연결 상태를 확인하고 다시 시도해 주세요.",
+                  "code": "UPLOAD_TIMEOUT",
+                  "retryable": true,
                   "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
                 },
                 "schema": {
@@ -1396,6 +1484,161 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "diagnosis"
+        ],
+        "summary": "내 진단 기록 삭제",
+        "description": "이 기기(익명 기기 쿠키)의 진단 기록 하나를 사진과 함께 삭제합니다. 성공하면 본문 없이 204입니다. 다른 기기의 기록이나 없는 기록은 404이며 되돌릴 수 없습니다. 같은 기록의 재촬영이 먼저 저장되면 409이고 기록은 그대로 남습니다.",
+        "operationId": "delete_history_api_v1_history__diagnosis_id__delete",
+        "parameters": [
+          {
+            "name": "diagnosis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Diagnosis Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "413": {
+            "description": "전체 요청 본문 크기 초과 (REQUEST_TOO_LARGE)",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "요청 크기가 너무 큽니다. 업로드할 파일 크기를 줄여 주세요.",
+                  "code": "REQUEST_TOO_LARGE",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "요청 항목을 확인해 주세요.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "요청 항목을 확인해 주세요.",
+                  "code": "VALIDATION_ERROR",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "처리되지 않은 서버 예외. 공통 JSON 오류 형식을 보장하지 않습니다.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Internal Server Error"
+              }
+            }
+          },
+          "404": {
+            "description": "진단 기록을 찾을 수 없습니다.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "진단 기록을 찾을 수 없습니다.",
+                  "code": "DIAGNOSIS_NOT_FOUND",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "기록이 방금 변경되었습니다. 기록을 다시 확인해 주세요.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "기록이 방금 변경되었습니다. 기록을 다시 확인해 주세요.",
+                  "code": "DIAGNOSIS_CHANGED",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "기록 처리에 실패했습니다. 다시 시도해 주세요.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "기록 처리에 실패했습니다. 다시 시도해 주세요.",
+                  "code": "DATABASE_UNAVAILABLE",
+                  "retryable": true,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/diseases": {
@@ -1807,7 +2050,7 @@
           "offline"
         ],
         "summary": "기기 진단 기록을 서버에 동기화",
-        "description": "브라우저에서 생성한 예측값과 사진을 저장합니다. 서버 모델 재추론은 수행하지 않으며 prediction_mode=browser입니다. metadata는 JSON 객체를 문자열로 직렬화한 multipart 폼 필드입니다. predictions는 클래스 0~8을 각각 포함한 9개 확률이고 합계는 1±0.001이어야 합니다. created_at은 시간대가 필요하고 2000년 이후·서버 현재 시각+5분 이하여야 합니다. 버전들은 해당 묶음 manifest와 일치해야 합니다. 재촬영 시 refined_predictions와 refined_file을 함께 보내세요. client_record_id로 중복을 판별하며 동일 ID에 다른 내용을 보내면 409입니다. HTTP 200의 save_status도 확인하세요.",
+        "description": "브라우저에서 생성한 예측값과 사진을 저장합니다. 서버 모델 재추론은 수행하지 않으며 prediction_mode=browser입니다. metadata는 JSON 객체를 문자열로 직렬화한 multipart 폼 필드입니다. predictions는 묶음 manifest의 class_ids(0~8 또는 0~9)를 각각 한 번씩 포함한 확률이고 합계는 1±0.001이어야 합니다. created_at은 시간대가 필요하고 2000년 이후·서버 현재 시각+5분 이하여야 합니다. 버전들은 해당 묶음 manifest와 일치해야 합니다. 재촬영 시 refined_predictions와 refined_file을 함께 보내세요. client_record_id로 중복을 판별하며 동일 ID에 다른 내용을 보내면 409입니다. HTTP 200의 save_status도 확인하세요.",
         "operationId": "sync_record_api_v1_offline_records_post",
         "requestBody": {
           "content": {
@@ -1862,8 +2105,18 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v1:low=0.5",
-                      "save_status": "saved"
+                      "policy_version": "decision-v2:low=0.5",
+                      "save_status": "saved",
+                      "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
+                      "management_actions": [
+                        "감염 부위 제거"
+                      ],
+                      "management_action_details": [
+                        {
+                          "title": "감염 부위 제거",
+                          "description": "병든 과실과 잔재를 주변에 남기지 마세요."
+                        }
+                      ]
                     }
                   },
                   "save_failed": {
@@ -1900,9 +2153,19 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v1:low=0.5",
+                      "policy_version": "decision-v2:low=0.5",
                       "save_status": "failed",
-                      "recovery_token": "ed6b3b3a-ecb4-4fc9-a681-4d870567fb62"
+                      "recovery_token": "ed6b3b3a-ecb4-4fc9-a681-4d870567fb62",
+                      "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
+                      "management_actions": [
+                        "감염 부위 제거"
+                      ],
+                      "management_action_details": [
+                        {
+                          "title": "감염 부위 제거",
+                          "description": "병든 과실과 잔재를 주변에 남기지 마세요."
+                        }
+                      ]
                     }
                   }
                 }
@@ -2016,6 +2279,30 @@
               }
             }
           },
+          "408": {
+            "description": "사진 전송이 멈췄거나(UPLOAD_IDLE_TIMEOUT_SECONDS, 기본 20초) 전체 전송 시간(UPLOAD_TIMEOUT_SECONDS, 기본 300초)을 넘음",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "사진 전송 시간이 초과되었습니다. 연결 상태를 확인하고 다시 시도해 주세요.",
+                  "code": "UPLOAD_TIMEOUT",
+                  "retryable": true,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
           "503": {
             "description": "DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가",
             "headers": {
@@ -2050,9 +2337,9 @@
         "properties": {
           "file": {
             "type": "string",
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
-            "description": "JPEG/PNG 원본 사진. 파일 파트의 Content-Type은 image/jpeg 또는 image/png 사용(image/* 필수). 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조."
+            "description": "JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진. image/* 또는 application/octet-stream(MIME 누락 가능). 실제 디코딩으로 검증하며 새 형식·고해상도 사진은 긴 변 4096픽셀 이하 JPEG로 변환합니다. 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조. RAW 지원은 서버 디코더가 읽을 수 있는 압축 방식에 한합니다."
           }
         },
         "type": "object",
@@ -2065,9 +2352,9 @@
         "properties": {
           "file": {
             "type": "string",
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
-            "description": "JPEG/PNG 원본 사진. 파일 파트의 Content-Type은 image/jpeg 또는 image/png 사용(image/* 필수). 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조."
+            "description": "JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진. image/* 또는 application/octet-stream(MIME 누락 가능). 실제 디코딩으로 검증하며 새 형식·고해상도 사진은 긴 변 4096픽셀 이하 JPEG로 변환합니다. 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조. RAW 지원은 서버 디코더가 읽을 수 있는 압축 방식에 한합니다."
           }
         },
         "type": "object",
@@ -2086,22 +2373,22 @@
               "$ref": "#/components/schemas/LocalRecord"
             },
             "title": "Metadata",
-            "description": "LocalRecord 스키마의 JSON 문자열. 필수: client_record_id(UUID), model_version(100자 이하), preprocessing_version(100자 이하), bundle_version(64자리 소문자 16진수), created_at(시간대 포함), predictions(9개 class_id/confidence). 선택: selected_crop(고추/무/배추), refined_predictions(동일한 9개 분포). 예시의 버전은 실제 manifest 값으로 교체하세요. 버전 형식 오류는 422, 정상 형식의 미지원 묶음은 409입니다.",
+            "description": "LocalRecord 스키마의 JSON 문자열. 필수: client_record_id(UUID), model_version(100자 이하), preprocessing_version(100자 이하), bundle_version(64자리 소문자 16진수), created_at(시간대 포함), predictions(manifest class_ids 전체의 class_id/confidence). 선택: selected_crop(고추/무/배추), refined_predictions(같은 클래스 분포). 예시의 버전은 실제 manifest 값으로 교체하세요. 버전 형식 오류는 422, 정상 형식의 미지원 묶음은 409입니다.",
             "examples": [
               "{\"client_record_id\": \"4da54046-bae9-4249-a4b3-85d17b83ee40\", \"selected_crop\": \"고추\", \"model_version\": \"manifest의 model_version\", \"preprocessing_version\": \"manifest의 preprocessing_version\", \"bundle_version\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\", \"created_at\": \"2026-10-15T09:00:00+09:00\", \"predictions\": [{\"class_id\": 0, \"confidence\": 0.6}, {\"class_id\": 1, \"confidence\": 0.05}, {\"class_id\": 2, \"confidence\": 0.05}, {\"class_id\": 3, \"confidence\": 0.05}, {\"class_id\": 4, \"confidence\": 0.05}, {\"class_id\": 5, \"confidence\": 0.05}, {\"class_id\": 6, \"confidence\": 0.05}, {\"class_id\": 7, \"confidence\": 0.05}, {\"class_id\": 8, \"confidence\": 0.05}]}"
             ]
           },
           "file": {
             "type": "string",
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
-            "description": "JPEG/PNG 원본 사진. 파일 파트의 Content-Type은 image/jpeg 또는 image/png 사용(image/* 필수). 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조."
+            "description": "JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진. image/* 또는 application/octet-stream(MIME 누락 가능). 실제 디코딩으로 검증하며 새 형식·고해상도 사진은 긴 변 4096픽셀 이하 JPEG로 변환합니다. 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조. RAW 지원은 서버 디코더가 읽을 수 있는 압축 방식에 한합니다."
           },
           "refined_file": {
             "anyOf": [
               {
                 "type": "string",
-                "contentMediaType": "application/octet-stream"
+                "format": "binary"
               },
               {
                 "type": "null"
@@ -2180,7 +2467,7 @@
               ],
               "low_confidence_threshold": 0.5,
               "second_photo_weight": 0.6,
-              "version": "decision-v1"
+              "version": "decision-v2"
             },
             "execution": {
               "browser_bundle_available": false,
@@ -2192,10 +2479,15 @@
             "upload": {
               "formats": [
                 "JPEG",
-                "PNG"
+                "PNG",
+                "HEIC",
+                "HEIF",
+                "DNG",
+                "WEBP",
+                "AVIF"
               ],
-              "max_bytes": 10485760,
-              "max_pixels": 40000000
+              "max_bytes": 104857600,
+              "max_pixels": 210000000
             }
           }
         ]
@@ -2343,13 +2635,20 @@
           "category": {
             "type": "string",
             "title": "Category",
-            "description": "클래스 분류: disease, pest, normal 등",
+            "description": "클래스 분류: disease, normal, other(판별 불가)",
             "default": "disease"
           },
           "severity": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Severity",
-            "description": "참고 정보의 심각도: high/medium/low",
+            "description": "참고 정보의 심각도: high/medium/low. 판별 불가(category other)는 null",
             "default": "medium"
           },
           "confidence": {
@@ -2469,6 +2768,26 @@
             "title": "Management Actions",
             "description": "관리·방제 행동 안내"
           },
+          "summary_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary Message",
+            "description": "결과 카드의 고정 한 줄 참고 안내. 이전 기록에 없으면 null; 진단 확정을 뜻하지 않음"
+          },
+          "management_action_details": {
+            "items": {
+              "$ref": "#/components/schemas/ManagementActionDetail"
+            },
+            "type": "array",
+            "title": "Management Action Details",
+            "description": "management_actions와 순서·개수가 같은 제목·설명. 이전 기록에 없으면 []"
+          },
           "content_status": {
             "type": "string",
             "enum": [
@@ -2502,7 +2821,7 @@
           "decision_status": {
             "type": "string",
             "title": "Decision Status",
-            "description": "판단 상태: crop_mismatch, confusion, low_confidence, normal, disease",
+            "description": "판단 상태: not_crop(작물 잎으로 알아볼 수 없음), crop_mismatch, confusion, low_confidence, normal, disease",
             "default": "disease"
           },
           "decision_reasons": {
@@ -2585,12 +2904,22 @@
             "id": "4da54046-bae9-4249-a4b3-85d17b83ee40",
             "image_url": "/uploads/4da54046-bae9-4249-a4b3-85d17b83ee40.jpg",
             "is_refined": false,
-            "policy_version": "decision-v1:low=0.5",
+            "management_action_details": [
+              {
+                "description": "병든 과실과 잔재를 주변에 남기지 마세요.",
+                "title": "감염 부위 제거"
+              }
+            ],
+            "management_actions": [
+              "감염 부위 제거"
+            ],
+            "policy_version": "decision-v2:low=0.5",
             "predicted_crop": "고추",
             "prediction_mode": "model",
             "save_status": "saved",
             "selected_crop": "고추",
             "severity": "high",
+            "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
             "top_predictions": [
               {
                 "confidence": 0.87,
@@ -2667,11 +2996,18 @@
             "default": "legacy"
           },
           "severity": {
-            "type": "string",
-            "enum": [
-              "high",
-              "medium",
-              "low"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ]
+              },
+              {
+                "type": "null"
+              }
             ],
             "title": "Severity",
             "default": "medium"
@@ -2758,7 +3094,14 @@
             "default": []
           },
           "severity": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Severity"
           },
           "pesticides": {
@@ -2898,6 +3241,26 @@
           }
         ]
       },
+      "ManagementActionDetail": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "management_actions의 같은 위치에 있는 할 일 제목"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "할 일의 짧은 설명"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "description"
+        ],
+        "title": "ManagementActionDetail"
+      },
       "ManifestDisease": {
         "properties": {
           "key": {
@@ -2945,8 +3308,16 @@
             "title": "Prevention"
           },
           "severity": {
-            "type": "string",
-            "title": "Severity"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity",
+            "description": "판별 불가(category other)는 null"
           },
           "management_actions": {
             "items": {
@@ -2954,6 +3325,24 @@
             },
             "type": "array",
             "title": "Management Actions"
+          },
+          "summary_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary Message"
+          },
+          "management_action_details": {
+            "items": {
+              "$ref": "#/components/schemas/ManagementActionDetail"
+            },
+            "type": "array",
+            "title": "Management Action Details"
           },
           "pesticides": {
             "items": {
@@ -3520,11 +3909,16 @@
             },
             "type": "array",
             "title": "Formats",
-            "description": "허용 이미지 형식",
+            "description": "허용 이미지 형식(RAW 압축 방식은 디코더 지원에 따름)",
             "examples": [
               [
                 "JPEG",
-                "PNG"
+                "PNG",
+                "HEIC",
+                "HEIF",
+                "DNG",
+                "WEBP",
+                "AVIF"
               ]
             ]
           },
@@ -3550,12 +3944,14 @@
       "LocalPrediction": {
         "properties": {
           "class_id": {
-            "description": "클래스 ID 0~8. 분포 내에서 각각 한 번씩 포함",
+            "description": "클래스 ID. 묶음 manifest의 class_ids를 각각 한 번씩 포함",
+            "maximum": 9,
+            "minimum": 0,
             "title": "Class Id",
             "type": "integer"
           },
           "confidence": {
-            "description": "확률(0~1). 9개 합계는 1±0.001",
+            "description": "확률(0~1). 전체 합계는 1±0.001",
             "maximum": 1.0,
             "minimum": 0.0,
             "title": "Confidence",
@@ -3622,7 +4018,7 @@
             "items": {
               "$ref": "#/components/schemas/LocalPrediction"
             },
-            "maxItems": 9,
+            "maxItems": 10,
             "minItems": 9,
             "title": "Predictions",
             "type": "array"
@@ -3633,7 +4029,7 @@
                 "items": {
                   "$ref": "#/components/schemas/LocalPrediction"
                 },
-                "maxItems": 9,
+                "maxItems": 10,
                 "minItems": 9,
                 "type": "array"
               },

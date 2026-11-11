@@ -17,8 +17,11 @@ DIAGNOSIS_EXAMPLE = {
     "created_at": "2026-10-15T00:00:00Z", "updated_at": "2026-10-15T00:00:00Z",
     "image_url": "/uploads/4da54046-bae9-4249-a4b3-85d17b83ee40.jpg",
     "recapture": None, "is_refined": False, "content_status": "snapshot",
-    "decision_status": "disease", "decision_reasons": [], "policy_version": "decision-v1:low=0.5",
+    "decision_status": "disease", "decision_reasons": [], "policy_version": "decision-v3:low=0.8",
     "save_status": "saved", "recovery_token": None,
+    "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
+    "management_actions": ["감염 부위 제거"],
+    "management_action_details": [{"title": "감염 부위 제거", "description": "병든 과실과 잔재를 주변에 남기지 마세요."}],
 }
 
 
@@ -71,6 +74,11 @@ class PesticideInfo(TimestampedResponse):
     synced_at: datetime | None = None
 
 
+class ManagementActionDetail(BaseModel):
+    title: str = Field(description="management_actions의 같은 위치에 있는 할 일 제목")
+    description: str = Field(description="할 일의 짧은 설명")
+
+
 class DiagnoseResponse(TimestampedResponse):
     model_config = {"json_schema_extra": {"examples": [DIAGNOSIS_EXAMPLE]}}
     id: str = Field(description="진단 기록 ID. 이력 조회·재촬영에 사용")
@@ -83,8 +91,8 @@ class DiagnoseResponse(TimestampedResponse):
     model_version: str | None = Field(None, description="추론 모델 버전/체크포인트 해시")
     preprocessing_version: str | None = Field(None, description="이미지 전처리 버전")
     pair_model_version: str | None = Field(None, description="사용한 혼동쌍 보조 모델 버전")
-    category: str = Field("disease", description="클래스 분류: disease, pest, normal 등")
-    severity: str = Field("medium", description="참고 정보의 심각도: high/medium/low")
+    category: str = Field("disease", description="클래스 분류: disease, normal, other(판별 불가)")
+    severity: str | None = Field("medium", description="참고 정보의 심각도: high/medium/low. 판별 불가(category other)는 null")
     confidence: float = Field(description="최상위 예측 확률(0~1)", examples=[0.87])
     top_predictions: list[PredictionItem] = Field(description="상위 예측 후보")
     description: str | None = Field(None, description="병해·정상 클래스 설명")
@@ -97,16 +105,25 @@ class DiagnoseResponse(TimestampedResponse):
     updated_at: datetime | None = Field(None, description="최종 갱신 시각(시간대 포함)")
     recapture: RecaptureGuidance | None = Field(None, description="혼동쌍 판별을 위한 재촬영 부위·안내. 없으면 null")
     management_actions: list[str] = Field(default_factory=list, description="관리·방제 행동 안내")
+    summary_message: str | None = Field(None, description="결과 카드의 고정 한 줄 참고 안내. 이전 기록에 없으면 null; 진단 확정을 뜻하지 않음")
+    management_action_details: list[ManagementActionDetail] = Field(default_factory=list, description="management_actions와 순서·개수가 같은 제목·설명. 이전 기록에 없으면 []")
     content_status: Literal["snapshot", "current_reference"] = Field("current_reference", description="snapshot: 당시 참고 정보 보존, current_reference: 현재 정보로 보완한 이전 기록")
     content_version: str | None = Field(None, description="참고 정보 버전")
     current_pesticides: list[PesticideInfo] = Field(default_factory=list, description="현재 DB 기준 농약 참고 정보")
-    decision_status: str = Field("disease", description="판단 상태: crop_mismatch, confusion, low_confidence, normal, disease")
+    decision_status: str = Field("disease", description="판단 상태: not_crop(작물 잎으로 알아볼 수 없음), crop_mismatch, confusion, low_confidence, normal, disease")
     decision_reasons: list[str] = Field(default_factory=list, description="판단 보류·재촬영 등의 사유")
     policy_version: str | None = Field(None, description="판단 정책 버전")
     is_refined: bool = Field(False, description="재촬영 반영 여부")
     initial_predictions: list[PredictionItem] = Field(default_factory=list, description="재촬영 전 최초 예측 후보")
     save_status: Literal["saved", "failed"] = Field("saved", description="DB 저장 상태. failed여도 진단 결과는 반환될 수 있음")
     recovery_token: str | None = Field(None, description="저장 실패 시 /api/v1/results/{token}/save에 사용할 토큰")
+
+
+class SpeechScript(BaseModel):
+    """음성으로 읽어줄 문장. TTS 서버가 없을 때 프론트가 브라우저 음성으로 읽는 데도 쓴다."""
+
+    sentences: list[str]
+    text: str
 
 
 class DiagnosisSummary(TimestampedResponse):
@@ -118,7 +135,7 @@ class DiagnosisSummary(TimestampedResponse):
     created_at: datetime
     refined_image_url: str | None = None
     prediction_mode: str = "legacy"
-    severity: Severity = "medium"
+    severity: Severity | None = "medium"
     category: str = "disease"
     is_refined: bool = False
     content_status: str = "current_reference"
@@ -150,7 +167,7 @@ class DiseaseDetail(BaseModel):
     description: str | None = None
     causes: list[str] = []
     prevention: list[str] = []
-    severity: str
+    severity: str | None
     pesticides: list[PesticideInfo] = []
 
 

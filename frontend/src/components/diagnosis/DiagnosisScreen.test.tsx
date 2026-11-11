@@ -13,7 +13,11 @@ import { ApiError, diagnoseImage, fetchDiagnosisDetail, refineDiagnosis } from "
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { AppFrame } from "../AppFrame";
 import { ANALYZING_MS, analyzingHold } from "./analyzingHold";
-import { gradeOf, resultTimeSentence } from "./DiagnosisResultView";
+import {
+  DiagnosisResultView,
+  gradeOf,
+  resultTimeSentence,
+} from "./DiagnosisResultView";
 
 vi.mock("next/navigation", async () => (await import("@/testing/fakeNavigation")).nextNavigation);
 vi.mock("next/link", async () => ({
@@ -130,6 +134,7 @@ afterEach(() => {
   document.removeEventListener("click", stopNavigation);
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  Reflect.deleteProperty(document, "scrollingElement");
 });
 
 describe("진단 시작 안내 (M-03-1 · D-03-1)", () => {
@@ -288,6 +293,52 @@ describe("사진 분석 중 (M-02 · D-02)", () => {
       expect(title()).toBe("사진 분석 중");
     }
 
+    it.each([
+      ["성공", false],
+      ["실패", true],
+    ] as const)(
+      "분석 중 아래로 스크롤했더라도 %s 화면은 맨 위에서 시작한다",
+      async (_, failed) => {
+        const scrollTo = vi.fn();
+
+        Object.defineProperty(document, "scrollingElement", {
+          configurable: true,
+          value: {
+            scrollTo,
+          },
+        });
+        if (failed) {
+          vi.mocked(diagnoseImage).mockRejectedValue(
+            new TypeError("Failed to fetch"),
+          );
+        } else {
+          vi.mocked(diagnoseImage).mockResolvedValue(response());
+        }
+
+        await startDiagnosis();
+
+        // 분석 중 화면으로 이동하면서 발생한 호출은 제외한다.
+        scrollTo.mockClear();
+
+        await act(() => vi.advanceTimersByTimeAsync(ANALYZING_MS));
+
+        if (failed) {
+          expect(
+            screen.getByRole("alert", {
+              name: "인터넷 연결을 확인해주세요",
+            }),
+          ).toBeTruthy();
+        } else {
+          expect(title()).toBe("진단 결과");
+        }
+
+        expect(scrollTo).toHaveBeenCalledWith({
+          top: 0,
+          behavior: "instant",
+        });
+      },
+    );
+
     it("응답이 바로 와도 3초가 지나야 결과로 넘어간다", async () => {
       vi.mocked(diagnoseImage).mockResolvedValue(response());
       await startDiagnosis();
@@ -412,6 +463,39 @@ describe("진단 결과 (M-03 · D-03)", () => {
     }
   });
 
+  it.each([
+    ["저장에 실패해도", { save_status: "failed" as const }],
+    ["브라우저 진단이어도", { prediction_mode: "browser" as const }],
+  ])("판별 불가는 %s 재촬영 안내로 간다", async (_, extra) => {
+    vi.mocked(diagnoseImage).mockResolvedValue(
+      response({ disease_name: "판별 불가", category: "other", severity: null, decision_status: "not_crop",
+        decision_reasons: ["not_crop"], ...extra }),
+    );
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await screen.findByRole("heading", { name: "작물 잎을 찾지 못했어요" });
+    expect(screen.queryByText("지금 해야 할 일")).toBeNull();
+  });
+
+  it("판별 불가 결과는 신뢰도 대신 작물 잎을 다시 찍도록 안내한다", async () => {
+    vi.mocked(diagnoseImage).mockResolvedValue(
+      response({
+        disease_name: "판별 불가",
+        category: "other",
+        confidence: 0.91,
+        decision_status: "not_crop",
+        decision_reasons: ["not_crop"],
+      }),
+    );
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await screen.findByRole("heading", { name: "작물 잎을 찾지 못했어요" });
+    expect(screen.queryByText(/AI 진단 신뢰도/)).toBeNull();
+    expect(screen.getByRole("button", { name: "다시 촬영하기" })).toBeTruthy();
+  });
+
   it("브라우저 카메라가 없으면 저신뢰 결과의 다시 촬영하기는 기기 카메라(파일 선택)를 연다", async () => {
     vi.mocked(diagnoseImage).mockResolvedValue(
       response({ confidence: 0.42, decision_reasons: ["low_confidence"] }),
@@ -487,6 +571,53 @@ describe("진단 결과 화면 새로고침", () => {
 
     expect(title()).toBe("진단 시작");
     expect(fetchDiagnosisDetail).not.toHaveBeenCalled();
+  });
+
+  it("새로고침 후 결과를 복원할 때는 문서 스크롤을 초기화하지 않는다", async () => {
+    const scrollTo = vi.fn();
+    const original = Object.getOwnPropertyDescriptor(document, "scrollingElement");
+
+    Object.defineProperty(document, "scrollingElement", {
+      configurable: true,
+      value: { scrollTo },
+    });
+
+    try {
+      let resolveDetail!: (value: DiagnoseResponse) => void;
+
+      vi.mocked(fetchDiagnosisDetail).mockReturnValue(
+        new Promise<DiagnoseResponse>((resolve) => {
+          resolveDetail = resolve;
+        }),
+      );
+
+      sessionStorage.setItem("cropy:lastDiagnosisId", "d1");
+      fakeNavigation.reset("/diagnosis");
+
+      renderHome();
+
+      // 복원 중 상태에서는 스크롤을 변경하지 않는다.
+      expect(
+        screen.getByText("마지막 진단 결과를 불러오고 있어요"),
+      ).toBeTruthy();
+      expect(scrollTo).not.toHaveBeenCalled();
+
+      // 저장된 진단 결과를 불러온다.
+      await act(async () => {
+        resolveDetail(response());
+      });
+
+      expect(title()).toBe("진단 결과");
+
+      // restoring → result 전환도 기존 스크롤 위치를 유지한다.
+      expect(scrollTo).not.toHaveBeenCalled();
+    } finally {
+      if (original) {
+        Object.defineProperty(document, "scrollingElement", original);
+      } else {
+        Reflect.deleteProperty(document, "scrollingElement");
+      }
+    }
   });
 });
 
@@ -971,5 +1102,71 @@ describe("결과 표시 도우미", () => {
     expect(gradeOf(response({ category: "normal" }))?.label).toBe("정상");
     expect(gradeOf(response({ severity: "high" }))?.label).toBe("위험");
     expect(gradeOf(response({ severity: undefined }))).toBeNull();
+  });
+});
+describe.each([false, true])("결과 안내 표시 desktop=%s", (desktop) => {
+  it("응답의 한 줄 안내와 행동별 설명을 표시한다", () => {
+    render(
+      <DiagnosisResultView
+        result={response({
+          summary_message: "결과 카드 테스트 안내",
+          management_action_details: [
+            {
+              title: "감염 부위 제거",
+              description: "첫 번째 행동 테스트 설명",
+            },
+            {
+              title: "주변 포기 확인",
+              description: "두 번째 행동 테스트 설명",
+            },
+          ],
+        })}
+        photo={null}
+        desktop={desktop}
+      />,
+    );
+
+    expect(screen.getByText("결과 카드 테스트 안내")).toBeTruthy();
+    expect(screen.getByText("첫 번째 행동 테스트 설명")).toBeTruthy();
+    expect(screen.getByText("두 번째 행동 테스트 설명")).toBeTruthy();
+  });
+
+  it("상세 설명이 없는 이전 기록은 행동 제목을 유지한다", () => {
+    render(
+      <DiagnosisResultView
+        result={response({
+          summary_message: null,
+          management_action_details: [],
+        })}
+        photo={null}
+        desktop={desktop}
+        isRecord
+      />,
+    );
+
+    expect(screen.getByText("감염 부위 제거")).toBeTruthy();
+    expect(screen.getByText("주변 포기 확인")).toBeTruthy();
+    expect(screen.queryByText("결과 카드 테스트 안내")).toBeNull();
+  });
+
+  it("행동 제목과 일치하지 않는 설명은 표시하지 않는다", () => {
+    render(
+      <DiagnosisResultView
+        result={response({
+          management_action_details: [
+            {
+              title: "다른 행동 제목",
+              description: "표시하면 안 되는 설명",
+            },
+          ],
+        })}
+        photo={null}
+        desktop={desktop}
+      />,
+    );
+
+    expect(screen.getByText("감염 부위 제거")).toBeTruthy();
+    expect(screen.queryByText("다른 행동 제목")).toBeNull();
+    expect(screen.queryByText("표시하면 안 되는 설명")).toBeNull();
   });
 });

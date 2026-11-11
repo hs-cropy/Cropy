@@ -11,6 +11,9 @@ os.environ["DATABASE_URL"] = f"sqlite:///{Path(_tmp) / 'test.db'}"
 os.environ["UPLOAD_DIR"] = str(Path(_tmp) / "uploads")
 # 상한 초과 케이스를 저렴하게 만들기 위해 테스트에서는 1MB로 낮춘다
 os.environ["MAX_UPLOAD_MB"] = "1"
+# TTS 서버 없이 음성 기능을 검증한다 (무음 wav)
+os.environ["TTS_ENGINE"] = "mock"
+os.environ["TTS_CACHE_DIR"] = str(Path(_tmp) / "tts_cache")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
