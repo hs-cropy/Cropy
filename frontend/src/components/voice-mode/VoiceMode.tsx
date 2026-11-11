@@ -152,9 +152,9 @@ export function VoiceMode({
       <section
         className="
             mx-auto flex w-full min-h-0 max-w-[430px] flex-1
-            flex-col items-center justify-center
+            flex-col items-center justify-start overflow-y-auto
             gap-3 px-6 pt-2 pb-2 text-center
-            lg:max-w-[1000px] lg:flex-row lg:items-center lg:gap-14
+            lg:max-w-[1000px] lg:flex-row lg:items-center lg:justify-center lg:gap-14 lg:overflow-visible
         "
       >
         {/* 넓은 화면: 왼쪽 크로피·대화, 오른쪽 카메라. 좁은 화면: 카메라가 켜지면 작은 크로피 + 상태를 한 줄로, 아래에 큰 카메라 */}
@@ -186,7 +186,7 @@ export function VoiceMode({
           <VoiceMascot state={state} inputLevel={inputLevel} />
         </div>
         {camera && (
-          <div className={`w-full lg:hidden ${compact ? "max-w-[min(430px,74dvh)]" : "max-w-[min(300px,52dvh)]"}`}>
+          <div className={`w-full shrink-0 lg:hidden ${compact ? "max-w-[min(430px,50dvh)]" : "max-w-[min(300px,46dvh)]"}`}>
             <VoiceCameraPreview {...camera} />
           </div>
         )}
@@ -211,7 +211,7 @@ export function VoiceMode({
                 ref={logRef}
                 role="log"
                 aria-label="대화 기록"
-                className="flex max-h-32 w-full flex-col gap-2 overflow-y-auto rounded-2xl bg-white/60 p-2 text-sm lg:max-h-48"
+                className="flex max-h-[24dvh] w-full flex-col gap-2 overflow-y-auto rounded-2xl bg-white/60 p-2 text-sm lg:max-h-48"
               >
                 {history.map((turn, i) => (
                   <VoiceBubble key={i} role={turn.role} text={turn.text} />

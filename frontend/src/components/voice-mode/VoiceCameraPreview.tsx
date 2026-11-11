@@ -66,21 +66,6 @@ export function VoiceCameraPreview({ videoRef, status, onStart, onShutter, shutt
             </div>
           </>
         )}
-        {/* 방금 찍은 사진: 지금 어떤 결과에 대해 답하는지 보여 준다 */}
-        {streaming && lastShot && (
-          <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-xl bg-black/55 p-1.5 pr-3 text-left text-white">
-            {lastShot.url ? (
-              // eslint-disable-next-line @next/next/no-img-element -- blob URL은 next/image로 최적화할 수 없다
-              <img src={lastShot.url} alt="방금 찍은 사진" className="h-12 w-12 rounded-lg object-cover" />
-            ) : (
-              <span aria-hidden="true" className="icon-[lucide--image] h-6 w-6" />
-            )}
-            <span className="text-xs leading-tight">
-              <span className="block text-white/70">방금 찍은 결과</span>
-              <span className="block font-semibold">{lastShot.diseaseName}</span>
-            </span>
-          </div>
-        )}
         {streaming && (
           <button
             type="button"
@@ -93,7 +78,23 @@ export function VoiceCameraPreview({ videoRef, status, onStart, onShutter, shutt
           </button>
         )}
       </div>
-      {streaming && <p className="mt-1.5 text-center text-xs text-[#647267]">잎을 비추고 &quot;찍어 줘&quot;라고 말하거나 셔터를 누르면 바로 진단해요</p>}
+      {/* 영상 아래 한 줄: 찍은 결과가 있으면 썸네일·병명(지금 무엇에 대해 답하는지), 없으면 사용 안내 */}
+      {streaming && lastShot ? (
+        <div className="mt-1.5 flex items-center justify-center gap-2 text-left">
+          {lastShot.url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- blob URL은 next/image로 최적화할 수 없다
+            <img src={lastShot.url} alt="방금 찍은 사진" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
+          ) : (
+            <span aria-hidden="true" className="icon-[lucide--image] h-5 w-5 text-[#647267]" />
+          )}
+          <span className="text-xs leading-tight text-[#647267]">
+            방금 찍은 결과 <span className="font-semibold text-[#212A23]">{lastShot.diseaseName}</span>
+            <span className="block">이어서 물어보면 이 결과로 답해요</span>
+          </span>
+        </div>
+      ) : streaming ? (
+        <p className="mt-1.5 text-center text-xs text-[#647267]">잎을 비추고 &quot;찍어 줘&quot;라고 말하거나 셔터를 누르면 바로 진단해요</p>
+      ) : null}
     </div>
   );
 }
