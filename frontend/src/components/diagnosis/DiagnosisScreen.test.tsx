@@ -1113,6 +1113,31 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
     expect(diagnoseImage).not.toHaveBeenCalled();
   });
 
+  it("이력 상세는 본문에 따로 둔 뒤로 줄 없이, 헤더의 뒤로 버튼으로 이력 목록에 돌아간다 (Figma M-08)", async () => {
+    vi.mocked(fetchDiagnosisDetail).mockResolvedValue(response());
+    render(
+      <AppFrame>
+        <FakeRoutes
+          routes={{ "/history": <p>이력 목록 화면</p>, "/history/d1": <HistoryDetailPage /> }}
+        />
+      </AppFrame>,
+    );
+    await goTo("/history/d1");
+    await waitFor(() =>
+      expect(screen.getAllByRole("heading", { name: "고추 탄저병" }).length).toBeGreaterThan(0),
+    );
+
+    expect(screen.queryByRole("navigation", { name: "이력 상세 탐색" })).toBeNull();
+    const main = within(screen.getByRole("main"));
+    expect(main.queryByRole("link", { name: /이력 목록/ })).toBeNull();
+
+    // 본문 밖(앱 헤더)에 있는 뒤로 버튼
+    const back = screen.getByRole("link", { name: "뒤로, 이력 목록으로" });
+    expect(screen.getByRole("main").contains(back)).toBe(false);
+    await userEvent.click(back);
+    expect(await screen.findByText("이력 목록 화면")).toBeTruthy();
+  });
+
   it("이력 상세는 처음에만 마스코트 로딩을 보이고, 다시 열면 로딩 없이 지난 기록을 바로 보인다", async () => {
     const loading = () => screen.queryByRole("heading", { name: "진단 기록을 불러오고 있어요" });
     let resolve!: (value: DiagnoseResponse) => void;

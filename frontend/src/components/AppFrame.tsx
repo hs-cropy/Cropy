@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
 import { APP_NAV_ITEMS, currentNavKey } from "./appNav";
@@ -30,6 +31,34 @@ const HEADER_SWITCH_CLASS =
 // 큰글씨에서는 90px 최소 폭이 113px 로 커져 320px 화면의 로고 자리가 사라지므로 최소 폭을 푼다
 export const HEADER_TOGGLE =
   "min-w-[5.625rem] md:min-w-0 [[data-textsize=large]_&]:min-w-0 xl:w-[8.25rem] xl:justify-between xl:gap-3 xl:px-[0.9375rem]";
+
+// 이력 상세(/history/<id>)만 모바일 헤더의 로고 자리에 뒤로 버튼을 둔다 (Figma M-08)
+const HISTORY_DETAIL = /^\/history\/[^/]+\/?$/;
+
+/**
+ * Figma MobileShell/Back: 44px 높이, 왼쪽 16px(헤더 좌우 24px 에서 -8px), 화살표 20px, "뒤로" 15/22 Medium.
+ * Figma 의 112px 폭은 390px 에서도 스위치와 겹쳐 글자 폭에 맞춘다.
+ * 오른쪽 스위치·음성 버튼(약 240px, 큰글씨 약 290px)은 줄지 않으므로 390px 보다 좁거나 큰글씨면
+ * 글자와 안쪽 여백을 빼고 화살표만 둔다 (이름은 aria-label 로 남는다). 그래도 모자라면(360px 이하 큰글씨)
+ * 로고처럼 버튼이 줄어들 뿐 스위치 밑으로 숨지 않는다. 그때는 하단 내비 "이력"으로 돌아간다.
+ * 이력 목록으로 가서 목록이 저장해 둔 필터·스크롤을 되살린다 (홈에서 열었어도 목록으로 간다)
+ */
+function HistoryBackLink() {
+  return (
+    <Link
+      href="/history"
+      aria-label="뒤로, 이력 목록으로"
+      className="flex min-h-11 min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap rounded-lg text-cropy-feedback-body min-[390px]:-ml-2 min-[390px]:px-2 [[data-textsize=large]_&]:ml-0 [[data-textsize=large]_&]:px-0 font-medium text-cropy-text-primary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cropy-action-primary [@media(hover:hover)]:hover:text-cropy-action-hover"
+    >
+      {/* 큰글씨에서도 화살표는 20px 그대로 둬 390px 의 남는 자리(약 20px)에 들어가게 한다 */}
+      <span
+        aria-hidden
+        className="icon-[lucide--chevron-left] h-5 w-5 shrink-0 [[data-textsize=large]_&]:size-[20px]"
+      />
+      <span className="max-[389px]:sr-only [[data-textsize=large]_&]:sr-only">뒤로</span>
+    </Link>
+  );
+}
 
 /**
  * 앱 전체의 틀을 조립한다: 헤더, 모바일 내비, 데스크탑 푸터. layout 에 한 번만 놓고,
@@ -152,6 +181,7 @@ function Frame({ children }: { children: ReactNode }) {
           current={current}
           onItemClick={handleNavClick}
           homeHref="/home"
+          leading={HISTORY_DETAIL.test(pathname) ? <HistoryBackLink /> : undefined}
           actions={
             <>
               <TextSizeToggle className={HEADER_SWITCH_CLASS} />

@@ -111,40 +111,19 @@ export default function HistoryDetailPage() {
 
   return (
     <AppShellPage scrollLabel="진단 기록">
-      <div className="mx-auto w-full max-w-[1200px] pt-5 pb-8 md:pt-8">
-
-        {/* ======================================
-            상단: 진단 이력 목록으로 돌아가기
-        ====================================== */}
-        <nav aria-label="이력 상세 탐색" className="mb-5">
-          <Link
-            href="/history"
-            className={[
-              "inline-flex min-h-cropy-control-md items-center gap-2",
-              "rounded-xl px-1 py-2",
-              "text-cropy-body-lg font-semibold text-cropy-text-secondary",
-              "transition-colors hover:text-cropy-action-hover",
-              "focus-visible:outline-2",
-              "focus-visible:outline-cropy-action-primary",
-            ].join(" ")}
-          >
-            <span
-              aria-hidden="true"
-              className="icon-[lucide--chevron-left] h-5 w-5"
-            />
-            이력 목록
-          </Link>
-        </nav>
+      {/* 모바일은 제목이 헤더 바로 아래(8px)에 온다 (Figma M-08 MobileShell/Title).
+          목록으로 돌아가는 버튼은 모바일 헤더의 뒤로 버튼과 아래 "진단 이력으로 돌아가기"가 맡는다 */}
+      <div className="mx-auto w-full max-w-[1200px] pt-2 pb-8 md:pt-8">
 
         {/* ======================================
             페이지 제목 및 캐릭터
         ====================================== */}
-        <header className="relative mb-6 min-h-[6.25rem] pr-20">
+        <header className="relative mb-6 min-h-[5rem] pr-[4.5rem] md:min-h-[6.25rem] md:pr-20">
           <h1 className="text-cropy-heading-lg text-cropy-text-primary">
             저장된 진단
           </h1>
 
-          <p className="mt-2 text-cropy-helper text-cropy-text-secondary">
+          <p className="mt-1.5 text-cropy-helper text-cropy-text-secondary md:mt-2">
             저장 당시의 결과예요.
             <br />
             현재 상태는 새 사진으로 확인하세요.
@@ -155,7 +134,7 @@ export default function HistoryDetailPage() {
             src="/mobile-prototype/assets/46875.png"
             alt=""
             aria-hidden="true"
-            className="absolute right-0 top-0 h-[4.75rem] w-[4.75rem] object-contain"
+            className="absolute right-0 top-1.5 h-16 w-16 object-contain md:top-0 md:h-[4.75rem] md:w-[4.75rem]"
           />
         </header>
 
