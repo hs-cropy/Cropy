@@ -592,6 +592,20 @@ describe("useVoiceConversation", () => {
     });
   });
 
+  it("\"종료해 줘\"라고 하면 모델에 보내지 않고 인사한 뒤 나가기를 요청하고 다시 듣지 않는다", async () => {
+    pipeline.transcribe.mockResolvedValueOnce("종료해 줘");
+    const onExitRequest = vi.fn();
+    const { result } = renderHook(() => useVoiceConversation({ onExitRequest }));
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+
+    expect(pipeline.selectFunction).not.toHaveBeenCalled();
+    expect(pipeline.speakAndWait).toHaveBeenCalledWith("음성 대화를 마칠게요.", expect.any(Symbol));
+    expect(onExitRequest).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(recorderMock.start).toHaveBeenCalledTimes(1); // 연속 대화가 켜져 있어도 다시 듣지 않는다
+  });
+
   it("\"찍어 줘\"라고 하면 모델에 보내지 않고 카메라로 찍어 진단하고 결과를 읽어 준다", async () => {
     pipeline.transcribe.mockResolvedValueOnce("사진 찍어 줘");
     pipeline.screen = { diagnosisId: null, uiStage: "no_photo", path: "/home" };

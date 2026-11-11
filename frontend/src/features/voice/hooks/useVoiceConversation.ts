@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { VoiceModeState } from "@/components/voice-mode/VoiceMascot";
 import { ApiError, diagnoseImage } from "@/lib/api";
 import { isCaptureCommand } from "@/features/voice/lib/captureIntent";
+import { isExitCommand } from "@/features/voice/lib/exitIntent";
 import { matchWakeWord } from "@/features/voice/lib/wakeWord";
 import { cancelSpeech, speakAndWait } from "@/features/voice/lib/speech";
 import { answerFunction, fetchSpeechScript, selectFunction, transcribe } from "@/features/voice/lib/voiceApi";
@@ -46,6 +47,7 @@ const NO_DIAGNOSIS_TEXT = "먼저 잎을 비추고 찍어 줘라고 말하거나
 const NO_CAMERA_TEXT = "카메라가 꺼져 있어요. 카메라 켜기를 누른 뒤 다시 말씀해 주세요.";
 const CAPTURE_FAILED_TEXT = "사진을 찍지 못했어요. 잎이 보이게 비추고 다시 말씀해 주세요.";
 const CAPTURING_TEXT = "찍었어요. 잠시만요.";
+const EXIT_TEXT = "음성 대화를 마칠게요.";
 
 /** 방금 찍어 진단한 사진. 미리보기 구석에 썸네일과 병명으로 남겨 "무엇에 대해 답하는지" 보여 준다 */
 export interface LastShot {
@@ -80,6 +82,8 @@ function readWake(): boolean {
 export interface UseVoiceConversationOptions {
   /** 지금 카메라 장면을 사진 파일로. 카메라가 없거나 꺼져 있으면 null. 음성 모드 화면이 넘긴다 */
   captureFrame?: () => Promise<File | null>;
+  /** "종료해 줘"처럼 말로 음성 모드를 끝내라고 했을 때. 화면이 이전 화면으로 돌아간다 */
+  onExitRequest?: () => void;
 }
 const NOT_READY_TEXT = "그 질문은 아직 답을 준비하지 못했어요. 진단 결과나 재촬영에 대해 물어봐 주세요.";
 const UNSURE_TEXT = "질문을 잘 이해하지 못했어요. 다시 말씀해 주세요.";
@@ -96,7 +100,7 @@ function answerFailure(error: unknown): { say?: string; toast?: string } {
   return { toast: VOICE_ERROR };
 }
 
-export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptions = {}) {
+export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceConversationOptions = {}) {
   const [state, setState] = useState<VoiceModeState>("idle");
   const [inputLevel, setInputLevel] = useState(0);
   const [analysisAvailable, setAnalysisAvailable] = useState(true);
@@ -111,6 +115,8 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
   const screenRef = useRef(screen);
   const captureFrameRef = useRef(captureFrame);
   captureFrameRef.current = captureFrame;
+  const onExitRequestRef = useRef(onExitRequest);
+  onExitRequestRef.current = onExitRequest;
   const [lastShot, setLastShot] = useState<LastShot | null>(null);
   const lastShotUrlRef = useRef<string | null>(null);
   const [history, setHistory] = useState<VoiceTurn[]>([]);
@@ -307,6 +313,21 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
     const live = () => generation === generationRef.current && !controller.signal.aborted;
     setTranscript(text);
     addTurn({ role: "user", text });
+
+    // "종료해 줘": 모델에 보내지 않고 짧게 인사한 뒤 음성 모드를 나간다. 연속 대화·호출어로 다시 듣지 않는다
+    if (isExitCommand(text)) {
+      abortRef.current = null;
+      setAssistantText(EXIT_TEXT);
+      addTurn({ role: "assistant", text: EXIT_TEXT });
+      updateState("speaking");
+      busyRef.current = false;
+      await speakAndWait(EXIT_TEXT, speechOwner.current);
+      if (generation !== generationRef.current) return;
+      generationRef.current += 1; // 예약된 다시 듣기·호출어 듣기가 이어지지 않게
+      updateState("idle");
+      onExitRequestRef.current?.();
+      return;
+    }
 
     // 2. 기능 고르기 → 3. 답변 문장. "찍어 줘"는 모델에 보내지 않고 앱이 바로 찍어 진단한다
     const current = screenRef.current;

@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { readVoiceReturn } from "@/components/voice-mode/voiceNavigation";
 import { VoiceMode } from "@/components/voice-mode/VoiceMode";
 import { Toast, useToast } from "@/components/Toast";
 import { useCamera, useCaptureFrame } from "@/features/camera";
@@ -19,7 +21,15 @@ export default function VoiceModePage() {
     return result.ok ? result.file : null;
   }, [capture, cameraStatus, videoRef]);
 
-  const conversation = useVoiceConversation({ captureFrame });
+  const router = useRouter();
+  // 말로 "종료해 줘": '기본 화면' 버튼과 같이 들어오기 전 화면으로 돌아간다
+  const exitByVoice = useCallback(() => {
+    camera.stop();
+    if (readVoiceReturn()) router.back();
+    else router.replace("/home");
+  }, [camera, router]);
+
+  const conversation = useVoiceConversation({ captureFrame, onExitRequest: exitByVoice });
   const { toast, showToast, clearToast } = useToast();
 
   const { state, inputLevel, error, clearError, handleMicClick, cancel, transcript, assistantText, continuous, setContinuous, wakeEnabled, setWakeEnabled, captureNow, lastShot, history } = conversation;
