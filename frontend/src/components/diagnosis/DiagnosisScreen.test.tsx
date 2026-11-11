@@ -496,6 +496,44 @@ describe("진단 결과 (M-03 · D-03)", () => {
     expect(screen.getByRole("button", { name: "다시 촬영하기" })).toBeTruthy();
   });
 
+  it.each([
+    ["저신뢰", { confidence: 0.42, decision_reasons: ["low_confidence"] }, "추가 확인이 필요해요"],
+    [
+      "판별 불가",
+      { disease_name: "판별 불가", category: "other" as const, decision_status: "not_crop",
+        decision_reasons: ["not_crop"] },
+      "작물 잎을 찾지 못했어요",
+    ],
+  ])("%s 결과의 촬영 방법 보기는 펼치지 않고 촬영 화면의 가이드로 옮긴다", async (_, extra, heading) => {
+    vi.mocked(diagnoseImage).mockResolvedValue(response(extra));
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await screen.findByRole("heading", { name: heading });
+
+    const guide = screen.getByRole("link", { name: "촬영 방법 보기" });
+    expect(guide.getAttribute("href")).toBe("/home#guide");
+    await userEvent.click(guide);
+
+    await waitFor(() => expect(title()).toBe("촬영 방법"));
+    expect(fakeNavigation.pathname).toBe("/home");
+    expect(window.location.hash).toBe("#guide");
+  });
+
+  it("저신뢰 결과에서 Ctrl 을 누르고 연 촬영 방법 보기(새 탭)는 이 화면을 옮기지 않는다", async () => {
+    vi.mocked(diagnoseImage).mockResolvedValue(
+      response({ confidence: 0.42, decision_reasons: ["low_confidence"] }),
+    );
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await screen.findByRole("heading", { name: "추가 확인이 필요해요" });
+
+    fireEvent.click(screen.getByRole("link", { name: "촬영 방법 보기" }), { ctrlKey: true });
+
+    expect(fakeNavigation.pathname).toBe("/diagnosis");
+  });
+
   it("브라우저 카메라가 없으면 저신뢰 결과의 다시 촬영하기는 기기 카메라(파일 선택)를 연다", async () => {
     vi.mocked(diagnoseImage).mockResolvedValue(
       response({ confidence: 0.42, decision_reasons: ["low_confidence"] }),

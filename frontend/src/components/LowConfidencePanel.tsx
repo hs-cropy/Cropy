@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/Button";
+import Link from "next/link";
+import type { MouseEvent } from "react";
+import { Button, buttonClassName } from "@/components/Button";
 import { DiagnosisPageActions } from "@/components/DiagnosisPageActions";
 import { Card } from "@/components/Card";
 import { Mascot } from "@/components/Mascot";
@@ -10,6 +11,8 @@ interface LowConfidencePanelProps {
   /** API에서 받은 0~1 범위의 신뢰도. 화면 분기용 임계값으로 사용하지 않는다. */
   confidence: number;
   onRetake: () => void;
+  /** "촬영 방법 보기": 가이드는 촬영 화면(/home#guide)에 있어 쓰는 쪽이 그리로 옮겨 연다 */
+  onOpenGuide: () => void;
   /** 판별 불가(작물 잎을 알아보지 못함): 신뢰도 대신 작물 잎을 다시 찍도록 안내한다 */
   notCrop?: boolean;
   actionsVisible?: boolean;
@@ -24,10 +27,19 @@ const PHOTO_TIPS = [
 export function LowConfidencePanel({
   confidence,
   onRetake,
+  onOpenGuide,
   notCrop = false,
   actionsVisible = true,
 }: LowConfidencePanelProps) {
-  const [showGuide, setShowGuide] = useState(false);
+  // 주소는 가이드로 두어 새 탭으로도 열 수 있게 하고, 그냥 누르면 쓰는 쪽이 앱 안에서 옮긴다
+  // (Link 는 기본 동작을 막으면 스스로 옮기지 않는다)
+  const handleGuideClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    event.preventDefault();
+    onOpenGuide();
+  };
   const percent = Number.isFinite(confidence)
     ? `${Math.round(Math.max(0, Math.min(1, confidence)) * 100)}%`
     : "확인 중";
@@ -83,28 +95,17 @@ export function LowConfidencePanel({
         </Card>
       </div>
 
-      {showGuide && (
-        <Card radius="lg" padding="lg" className="space-y-3">
-          <h3 className="text-lg font-bold text-cropy-text-primary">촬영 방법</h3>
-          <ol className="list-inside list-decimal space-y-2 text-base leading-7 text-cropy-text-secondary">
-            <li>병반이 있는 잎 또는 열매를 화면에 크게 담아주세요.</li>
-            <li>초점이 맞았는지 확인하고 흔들림을 피해 주세요.</li>
-            <li>밝은 그늘에서 반사광 없이 촬영해 주세요.</li>
-          </ol>
-        </Card>
-      )}
-
       <DiagnosisPageActions visible={actionsVisible}>
         <Button onClick={onRetake}>
           다시 촬영하기
         </Button>
-        <Button
-          variant="secondary"
-          onClick={() => setShowGuide((current) => !current)}
-          aria-expanded={showGuide}
+        <Link
+          href="/home#guide"
+          onClick={handleGuideClick}
+          className={buttonClassName({ variant: "secondary" })}
         >
-          {showGuide ? "촬영 방법 닫기" : "촬영 방법 보기"}
-        </Button>
+          <span className="min-w-0">촬영 방법 보기</span>
+        </Link>
       </DiagnosisPageActions>
     </section>
   );
