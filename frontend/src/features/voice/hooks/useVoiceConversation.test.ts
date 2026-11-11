@@ -4,6 +4,8 @@ import { useVoiceConversation } from "./useVoiceConversation";
 import { VoicePermissionError } from "@/features/voice/lib/voiceRecorder";
 import type { UiStage } from "@/features/voice/lib/voiceApi";
 
+const fakeStream = { active: true, getTracks: () => [{ stop: () => {} }] } as unknown as MediaStream;
+
 const recorderMock = vi.hoisted(() => ({
   start: vi.fn(),
   stop: vi.fn(),
@@ -53,6 +55,10 @@ vi.mock("@/features/voice/lib/voiceScreen", () => ({
   readVoiceScreen: () => pipeline.screen,
 }));
 
+vi.mock("@/features/voice/lib/listenCue", () => ({
+  playListenCue: vi.fn(),
+}));
+
 function resetPipeline() {
   pipeline.recordingToWav.mockReset().mockResolvedValue(new Blob(["wav"], { type: "audio/wav" }));
   pipeline.transcribe.mockReset().mockResolvedValue("이 병 뭐야");
@@ -86,6 +92,7 @@ describe("useVoiceConversation", () => {
         return {
           stop: recorderMock.stop,
           cancel: recorderMock.cancel,
+          stream: fakeStream,
         };
       },
     );
@@ -513,6 +520,17 @@ describe("useVoiceConversation", () => {
 
     expect(pipeline.transcribe).not.toHaveBeenCalled();
     expect(result.current.error).toBe("녹음한 소리를 처리하지 못했어요");
+  });
+
+  it("두 번째 녹음부터는 열어 둔 마이크 스트림을 다시 쓴다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+    await act(async () => { await result.current.start(); });
+    expect(recorderMock.start.mock.calls[0][0]).toMatchObject({ keepStream: true, stream: null });
+
+    await act(async () => { await result.current.stop(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(recorderMock.start).toHaveBeenCalledTimes(2);
+    expect(recorderMock.start.mock.calls[1][0].stream).toBe(fakeStream);
   });
 
   it("연속 대화가 켜져 있으면 답을 다 읽은 뒤 잠깐 쉬고 다시 듣는다", async () => {

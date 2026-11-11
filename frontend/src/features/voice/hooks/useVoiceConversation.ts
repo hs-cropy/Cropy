@@ -10,7 +10,8 @@ import { ApiError } from "@/lib/api";
 import { cancelSpeech, speakAndWait } from "@/features/voice/lib/speech";
 import { answerFunction, selectFunction, transcribe } from "@/features/voice/lib/voiceApi";
 import { readVoiceScreen } from "@/features/voice/lib/voiceScreen";
-import { startVoiceRecording, VoicePermissionError, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
+import { playListenCue } from "@/features/voice/lib/listenCue";
+import { releaseStream, startVoiceRecording, VoicePermissionError, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
 import { AudioConversionError, recordingToWav } from "@/features/voice/lib/wav";
 
 const VAD_THRESHOLD = 0.06;
@@ -21,7 +22,8 @@ const MAX_RECORDING_MS = 30000;
 
 // 연속 대화: 답을 다 읽으면 버튼 없이 다시 듣는다. 끝난 뒤 잠깐 쉬어 스피커 소리 꼬리가 마이크에 들어가지 않게 한다
 export const CONTINUOUS_KEY = "cropy:voice-continuous";
-const AUTO_LISTEN_DELAY_MS = 300;
+// 마이크를 열어 둔 채 다시 듣기 시작하므로 준비 시간은 거의 없다. 스피커 소리 꼬리만 피하면 된다
+const AUTO_LISTEN_DELAY_MS = 150;
 // 연속 대화 중 말이 없어 취소된 횟수가 이만큼 이어지면 자동으로 다시 듣지 않고 대기로 돌아간다
 const MAX_SILENT_ROUNDS = 2;
 
@@ -73,6 +75,8 @@ export function useVoiceConversation() {
   const startRef = useRef<() => Promise<void>>(async () => {});
 
   const recordingRef = useRef<VoiceRecording | null>(null);
+  // 음성 모드에 있는 동안 열어 두는 마이크. 매번 다시 열면 수백 ms가 걸려 말의 첫머리가 잘린다
+  const streamRef = useRef<MediaStream | null>(null);
   const stateRef = useRef<VoiceModeState>("idle");
 
   const generationRef = useRef(0);
@@ -317,6 +321,8 @@ export function useVoiceConversation() {
 
     try {
       const recording = await startVoiceRecording({
+        stream: streamRef.current,
+        keepStream: true,
         onLevel: (level) => {
           if (generation !== generationRef.current || stateRef.current !== "listening") {
             return;
@@ -357,14 +363,18 @@ export function useVoiceConversation() {
       // 권한 요청 중 취소하거나 화면을 벗어난 경우
       if (generation !== generationRef.current) {
         recording.cancel();
+        releaseStream(recording.stream);
         return;
       }
 
       recordingRef.current = recording;
+      streamRef.current = recording.stream;
 
       const startedAt = Date.now();
       listeningStartedAtRef.current = startedAt;
       updateState("listening");
+      // 지금부터 말해도 된다는 신호. 버튼 없이 다시 듣는 연속 대화에서 특히 필요하다
+      playListenCue();
 
       // 이전 타이머가 남지 않도록 정리
       clearVadTimer();
@@ -457,6 +467,9 @@ export function useVoiceConversation() {
         clearTimeout(autoListenTimerRef.current);
         autoListenTimerRef.current = null;
       }
+      // 음성 모드를 벗어날 때 마이크를 끈다 (브라우저의 녹음 표시도 같이 꺼진다)
+      releaseStream(streamRef.current);
+      streamRef.current = null;
     };
   }, [clearVadTimer]);
 

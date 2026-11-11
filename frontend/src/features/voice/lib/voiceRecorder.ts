@@ -2,11 +2,25 @@
 export interface VoiceRecording {
   stop(): Promise<Blob>;
   cancel(): void;
+  /** 녹음에 쓴 마이크 스트림. keepStream이면 종료 뒤에도 살아 있어 다음 녹음에 바로 다시 쓴다 */
+  stream: MediaStream;
 }
 
 export interface VoiceRecordingOptions {
   onLevel?: (level: number) => void;
   onAnalysisUnavailable?: () => void;
+  /**
+   * 이미 열어 둔 마이크 스트림. 연속 대화에서 매번 권한을 다시 묻고 장치를 다시 여는 데 수백 ms가 걸려
+   * 말의 첫머리가 잘리는 것을 막는다. 끝난(active가 아닌) 스트림이면 새로 연다.
+   */
+  stream?: MediaStream | null;
+  /** 종료·취소 때 마이크 트랙을 끄지 않고 둔다. 쓰는 쪽이 releaseStream으로 끈다 */
+  keepStream?: boolean;
+}
+
+/** keepStream으로 남겨 둔 마이크를 끈다 */
+export function releaseStream(stream: MediaStream | null | undefined): void {
+  stream?.getTracks().forEach((track) => track.stop());
 }
 
 export class VoiceRecorderError extends Error {
@@ -33,13 +47,15 @@ export async function startVoiceRecording(
   let stream: MediaStream;
 
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-      },
-      video: false,
-    });
+    stream = options.stream && options.stream.active
+      ? options.stream
+      : await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+          },
+          video: false,
+        });
   } catch (error) {
     const errorName =
       error !== null &&
@@ -119,7 +135,9 @@ export async function startVoiceRecording(
     released = true;
 
     stopAnalysis();
-    stream.getTracks().forEach((track) => track.stop());
+    if (!options.keepStream) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
   };
 
   recorder.addEventListener("dataavailable", (event) => {
@@ -273,5 +291,5 @@ export async function startVoiceRecording(
     release();
   };
 
-  return { stop, cancel };
+  return { stop, cancel, stream };
 }
