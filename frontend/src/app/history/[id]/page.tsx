@@ -1,11 +1,17 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
-import { fetchDiagnosisDetail } from "@/lib/api";
+import { ApiError, fetchDiagnosisDetail } from "@/lib/api";
+import {
+  clearHistoryCache,
+  readHistoryCache,
+  writeHistoryCache,
+} from "@/lib/historyCache";
+import { InlineFeedback } from "@/components/InlineFeedback";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 
 import { AppShellPage } from "@/components/AppShell";
@@ -15,6 +21,9 @@ import { RecapturePanel } from "@/components/RecapturePanel";
 import { CropMismatchNotice } from "@/components/CropMismatchNotice";
 import { Button, buttonClassName } from "@/components/Button";
 import { CAPTURE_PATH, useDiagnosisSession } from "@/components/diagnosis/DiagnosisSession";
+
+// 이력 캐시의 키 (lib/historyCache)
+const detailKey = (id: string) => `history:detail:${id}`;
 
 export default function HistoryDetailPage() {
   const params = useParams<{ id: string }>();
@@ -27,11 +36,12 @@ export default function HistoryDetailPage() {
     session.navigate(CAPTURE_PATH, "reset");
   };
 
+  // 한 번 본 기록은 캐시로 바로 그린다. 새로고침 직후에는 캐시가 비어 있어 서버 HTML 과 같다
   const [result, setResult] = useState<DiagnoseResponse | null>(
-    null
+    () => readHistoryCache<DiagnoseResponse>(detailKey(id)) ?? null
   );
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => result == null);
   const [error, setError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
 
@@ -39,7 +49,13 @@ export default function HistoryDetailPage() {
   // 저장 결과 갱신
   // ======================================
 
+  // 캐시로 먼저 그린 뒤 뒤에서 새로 불러오는 요청. 그동안 다시 저장하면 끊는다
+  const revalidateRef = useRef<AbortController | null>(null);
+
   const updateResult = (saved: DiagnoseResponse) => {
+    // 저장 전 상태를 담은 응답이 늦게 와서 방금 저장한 결과를 되돌리지 않게 한다
+    revalidateRef.current?.abort();
+    if (saved.id === id) writeHistoryCache(detailKey(id), saved);
     setResult((previous) =>
       previous?.id === saved.id ? saved : previous
     );
@@ -51,19 +67,32 @@ export default function HistoryDetailPage() {
 
   useEffect(() => {
     const controller = new AbortController();
+    revalidateRef.current = controller;
+    const key = detailKey(id);
+    const cached = readHistoryCache<DiagnoseResponse>(key);
 
-    setResult(null);
-    setLoading(true);
+    // 캐시가 있으면 그대로 보이고 뒤에서 새로 불러와 고친다
+    setResult(cached ?? null);
+    setLoading(!cached);
     setError(null);
 
     fetchDiagnosisDetail(id, controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return;
 
+        writeHistoryCache(key, data);
         setResult(data);
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
+        // 보이고 있는 기록을 새로 고치지 못한 것뿐이면 그대로 둔다.
+        // 기록이 없어졌다는 응답(404)이면 목록 캐시까지 버리고 알린다
+        const gone = err instanceof ApiError && err.status === 404;
+        if (cached && !gone) return;
+        if (gone) {
+          clearHistoryCache();
+          setResult(null);
+        }
 
         setError(
           err instanceof Error
@@ -131,28 +160,18 @@ export default function HistoryDetailPage() {
         </header>
 
         {/* ======================================
-            로딩 상태
+            로딩 상태: 이력 목록과 같은 마스코트 안내 카드.
+            진행 중 안내라 항상 그려 두고 open 으로 켜고 끈다 (InlineFeedback)
         ====================================== */}
-        {loading && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="rounded-2xl border border-cropy-border bg-cropy-surface px-6 py-12 text-center"
-          >
-            <span
-              aria-hidden="true"
-              className="icon-[lucide--loader-circle] mx-auto block h-10 w-10 animate-spin text-cropy-action-primary"
-            />
-
-            <h2 className="mt-5 text-cropy-feedback-title text-cropy-text-primary">
-              진단 기록을 불러오고 있어요
-            </h2>
-
-            <p className="mt-2 text-cropy-body-lg text-cropy-text-secondary">
-              저장된 사진과 분석 결과를 확인하는 중이에요.
-            </p>
-          </div>
-        )}
+        <InlineFeedback
+          mascot="analysis"
+          tone="status"
+          headingLevel={2}
+          title="진단 기록을 불러오고 있어요"
+          open={loading}
+        >
+          {"저장된 사진과 분석 결과를 확인하는 중이에요.\n잠시만 기다려주세요."}
+        </InlineFeedback>
 
         {/* ======================================
             오류 또는 기록 없음

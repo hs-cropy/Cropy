@@ -1113,6 +1113,70 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
     expect(diagnoseImage).not.toHaveBeenCalled();
   });
 
+  it("이력 상세는 처음에만 마스코트 로딩을 보이고, 다시 열면 로딩 없이 지난 기록을 바로 보인다", async () => {
+    const loading = () => screen.queryByRole("heading", { name: "진단 기록을 불러오고 있어요" });
+    let resolve!: (value: DiagnoseResponse) => void;
+    vi.mocked(fetchDiagnosisDetail).mockImplementation(
+      () => new Promise((res) => {
+        resolve = res;
+      }),
+    );
+    render(
+      <AppFrame>
+        <FakeRoutes
+          routes={{ "/history": <p>이력</p>, "/history/d1": <HistoryDetailPage /> }}
+        />
+      </AppFrame>,
+    );
+    await goTo("/history/d1");
+
+    // 처음: 마스코트가 있는 진행 중 안내 (spinner 카드가 아니다)
+    await waitFor(() => expect(loading()).toBeTruthy());
+    const card = loading()?.closest("section") as HTMLElement;
+    expect(card.querySelector("img")?.getAttribute("src")).toMatch(/mascot|analyzing/);
+    expect(card.querySelector(".animate-spin")).toBeNull();
+    await act(async () => resolve(response()));
+    expect(screen.getAllByRole("heading", { name: "고추 탄저병" }).length).toBeGreaterThan(0);
+
+    await goTo("/history");
+    await goTo("/history/d1");
+
+    // 다시 열면 첫 화면부터 기록이 있고, 뒤에서 새로 불러온 결과로 고친다
+    expect(loading()).toBeNull();
+    expect(screen.getAllByRole("heading", { name: "고추 탄저병" }).length).toBeGreaterThan(0);
+    await act(async () => resolve(response({ disease_name: "무 노균병" })));
+    expect(screen.getAllByRole("heading", { name: "무 노균병" }).length).toBeGreaterThan(0);
+  });
+
+  it("다시 연 이력 상세는 새로 불러오기가 실패해도 기록을 두지만, 기록이 없어졌으면(404) 알린다", async () => {
+    vi.mocked(fetchDiagnosisDetail).mockResolvedValueOnce(response());
+    render(
+      <AppFrame>
+        <FakeRoutes
+          routes={{ "/history": <p>이력</p>, "/history/d1": <HistoryDetailPage /> }}
+        />
+      </AppFrame>,
+    );
+    await goTo("/history/d1");
+    await screen.findAllByRole("heading", { name: "고추 탄저병" });
+
+    vi.mocked(fetchDiagnosisDetail).mockRejectedValueOnce(new Error("network"));
+    await goTo("/history");
+    await goTo("/history/d1");
+    await act(async () => {});
+    expect(screen.getAllByRole("heading", { name: "고추 탄저병" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    vi.mocked(fetchDiagnosisDetail).mockRejectedValueOnce(
+      new ApiError("진단 기록을 찾을 수 없습니다.", "NOT_FOUND", 404, false),
+    );
+    await goTo("/history");
+    await goTo("/history/d1");
+
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
+  });
+
   it("다른 화면으로 가면 추가 촬영을 그만둔다", async () => {
     await showConfusion();
     await pickExtraPhoto();

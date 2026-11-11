@@ -6,8 +6,14 @@ import { useEffect, useRef, useState } from "react";
 import { AppShellPage } from "@/components/AppShell";
 import { Button } from "@/components/Button";
 import { fetchHistory } from "@/lib/api";
+import {
+  isHistoryCacheWarm,
+  readHistoryCache,
+  writeHistoryCache,
+} from "@/lib/historyCache";
 import type {
   DiagnosisSummary,
+  PaginatedHistory,
   Severity,
 } from "@/types/diagnosis";
 
@@ -46,90 +52,166 @@ function scrollHistoryToTop() {
   getHistoryScrollElement().scrollTop = 0;
 }
 
+interface SavedView {
+  crop: string;
+  grade: Severity | "";
+  page: number;
+  scrollY: number | null;
+}
+
+const DEFAULT_VIEW: SavedView = { crop: "", grade: "", page: 1, scrollY: null };
+
+/**
+ * 상세로 가기 전에 남긴 필터·페이지·스크롤을 읽는다. 없으면 null, 잘못된 값은 기본값.
+ * 읽기만 한다: render 중에 불러도 되도록 지우는 일은 effect 가 한다
+ */
+function readSavedView(): SavedView | null {
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (!saved) return null;
+    const view = { ...DEFAULT_VIEW };
+
+    const state = JSON.parse(saved) as {
+      crop?: unknown;
+      grade?: unknown;
+      page?: unknown;
+      scrollY?: unknown;
+    };
+
+    if (
+      typeof state.crop === "string" &&
+      CROP_OPTIONS.some((c) => c.value === state.crop)
+    ) {
+      view.crop = state.crop;
+    }
+
+    if (
+      typeof state.grade === "string" &&
+      GRADE_OPTIONS.some((g) => g.value === state.grade)
+    ) {
+      view.grade = state.grade as Severity | "";
+    }
+
+    if (
+      typeof state.page === "number" &&
+      Number.isSafeInteger(state.page) &&
+      state.page > 0
+    ) {
+      view.page = state.page;
+    }
+
+    if (
+      typeof state.scrollY === "number" &&
+      Number.isFinite(state.scrollY) &&
+      state.scrollY >= 0
+    ) {
+      view.scrollY = state.scrollY;
+    }
+
+    return view;
+  } catch {
+    // 저장 상태가 잘못되어도 기본 필터로 진입
+    return { ...DEFAULT_VIEW };
+  }
+}
+
+function forgetSavedView() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // 지우지 못해도 다음 상세 이동 때 덮어쓴다
+  }
+}
+
+// 이력 캐시의 키 (lib/historyCache)
+const listKey = (crop: string, grade: string, page: number) =>
+  `history:list:${crop}|${grade}|${page}`;
+const CROP_COUNTS_KEY = "history:crop-counts";
+
+const EMPTY_CROP_COUNTS: Record<string, number | null> = {
+  고추: null,
+  무: null,
+  배추: null,
+};
+
+function newestFirst(items: DiagnosisSummary[]) {
+  return [...items].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() -
+      new Date(a.created_at).getTime()
+  );
+}
+
 export default function HistoryPage() {
-  const [items, setItems] = useState<DiagnosisSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  // 앱 안에서 다시 들어온 때(캐시가 있을 때)는 저장 상태와 캐시를 첫 화면부터 쓴다.
+  // 그래야 상세에서 돌아오거나 탭을 오갈 때 로딩 안내가 깜빡이지 않는다.
+  // 새로고침 직후에는 캐시가 비어 있어 서버 HTML 과 같은 기본 화면을 그린 뒤 effect 에서 읽는다
+  const [initial] = useState(() =>
+    isHistoryCacheWarm() ? readSavedView() ?? DEFAULT_VIEW : null
+  );
+  const [initialList] = useState(() => {
+    if (!initial) return undefined;
+    const cached = readHistoryCache<PaginatedHistory>(
+      listKey(initial.crop, initial.grade, initial.page)
+    );
+    // 기록이 줄어 남긴 페이지가 끝을 넘으면 캐시로 그리지 않고 effect 가 페이지를 고친다
+    const lastPage = cached ? Math.max(1, Math.ceil(cached.total / PAGE_SIZE)) : 0;
+    return cached && initial.page <= lastPage ? cached : undefined;
+  });
+
+  const [items, setItems] = useState<DiagnosisSummary[]>(() =>
+    initialList ? newestFirst(initialList.items) : []
+  );
+  const [loading, setLoading] = useState(!initialList);
   const [error, setError] = useState<string | null>(null);
 
-  const [crop, setCrop] = useState("");
-  const [grade, setGrade] = useState<Severity | "">("");
-  const [page, setPage] = useState(1);
+  const [crop, setCrop] = useState(initial?.crop ?? "");
+  const [grade, setGrade] = useState<Severity | "">(initial?.grade ?? "");
+  const [page, setPage] = useState(initial?.page ?? 1);
 
   // 현재 필터 결과 건수 및 전체 이력 건수
   const [counts, setCounts] = useState({
-    total: 0,
-    unfiltered: 0,
+    total: initialList?.total ?? 0,
+    unfiltered: initialList?.unfiltered_total ?? 0,
   });
 
   // 작물별 전체 기록 건수
   const [cropCounts, setCropCounts] = useState<
     Record<string, number | null>
-  >({
-    고추: null,
-    무: null,
-    배추: null,
-  });
+  >(() =>
+    (initial &&
+      readHistoryCache<Record<string, number | null>>(CROP_COUNTS_KEY)) ||
+    EMPTY_CROP_COUNTS
+  );
 
   const [refresh, setRefresh] = useState(0);
-  const [restored, setRestored] = useState(false);
+  const [restored, setRestored] = useState(initial != null);
 
-  const pendingScrollRef = useRef<number | null>(null);
+  const pendingScrollRef = useRef<number | null>(initial?.scrollY ?? null);
 
   // ======================================
-  // 1. 이전 필터 및 스크롤 위치 복원 준비
+  // 1. 이전 필터 및 스크롤 위치 복원 준비 (새로고침 직후)
   // ======================================
 
   useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
-
-      if (saved) {
-        const state = JSON.parse(saved) as {
-          crop?: string;
-          grade?: string;
-          page?: number;
-          scrollY?: number;
-        };
-
-        if (
-          typeof state.crop === "string" &&
-          (state.crop === "" ||
-            CROP_OPTIONS.some((c) => c.value === state.crop))
-        ) {
-          setCrop(state.crop);
-        }
-
-        if (
-          typeof state.grade === "string" &&
-          GRADE_OPTIONS.some((g) => g.value === state.grade)
-        ) {
-          setGrade(state.grade as Severity | "");
-        }
-
-        if (
-          typeof state.page === "number" &&
-          Number.isSafeInteger(state.page) &&
-          state.page > 0
-        ) {
-          setPage(state.page);
-        }
-
-        if (
-          typeof state.scrollY === "number" &&
-          Number.isFinite(state.scrollY) &&
-          state.scrollY >= 0
-        ) {
-          pendingScrollRef.current = state.scrollY;
-        }
-
-        sessionStorage.removeItem(STORAGE_KEY);
-      }
-    } catch {
-      // 저장 상태가 잘못되어도 기본 필터로 진입
+    if (initial) {
+      // 첫 화면에서 이미 읽었으므로 지우기만 한다
+      forgetSavedView();
+      return;
     }
 
+    // 개발 모드에서 effect 가 두 번 돌아도 두 번째(남긴 상태 없음)가 첫 번째를 덮지 않게
+    // 남긴 상태가 있을 때만 바꾼다
+    const view = readSavedView();
+    if (view) {
+      forgetSavedView();
+      setCrop(view.crop);
+      setGrade(view.grade);
+      setPage(view.page);
+      pendingScrollRef.current = view.scrollY;
+    }
     setRestored(true);
-  }, []);
+  }, [initial]);
 
   // ======================================
   // 2. 상세 페이지 이동 전 목록 상태 저장
@@ -187,7 +269,9 @@ export default function HistoryPage() {
 
       if (controller.signal.aborted) return;
 
-      setCropCounts(Object.fromEntries(totals));
+      const next = Object.fromEntries(totals);
+      setCropCounts(next);
+      writeHistoryCache(CROP_COUNTS_KEY, next);
     }
 
     void loadCropCounts();
@@ -219,9 +303,39 @@ export default function HistoryPage() {
     }
 
     const controller = new AbortController();
+    const key = listKey(crop, grade, page);
 
-    setLoading(true);
+    const apply = (data: PaginatedHistory) => {
+      setCounts({
+        total: data.total,
+        unfiltered: data.unfiltered_total,
+      });
+
+      const lastPage = Math.max(
+        1,
+        Math.ceil(data.total / PAGE_SIZE)
+      );
+
+      if (page > lastPage) {
+        setItems([]);
+        setPage(lastPage);
+        // 남긴 스크롤은 원래 페이지의 위치라 고친 페이지에는 쓰지 않는다
+        pendingScrollRef.current = null;
+        return;
+      }
+
+      setItems(newestFirst(data.items));
+    };
+
+    // 한 번 본 필터·페이지는 로딩 없이 바로 보이고, 뒤에서 새로 불러와 고친다
+    const cached = readHistoryCache<PaginatedHistory>(key);
     setError(null);
+    if (cached) {
+      apply(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
 
     fetchHistory(
       page,
@@ -233,32 +347,13 @@ export default function HistoryPage() {
       .then((data) => {
         if (controller.signal.aborted) return;
 
-        setCounts({
-          total: data.total,
-          unfiltered: data.unfiltered_total,
-        });
-
-        const lastPage = Math.max(
-          1,
-          Math.ceil(data.total / PAGE_SIZE)
-        );
-
-        if (page > lastPage) {
-          setItems([]);
-          setPage(lastPage);
-          return;
-        }
-
-        setItems(
-          [...data.items].sort(
-            (a, b) =>
-              new Date(b.created_at).getTime() -
-              new Date(a.created_at).getTime()
-          )
-        );
+        writeHistoryCache(key, data);
+        apply(data);
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
+        // 보이고 있는 기록을 새로 고치지 못한 것뿐이면 그대로 둔다
+        if (cached) return;
 
         setError(
           err instanceof Error
