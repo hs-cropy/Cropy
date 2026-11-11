@@ -38,7 +38,7 @@ response = handle_function_output(
 
 이 모듈은 LLM 실행, HTTP API 연결, DB 조회, TTS 합성을 수행하지 않는다.
 
-HTTP로는 `POST /api/v1/voice/function-call`이 이 함수를 호출한다. 요청의 `diagnosis_id`(이 기기의 저장된 진단)나 `context`(LLM 입력 계약)로 문맥을 만들고, 계약은 설정 `LLM_FUNCTION_CONTRACT_PATH`(기본 `backend/app/data/function_contract.json`, `app/services/function_contract.py`)에서 한 번 읽어 둔다. 오류는 `InvalidFunctionOutput` → 400 `FUNCTION_CALL_INVALID`, `FunctionHandlerNotImplemented` → 501 `FUNCTION_NOT_IMPLEMENTED`, `InvalidFunctionContract`·계약 파일 없음 → 503 `FUNCTION_CONTRACT_UNAVAILABLE`로 바뀐다. 자세한 계약은 [API_SPEC](API_SPEC.md)의 `POST /voice/function-call`.
+음성 모드는 `POST /api/v1/voice/transcribe`(wav → 문장) → `POST /api/v1/voice/select-function`(문장 + 화면 상태 → 호출 문자열, 서버 경유) → `POST /api/v1/voice/function-call` 순으로 부른다. 마지막 단계가 이 함수를 호출한다. 요청의 `diagnosis_id`(이 기기의 저장된 진단)나 `context`(LLM 입력 계약)로 문맥을 만들고, 계약은 설정 `LLM_FUNCTION_CONTRACT_PATH`(기본 `backend/app/data/function_contract.json`, `app/services/function_contract.py`)에서 한 번 읽어 둔다. 오류는 `InvalidFunctionOutput` → 400 `FUNCTION_CALL_INVALID`, `FunctionHandlerNotImplemented` → 501 `FUNCTION_NOT_IMPLEMENTED`, `InvalidFunctionContract`·계약 파일 없음 → 503 `FUNCTION_CONTRACT_UNAVAILABLE`로 바뀐다. 자세한 계약은 [API_SPEC](API_SPEC.md)의 `POST /voice/function-call`.
 
 ## v2 파서와의 연결
 

@@ -343,6 +343,28 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 개발용 Mock은 시연을 허용하더라도 실제 모델 준비 완료로 표시하지 않는다.
 모델 파일·실행 설정 변경은 프로세스 재시작 후 반영된다.
 
+### POST /voice/transcribe
+
+음성 받아 적기. 16비트 PCM wav 본문(`Content-Type: audio/wav`, 기본 5MB 이하)을 STT 서버(`stt/server.py`, sherpa-onnx SenseVoice)로 넘겨 문장을 돌려준다. 브라우저 녹음(webm·mp4)은 프론트가 `AudioContext`로 디코드해 16kHz 모노 wav로 바꿔 보낸다(`features/voice/lib/wav.ts`). 학습 문장에 문장부호가 없으므로 결과의 문장부호를 지운다. 말소리가 없으면 `text`는 빈 문자열이다.
+
+**Response:** `200 OK` — `{ "text": "이 병 약 얼마나 타서 뿌려" }`
+
+**Errors:** `400 AUDIO_INVALID`(wav 아님·빈 본문), `413 AUDIO_TOO_LARGE`(`STT_MAX_AUDIO_MB`), `503 STT_UNAVAILABLE`(`STT_ENGINE=off` 또는 STT 서버 무응답, `retryable: true`). 설정: `STT_ENGINE`(`off|mock|http`, 기본 `off`), `STT_SERVER_URL`(기본 `http://127.0.0.1:8200`), `STT_TIMEOUT_SECONDS`.
+
+---
+
+### POST /voice/select-function
+
+발화와 화면 상태로 기능 고르기(서버 경유). 보고 있는 진단(`diagnosis_id`, 이 기기의 기록)과 화면 단계(`ui_stage`: `no_photo|photo_ready|analyzing|result|error`)로 학습 때와 같은 화면 상태(`services/voice_context.compact_context`)를 만들어 기능 선택 모델 서버의 `POST /select {utterance, context}`에 넘기고, 호출 문자열과 모델에 넣은 화면 상태를 돌려준다. 브라우저·보드에서 모델을 직접 돌리는 기기는 이 단계를 건너뛰고 `/voice/function-call`만 쓴다.
+
+**Request:** `{ "utterance": "이 병 약 얼마나 타서 뿌려", "diagnosis_id": "…", "ui_stage": "result" }` (`diagnosis_id`·`ui_stage`는 선택)
+
+**Response:** `200 OK` — `{ "function_call": "<hs_4>(topic=2, product=1)<hs_end>", "context": { "ui_stage": "result", "selected_crop": "고추", … } }`
+
+**Errors:** `404 DIAGNOSIS_NOT_FOUND`, `503 FUNCTION_SELECTOR_UNAVAILABLE`(`FUNCTION_SELECTOR_ENGINE=off` 또는 모델 서버 무응답). 설정: `FUNCTION_SELECTOR_ENGINE`(`off|mock|http`, 기본 `off`. `mock`은 화면 단계만 보고 고정 호출), `FUNCTION_SELECTOR_URL`(기본 `http://127.0.0.1:8300`), `FUNCTION_SELECTOR_TIMEOUT_SECONDS`.
+
+---
+
 ### POST /voice/function-call
 
 음성 질문의 답변 문장 생성. 기능 선택 모델(Qwen 또는 아이폰용 소형 분류기)이 낸 호출 한 줄과 진단 문맥을 받아, 저장된 진단 근거로 읽어 줄 문장을 돌려준다. 모델 실행·STT·TTS는 하지 않는다. 모델이 서버·브라우저(PC·안드로이드 Qwen q4f16, 아이폰 분류기 int8)·오렌지파이(RKLLM) 어디서 돌았든 이 엔드포인트 하나를 쓴다.
@@ -389,7 +411,7 @@ REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_typ
 
 현재 CNN↔백엔드는 동일 Python 프로세스의 함수 호출이다. 입력은 검증된 이미지 경로, 출력은 전체/Top-3 `(model_class_id, score)`이며 체크포인트 규격은 [MODEL_SPEC](MODEL_SPEC.md)를 따른다. 프론트는 [api.ts](../frontend/src/lib/api.ts)와 [응답 타입](../frontend/src/types/diagnosis.ts)을 사용한다. nullable 응답과 TypeScript 선택 필드의 정합은 후속 코드 보완 대상이다.
 
-Qwen 기능 호출의 출구는 `POST /voice/function-call`로 연결됐다(2026-11-11). 기능 선택 모델 자체는 기기별로 다른 곳에서 돈다: 오렌지파이는 RKLLM, PC·안드로이드 브라우저는 Qwen q4f16, 아이폰 Safari는 소형 분류기. STT 연결과 브라우저 안의 기능 선택기는 계획 단계다. 브라우저 카메라 촬영과 Web Speech API TTS 안내는 구현되어 있으며 보드 음성 통합과 구분한다. 데이터 시트의 get_diagnosis 등 기능명은 REST 엔드포인트가 아니라 `function_call` 문자열 안의 함수 번호다.
+음성 질문은 `POST /voice/transcribe` → `POST /voice/select-function`(서버 경유일 때) → `POST /voice/function-call` 세 단계로 연결됐다(2026-11-11). 프론트의 음성 모드(`features/voice/hooks/useVoiceConversation.ts`)가 이 순서로 부르고 답변은 브라우저 음성으로 읽는다. 기능 선택 모델 자체는 기기별로 다른 곳에서 돈다: 오렌지파이는 RKLLM, PC·안드로이드 브라우저는 Qwen q4f16, 아이폰 Safari는 소형 분류기. STT 연결과 브라우저 안의 기능 선택기는 계획 단계다. 브라우저 카메라 촬영과 Web Speech API TTS 안내는 구현되어 있으며 보드 음성 통합과 구분한다. 데이터 시트의 get_diagnosis 등 기능명은 REST 엔드포인트가 아니라 `function_call` 문자열 안의 함수 번호다.
 
 ## 진단 결과 카드 안내 필드
 
