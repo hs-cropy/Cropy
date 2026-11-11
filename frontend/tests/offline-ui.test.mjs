@@ -300,3 +300,10 @@ test('not-crop result keeps retake guidance instead of management guidance', () 
   assert.match(html, /잎이 잘 보이게 다시 찍어 주세요/);
   assert.doesNotMatch(html, /노출되면 안 되는/);
 });
+
+test('photo inputs let mobile users pick from the gallery or the camera (no capture attribute)',async()=>{
+ const html=await readFile(new URL('../public/offline/index.html',import.meta.url),'utf8');
+ const inputs=html.match(/<input[^>]*type="file"[^>]*>/g)??[];
+ assert.equal(inputs.length,2);
+ for(const input of inputs){assert.doesNotMatch(input,/\scapture\b/);assert.match(input,/accept="image\/jpeg,image\/png"/);}
+});

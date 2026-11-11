@@ -58,7 +58,7 @@
 <!-- 진단 결과. 카드들은 app.mjs 의 resultHtml 이 그린다. 추가 사진 입력은 다시 그려도 고른 파일이 남게 밖에 둔다 -->
 <section class="result-view" id="result-view" hidden aria-label="진단 결과"><div id="result"></div>
 <section class="card hidden" id="refine-area" aria-labelledby="refine-title"><h2 id="refine-title">추가 촬영</h2><p id="guidance" class="muted"></p>
-<label>추가 사진 <input id="second" type="file" accept="image/jpeg,image/png" capture="environment"></label><button id="refine" type="button">두 사진으로 다시 확인</button></section>
+<label>추가 사진 <input id="second" type="file" accept="image/jpeg,image/png"></label><button id="refine" type="button">두 사진으로 다시 확인</button></section>
 <div class="result-tools"><button id="speak" class="secondary" type="button" disabled>결과 읽기</button><button id="new-photo" class="text-button" type="button">새 사진으로 진단하기</button></div>
 </section>
 <!-- 결과가 없는 진단 결과 화면 (온라인 DiagnosisEmptyState.tsx). 오프라인에는 촬영 방법 화면이 없어 그 링크는 뺀다 -->
@@ -71,7 +71,7 @@
 </section>
 <section class="card section" id="diagnosis" aria-labelledby="diagnosis-title"><h2 id="diagnosis-title">사진 진단</h2>
 <label>작물 <select id="crop"><option value="">자동 감지</option><option>고추</option><option>무</option><option>배추</option></select></label>
-<input id="file" type="file" accept="image/jpeg,image/png" capture="environment" aria-label="진단할 사진"><img id="preview" alt="선택한 사진" class="hidden">
+<input id="file" type="file" accept="image/jpeg,image/png" aria-label="진단할 사진"><img id="preview" alt="선택한 사진" class="hidden">
 <div class="row"><button id="diagnose" type="button" disabled>이 기기에서 진단하기</button></div>
 </section>
 
