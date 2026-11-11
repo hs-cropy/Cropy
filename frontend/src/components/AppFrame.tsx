@@ -6,7 +6,11 @@ import { APP_NAV_ITEMS, currentNavKey } from "./appNav";
 import { AppShell, AppShellFooter } from "./AppShell";
 import { Header } from "./Header";
 import { MobileNav } from "./MobileNav";
-import { DiagnosisSessionProvider, useDiagnosisSession } from "./diagnosis/DiagnosisSession";
+import {
+  DIAGNOSIS_PATH,
+  DiagnosisSessionProvider,
+  useDiagnosisSession,
+} from "./diagnosis/DiagnosisSession";
 import type { NavItem } from "./navItem";
 import { requestNewDiagnosis } from "./newDiagnosis";
 import { TextSizeToggle } from "./TextSizeToggle";
@@ -100,13 +104,29 @@ function Frame({ children }: { children: ReactNode }) {
 
   // "새 진단"은 이전 사진·결과를 비우고 촬영 화면 처음으로 간다 (Figma 03 개발 가이드).
   // 촬영 화면에서 다시 누르면 같은 주소라 화면이 그대로 남으므로 처음 상태로 돌아가라고 알린다.
-  // 다른 화면에서 누르면 진단 상태를 비우고 링크대로 옮겨 간다
+  // 다른 화면에서 누르면 진단 상태를 비우고 링크대로 옮겨 간다.
+  // 진단 탭(진단 결과)은 끝난 진단만 비운다 (아래 result 분기)
   const handleNavClick = (item: NavItem, event: MouseEvent<HTMLAnchorElement>) => {
-    if (item.key !== "capture") return;
     // 새 탭·새 창으로 여는 클릭은 지금 화면을 건드리지 않는다
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
       return;
     }
+    if (item.key === "result") {
+      // 이력에 저장된 진단(결과, 새로고침 뒤 되살릴 마지막 결과)은 다른 화면에서 진단 탭으로 오면 비우고
+      // 진단 시작 안내를 보인다. 결과는 이력에서 다시 볼 수 있다.
+      // 진단 결과 화면에서 다시 누를 때, 분석·추가 촬영 중일 때, 진단 전의 고른 사진(실패 포함),
+      // 저장되지 않은 결과(저장 실패·기기 진단 — 이력에 없어 다시 볼 수 없다)는 그대로 둔다
+      const { file, result, loading, refineTarget } = session;
+      const keep =
+        pathname === DIAGNOSIS_PATH ||
+        loading ||
+        refineTarget != null ||
+        (result == null && file != null) ||
+        (result != null && result.save_status !== "saved");
+      if (!keep) session.reset();
+      return;
+    }
+    if (item.key !== "capture") return;
     if (pathname !== "/home") {
       session.reset();
       // 링크가 촬영 화면으로 옮긴 뒤 처음 컨트롤(사진 업로드 영역)에 초점을 둔다

@@ -12,7 +12,7 @@ import DiagnosisRoute from "@/app/diagnosis/page";
 import { FakeRoutes, fakeNavigation, fakeRouter } from "@/testing/fakeNavigation";
 
 const fakeRouterBack = () => fakeRouter.back();
-import { diagnoseImage } from "@/lib/api";
+import { diagnoseImage, fetchDiagnosisDetail } from "@/lib/api";
 import type { DiagnoseResponse } from "@/types/diagnosis";
 import { AppFrame } from "./AppFrame";
 import { subscribeNewDiagnosis } from "./newDiagnosis";
@@ -24,6 +24,7 @@ vi.mock("next/link", async () => ({
 vi.mock("@/lib/api", async (original) => ({
   ...(await original<typeof import("@/lib/api")>()),
   diagnoseImage: vi.fn(),
+  fetchDiagnosisDetail: vi.fn(() => new Promise(() => {})),
   // 촬영 화면의 최근 진단 카드가 부른다. 기록이 없으면 카드를 그리지 않는다
   fetchHistory: vi.fn(() =>
     Promise.resolve({ items: [], total: 0, page: 1, size: 1, unfiltered_total: 0, crop_total: 0 }),
@@ -120,6 +121,7 @@ beforeEach(() => {
   fakeNavigation.reset("/home");
   sessionStorage.clear();
   vi.mocked(diagnoseImage).mockReset();
+  vi.mocked(fetchDiagnosisDetail).mockClear();
   document.addEventListener("click", stopNavigation);
   // jsdom 에 없는 것들
   vi.stubGlobal("matchMedia", () => ({ matches: false }));
@@ -289,19 +291,121 @@ describe("AppFrame — 진단 화면에서 새 진단을 다시 누를 때", () 
     },
   );
 
-  it("이력에 다녀와도 진단 결과 화면은 마지막 결과를 그대로 보인다", async () => {
+  it.each([
+    ["주요 메뉴", "진단 결과"],
+    ["하단 메뉴", "진단"],
+  ] as const)(
+    "진단이 끝난 뒤 이력에 다녀와 %s 의 %s 을 누르면 결과를 비우고 진단 시작 안내를 보인다",
+    async (nav, name) => {
+      vi.mocked(diagnoseImage).mockResolvedValue(result("d1", "고추 탄저병"));
+      const { container } = renderApp();
+      pickPhoto(container);
+      await startDiagnosis();
+      await screen.findByRole("heading", { name: "고추 탄저병" });
+      expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBe("d1");
+
+      await userEvent.click(navLink("주요 메뉴", "진단 이력"));
+      expect(fakeNavigation.pathname).toBe("/history");
+      expect(navLink(nav, name).hasAttribute("aria-current")).toBe(false);
+
+      await userEvent.click(navLink(nav, name));
+
+      expect(fakeNavigation.pathname).toBe("/diagnosis");
+      expect(screen.getByRole("heading", { level: 1, name: "진단 시작" })).toBeTruthy();
+      expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
+      expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBeNull();
+    },
+  );
+
+  it("새로고침 뒤 마지막 결과만 남아 있어도 진단 탭으로 오면 되살리지 않고 진단 시작 안내를 보인다", async () => {
+    sessionStorage.setItem("cropy:lastDiagnosisId", "d1");
+    renderApp();
+
+    await userEvent.click(navLink("하단 메뉴", "진단"));
+
+    expect(fakeNavigation.pathname).toBe("/diagnosis");
+    expect(screen.getByRole("heading", { level: 1, name: "진단 시작" })).toBeTruthy();
+    expect(vi.mocked(fetchDiagnosisDetail)).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBeNull();
+  });
+
+  it("저장에 실패한 결과는 이력에 없으므로 이력에 다녀와 진단 탭을 눌러도 그대로 둔다", async () => {
+    vi.mocked(diagnoseImage).mockResolvedValue({
+      ...result("d1", "고추 탄저병"),
+      save_status: "failed",
+    });
+    const { container } = renderApp();
+    pickPhoto(container);
+    await startDiagnosis();
+    await screen.findByRole("heading", { name: "고추 탄저병" });
+    await userEvent.click(navLink("주요 메뉴", "진단 이력"));
+
+    await userEvent.click(navLink("하단 메뉴", "진단"));
+
+    expect(screen.getByRole("heading", { name: "고추 탄저병" })).toBeTruthy();
+  });
+
+  it("진단에 실패한 뒤 이력에 다녀와 진단 탭을 누르면 실패 안내를 그대로 둔다", async () => {
+    vi.mocked(diagnoseImage).mockRejectedValue(new Error("network"));
+    const { container } = renderApp();
+    pickPhoto(container);
+    await startDiagnosis();
+    await waitFor(() => expect(analyzingTitle()).toBeNull());
+    const failure = screen.getByRole("heading", { level: 2 }).textContent;
+    await userEvent.click(navLink("주요 메뉴", "진단 이력"));
+
+    await userEvent.click(navLink("하단 메뉴", "진단"));
+
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(failure);
+    expect(screen.queryByRole("heading", { level: 1, name: "진단 시작" })).toBeNull();
+  });
+
+  it("진단 결과 화면에서 진단 탭을 다시 누르면 결과를 그대로 둔다", async () => {
     vi.mocked(diagnoseImage).mockResolvedValue(result("d1", "고추 탄저병"));
     const { container } = renderApp();
     pickPhoto(container);
     await startDiagnosis();
     await screen.findByRole("heading", { name: "고추 탄저병" });
 
+    await userEvent.click(navLink("하단 메뉴", "진단"));
+
+    expect(screen.getByRole("heading", { name: "고추 탄저병" })).toBeTruthy();
+    expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBe("d1");
+  });
+
+  it("분석 중에 진단 탭을 눌러도 요청을 끊지 않는다", async () => {
+    const pending = pendingDiagnosis();
+    vi.mocked(diagnoseImage).mockReturnValue(pending.promise);
+    const { container } = renderApp();
+    pickPhoto(container);
+    await startDiagnosis();
+    await waitFor(() => expect(analyzingTitle()).toBeTruthy());
     await userEvent.click(navLink("주요 메뉴", "진단 이력"));
-    expect(fakeNavigation.pathname).toBe("/history");
-    expect(navLink("주요 메뉴", "진단 결과").hasAttribute("aria-current")).toBe(false);
 
-    await userEvent.click(navLink("주요 메뉴", "진단 결과"));
+    await userEvent.click(navLink("하단 메뉴", "진단"));
 
+    expect(vi.mocked(diagnoseImage).mock.calls[0][2]?.signal?.aborted).toBe(false);
+    expect(analyzingTitle()).toBeTruthy();
+    await act(async () => {
+      pending.resolve(result("d1", "고추 탄저병"));
+    });
+    expect(screen.getByRole("heading", { name: "고추 탄저병" })).toBeTruthy();
+  });
+
+  it("진단이 끝난 뒤 Ctrl 클릭(새 탭)으로 연 진단 탭은 지금 결과를 비우지 않는다", async () => {
+    vi.mocked(diagnoseImage).mockResolvedValue(result("d1", "고추 탄저병"));
+    const { container } = renderApp();
+    pickPhoto(container);
+    await startDiagnosis();
+    await screen.findByRole("heading", { name: "고추 탄저병" });
+    await userEvent.click(navLink("주요 메뉴", "진단 이력"));
+
+    fireEvent.click(navLink("하단 메뉴", "진단"), { ctrlKey: true });
+
+    expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBe("d1");
+    await act(async () => {
+      fakeRouterBack();
+    });
     expect(fakeNavigation.pathname).toBe("/diagnosis");
     expect(screen.getByRole("heading", { name: "고추 탄저병" })).toBeTruthy();
   });
