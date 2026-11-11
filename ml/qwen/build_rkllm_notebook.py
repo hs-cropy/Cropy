@@ -3,7 +3,7 @@
 Output
   cropy_qwen_v2_rkllm_colab.ipynb   upload to Drive MyDrive/cropy_qwen_v2/ and run on a Colab A100 (high RAM)
 
-What the notebook does (model = soup_v2_v2b_v2c/merged_hf, validation = qwen_v2c_data.jsonl.xz)
+What the notebook does (model = soup_v2abc_v2d_6run/merged_hf, validation rows = the same 1,160 as qwen_v2c)
   1. installs rkllm-toolkit (RKLLM_VERSION, Qwen3.5 supported since 1.3.0) in its own Python 3.11 venv,
      because it pins torch 2.6 / transformers 5.8 and auto_gptq has no 3.12 wheel
   2. rkllm/prepare_rkllm.py   token checks, calibration set from train, prompts+ids for every validation row,
@@ -20,8 +20,8 @@ import build_train_notebook as train
 
 HERE = Path(__file__).resolve().parent
 CRLF, LF = bytes([13, 10]), bytes([10])
-MODEL_DIR = "soup_v2_v2b_v2c/merged_hf"
-REFERENCE = "merge_eval/soup_v2_v2b_v2c_b1_cases.jsonl"  # float outputs of the same model, one prompt at a time
+MODEL_DIR = "soup_v2abc_v2d_6run/merged_hf"  # deployed since 2026-11-11 (before: soup_v2_v2b_v2c)
+REFERENCE = "merge_eval_soup6/soup_v2abc_v2d_6run_b1_cases.jsonl"  # float outputs of the same model, one prompt at a time
 RKLLM_VERSION = "1.3.1"
 QUANTS = ["w8a8"]  # add "w8a8_g128" etc. if plain w8a8 loses accuracy
 SIM_N = 300

@@ -29,11 +29,19 @@ if SMALL:
     OUT_DIR = "merge_eval_08b"
     BASELINE = "비교 기준(같은 라벨): 0.8B 단일 seed 0.9026 / 0.9112 / 0.8940 (평균 0.9026), 2B 평균 모델 0.9690"
 else:
-    RUNS = ["v2_r16_e2", "v2b_r16_e2", "v2c_r16_e2"]  # same base, prompt and new-token ids; v3s used another prompt
-    EXPORT = "v2_r16_e2"  # adapter chosen for the server (README "v2c 결과와 결정")
-    SOUP_NAME = "soup_" + "_".join(r.split("_")[0] for r in RUNS)
-    OUT_DIR = "merge_eval"
-    BASELINE = "비교 기준(같은 라벨): v2 단독 0.9500, v2c 0.9483, 세 run 다수결 0.9664, 평균 모델(16개씩 생성) 0.9690"
+    # 2026-11-03: RUNS v2_r16_e2 / v2b_r16_e2 / v2c_r16_e2 -> soup_v2_v2b_v2c (deployed, 0.9698 one prompt at a time).
+    # 2026-11-11: v2d / v2e = v2c + real-speech patch, three seeds each. Their 3-seed soups lost validation
+    # (95.4 / 94.4), so neither replaced the deployed model. Soup of the 3 deployed runs + the 3 v2d seeds kept
+    # validation (0.9707 one prompt at a time) and raised real speech 71.5% -> 78.5%: deployed since 2026-11-11.
+    # Earlier configs: v2d  RUNS v2d_r16_e2(_s20261111/_s20261112) -> soup_v2d_3seed, merge_eval_v2d
+    #                  v2e  RUNS v2e_r16_e2(_s20261111/_s20261112) -> soup_v2e_3seed, merge_eval_v2e
+    RUNS = ["v2_r16_e2", "v2b_r16_e2", "v2c_r16_e2", "v2d_r16_e2", "v2d_r16_e2_s20261111", "v2d_r16_e2_s20261112"]
+    EXPORT = RUNS[0]  # only the tokenizer is read from it; no single-adapter merge
+    SOUP_NAME = "soup_v2abc_v2d_6run"
+    OUT_DIR = "merge_eval_soup6"
+    BASELINE = ("비교 기준: 이전 배포 평균 모델(soup_v2_v2b_v2c) validation 0.9698(한 건씩). "
+                "실제 발화는 위 deployed_real_speech 줄과 비교한다. 둘 다 나빠지지 않을 때만 교체한다")
+DEPLOYED = "soup_v2_v2b_v2c"  # the model the 2026-11-10 testers talked to; comparison baseline for real speech
 RUN_MERGE = False  # done on 2026-11-02 (v2_r16_e2/merged_hf)
 SAVE_SOUP = True
 
@@ -50,7 +58,7 @@ def notebook(data_sha, counts):
 학습은 하지 않는다. 이미 학습한 어댑터만 쓴다.
 
 1. **병합**: `{EXPORT}` 어댑터를 기본 모델에 합쳐 어댑터와 같은 답을 내는지 확인하고, 보드 RKLLM 변환용 Hugging Face 모델로 저장한다.
-2. **평균**: {', '.join(f'`{r}`' for r in RUNS)} 세 모델의 병합 가중치를 평균 낸 한 모델을 평가한다. {BASELINE}.
+2. **평균**: {', '.join(f'`{r}`' for r in RUNS)} {len(RUNS)}개 모델의 병합 가중치를 평균 낸 한 모델을 평가한다. {BASELINE}.
 
 - 평가 기준: `{train.DATA_FILE}`의 validation {counts['validation']:,}행(학습 결과 비교에 써 온 라벨)
 - 런타임: **A100**, 메뉴 런타임 → 모두 실행. 결과는 `cropy_qwen_v2/{OUT_DIR}/`, 병합 모델은 `cropy_qwen_v2/{EXPORT}/merged_hf/`, 평균 모델은 `cropy_qwen_v2/{SOUP_NAME}/merged_hf/`({'약 1.7GB' if SMALL else '각 약 4~5GB'}, Drive 여유 공간 확인).
@@ -101,7 +109,8 @@ raw = DATA_FILE.read_bytes()
 assert hashlib.sha256(raw).hexdigest() == DATA_SHA256, '데이터 파일이 노트북과 다릅니다'
 rows = [json.loads(l) for l in lzma.decompress(raw).decode('utf-8').splitlines()]
 val_rows = [r for r in rows if r['split'] == 'validation']
-assert len(val_rows) == {counts['validation']}
+real_rows = [r for r in rows if r['split'] == 'real_speech']   # 11/10 팀 테스트 발화(문장 부호 제거). 채점만 한다
+assert (len(val_rows), len(real_rows)) == ({counts['validation']}, {counts.get('real_speech', 0)})
 
 SYSTEM_PROMPT = {system!r}
 FUNCTIONS = {json.dumps(table, ensure_ascii=False)}
@@ -195,6 +204,10 @@ def write(name, cases, metrics):
     with (OUT / f'{name}_cases.jsonl').open('w', encoding='utf-8') as f:
         for c in cases:
             f.write(json.dumps(c, ensure_ascii=False) + '\\n')
+    # wrong answers only, as .json: small enough to read back from Drive without downloading the .jsonl
+    wrong = [dict(id=c['case_id'], text=c['user_text'], expected=c['expected'], actual=c['actual'])
+             for c in cases if c['exact_correct'] is False]
+    (OUT / f'{name}_errors.json').write_text(json.dumps(wrong, ensure_ascii=False, indent=0))
     print(name, json.dumps({k: metrics[k] for k in ('format_valid', 'function', 'exact')}))
 
 MODEL_CLASS = getattr(transformers, 'Qwen3_5ForConditionalGeneration')
@@ -247,9 +260,9 @@ if RUN_MERGE:
 else:
     print('병합 건너뜀')
 """),
-        md("""
+        md(f"""
 ## 2. 평균 (모델 수프)
-세 run을 각각 병합한 가중치를 평균 낸다(기본 가중치 + 세 변화량의 평균과 같다). 새 토큰 임베딩도 평균 낸다.
+{len(RUNS)}개 run을 각각 병합한 가중치를 평균 낸다(기본 가중치 + 변화량 평균과 같다). 새 토큰 임베딩도 평균 낸다.
 CPU 메모리에 float32로 더하므로 RAM이 넉넉한 런타임이 좋다(약 20GB).
 """),
         code("""
@@ -283,6 +296,46 @@ name = SOUP_NAME + ('_b1' if run_info['batch_generation'] == 1 else '')
 write(name, cases, metrics)
 if SAVE_SOUP:
     (OUT / f'{name}_reload_check.json').write_text(json.dumps(save_hf(soup, DRIVE_DIR / SOUP_NAME / 'merged_hf', RUNS)))
+"""),
+        md(f"""
+## 3. 실제 발화 평가
+11/10 팀 테스트 발화를 새 평균 모델과 지금 배포 중인 모델(`{DEPLOYED}`)에 똑같이 넣는다. 학습에 쓰지 않은 문장이고,
+두 모델 모두 문장 부호를 뺀 같은 입력을 받는다. 정답에 인자가 없는 행은 기능만 본다.
+"""),
+        code(f"""
+def score_real(texts):
+    cases = []
+    for r, t in zip(real_rows, texts):
+        got = parse_call(t)
+        cases.append(dict(case_id=r['case_id'], input_kind=r['augmentation'], user_text=r['user_text'], expected=r['output'],
+                          expected_function=r['function'], actual=t, actual_function=got[0] if got else None,
+                          format_valid=got is not None, function_correct=bool(got) and got[0] == r['function'],
+                          exact_correct=None if r['output'] is None else t == r['output']))
+    full = [c for c in cases if c['exact_correct'] is not None]
+    rate = lambda cs, key: round(sum(c[key] for c in cs) / max(1, len(cs)), 4)
+    by = lambda key: {{v: dict(support=len(cs), function=rate(cs, 'function_correct'),
+                               exact=rate([c for c in cs if c['exact_correct'] is not None], 'exact_correct'))
+                       for v in sorted({{c[key] for c in cases}}) for cs in [[c for c in cases if c[key] == v]]}}
+    return cases, dict(support=len(cases), exact_support=len(full), format_valid=rate(cases, 'format_valid'),
+                       function=rate(cases, 'function_correct'), exact=rate(full, 'exact_correct'),
+                       per_function=by('expected_function'), per_input_kind=by('input_kind'))
+
+if real_rows:
+    new_cases, new_metrics = score_real(generate(soup, real_rows, 1))
+    write(SOUP_NAME + '_real_speech', new_cases, new_metrics | dict(runs=RUNS, env=ENV))
+    del soup; gc.collect(); torch.cuda.empty_cache()
+    deployed = MODEL_CLASS.from_pretrained(DRIVE_DIR / '{DEPLOYED}' / 'merged_hf', device_map={{'': 0}}, dtype=DTYPE, attn_implementation='sdpa')
+    deployed.config.use_cache = True
+    old_cases, old_metrics = score_real(generate(deployed, real_rows, 1))
+    write('deployed_real_speech', old_cases, old_metrics | dict(model='{DEPLOYED}', env=ENV))
+    del deployed; gc.collect(); torch.cuda.empty_cache()
+    fixed = [n['case_id'] for n, o in zip(new_cases, old_cases) if n['function_correct'] and not o['function_correct']]
+    broken = [n['case_id'] for n, o in zip(new_cases, old_cases) if o['function_correct'] and not n['function_correct']]
+    (OUT / 'real_speech_changes.json').write_text(json.dumps(dict(fixed=fixed, broken=broken), ensure_ascii=False, indent=2))
+    print(f'기능 기준: 고쳐진 발화 {{len(fixed)}}건, 새로 틀린 발화 {{len(broken)}}건')
+    for name, v in new_metrics['per_function'].items():
+        o = old_metrics['per_function'][name]
+        print(f'{{name:28s}} n={{v["support"]:3d}} 기능 {{o["function"]:.3f}} -> {{v["function"]:.3f}} | 인자까지 {{o["exact"]:.3f}} -> {{v["exact"]:.3f}}')
 """),
         md("## 요약"),
         code("""

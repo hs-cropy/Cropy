@@ -15,7 +15,7 @@ import build_train_notebook as train
 import spec_v2
 
 HERE = Path(__file__).resolve().parent
-MODEL_DIR = "soup_v2_v2b_v2c/merged_hf"
+MODEL_DIR = "soup_v2abc_v2d_6run/merged_hf"  # deployed since 2026-11-11 (before: soup_v2_v2b_v2c)
 
 
 def meanings():

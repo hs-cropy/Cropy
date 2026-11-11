@@ -3,7 +3,7 @@
 Output
   cropy_qwen_v2_web_onnx_colab.ipynb   upload to Drive MyDrive/cropy_qwen_v2/ with onnx_web/*.py in cropy_qwen_v2/web_onnx_scripts/
 
-SIZE '2b'   the deployed soup model (soup_v2_v2b_v2c/merged_hf, float 97.0%)
+SIZE '2b'   the deployed soup model (soup_v2abc_v2d_6run/merged_hf, float 97.07%; before 2026-11-11 soup_v2_v2b_v2c)
 SIZE '0.8b' the 0.8B run (v2c_08b_r16_e2, cropy_qwen_v2_08b_train_colab.ipynb); its adapter is merged here first
 Steps: (0.8b) merge adapter -> onnx_web/export_web_onnx.py (official graphs + our weights, q4f16 and q4)
        -> onnx_web/eval_web_onnx.py on the same 300 validation rows as the RKLLM simulation.
@@ -19,9 +19,9 @@ import build_train_notebook as train
 HERE = Path(__file__).resolve().parent
 SCRIPTS = ["weights.py", "export_web_onnx.py", "eval_web_onnx.py"]
 SIZES = {
-    "2b": dict(model="soup_v2_v2b_v2c/merged_hf", adapter=None, ref="onnx-community/Qwen3.5-2B-ONNX-OPT",
+    "2b": dict(model="soup_v2abc_v2d_6run/merged_hf", adapter=None, ref="onnx-community/Qwen3.5-2B-ONNX-OPT",
                ref_rev="ed446636739bf426e73c5a00714fd8e010d36c21", base="Qwen/Qwen3.5-2B",
-               base_rev="15852e8c16360a2fea060d615a32b45270f8a8fc", float_ref="merge_eval/soup_v2_v2b_v2c_b1_cases.jsonl"),
+               base_rev="15852e8c16360a2fea060d615a32b45270f8a8fc", float_ref="merge_eval_soup6/soup_v2abc_v2d_6run_b1_cases.jsonl"),
     "0.8b": dict(model="v2c_08b_r16_e2/merged_hf", adapter="v2c_08b_r16_e2/adapter", ref="onnx-community/Qwen3.5-0.8B-ONNX-OPT",
                  ref_rev="9a4c21d8f724176b0a7edaaed36303044451886e", base="Qwen/Qwen3.5-0.8B",
                  base_rev="2fc06364715b967f1860aea9cf38778875588b17", float_ref="v2c_08b_r16_e2/eval_cases.jsonl"),
