@@ -6,13 +6,14 @@ import { VoiceMicButton } from "./VoiceMicButton";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { VoiceBubble } from "./VoiceBubble";
 import { Header } from "@/components/Header";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { cancelSpeech } from "@/features/voice/lib/speech";
 import { readVoiceReturn } from "./voiceNavigation";
 import { Button } from "@/components/Button";
 import { Switch } from "@/components/Switch";
 import { VoiceCameraPreview, type VoiceCamera } from "./VoiceCameraPreview";
 import type { VoiceTurn } from "@/features/voice/hooks/useVoiceConversation";
+import { VoiceTranscript } from "./VoiceTranscript";
 
 interface VoiceModeProps {
   state?: VoiceModeState;
@@ -71,12 +72,6 @@ export function VoiceMode({
   camera,
   history = [],
 }: VoiceModeProps) {
-  // 대화 기록은 새 말이 붙으면 맨 아래(최신)로 내려 둔다
-  const logRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = logRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [history.length, state]);
   const router = useRouter();
   // 카메라가 켜지면 좁은 화면에서는 카메라가 주인공이고 크로피는 작은 상태 표시로 물러난다
   const compact = camera?.status === "streaming";
@@ -207,16 +202,7 @@ export function VoiceMode({
 
             {/* 주고받은 말이 있으면 예시 대신 기록을 보여 준다. 밭에서 소리가 잘 안 들려도 눈으로 확인할 수 있다 */}
             {history.length > 0 ? (
-              <div
-                ref={logRef}
-                role="log"
-                aria-label="대화 기록"
-                className="flex max-h-[24dvh] w-full flex-col gap-2 overflow-y-auto rounded-2xl bg-white/60 p-2 text-sm lg:max-h-48"
-              >
-                {history.map((turn, i) => (
-                  <VoiceBubble key={i} role={turn.role} text={turn.text} />
-                ))}
-              </div>
+              <VoiceTranscript turns={history} />
             ) : (
             <div className="flex flex-wrap justify-center gap-2 text-sm">
               {camera ? (
