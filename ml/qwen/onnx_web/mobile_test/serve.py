@@ -24,7 +24,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return str((HERE / clean.lstrip("/")).resolve())
 
     def end_headers(self):
-        self.send_header("Cache-Control", "no-store" if self.path.endswith(".html") or self.path == "/" else "public, max-age=86400")
+        # small files (page, config, lists) must always be fresh; only the big weight files are cacheable
+        fresh = self.path == "/" or self.path.split("?", 1)[0].endswith((".html", ".json"))
+        self.send_header("Cache-Control", "no-store" if fresh else "public, max-age=86400")
+        # Cross-origin isolation lets onnxruntime-web use SharedArrayBuffer, i.e. multi-threaded wasm
+        # (without it the CPU path ran single-threaded: 161 s per question on a 22-core PC).
+        # Only for the CPU page (?cpu=1): isolation changes how the browser treats every other request, so the
+        # WebGPU measurement stays on the plain page.
+        if "cpu=1" in self.path:
+            self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+            self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
         super().end_headers()
 
 
