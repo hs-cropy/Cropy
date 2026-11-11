@@ -16,10 +16,11 @@ export interface AccordionItem {
 const ITEM = "overflow-hidden rounded-2xl border border-cropy-border bg-cropy-surface";
 
 // 머리: 좌우 16px·상하 12px·15px Bold → lg 안쪽 16px·최소 56px·16px Bold.
-// Figma 에 호버·누름 상태가 없어 보조 버튼·칩과 같은 배경을 쓴다.
+// Figma(M-03-E1)의 머리는 펼쳐도 항목과 같은 흰 배경이다. 터치 기기에서 누름 배경을 주면
+// 머리만 회색 띠로 남아 어색하므로, 호버·누름 배경은 마우스 기기에만 준다.
 // 초점 표시는 항목의 overflow-hidden 에 잘리지 않게 안쪽으로 그린다
 const TRIGGER =
-  "flex w-full cursor-pointer items-center gap-3 break-keep px-4 py-3 text-left text-cropy-feedback-body font-bold text-cropy-text-primary [overflow-wrap:break-word] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-cropy-action-primary active:bg-cropy-surface-canvas lg:min-h-14 lg:gap-4 lg:py-4 lg:text-cropy-body-lg lg:font-bold [@media(hover:hover)]:[&:hover:not(:active)]:bg-cropy-surface-canvas";
+  "flex w-full cursor-pointer items-center gap-3 break-keep px-4 py-3 text-left text-cropy-feedback-body font-bold text-cropy-text-primary [overflow-wrap:break-word] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-cropy-action-primary lg:min-h-14 lg:gap-4 lg:py-4 lg:text-cropy-body-lg lg:font-bold [@media(hover:hover)]:hover:bg-cropy-surface-canvas";
 
 // 본문: 좌우 16px·아래 18px·문단 간격 12px·14px → lg 아래 20px·간격 8px
 const PANEL =
