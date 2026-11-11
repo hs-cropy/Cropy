@@ -4,7 +4,7 @@ import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import diagnosis, diseases, health, offline
+from app.api.routes import diagnosis, diseases, health, offline, voice
 from app.api.documentation import COMMON_ERRORS, DESCRIPTION, TAGS
 from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine, ensure_columns
@@ -66,6 +66,7 @@ app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(diagnosis.router, prefix="/api/v1", tags=["diagnosis"])
 app.include_router(diseases.router, prefix="/api/v1/diseases", tags=["diseases"])
 app.include_router(offline.router, prefix="/api/v1/offline", tags=["offline"])
+app.include_router(voice.router, prefix="/api/v1", tags=["voice"])
 app.mount("/uploads", ImageStaticFiles(directory=str(settings.upload_dir)), name="uploads")
 
 # metadata is JSON text inside multipart, so FastAPI cannot discover its inner
