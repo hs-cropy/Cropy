@@ -22,7 +22,7 @@ export default function VoiceModePage() {
   const conversation = useVoiceConversation({ captureFrame });
   const { toast, showToast, clearToast } = useToast();
 
-  const { state, inputLevel, error, clearError, handleMicClick, cancel, transcript, assistantText, continuous, setContinuous, captureNow, lastShot, history } = conversation;
+  const { state, inputLevel, error, clearError, handleMicClick, cancel, transcript, assistantText, continuous, setContinuous, wakeEnabled, setWakeEnabled, captureNow, lastShot, history } = conversation;
 
   // 처음에 한 번 켜 본다. iOS처럼 사용자 동작이 필요한 기기는 실패하고, 미리보기의 "카메라 켜기"로 켠다
   useEffect(() => {
@@ -55,6 +55,8 @@ export default function VoiceModePage() {
         micDisabled={state === "thinking"}
         continuous={continuous}
         onContinuousChange={setContinuous}
+        wakeEnabled={wakeEnabled}
+        onWakeEnabledChange={setWakeEnabled}
         history={history}
         camera={{
           videoRef,

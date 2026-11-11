@@ -86,6 +86,8 @@ describe("useVoiceConversation", () => {
     vi.clearAllMocks();
     resetPipeline();
     localStorage.clear();
+    // 호출어 듣기는 대기 중에 녹음을 시작해 recorder.start 횟수를 바꾸므로, 호출어 테스트에서만 켠다
+    localStorage.setItem("cropy:voice-wake", "off");
 
     recorderMock.onLevel = null;
     recorderMock.onAnalysisUnavailable = null;
@@ -531,6 +533,63 @@ describe("useVoiceConversation", () => {
 
     expect(pipeline.transcribe).not.toHaveBeenCalled();
     expect(result.current.error).toBe("녹음한 소리를 처리하지 못했어요");
+  });
+
+  describe("호출어", () => {
+    function wakeOn() {
+      localStorage.setItem("cropy:voice-wake", "on");
+    }
+
+    async function speakIntoWake() {
+      // 대기 400ms 뒤 호출어 녹음 시작 → 말소리 → 700ms 묵음 → 받아 적기
+      await act(async () => { await vi.advanceTimersByTimeAsync(450); });
+      expect(recorderMock.start).toHaveBeenCalledTimes(1);
+      act(() => { recorderMock.onLevel?.(0.5); vi.advanceTimersByTime(300); recorderMock.onLevel?.(0.5); recorderMock.onLevel?.(0); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(900); });
+    }
+
+    it("\"크로피 이거 무슨 병이야\"라고 하면 바로 그 질문에 답한다", async () => {
+      wakeOn();
+      pipeline.transcribe.mockResolvedValueOnce("크로피 이거 무슨 병이야");
+      const { result } = renderHook(() => useVoiceConversation());
+      act(() => { result.current.setContinuous(false); }); // 답한 뒤 연속 대화로 다시 듣지 않게
+      await speakIntoWake();
+
+      expect(pipeline.selectFunction).toHaveBeenCalledWith("이거 무슨 병이야", expect.anything(), expect.any(AbortSignal));
+      expect(result.current.history[0]).toEqual({ role: "user", text: "이거 무슨 병이야" });
+      expect(pipeline.speakAndWait).toHaveBeenCalledTimes(1);
+      expect(result.current.state).toBe("idle");
+    });
+
+    it("이름만 부르면 신호음 뒤 듣기를 시작한다", async () => {
+      wakeOn();
+      pipeline.transcribe.mockResolvedValueOnce("크로피야");
+      const { result } = renderHook(() => useVoiceConversation());
+      await speakIntoWake();
+
+      expect(pipeline.selectFunction).not.toHaveBeenCalled();
+      expect(result.current.state).toBe("listening");
+      expect(recorderMock.start).toHaveBeenCalledTimes(2); // 호출어 녹음 + 본 녹음
+    });
+
+    it("호출어가 아니면 버리고 계속 듣는다", async () => {
+      wakeOn();
+      pipeline.transcribe.mockResolvedValueOnce("오늘 날씨 좋다");
+      const { result } = renderHook(() => useVoiceConversation());
+      await speakIntoWake();
+
+      expect(pipeline.selectFunction).not.toHaveBeenCalled();
+      expect(result.current.state).toBe("idle");
+      expect(result.current.history).toEqual([]);
+      expect(recorderMock.start).toHaveBeenCalledTimes(2); // 다시 호출어 듣기 시작
+    });
+
+    it("끄면 대기 중에 녹음하지 않는다", async () => {
+      const { result } = renderHook(() => useVoiceConversation());
+      expect(result.current.wakeEnabled).toBe(false);
+      await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+      expect(recorderMock.start).not.toHaveBeenCalled();
+    });
   });
 
   it("\"찍어 줘\"라고 하면 모델에 보내지 않고 카메라로 찍어 진단하고 결과를 읽어 준다", async () => {

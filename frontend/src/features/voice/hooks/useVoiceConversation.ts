@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { VoiceModeState } from "@/components/voice-mode/VoiceMascot";
 import { ApiError, diagnoseImage } from "@/lib/api";
 import { isCaptureCommand } from "@/features/voice/lib/captureIntent";
+import { matchWakeWord } from "@/features/voice/lib/wakeWord";
 import { cancelSpeech, speakAndWait } from "@/features/voice/lib/speech";
 import { answerFunction, fetchSpeechScript, selectFunction, transcribe } from "@/features/voice/lib/voiceApi";
 import { LAST_DIAGNOSIS_KEY, readVoiceScreen, type VoiceScreen } from "@/features/voice/lib/voiceScreen";
@@ -61,6 +62,21 @@ export interface VoiceTurn {
 
 const MAX_TURNS = 12;
 
+// 호출어 "크로피": 대기 중에 마이크를 낮게 열어 두고, 말소리가 끝날 때마다 받아 적어 이름이 들렸는지 본다
+export const WAKE_KEY = "cropy:voice-wake";
+const WAKE_SILENCE_MS = 700;       // 말이 끝났다고 보는 묵음
+const WAKE_MAX_SEGMENT_MS = 8000;  // 한 번에 받아 적는 최대 길이
+const WAKE_IDLE_RESTART_MS = 6000; // 말소리가 없으면 녹음을 비우고 다시 시작(파일이 커지지 않게)
+const WAKE_START_DELAY_MS = 400;   // 대기 상태가 된 뒤 호출어 듣기를 시작하기까지
+
+function readWake(): boolean {
+  try {
+    return localStorage.getItem(WAKE_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
 export interface UseVoiceConversationOptions {
   /** 지금 카메라 장면을 사진 파일로. 카메라가 없거나 꺼져 있으면 null. 음성 모드 화면이 넘긴다 */
   captureFrame?: () => Promise<File | null>;
@@ -98,6 +114,14 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
   const [lastShot, setLastShot] = useState<LastShot | null>(null);
   const lastShotUrlRef = useRef<string | null>(null);
   const [history, setHistory] = useState<VoiceTurn[]>([]);
+  // 호출어 듣기
+  const [wakeEnabled, setWakeEnabledState] = useState(readWake);
+  const wakeEnabledRef = useRef(wakeEnabled);
+  const wakeRecordingRef = useRef<VoiceRecording | null>(null);
+  const wakeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wakeStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wakeBusyRef = useRef(false);
+  const wakeUnavailableRef = useRef(false);
   const addTurn = useCallback((turn: VoiceTurn) => {
     if (!turn.text.trim()) return;
     setHistory((prev) => [...prev, turn].slice(-MAX_TURNS));
@@ -151,6 +175,30 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
     }
   }, []);
 
+  const setWakeEnabled = useCallback((next: boolean) => {
+    wakeEnabledRef.current = next;
+    setWakeEnabledState(next);
+    try {
+      localStorage.setItem(WAKE_KEY, next ? "on" : "off");
+    } catch {
+      // 저장이 막힌 환경 — 이번 화면에만 적용된다
+    }
+  }, []);
+
+  const stopWakeLoop = useCallback(() => {
+    if (wakeStartTimerRef.current !== null) {
+      clearTimeout(wakeStartTimerRef.current);
+      wakeStartTimerRef.current = null;
+    }
+    if (wakeTimerRef.current !== null) {
+      clearInterval(wakeTimerRef.current);
+      wakeTimerRef.current = null;
+    }
+    wakeRecordingRef.current?.cancel();
+    wakeRecordingRef.current = null;
+    wakeBusyRef.current = false;
+  }, []);
+
   const setContinuous = useCallback((next: boolean) => {
     continuousRef.current = next;
     setContinuousState(next);
@@ -202,6 +250,7 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
     generationRef.current += 1;
     resetVad();
     clearAutoListen();
+    stopWakeLoop();
 
     recordingRef.current?.cancel();
     recordingRef.current = null;
@@ -215,7 +264,7 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
     setAudio(null);
     setError(null);
     updateState("idle");
-  }, [clearAutoListen, resetVad, updateState]);
+  }, [clearAutoListen, resetVad, stopWakeLoop, updateState]);
 
   /**
    * 지금 카메라 장면을 찍어 진단하고, 읽어 줄 문장을 돌려준다. 결과는 이 화면의 현재 진단이 된다.
@@ -249,6 +298,59 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
       throw cause;
     }
   }, [adoptDiagnosis]);
+
+  /**
+   * 받아 적은 말에 답한다: 기능 고르기 → 답변 문장 → 읽기 → (연속 대화면) 다시 듣기.
+   * 상태는 thinking이어야 하고, generation·controller는 부른 쪽이 만든 것을 쓴다.
+   */
+  const respondTo = useCallback(async (text: string, generation: number, controller: AbortController) => {
+    const live = () => generation === generationRef.current && !controller.signal.aborted;
+    setTranscript(text);
+    addTurn({ role: "user", text });
+
+    // 2. 기능 고르기 → 3. 답변 문장. "찍어 줘"는 모델에 보내지 않고 앱이 바로 찍어 진단한다
+    const current = screenRef.current;
+    let reply: string | string[];
+    try {
+      if (isCaptureCommand(text)) {
+        reply = await captureAndDescribe(controller.signal);
+        if (!live()) return;
+      } else {
+        const selected = await selectFunction(text, current, controller.signal);
+        if (!live()) return;
+        if (!current.diagnosisId) {
+          // 진단 없이 답할 수 있는 기능(사용 안내·잡담)은 handler가 생기면 여기서 연결한다 (#162)
+          reply = NO_DIAGNOSIS_TEXT;
+        } else {
+          reply = (await answerFunction(current.diagnosisId, selected.function_call, "server", controller.signal)).text;
+        }
+      }
+    } catch (cause) {
+      if (!live()) return;
+      const failure = answerFailure(cause);
+      if (!failure.say) {
+        setError(failure.toast ?? VOICE_ERROR);
+        updateState("idle");
+        return;
+      }
+      reply = failure.say;
+    }
+    if (!live()) return;
+
+    // 4. 읽기. 다 읽으면 다시 대기. 그 사이 마이크를 누르면 cancel()이 낭독을 끊고 idle로 돌린다
+    abortRef.current = null;
+    const replyText = Array.isArray(reply) ? reply.join(" ") : reply;
+    setAssistantText(replyText);
+    addTurn({ role: "assistant", text: replyText });
+    updateState("speaking");
+    busyRef.current = false;
+    await speakAndWait(reply, speechOwner.current);
+    if (generation === generationRef.current && isState("speaking")) {
+      updateState("idle");
+      // 연속 대화: 다 읽었으면 버튼 없이 다시 듣는다 (끊긴 경우는 cancel()이 처리했으므로 여기 오지 않는다)
+      scheduleAutoListen();
+    }
+  }, [addTurn, captureAndDescribe, isState, scheduleAutoListen, updateState]);
 
   /** 셔터 버튼: 듣는 중이 아니어도 찍어서 바로 진단하고 결과를 읽어 준다 */
   const captureNow = useCallback(async () => {
@@ -352,51 +454,7 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
         return;
       }
       silentRoundsRef.current = 0;
-      setTranscript(text);
-      addTurn({ role: "user", text });
-
-      // 2. 기능 고르기 → 3. 답변 문장. "찍어 줘"는 모델에 보내지 않고 앱이 바로 찍어 진단한다
-      const current = screenRef.current;
-      let reply: string | string[];
-      try {
-        if (isCaptureCommand(text)) {
-          reply = await captureAndDescribe(controller.signal);
-          if (!live()) return;
-        } else {
-          const selected = await selectFunction(text, current, controller.signal);
-          if (!live()) return;
-          if (!current.diagnosisId) {
-            // 진단 없이 답할 수 있는 기능(사용 안내·잡담)은 handler가 생기면 여기서 연결한다 (#162)
-            reply = NO_DIAGNOSIS_TEXT;
-          } else {
-            reply = (await answerFunction(current.diagnosisId, selected.function_call, "server", controller.signal)).text;
-          }
-        }
-      } catch (cause) {
-        if (!live()) return;
-        const failure = answerFailure(cause);
-        if (!failure.say) {
-          setError(failure.toast ?? VOICE_ERROR);
-          updateState("idle");
-          return;
-        }
-        reply = failure.say;
-      }
-      if (!live()) return;
-
-      // 4. 읽기. 다 읽으면 다시 대기. 그 사이 마이크를 누르면 cancel()이 낭독을 끊고 idle로 돌린다
-      abortRef.current = null;
-      const replyText = Array.isArray(reply) ? reply.join(" ") : reply;
-      setAssistantText(replyText);
-      addTurn({ role: "assistant", text: replyText });
-      updateState("speaking");
-      busyRef.current = false;
-      await speakAndWait(reply, speechOwner.current);
-      if (generation === generationRef.current && isState("speaking")) {
-        updateState("idle");
-        // 연속 대화: 다 읽었으면 버튼 없이 다시 듣는다 (끊긴 경우는 cancel()이 처리했으므로 여기 오지 않는다)
-        scheduleAutoListen();
-      }
+      await respondTo(text, generation, controller);
     } catch {
       if (generation === generationRef.current) {
         recordingRef.current?.cancel();
@@ -413,7 +471,7 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
         busyRef.current = false;
       }
     }
-  }, [addTurn, captureAndDescribe, clearVadTimer, isState, resetVad, scheduleAutoListen, updateState]);
+  }, [clearVadTimer, resetVad, respondTo, updateState]);
 
   // 연속 대화 중 말이 없었을 때: 한 번은 조용히 다시 듣고, 계속 없으면 안내 뒤 대기로 돌아간다
   const giveUpOrRetry = useCallback(() => {
@@ -435,6 +493,7 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
     busyRef.current = true;
     const generation = ++generationRef.current;
 
+    stopWakeLoop();
     clearAutoListen();
     resetVad();
     setAnalysisAvailable(true);
@@ -564,8 +623,145 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
         busyRef.current = false;
       }
     }
-  }, [clearAutoListen, clearVadTimer, giveUpOrRetry, resetVad, stop, updateState]);
+  }, [clearAutoListen, clearVadTimer, giveUpOrRetry, resetVad, stop, stopWakeLoop, updateState]);
   startRef.current = start;
+
+  /**
+   * 호출어 듣기: 대기 중에 마이크를 열어 두고 말소리 구간마다 받아 적어 "크로피"가 들렸는지 본다.
+   * 이름 뒤에 말이 이어졌으면 그 말로 바로 답하고, 이름만 불렀으면 신호음 뒤 듣기 시작.
+   * 호출어가 아니면 버리고 계속 듣는다. 화면 표시(음량·상태)는 바꾸지 않는다.
+   */
+  const startWakeLoop = useCallback(async () => {
+    if (!wakeEnabledRef.current || wakeUnavailableRef.current) return;
+    if (stateRef.current !== "idle" || busyRef.current || wakeBusyRef.current || wakeRecordingRef.current) return;
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+    if (autoListenTimerRef.current !== null) return; // 연속 대화가 곧 듣기를 시작한다
+
+    wakeBusyRef.current = true;
+    const generation = generationRef.current;
+    let speechStartedAt: number | null = null;
+    let lastSpeechAt: number | null = null;
+    let detected = false;
+    const startedAt = Date.now();
+    let recording: VoiceRecording;
+    try {
+      recording = await startVoiceRecording({
+        stream: streamRef.current,
+        keepStream: true,
+        onLevel: (level) => {
+          const now = Date.now();
+          if (level >= VAD_THRESHOLD) {
+            speechStartedAt ??= now;
+            if (now - speechStartedAt >= MIN_SPEECH_MS) {
+              detected = true;
+              lastSpeechAt = now;
+            }
+          } else {
+            speechStartedAt = null;
+          }
+        },
+      });
+    } catch {
+      wakeBusyRef.current = false;
+      wakeUnavailableRef.current = true; // 마이크를 못 열면 조용히 포기한다 (버튼은 여전히 쓸 수 있다)
+      return;
+    }
+    if (generation !== generationRef.current || stateRef.current !== "idle" || !wakeEnabledRef.current) {
+      recording.cancel();
+      wakeBusyRef.current = false;
+      return;
+    }
+    streamRef.current = recording.stream;
+    wakeRecordingRef.current = recording;
+    wakeBusyRef.current = false;
+
+    const finish = async (restartOnly: boolean) => {
+      if (wakeTimerRef.current !== null) {
+        clearInterval(wakeTimerRef.current);
+        wakeTimerRef.current = null;
+      }
+      wakeRecordingRef.current = null;
+      if (restartOnly) {
+        recording.cancel();
+        void startWakeLoop();
+        return;
+      }
+      wakeBusyRef.current = true;
+      try {
+        const blob = await recording.stop();
+        if (generation !== generationRef.current || stateRef.current !== "idle") return;
+        const wav = await recordingToWav(blob);
+        const text = (await transcribe(wav)).trim();
+        if (generation !== generationRef.current || stateRef.current !== "idle") return;
+        const wake = matchWakeWord(text);
+        if (!wake) {
+          wakeBusyRef.current = false;
+          void startWakeLoop();
+          return;
+        }
+        wakeBusyRef.current = false;
+        playListenCue();
+        if (!wake.remainder) {
+          void startRef.current();
+          return;
+        }
+        // 이름 뒤에 질문이 이어졌으면 다시 듣지 않고 바로 답한다
+        busyRef.current = true;
+        const next = ++generationRef.current;
+        const controller = new AbortController();
+        abortRef.current = controller;
+        setError(null);
+        setAssistantText("");
+        updateState("thinking");
+        try {
+          await respondTo(wake.remainder, next, controller);
+        } finally {
+          if (next === generationRef.current) busyRef.current = false;
+        }
+      } catch (cause) {
+        // STT 서버가 없거나 변환에 실패하면 호출어 듣기를 멈춘다. 다음에 화면에 들어오면 다시 시도한다
+        wakeBusyRef.current = false;
+        if (cause instanceof ApiError && cause.status === 503) wakeUnavailableRef.current = true;
+        else void startWakeLoop();
+      }
+    };
+
+    wakeTimerRef.current = setInterval(() => {
+      if (generation !== generationRef.current || stateRef.current !== "idle" || !wakeEnabledRef.current) {
+        void finish(true);
+        if (wakeRecordingRef.current === null) {
+          // finish(true)가 다시 시작하려 했지만 조건이 안 맞아 멈춘 경우
+        }
+        return;
+      }
+      const now = Date.now();
+      if (detected && lastSpeechAt !== null && now - lastSpeechAt >= WAKE_SILENCE_MS) {
+        void finish(false);
+      } else if (detected && now - startedAt >= WAKE_MAX_SEGMENT_MS) {
+        void finish(false);
+      } else if (!detected && now - startedAt >= WAKE_IDLE_RESTART_MS) {
+        void finish(true);
+      }
+    }, 100);
+  }, [respondTo, updateState]);
+
+  // 대기 상태가 되면 잠시 뒤 호출어 듣기를 시작한다 (연속 대화가 먼저 듣기 시작하면 그쪽이 우선)
+  useEffect(() => {
+    if (state !== "idle" || !wakeEnabled) {
+      stopWakeLoop();
+      return;
+    }
+    wakeStartTimerRef.current = setTimeout(() => {
+      wakeStartTimerRef.current = null;
+      void startWakeLoop();
+    }, WAKE_START_DELAY_MS);
+    return () => {
+      if (wakeStartTimerRef.current !== null) {
+        clearTimeout(wakeStartTimerRef.current);
+        wakeStartTimerRef.current = null;
+      }
+    };
+  }, [state, wakeEnabled, startWakeLoop, stopWakeLoop]);
 
   const handleMicClick = useCallback(() => {
     if (stateRef.current === "idle") {
@@ -593,6 +789,7 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
         clearTimeout(autoListenTimerRef.current);
         autoListenTimerRef.current = null;
       }
+      stopWakeLoop();
       // 음성 모드를 벗어날 때 마이크를 끈다 (브라우저의 녹음 표시도 같이 꺼진다)
       releaseStream(streamRef.current);
       streamRef.current = null;
@@ -601,7 +798,7 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
         lastShotUrlRef.current = null;
       }
     };
-  }, [clearVadTimer]);
+  }, [clearVadTimer, stopWakeLoop]);
 
   return {
     state,
@@ -613,6 +810,8 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
     assistantText,
     continuous,
     setContinuous,
+    wakeEnabled,
+    setWakeEnabled,
     /** 지금 이야기하는 진단(없으면 null)과 화면 단계 */
     screen,
     lastShot,

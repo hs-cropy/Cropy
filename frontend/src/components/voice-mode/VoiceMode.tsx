@@ -29,6 +29,9 @@ interface VoiceModeProps {
   /** 연속 대화: 답을 다 읽으면 버튼 없이 다시 듣는다. 넘기지 않으면 스위치를 보이지 않는다 */
   continuous?: boolean;
   onContinuousChange?: (next: boolean) => void;
+  /** 호출어 "크로피"로 시작하기. 넘기지 않으면 스위치를 보이지 않는다 */
+  wakeEnabled?: boolean;
+  onWakeEnabledChange?: (next: boolean) => void;
   /** 음성 모드 안 카메라 미리보기·셔터. 넘기지 않으면 보이지 않는다 */
   camera?: VoiceCamera;
   /** 이번 음성 모드에서 주고받은 말. 대기 중에 다시 볼 수 있게 보여 준다 */
@@ -69,6 +72,8 @@ export function VoiceMode({
   analysisAvailable = true,
   continuous,
   onContinuousChange,
+  wakeEnabled,
+  onWakeEnabledChange,
   camera,
   history = [],
 }: VoiceModeProps) {
@@ -273,17 +278,33 @@ export function VoiceMode({
         <p className="text-center text-sm text-[#647267]">
           {state === "listening" && !analysisAvailable
             ? "말을 마친 뒤 마이크 버튼을 다시 눌러 주세요"
-            : HELPER[state]}
+            : state === "idle" && wakeEnabled
+              ? "“크로피”라고 부르거나 버튼을 누르고 말해보세요"
+              : HELPER[state]}
         </p>
-        {continuous !== undefined && (
-          <Switch
-            checked={continuous}
-            onCheckedChange={onContinuousChange}
-            aria-label="연속 대화"
-            className="text-sm text-[#647267]"
-          >
-            연속 대화
-          </Switch>
+        {(continuous !== undefined || wakeEnabled !== undefined) && (
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            {wakeEnabled !== undefined && (
+              <Switch
+                checked={wakeEnabled}
+                onCheckedChange={onWakeEnabledChange}
+                aria-label="크로피라고 부르면 시작"
+                className="text-sm text-[#647267]"
+              >
+                부르면 시작
+              </Switch>
+            )}
+            {continuous !== undefined && (
+              <Switch
+                checked={continuous}
+                onCheckedChange={onContinuousChange}
+                aria-label="연속 대화"
+                className="text-sm text-[#647267]"
+              >
+                연속 대화
+              </Switch>
+            )}
+          </div>
         )}
       </footer>
     </main>
