@@ -68,6 +68,8 @@ export function VoiceMode({
   camera,
 }: VoiceModeProps) {
   const router = useRouter();
+  // 카메라가 켜지면 좁은 화면에서는 카메라가 주인공이고 크로피는 작은 상태 표시로 물러난다
+  const compact = camera?.status === "streaming";
   // 음성 모드를 벗어날 때 재생 중인 음성을 중단
   useEffect(() => {
     return () => {
@@ -145,27 +147,36 @@ export function VoiceMode({
             lg:max-w-[1000px] lg:flex-row lg:items-center lg:gap-14
         "
       >
-        {/* 넓은 화면: 왼쪽 크로피·대화, 오른쪽 카메라. 좁은 화면: 위아래로 */}
+        {/* 넓은 화면: 왼쪽 크로피·대화, 오른쪽 카메라. 좁은 화면: 카메라가 켜지면 작은 크로피 + 상태를 한 줄로, 아래에 큰 카메라 */}
         <div className="flex w-full flex-col items-center gap-3 lg:max-w-[430px] lg:gap-4">
-        <span
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          className="
-            inline-flex items-center justify-center gap-2
-            rounded-full bg-[#E5F4E6] px-4 py-2
-            text-sm font-semibold text-[#25864F]
-          "
-        >
+        <div className={compact ? "flex items-center gap-3 lg:flex-col lg:gap-4" : "flex flex-col items-center gap-3 lg:gap-4"}>
+          {compact && (
+            <div className="lg:hidden">
+              <VoiceMascot state={state} inputLevel={inputLevel} size="sm" />
+            </div>
+          )}
           <span
-            aria-hidden="true"
-            className={`h-4 w-4 ${STATUS_ICON[state]}`}
-          />
-          {STATUS[state]}
-        </span>
-        <VoiceMascot state={state} inputLevel={inputLevel} />
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="
+              inline-flex items-center justify-center gap-2
+              rounded-full bg-[#E5F4E6] px-4 py-2
+              text-sm font-semibold text-[#25864F]
+            "
+          >
+            <span
+              aria-hidden="true"
+              className={`h-4 w-4 ${STATUS_ICON[state]}`}
+            />
+            {STATUS[state]}
+          </span>
+        </div>
+        <div className={compact ? "hidden lg:block" : ""}>
+          <VoiceMascot state={state} inputLevel={inputLevel} />
+        </div>
         {camera && (
-          <div className="w-full max-w-[min(300px,52dvh)] lg:hidden">
+          <div className={`w-full lg:hidden ${compact ? "max-w-[min(430px,74dvh)]" : "max-w-[min(300px,52dvh)]"}`}>
             <VoiceCameraPreview {...camera} />
           </div>
         )}
