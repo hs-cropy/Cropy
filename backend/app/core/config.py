@@ -54,6 +54,8 @@ class Settings(BaseSettings):
     stt_timeout_seconds: float = Field(default=30, gt=0)
     # 한 번에 받는 음성 길이 상한. 16kHz 16비트 모노 30초 ≈ 1MB
     stt_max_audio_mb: int = Field(default=5, gt=0, le=50)
+    # 설정하면 받은 음성(wav)과 인식 결과를 이 폴더에 남긴다. 실제 발화 평가셋·오인식 분석용. 운영에서는 비워 둔다
+    stt_log_dir: Path | None = None
 
     # 서버 경유 기능 선택기 (app/services/function_selector.py). 모델 서버의 /select 호출
     function_selector_engine: Literal["off", "mock", "http"] = "off"

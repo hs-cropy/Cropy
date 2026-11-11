@@ -7,8 +7,12 @@
 학습 데이터에는 문장부호가 없으므로 STT 결과의 문장부호를 지운 뒤 돌려준다(공개 보고서 09절).
 """
 
+import datetime
+import json
 import logging
 import re
+import uuid
+from pathlib import Path
 
 import httpx
 
@@ -59,12 +63,33 @@ def transcribe(audio_wav: bytes) -> str:
         raise STTUnavailableError(f"status {response.status_code}")
 
     try:
-        text = response.json().get("text")
+        body = response.json()
+        text = body.get("text")
     except ValueError as exc:
         raise STTUnavailableError("invalid STT response") from exc
     if not isinstance(text, str):
         raise STTUnavailableError("invalid STT response")
-    return normalize_transcript(text)
+    normalized = normalize_transcript(text)
+    _log_sample(audio_wav, body, normalized)
+    return normalized
+
+
+def _log_sample(audio_wav: bytes, body: dict, normalized: str) -> None:
+    """STT_LOG_DIR이 설정되면 받은 음성과 인식 결과를 남긴다. 실제 발화 평가셋과 오인식 분석에 쓴다.
+
+    음성은 개인 정보라 기본은 끔. 켜면 운영 서버가 아닌 평가용 PC에서만 쓴다.
+    """
+    directory = settings.stt_log_dir
+    if not directory:
+        return
+    try:
+        directory = Path(directory)
+        directory.mkdir(parents=True, exist_ok=True)
+        stem = datetime.datetime.now().strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:6]
+        (directory / f"{stem}.wav").write_bytes(audio_wav)
+        (directory / f"{stem}.json").write_text(json.dumps({"text": normalized, "stt": body}, ensure_ascii=False, indent=1), encoding="utf-8")
+    except OSError as exc:
+        logger.warning("STT sample not saved: %s", exc)
 
 
 def _detail(response: httpx.Response) -> str | None:
