@@ -88,3 +88,36 @@ export function speak(text: string | string[], owner?: symbol): void {
     synth.speak(utterance);
   }
 }
+
+/**
+ * speak와 같지만 마지막 문장을 다 읽거나(end) 끊기거나(error·cancel) 했을 때 끝나는 Promise를 돌려준다.
+ * 음성 모드가 "말하는 중" 상태를 실제 낭독 길이에 맞추는 데 쓴다. 미지원 환경이나 읽을 문장이
+ * 없으면 바로 끝난다. 큐에 넣은 utterance가 시작도 못 하고 cancel되면 브라우저에 따라 end·error가
+ * 오지 않을 수 있어, 호출한 쪽은 자기 상태 전환을 이 Promise에만 의존하지 않는다.
+ */
+export function speakAndWait(text: string | string[], owner?: symbol): Promise<void> {
+  if (!isSpeechSupported()) return Promise.resolve();
+  const sentences = (Array.isArray(text) ? text : [text]).filter((s) => s.trim());
+  if (sentences.length === 0) return Promise.resolve();
+
+  const synth = window.speechSynthesis;
+  if (synth.speaking || synth.pending) synth.cancel();
+  currentOwner = owner;
+  const voice = pickKoreanVoice();
+  return new Promise<void>((resolve) => {
+    let remaining = sentences.length;
+    const done = () => {
+      remaining -= 1;
+      if (remaining <= 0) resolve();
+    };
+    for (const sentence of sentences) {
+      const utterance = new SpeechSynthesisUtterance(sentence);
+      utterance.lang = "ko-KR";
+      utterance.rate = SPEECH_RATE;
+      if (voice) utterance.voice = voice;
+      utterance.onend = done;
+      utterance.onerror = done;
+      synth.speak(utterance);
+    }
+  });
+}
