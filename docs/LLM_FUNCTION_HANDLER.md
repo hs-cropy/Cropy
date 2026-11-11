@@ -83,18 +83,13 @@ response = handle_function_output(
 ## 구현 범위
 
 | 기능 | 지원하는 topic |
-
 |---|---|
-
 | `get_diagnosis` | result, severity, observation, provenance, impact, food_safety, change |
-
 | `get_prediction_metrics` | confidence, ranking, distribution, limits, comparison |
-
 | `get_recapture_guidance` | where, why, certainty, provenance |
+| `get_care_information` | causes, prevention, priority |
 
 다음 기능은 파서에서 유효하게 분석되더라도 아직 handler가 구현되어 있지 않다.
-
-- `get_care_information`
 
 - `get_pesticide_information`
 
@@ -259,6 +254,13 @@ AI가 매긴 점수이며 실제 발병 확률이나 피해 수준이 아님을 
 점수는 후보를 비교하기 위한 값이며 실제 발병 확률이나 피해 수준을 의미하지 않는다고 설명한다.
 
 백분율과 점수 차이는 소수점 둘째 자리까지 표시하고 불필요한 끝자리 0은 제거한다.
+
+## 원인·예방·관리 안내
+
+- `causes`: 저장된 `causes`로 일반적인 원인을 설명한다. 사진 속 작물의 실제 원인을 확인했다고 말하지 않는다.
+- `prevention`: 저장된 `prevention`과 `management_actions`를 안내한다.
+- `priority`: `management_actions`에서 비어 있지 않은 첫 항목을 저장된 순서대로 안내한다.
+- 해당 정보가 없거나 재촬영이 필요한 불확실한 판정이면 `insufficient_information`을 반환한다.
 
 ## 입력 검증과 출처 표시
 
