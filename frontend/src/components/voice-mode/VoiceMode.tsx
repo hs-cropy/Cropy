@@ -160,7 +160,12 @@ export function VoiceMode({
           />
           {STATUS[state]}
         </span>
-        {camera ? <VoiceCameraPreview {...camera} /> : <VoiceMascot state={state} inputLevel={inputLevel} />}
+        <VoiceMascot state={state} inputLevel={inputLevel} />
+        {camera && (
+          <div className="w-full max-w-[300px]">
+            <VoiceCameraPreview {...camera} />
+          </div>
+        )}
 
         {state === "idle" && (
           <>
