@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 from pydantic import ValidationError
 
@@ -9,6 +11,7 @@ from app.services.llm_function_handler import (
 from app.services.llm_function_parser import (
     FunctionContract,
     FunctionSpec,
+    InvalidFunctionContract,
     InvalidFunctionOutput,
 )
 
@@ -150,7 +153,6 @@ def test_invalid_tokens_are_rejected(context):
 @pytest.mark.parametrize(
     "output",
     [
-        "<hs_3>(topic=1)<hs_end>",
         "<hs_4>(topic=2, product=1)<hs_end>",
         "<hs_7>(topic=1, delivery=1)<hs_end>",
         "<hs_8>()<hs_end>",
@@ -241,6 +243,49 @@ def test_mock_prefix_is_shared(context):
 
     assert run("where", context).text.startswith(prefix)
     assert dispatch("get_diagnosis", "result", context).text.startswith(prefix)
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        (1, "작물 이름"),
+        (2, "병 이름"),
+        (3, "한 가지씩"),
+        (4, "어떤 점수"),
+        (5, "병의 심각도와 사진 속 작물 상태"),
+        (6, "어느 진단 기록"),
+        (7, "제품 이름"),
+        (8, "다시 말해 주세요"),
+    ],
+)
+def test_clarify_asks_about_the_selected_target(context, target, expected):
+    before = context.model_dump()
+    result = handle_function_output(f"<hs_5>(target={target})<hs_end>", context, CONTRACT)
+
+    assert result.function_name == "clarify_request"
+    assert result.status == "needs_clarification"
+    assert expected in result.text
+    assert context.model_dump() == before
+
+
+@pytest.mark.parametrize(
+    "output",
+    ["<hs_5>(target=0)<hs_end>", "<hs_5>(target=9)<hs_end>", "<hs_5>(topic=1)<hs_end>"],
+)
+def test_clarify_rejects_invalid_arguments(context, output):
+    with pytest.raises(InvalidFunctionOutput):
+        handle_function_output(output, context, CONTRACT)
+
+
+@pytest.mark.parametrize(("argument", "count"), [("topic", 8), ("target", 9)])
+def test_clarify_rejects_an_incompatible_contract(context, argument, count):
+    # 파서가 받아들이더라도 핸들러는 약속된 target 8개만 처리한다.
+    functions = list(CONTRACT.functions)
+    functions[5] = FunctionSpec("clarify_request", ((argument, count),))
+    contract = replace(CONTRACT, functions=tuple(functions))
+
+    with pytest.raises(InvalidFunctionContract):
+        handle_function_output(f"<hs_5>({argument}=1)<hs_end>", context, contract)
+
 
 def test_modified_invalid_context_is_rejected(context):
     context.confidence = float("nan")
@@ -363,3 +408,55 @@ def test_mock_result_remains_explicit(context):
     context.prediction_mode = "mock"
     result = dispatch("get_diagnosis", "result", context)
     assert "데모 결과이며 실제 모델 진단이 아닙니다" in result.text
+@pytest.fixture
+def care_context(context):
+    context.decision_status = "disease"
+    context.decision_reasons = []
+    context.recapture = None
+    context.causes = ["잎이 오래 젖어 있는 환경"]
+    context.prevention = ["통풍을 확보하세요."]
+    context.management_actions = [" ", "병든 잎을 살펴보세요.", "재배 환경을 점검하세요."]
+    return context
+
+
+@pytest.mark.parametrize(
+    ("topic", "expected", "excluded"),
+    [
+        (1, ["잎이 오래 젖어 있는 환경", "실제 원인을 확인한 것은 아닙니다"], ["통풍을 확보하세요"]),
+        (2, ["통풍을 확보하세요", "재배 환경을 점검하세요"], ["잎이 오래 젖어 있는 환경"]),
+        (3, ["병든 잎을 살펴보세요"], ["재배 환경을 점검하세요"]),
+    ],
+)
+def test_care_uses_stored_information_for_each_topic(care_context, topic, expected, excluded):
+    before = care_context.model_dump()
+    result = handle_function_output(f"<hs_3>(topic={topic})<hs_end>", care_context, CONTRACT)
+
+    assert result.function_name == "get_care_information"
+    assert result.status == "ok"
+    assert all(text in result.text for text in expected)
+    assert all(text not in result.text for text in excluded)
+    assert care_context.model_dump() == before
+
+
+@pytest.mark.parametrize("topic", [1, 2, 3])
+def test_care_does_not_invent_missing_information(care_context, topic):
+    care_context.causes = []
+    care_context.prevention = []
+    care_context.management_actions = [" "]
+    result = handle_function_output(f"<hs_3>(topic={topic})<hs_end>", care_context, CONTRACT)
+    assert result.status == "insufficient_information"
+
+
+@pytest.mark.parametrize("reason", ["not_crop", "crop_mismatch", "low_confidence", "confusion"])
+def test_care_does_not_recommend_disease_actions_for_uncertain_results(care_context, reason):
+    care_context.decision_reasons.append(reason)
+    result = handle_function_output("<hs_3>(topic=3)<hs_end>", care_context, CONTRACT)
+    assert result.status == "insufficient_information"
+    assert "병든 잎을 살펴보세요" not in result.text
+
+
+def test_care_keeps_mock_provenance(care_context):
+    care_context.prediction_mode = "mock"
+    result = handle_function_output("<hs_3>(topic=2)<hs_end>", care_context, CONTRACT)
+    assert result.status == "ok"
+    assert result.text.startswith("데모 결과")

@@ -120,3 +120,6 @@ backend/app/data/seed/*
 
 # TTS 합성 캐시
 backend/tts_cache/
+
+# STT 모델 파일 (stt/download_models.py로 받음)
+stt/models/

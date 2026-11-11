@@ -27,6 +27,7 @@ _TOPICS = {
     "get_recapture_guidance": (
         "where", "why", "certainty", "provenance",
     ),
+    "get_care_information": ("causes", "prevention", "priority"),
 }
 
 
@@ -40,28 +41,50 @@ def handle_function_output(
     # 생성 후 수정된 객체도 응답 전에 다시 검증한다.
     context = DiagnosisLLMInput.model_validate(context.model_dump())
 
+    if call.function_name == "clarify_request":
+        _check_handler_arguments(contract, call.function_name, "target", len(_CLARIFICATION_QUESTIONS))
+        question = _CLARIFICATION_QUESTIONS[call.arguments["target"] - 1]
+        return _response(call.function_name, context, "needs_clarification", question)
+
     topics = _TOPICS.get(call.function_name)
     if topics is None:
         raise FunctionHandlerNotImplemented(
             f"handler not implemented: {call.function_name}"
         )
 
-    specification = next(
-        item for item in contract.functions
-        if item.name == call.function_name
-    )
-    if specification.arguments != (("topic", len(topics)),):
-        raise InvalidFunctionContract(
-            f"unsupported handler contract: {call.function_name}"
-        )
+    _check_handler_arguments(contract, call.function_name, "topic", len(topics))
 
     topic = topics[call.arguments["topic"] - 1]
     handlers = {
         "get_diagnosis": _diagnosis_response,
         "get_prediction_metrics": _metrics_response,
         "get_recapture_guidance": _recapture_response,
+        "get_care_information": _care_response,
     }
     return handlers[call.function_name](topic, context)
+
+
+def _check_handler_arguments(contract, function_name, argument, count):
+    specification = next(
+        item for item in contract.functions
+        if item.name == function_name
+    )
+    if specification.arguments != ((argument, count),):
+        raise InvalidFunctionContract(
+            f"unsupported handler contract: {function_name}"
+        )
+
+# target의 1부터 시작하는 번호 순서는 hs-call-v2 학습 계약과 같다.
+_CLARIFICATION_QUESTIONS = (
+    "어떤 작물에 대해 물어보시는 건가요? 작물 이름을 알려 주세요.",
+    "어떤 병에 대해 물어보시는 건가요? 병 이름을 알려 주세요.",
+    "어떤 내용부터 알려 드릴까요? 한 가지씩 물어봐 주세요.",
+    "어떤 점수를 말씀하시는 건가요? 궁금한 진단 후보를 알려 주세요.",
+    "화면에 표시된 병의 심각도와 사진 속 작물 상태 중 어느 쪽이 궁금하세요?",
+    "어느 진단 기록을 말씀하시는 건가요? 화면에서 해당 기록을 선택해 주세요.",
+    "어떤 농약 제품을 말씀하시는 건가요? 제품 이름을 알려 주세요.",
+    "말씀을 잘 알아듣지 못했어요. 조금 더 천천히 다시 말해 주세요.",
+)
 
 
 def _response(function_name, context, status, text):
@@ -179,6 +202,40 @@ def _recapture_response(topic, context):
         "진단할 때 함께 저장된 촬영 안내예요. "
         "이 답변을 위해 사진을 새로 분석한 것은 아닙니다.",
     )
+
+
+def _care_response(topic, context):
+    function_name = "get_care_information"
+
+    if _retake_reason(context) is not None or context.decision_status not in {"normal", "disease"}:
+        return _response(
+            function_name, context, "insufficient_information",
+            "현재 기록으로는 원인이나 관리 방법을 안내하기 어렵습니다. "
+            "진단 결과의 안내를 먼저 확인해 주세요.",
+        )
+
+    if topic == "causes":
+        items = context.causes
+        prefix = "이 병의 일반적인 원인으로 등록된 내용이에요. "
+        suffix = " 이 사진만으로 실제 원인을 확인한 것은 아닙니다."
+    elif topic == "prevention":
+        items = [*context.prevention, *context.management_actions]
+        prefix = "진단 기록에 저장된 예방·관리 방법이에요. "
+        suffix = ""
+    else:
+        items = context.management_actions
+        prefix = "진단 기록에서 첫 번째로 안내하는 관리 방법이에요. "
+        suffix = ""
+
+    entries = list(dict.fromkeys(item.strip() for item in items if item.strip()))
+    if not entries:
+        return _response(
+            function_name, context, "insufficient_information",
+            "현재 진단 기록에는 질문에 답할 내용이 저장되어 있지 않습니다.",
+        )
+
+    advice = entries[0] if topic == "priority" else "; ".join(entries)
+    return _response(function_name, context, "ok", prefix + advice + suffix)
 
 
 def _diagnosis_response(topic, context):
