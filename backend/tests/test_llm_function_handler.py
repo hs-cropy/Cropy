@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 from pydantic import ValidationError
 
@@ -9,6 +11,7 @@ from app.services.llm_function_handler import (
 from app.services.llm_function_parser import (
     FunctionContract,
     FunctionSpec,
+    InvalidFunctionContract,
     InvalidFunctionOutput,
 )
 
@@ -240,6 +243,49 @@ def test_mock_prefix_is_shared(context):
 
     assert run("where", context).text.startswith(prefix)
     assert dispatch("get_diagnosis", "result", context).text.startswith(prefix)
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        (1, "작물 이름"),
+        (2, "병 이름"),
+        (3, "한 가지씩"),
+        (4, "어떤 점수"),
+        (5, "병의 심각도와 사진 속 작물 상태"),
+        (6, "어느 진단 기록"),
+        (7, "제품 이름"),
+        (8, "다시 말해 주세요"),
+    ],
+)
+def test_clarify_asks_about_the_selected_target(context, target, expected):
+    before = context.model_dump()
+    result = handle_function_output(f"<hs_5>(target={target})<hs_end>", context, CONTRACT)
+
+    assert result.function_name == "clarify_request"
+    assert result.status == "needs_clarification"
+    assert expected in result.text
+    assert context.model_dump() == before
+
+
+@pytest.mark.parametrize(
+    "output",
+    ["<hs_5>(target=0)<hs_end>", "<hs_5>(target=9)<hs_end>", "<hs_5>(topic=1)<hs_end>"],
+)
+def test_clarify_rejects_invalid_arguments(context, output):
+    with pytest.raises(InvalidFunctionOutput):
+        handle_function_output(output, context, CONTRACT)
+
+
+@pytest.mark.parametrize(("argument", "count"), [("topic", 8), ("target", 9)])
+def test_clarify_rejects_an_incompatible_contract(context, argument, count):
+    # 파서가 받아들이더라도 핸들러는 약속된 target 8개만 처리한다.
+    functions = list(CONTRACT.functions)
+    functions[5] = FunctionSpec("clarify_request", ((argument, count),))
+    contract = replace(CONTRACT, functions=tuple(functions))
+
+    with pytest.raises(InvalidFunctionContract):
+        handle_function_output(f"<hs_5>({argument}=1)<hs_end>", context, contract)
+
 
 def test_modified_invalid_context_is_rejected(context):
     context.confidence = float("nan")
