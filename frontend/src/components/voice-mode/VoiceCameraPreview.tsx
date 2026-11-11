@@ -61,7 +61,7 @@ export function VoiceCameraPreview({ videoRef, status, onStart, onShutter, shutt
           </button>
         )}
       </div>
-      {streaming && <p className="mt-2 text-center text-xs text-[#647267]">잎을 비추고 &quot;찍어 줘&quot;라고 말하거나 셔터를 누르세요</p>}
+      {streaming && <p className="mt-1.5 text-center text-xs text-[#647267]">잎을 비추고 &quot;찍어 줘&quot;라고 말하거나 셔터를 누르면 바로 진단해요</p>}
     </div>
   );
 }

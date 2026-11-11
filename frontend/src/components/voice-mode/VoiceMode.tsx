@@ -97,9 +97,9 @@ export function VoiceMode({
   return (
     <main
       className="
-            relative isolate flex min-h-screen flex-col
-            overflow-x-clip bg-cropy-surface
-            supports-[height:100dvh]:min-h-dvh
+            relative isolate flex h-screen flex-col
+            overflow-hidden bg-cropy-surface
+            supports-[height:100dvh]:h-dvh
         "
     >
       {/* 문서가 길어져도 농장 배경은 화면에 고정 */}
@@ -114,7 +114,7 @@ export function VoiceMode({
         </picture>
       </div>
       <Header
-        className="bg-cropy-surface-canvas lg:border-b-0"
+        className="border-b-0 bg-transparent"
         actions={
           <button
             type="button"
@@ -139,10 +139,10 @@ export function VoiceMode({
       />
       <section
         className="
-            mx-auto flex w-full max-w-[430px] flex-1
-            flex-col items-center
-            gap-6 px-6 pt-8 pb-6 text-center
-            lg:max-w-[640px]
+            mx-auto flex w-full min-h-0 max-w-[430px] flex-1
+            flex-col items-center justify-center
+            gap-3 px-6 pt-2 pb-2 text-center
+            lg:max-w-[640px] lg:gap-4
         "
       >
         <span
@@ -163,35 +163,39 @@ export function VoiceMode({
         </span>
         <VoiceMascot state={state} inputLevel={inputLevel} />
         {camera && (
-          <div className="w-full max-w-[300px] lg:max-w-[560px]">
+          <div className="w-full max-w-[min(300px,52dvh)] lg:max-w-[min(560px,56dvh)]">
             <VoiceCameraPreview {...camera} />
           </div>
         )}
 
         {state === "idle" && (
           <>
-            <div>
-              <h1 className="text-2xl font-bold text-[#212A23]">무엇이 궁금하세요?</h1>
+            {!camera && (
+              <div>
+                <h1 className="text-2xl font-bold text-[#212A23]">무엇이 궁금하세요?</h1>
 
-              <p className="mt-4 text-base leading-relaxed text-[#647267]">
-                작물 상태를 말로 물어보면
-                <br />
-                크로피가 소리로 답해드려요.
-              </p>
-            </div>
+                <p className="mt-4 text-base leading-relaxed text-[#647267]">
+                  작물 상태를 말로 물어보면
+                  <br />
+                  크로피가 소리로 답해드려요.
+                </p>
+              </div>
+            )}
 
+            {/* 카메라가 있으면 설명은 미리보기 아래 한 줄로 끝내고, 예시 말만 짧게 보여 한 화면에 들어가게 한다 */}
             <div className="flex flex-wrap justify-center gap-2 text-sm">
-              {camera && (
-                <span className="rounded-full bg-white px-4 py-2">
-                  &quot;찍어 줘&quot;
-                </span>
+              {camera ? (
+                <>
+                  <span className="rounded-full bg-white px-4 py-2">&quot;찍어 줘&quot;</span>
+                  <span className="rounded-full bg-white px-4 py-2">&quot;이거 무슨 병이야&quot;</span>
+                  <span className="rounded-full bg-white px-4 py-2">&quot;약 얼마나 타&quot;</span>
+                </>
+              ) : (
+                <>
+                  <span className="rounded-full bg-white px-4 py-2">&quot;고추 잎에 점이 생겼어&quot;</span>
+                  <span className="rounded-full bg-white px-4 py-2">&quot;사진 찍는 법 알려줘&quot;</span>
+                </>
               )}
-              <span className="rounded-full bg-white px-4 py-2">
-                &quot;고추 잎에 점이 생겼어&quot;
-              </span>
-              <span className="rounded-full bg-white px-4 py-2">
-                &quot;사진 찍는 법 알려줘&quot;
-              </span>
             </div>
           </>
         )}
@@ -228,7 +232,7 @@ export function VoiceMode({
         )}
       </section>
 
-      <footer className="flex flex-col items-center gap-4 px-6 pb-10">
+      <footer className="flex shrink-0 flex-col items-center gap-2 px-6 pb-5 pt-1">
         <VoiceMicButton
           state={state}
           disabled={micDisabled}
