@@ -9,7 +9,7 @@ What the notebook does (model = soup_v2abc_v2d_6run/merged_hf, validation rows =
   2. rkllm/prepare_rkllm.py   token checks, calibration set from train, prompts+ids for every validation row,
                               float check under the toolkit's transformers version
   3. rkllm/convert_rkllm.py   W8A8 build + export, then PC simulation of the quantized model on a validation subset
-Results go to cropy_qwen_v2/rkllm/ (the .rkllm file, eval_cases.jsonl for the board, metrics).
+Results go to cropy_qwen_v2/rkllm_soup6/ (the .rkllm file, eval_cases.jsonl for the board, metrics).
 The two scripts are uploaded next to it (cropy_qwen_v2/rkllm_scripts/, sha-checked); they also run as-is on a Linux PC.
 """
 import hashlib
@@ -22,6 +22,7 @@ HERE = Path(__file__).resolve().parent
 CRLF, LF = bytes([13, 10]), bytes([10])
 MODEL_DIR = "soup_v2abc_v2d_6run/merged_hf"  # deployed since 2026-11-11 (before: soup_v2_v2b_v2c)
 REFERENCE = "merge_eval_soup6/soup_v2abc_v2d_6run_b1_cases.jsonl"  # float outputs of the same model, one prompt at a time
+OUT_DIR = "rkllm_soup6"  # new folder per model; rkllm/ keeps the 2026-11-05 build of soup_v2_v2b_v2c
 RKLLM_VERSION = "1.3.1"
 QUANTS = ["w8a8"]  # add "w8a8_g128" etc. if plain w8a8 loses accuracy
 SIM_N = 300
@@ -42,7 +43,7 @@ def notebook(data_sha):
 3. **변환**: W8A8 양자화 → `.rkllm` 저장 → validation {SIM_N}건을 양자화 모델로 시뮬레이션해 float 결과(97.0%)와 비교.
 
 - 런타임: **A100 + 높은 RAM** (L4·T4도 됨). 툴킷의 torch 2.6은 최신 GPU(G4·RTX PRO 6000·B200 등 Blackwell)를 지원하지 않는다. 메뉴 런타임 → 모두 실행. 변환은 수십 분 걸릴 수 있다.
-- 결과: `cropy_qwen_v2/rkllm/` — `cropy_qwen_w8a8_rk3588.rkllm`(보드에 복사), `eval_cases.jsonl`(보드 평가 입력), `sim_w8a8_metrics.json`.
+- 결과: `cropy_qwen_v2/{OUT_DIR}/` — `cropy_qwen_w8a8_rk3588.rkllm`(보드에 복사), `eval_cases.jsonl`(보드 평가 입력), `sim_w8a8_metrics.json`.
 - 끊기면 다시 모두 실행: 시뮬레이션은 이미 한 건을 건너뛰지만 변환은 처음부터 다시 한다.
 - 보드에서 돌릴 때는 `skip_special_token = false`로 해야 `<hs_4>` 같은 토큰이 지워지지 않는다.
 """),
@@ -61,7 +62,7 @@ RKLLM_VERSION = '{RKLLM_VERSION}'
 QUANTS = {QUANTS!r}      # 정확도가 떨어지면 'w8a8_g128' 등을 추가해 비교
 SIM_N = {SIM_N}          # 양자화 모델 시뮬레이션 건수 (-1이면 validation 전체, 0이면 건너뜀)
 ALLOW_CPU = False    # GPU가 툴킷 torch 2.6과 안 맞을 때 CPU로 진행(매우 느림). 기본은 멈추고 A100으로 바꾸라고 안내
-OUT = DRIVE_DIR / 'rkllm'
+OUT = DRIVE_DIR / '{OUT_DIR}'
 WORK = Path('/content/rk')        # 변환 중간 파일은 로컬에서 만들고 결과만 Drive로 복사
 for p in (OUT, WORK):
     p.mkdir(parents=True, exist_ok=True)
