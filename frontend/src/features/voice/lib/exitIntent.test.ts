@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isExitCommand } from "./exitIntent";
 
 describe("isExitCommand", () => {
-  it.each(["종료해줘", "종료", "그만", "이제 그만", "끝내자", "대화 끝", "멈춰", "나가기", "닫아 줘", "꺼 줘", "이제 됐어", "음성 모드 종료", "종묘 해줘", "끝"])(
+  it.each(["종료해줘", "종료", "그만", "이제 그만", "끝내자", "대화 끝", "멈춰", "나가기", "닫아 줘", "꺼 줘", "이제 됐어", "음성 모드 종료", "종묘 해줘", "끝", "종료 하자", "종려 하자", "피조묘하자", "오늘은 여기까지", "그만 하자"])(
     "종료 명령: %s",
     (text) => expect(isExitCommand(text)).toBe(true),
   );

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 MOCK_TEXT = "이 병 약 얼마나 타서 뿌려"
 
 # STT가 붙이는 쉼표·마침표·물음표와 말줄임. 숫자 사이 소수점은 남긴다
-_PUNCTUATION = re.compile(r"(?<!\d)[.,!?;:…~](?!\d)|[.,!?;:…~]$")
+_PUNCTUATION = re.compile(r"[!?;:…~]|(?<!\d)[.,]|[.,](?!\d)")  # 소수점·천 단위(0.5, 1,000)만 남긴다
 _SPACES = re.compile(r"\s+")
 
 

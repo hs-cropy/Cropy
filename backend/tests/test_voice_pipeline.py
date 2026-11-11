@@ -45,6 +45,8 @@ def diagnosis_id(client, sample_image) -> str:
     ("ロキ？ 이 병 무병 걸린 거야.", "이 병 무병 걸린 거야"),
     ("사진진 찍어줘。", "사진진 찍어줘"),
     ("그費？ 그록피 이거 진단해줘.", "그 그록피 이거 진단해줘"),
+    ("6？ 오늘은 여기까지.", "6 오늘은 여기까지"),
+    ("1,000배 희석", "1,000배 희석"),
 ])
 def test_normalize_transcript_strips_punctuation(raw, expected):
     assert stt_service.normalize_transcript(raw) == expected

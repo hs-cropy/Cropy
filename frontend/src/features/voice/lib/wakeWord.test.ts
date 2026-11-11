@@ -18,6 +18,9 @@ describe("matchWakeWord", () => {
     ["그피.", ""],
     ["록피.", ""],
     ["야, 크로피 약 얼마나 타", "약 얼마나 타"],
+    ["록끼. 이거 무슨 병 걸린 거야?", "이거 무슨 병 걸린 거야?"],
+    ["로피？", ""],
+    ["그로피 그만 하자.", "그만 하자."],
   ])("%s → 이어진 말 %s", (text, remainder) => {
     expect(matchWakeWord(text)).toEqual({ remainder, by: "name" });
   });
