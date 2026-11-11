@@ -83,6 +83,12 @@ def _usable(word: str) -> bool:
     return len(word) >= 2 and all(is_hangul(ch) for ch in word)
 
 
+def _usable_alias(word: str) -> bool:
+    # 틀리게 들은 형태는 그대로 찾아 바꾸므로 자모 비교가 필요 없다. 숫자가 섞인 오인식("5추")도 받되,
+    # 한 글자나 한글이 하나도 없는 말은 다른 낱말과 겹치기 쉬워 뺀다
+    return len(word) >= 2 and any(is_hangul(ch) for ch in word)
+
+
 class Lexicon:
     def __init__(self, terms: list[str]):
         cleaned = []
@@ -96,7 +102,7 @@ class Lexicon:
             cleaned.append((term, compact, to_jamo(compact)))
             for alias in heard.split(","):
                 alias = alias.replace(" ", "")
-                if _usable(alias) and alias != compact:
+                if _usable_alias(alias) and alias != compact:
                     aliases[alias] = term
         self.terms = cleaned
         self.aliases = aliases
