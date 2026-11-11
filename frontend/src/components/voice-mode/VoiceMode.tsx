@@ -142,9 +142,11 @@ export function VoiceMode({
             mx-auto flex w-full min-h-0 max-w-[430px] flex-1
             flex-col items-center justify-center
             gap-3 px-6 pt-2 pb-2 text-center
-            lg:max-w-[640px] lg:gap-4
+            lg:max-w-[1000px] lg:flex-row lg:items-center lg:gap-14
         "
       >
+        {/* 넓은 화면: 왼쪽 크로피·대화, 오른쪽 카메라. 좁은 화면: 위아래로 */}
+        <div className="flex w-full flex-col items-center gap-3 lg:max-w-[430px] lg:gap-4">
         <span
           role="status"
           aria-live="polite"
@@ -163,7 +165,7 @@ export function VoiceMode({
         </span>
         <VoiceMascot state={state} inputLevel={inputLevel} />
         {camera && (
-          <div className="w-full max-w-[min(300px,52dvh)] lg:max-w-[min(560px,56dvh)]">
+          <div className="w-full max-w-[min(300px,52dvh)] lg:hidden">
             <VoiceCameraPreview {...camera} />
           </div>
         )}
@@ -219,15 +221,24 @@ export function VoiceMode({
           <div className="w-full space-y-5">
             <VoiceBubble role="assistant" text={assistantText} />
             <VoiceWaveform active level={outputLevel} />
-            <Button
-              variant="primary"
-              size="default"
-              fullWidth
-              onClick={onPhotoClick}
-              disabled={!onPhotoClick}
-            >
-              사진 찍어 확인하기
-            </Button>
+            {/* 카메라가 화면에 있으면 셔터가 그 역할을 하므로 버튼을 겹쳐 두지 않는다 */}
+            {!camera && (
+              <Button
+                variant="primary"
+                size="default"
+                fullWidth
+                onClick={onPhotoClick}
+                disabled={!onPhotoClick}
+              >
+                사진 찍어 확인하기
+              </Button>
+            )}
+          </div>
+        )}
+        </div>
+        {camera && (
+          <div className="hidden w-full lg:block lg:max-w-[min(520px,62dvh)] lg:shrink-0">
+            <VoiceCameraPreview {...camera} />
           </div>
         )}
       </section>
