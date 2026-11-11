@@ -257,4 +257,13 @@ Qwen 대신 같은 입력(발화 + 화면 상태 JSON)에서 같은 `<hs_N>(arg=
 - L4(1행 × 16 누적)와 A100의 같은 시드 차이는 시드 편차 수준이었다(v2d 시드 1: 94.0 / 94.6).
 - PC CPU float32(평가 서버와 같은 방식)에서도 실제 발화 114/144(79.2%), Colab과 143/144 같은 답.
 
+웹 묶음(q4f16, ONNX Runtime, `web_onnx/2b_soup6/bundle`)으로도 확인했다(`eval_web_onnx.py --split real_speech`):
+
+| 웹 q4f16 | validation 300행 인자까지 | 실제 발화 인자까지 | 실제 발화 기능 |
+|---|---|---|---|
+| 이전 모델 (`web_onnx/2b`) | 97.33% | 70.8% | 74.8% |
+| 6 run 평균 (`web_onnx/2b_soup6`) | 95.67% | **77.1%** | **87.8%** |
+
+validation 300행에서 5행을 잃고 실제 발화에서 9행(기능 기준 19행)을 얻는다. 양자화로 float와 달라지는 답은 실제 발화 12행이며, 농약 "전체 목록"(product=2)을 "지금 화면 제품"(product=1)으로 답하는 쪽이 많다. 오프라인 웹 묶음도 `web_onnx/2b_soup6`을 쓴다.
+
 **결정(2026-11-11): 보드·서버에는 6 run 평균 모델 `cropy_qwen_v2/soup_v2abc_v2d_6run/merged_hf`를 쓴다.** validation을 지키면서 실제 발화가 올랐다. 이전 모델은 Drive `soup_v2_v2b_v2c/merged_hf`에 그대로 있다. 데모·RKLLM·웹 ONNX 노트북 빌더는 새 모델을 가리키도록 바꿨고, RKLLM·웹 묶음은 새 모델로 다시 변환해야 한다.
