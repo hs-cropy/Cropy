@@ -7,6 +7,7 @@ HERE = Path(__file__).resolve().parent
 BUNDLE = Path(sys.argv[1]).resolve()
 PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 8777
 BUNDLE08B = Path(sys.argv[3]).resolve() if len(sys.argv) > 3 else None
+CLF = Path(sys.argv[4]).resolve() if len(sys.argv) > 4 else None   # classifier bundle: model_int8.onnx, tokenizer*, labels.json
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -15,7 +16,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def translate_path(self, path):
         clean = path.split("?", 1)[0].split("#", 1)[0]
-        roots = {"/model/": BUNDLE, "/model2/": BUNDLE, "/model08b/": BUNDLE08B}  # model2 = fresh cache key
+        roots = {"/model/": BUNDLE, "/model2/": BUNDLE, "/model08b/": BUNDLE08B, "/clf/": CLF}  # model2 = fresh cache key
         prefix = next((p for p in roots if clean.startswith(p) and roots[p]), None)
         if prefix:
             root = roots[prefix]
