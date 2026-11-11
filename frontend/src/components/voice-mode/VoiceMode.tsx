@@ -142,6 +142,7 @@ export function VoiceMode({
             mx-auto flex w-full max-w-[430px] flex-1
             flex-col items-center
             gap-6 px-6 pt-8 pb-6 text-center
+            lg:max-w-[640px]
         "
       >
         <span
@@ -162,7 +163,7 @@ export function VoiceMode({
         </span>
         <VoiceMascot state={state} inputLevel={inputLevel} />
         {camera && (
-          <div className="w-full max-w-[300px]">
+          <div className="w-full max-w-[300px] lg:max-w-[560px]">
             <VoiceCameraPreview {...camera} />
           </div>
         )}
