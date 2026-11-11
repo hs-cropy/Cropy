@@ -9,6 +9,9 @@ Writes to --out-dir: web_<dtype><tag>_cases.jsonl, web_<dtype><tag>_metrics.json
 --texts swaps each row's typed utterance for STT output (stt_roundtrip/roundtrip.py jsonl) of one --condition, keeping
 the labels; --strip-punct removes the punctuation SenseVoice adds (training text has none), as the app should.
 
+--split real_speech scores the held-out team utterances (real_speech_eval.jsonl rows in the data file) instead;
+rows whose gold has no arguments count for the function only. Wrong rows are also written as web_<dtype><tag>_errors.json.
+
 --prefix-state starts every row from prefix_state.py output (decoder state after the fixed system prompt) and prefills
 only the user turn, as the phone app does; compare its cases with a full-prefill run of the same rows.
 """
@@ -30,7 +33,8 @@ ap.add_argument("--data", required=True)
 ap.add_argument("--data-sha", required=True)
 ap.add_argument("--dtype", default="q4f16")
 ap.add_argument("--out-dir", required=True)
-ap.add_argument("--sim-n", type=int, default=300, help="-1 = all validation rows")
+ap.add_argument("--split", default="validation", choices=["validation", "real_speech"])
+ap.add_argument("--sim-n", type=int, default=300, help="-1 = all rows of the split")
 ap.add_argument("--reference-cases", default="", help="float outputs (case_id -> actual) of the same model")
 ap.add_argument("--device", default="cuda")
 ap.add_argument("--seed", type=int, default=20261105)
@@ -60,7 +64,7 @@ STOP_IDS = {END_ID, *(eos if isinstance(eos, list) else [eos])}
 
 raw = Path(args.data).read_bytes()
 assert hashlib.sha256(raw).hexdigest() == args.data_sha
-val = [r for r in map(json.loads, lzma.decompress(raw).decode("utf-8").splitlines()) if r["split"] == "validation"]
+val = [r for r in map(json.loads, lzma.decompress(raw).decode("utf-8").splitlines()) if r["split"] == args.split]
 PUNCT = re.compile(r"[.,?!~…·:;\"'()\[\]]")
 if args.texts:
     heard = {d["case_id"]: d[args.text_field] for d in map(json.loads, Path(args.texts).read_text(encoding="utf-8").splitlines())
@@ -69,6 +73,7 @@ if args.texts:
     assert val, "--texts에 이 조건의 문장이 없습니다"
 if args.strip_punct:
     val = [dict(r, user_text=" ".join(PUNCT.sub(" ", r["user_text"]).split())) for r in val]
+assert val, f"데이터에 {args.split} 행이 없습니다"
 cases = val if args.sim_n < 0 else random.Random(args.seed).sample(val, min(args.sim_n, len(val)))
 ref = {}
 if args.reference_cases and Path(args.reference_cases).exists():
@@ -184,12 +189,13 @@ rows, start = [], time.time()
 for i, r in enumerate(cases, 1):
     ids = prompt_ids(r)
     text, prefill, total = greedy(ids)
-    got, gold = parse_call(text), parse_call(r["output"])
+    got = parse_call(text)
     rows.append(dict(case_id=r["case_id"], function=r["function"], user_text=r["user_text"], typed_text=r.get("typed_text"),
                      expected=r["output"],
                      actual=text, float_actual=ref.get(r["case_id"]), prompt_tokens=len(ids), prefill_s=round(prefill, 3),
                      total_s=round(total, 3), format_valid=got is not None,
-                     function_correct=bool(got) and got[0] == gold[0], exact_correct=text == r["output"]))
+                     function_correct=bool(got) and got[0] == r["function"],
+                     exact_correct=None if r["output"] is None else text == r["output"]))
     if i in (1, 5) or i % 50 == 0:
         per = (time.time() - start) / i
         print(f"  {i}/{len(cases)} 건당 {per:.2f}초 (prefill {prefill:.2f}초) | {text}")
@@ -197,11 +203,18 @@ for i, r in enumerate(cases, 1):
 with (out / f"web_{args.dtype}{args.tag}_cases.jsonl").open("w", encoding="utf-8") as f:
     for row in rows:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
-rate = lambda key, rs=rows: round(sum(r[key] for r in rs) / max(1, len(rs)), 4)  # noqa: E731
-with_ref = [r for r in rows if r["float_actual"] is not None]
+def rate(key, rs=rows):
+    rs = [r for r in rs if r[key] is not None]
+    return round(sum(r[key] for r in rs) / max(1, len(rs)), 4)
+
+
+with_ref = [r for r in rows if r["float_actual"] is not None and r["expected"] is not None]
 per_fn = {fn: dict(support=len(rs), function=rate("function_correct", rs), exact=rate("exact_correct", rs))
           for fn in sorted({r["function"] for r in rows}) for rs in [[r for r in rows if r["function"] == fn]]}
-metrics = dict(dtype=args.dtype, tag=args.tag, prefix_state=bool(PREFIX), texts=Path(args.texts).name if args.texts else None,
+wrong = [dict(id=r["case_id"], text=r["user_text"], expected=r["expected"], actual=r["actual"], float_actual=r["float_actual"])
+         for r in rows if r["exact_correct"] is False or (r["exact_correct"] is None and not r["function_correct"])]
+(out / f"web_{args.dtype}{args.tag}_errors.json").write_text(json.dumps(wrong, ensure_ascii=False, indent=0), encoding="utf-8")
+metrics = dict(dtype=args.dtype, tag=args.tag, split=args.split, exact_support=sum(r["exact_correct"] is not None for r in rows), prefix_state=bool(PREFIX), texts=Path(args.texts).name if args.texts else None,
                condition=args.condition if args.texts else "typed", text_field=args.text_field if args.texts else None,
                strip_punct=args.strip_punct, providers=dec.get_providers(), support=len(rows), format_valid=rate("format_valid"),
                function=rate("function_correct"), exact=rate("exact_correct"),
