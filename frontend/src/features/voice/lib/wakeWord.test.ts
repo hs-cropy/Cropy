@@ -31,6 +31,8 @@ describe("matchWakeWord", () => {
     ["저기요 사진 찍어 줘", "사진 찍어 줘"],
     ["여보세요", ""],
     ["이봐 이거 뭐야", "이거 뭐야"],
+    ["선생님 이거 무슨 병이야", "이거 무슨 병이야"],
+    ["안녕", ""],
   ])("부르는 말 %s → 이어진 말 %s", (text, remainder) => {
     expect(matchWakeWord(text)).toEqual({ remainder, by: "call" });
   });

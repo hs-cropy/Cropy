@@ -279,7 +279,7 @@ export function VoiceMode({
           {state === "listening" && !analysisAvailable
             ? "말을 마친 뒤 마이크 버튼을 다시 눌러 주세요"
             : state === "idle" && wakeEnabled
-              ? "“크로피”라고 부르거나 버튼을 누르고 말해보세요"
+              ? "“여보세요”나 “크로피”라고 부르거나 버튼을 누르세요"
               : HELPER[state]}
         </p>
         {(continuous !== undefined || wakeEnabled !== undefined) && (
