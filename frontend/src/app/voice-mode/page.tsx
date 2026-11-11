@@ -9,7 +9,7 @@ export default function VoiceModePage() {
   const conversation = useVoiceConversation();
   const { toast, showToast, clearToast } = useToast();
 
-  const { state, inputLevel, error, clearError, handleMicClick, cancel, transcript, assistantText } = conversation;
+  const { state, inputLevel, error, clearError, handleMicClick, cancel, transcript, assistantText, continuous, setContinuous } = conversation;
 
   // 녹음 오류가 발생하면 기존 토스트로 안내
   useEffect(() => {
@@ -35,6 +35,8 @@ export default function VoiceModePage() {
         assistantText={assistantText}
         analysisAvailable={conversation.analysisAvailable}
         micDisabled={state === "thinking"}
+        continuous={continuous}
+        onContinuousChange={setContinuous}
       />
 
       <Toast toast={toast} placement="top" />

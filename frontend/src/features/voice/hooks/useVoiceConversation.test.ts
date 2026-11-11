@@ -68,6 +68,7 @@ describe("useVoiceConversation", () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     resetPipeline();
+    localStorage.clear();
 
     recorderMock.onLevel = null;
     recorderMock.onAnalysisUnavailable = null;
@@ -174,6 +175,7 @@ describe("useVoiceConversation", () => {
 
   it("8초 동안 발화가 없으면 취소하고 오류를 설정한다", async () => {
     const { result } = renderHook(() => useVoiceConversation());
+    act(() => { result.current.setContinuous(false); }); // 연속 대화는 첫 무발화를 조용히 다시 듣는다 (별도 테스트)
 
     await act(async () => {
       await result.current.start();
@@ -292,6 +294,7 @@ describe("useVoiceConversation", () => {
   //VAD 최소 발화 조건
   it("150ms 미만의 짧은 소음은 발화로 인정하지 않는다", async () => {
     const { result } = renderHook(() => useVoiceConversation());
+    act(() => { result.current.setContinuous(false); });
 
     await act(async () => {
       await result.current.start();
@@ -510,6 +513,65 @@ describe("useVoiceConversation", () => {
 
     expect(pipeline.transcribe).not.toHaveBeenCalled();
     expect(result.current.error).toBe("녹음한 소리를 처리하지 못했어요");
+  });
+
+  it("연속 대화가 켜져 있으면 답을 다 읽은 뒤 잠깐 쉬고 다시 듣는다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+    expect(result.current.continuous).toBe(true); // 기본값 켜짐
+
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+    expect(result.current.state).toBe("idle");
+    expect(recorderMock.start).toHaveBeenCalledTimes(1);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(recorderMock.start).toHaveBeenCalledTimes(2);
+    expect(result.current.state).toBe("listening");
+  });
+
+  it("연속 대화를 끄면 답을 읽은 뒤 대기 상태에 머문다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+    act(() => { result.current.setContinuous(false); });
+    expect(localStorage.getItem("cropy:voice-continuous")).toBe("off");
+
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+
+    expect(recorderMock.start).toHaveBeenCalledTimes(1);
+    expect(result.current.state).toBe("idle");
+  });
+
+  it("연속 대화 중 말이 없으면 한 번은 조용히 다시 듣고, 두 번째에는 안내 뒤 멈춘다", async () => {
+    const { result } = renderHook(() => useVoiceConversation());
+    await act(async () => { await result.current.start(); });
+
+    // 1회차 무발화 8초 → 오류 없이 자동으로 다시 듣기
+    await act(async () => { await vi.advanceTimersByTimeAsync(8100); });
+    expect(result.current.error).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(recorderMock.start).toHaveBeenCalledTimes(2);
+    expect(result.current.state).toBe("listening");
+
+    // 2회차 무발화 → 안내하고 대기
+    await act(async () => { await vi.advanceTimersByTimeAsync(8100); });
+    expect(result.current.error).toBe("말씀을 듣지 못했어요. 다시 시도해 주세요.");
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(recorderMock.start).toHaveBeenCalledTimes(2);
+    expect(result.current.state).toBe("idle");
+  });
+
+  it("말하는 중 마이크로 끊으면 자동으로 다시 듣지 않는다", async () => {
+    pipeline.speakAndWait.mockImplementationOnce(() => new Promise<void>(() => {}));
+    const { result } = renderHook(() => useVoiceConversation());
+    await act(async () => { await result.current.start(); });
+    await act(async () => { void result.current.stop(); await vi.advanceTimersByTimeAsync(0); });
+    expect(result.current.state).toBe("speaking");
+
+    act(() => { result.current.handleMicClick(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(result.current.state).toBe("idle");
+    expect(recorderMock.start).toHaveBeenCalledTimes(1);
   });
 
   it("분석 중 취소하면 늦게 온 답변을 무시하고 읽지 않는다", async () => {

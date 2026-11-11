@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { cancelSpeech } from "@/features/voice/lib/speech";
 import { readVoiceReturn } from "./voiceNavigation";
 import { Button } from "@/components/Button";
+import { Switch } from "@/components/Switch";
 
 interface VoiceModeProps {
   state?: VoiceModeState;
@@ -22,6 +23,9 @@ interface VoiceModeProps {
   assistantText?: string;
   onPhotoClick?: () => void;
   analysisAvailable?: boolean;
+  /** 연속 대화: 답을 다 읽으면 버튼 없이 다시 듣는다. 넘기지 않으면 스위치를 보이지 않는다 */
+  continuous?: boolean;
+  onContinuousChange?: (next: boolean) => void;
 }
 
 const STATUS: Record<VoiceModeState, string> = {
@@ -56,6 +60,8 @@ export function VoiceMode({
   assistantText = "",
   onPhotoClick,
   analysisAvailable = true,
+  continuous,
+  onContinuousChange,
 }: VoiceModeProps) {
   const router = useRouter();
   // 음성 모드를 벗어날 때 재생 중인 음성을 중단
@@ -219,6 +225,16 @@ export function VoiceMode({
             ? "말을 마친 뒤 마이크 버튼을 다시 눌러 주세요"
             : HELPER[state]}
         </p>
+        {continuous !== undefined && (
+          <Switch
+            checked={continuous}
+            onCheckedChange={onContinuousChange}
+            aria-label="연속 대화"
+            className="text-sm text-[#647267]"
+          >
+            연속 대화
+          </Switch>
+        )}
       </footer>
     </main>
   );

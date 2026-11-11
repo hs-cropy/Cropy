@@ -19,6 +19,20 @@ const SILENCE_MS = 1800;
 const NO_SPEECH_MS = 8000;
 const MAX_RECORDING_MS = 30000;
 
+// 연속 대화: 답을 다 읽으면 버튼 없이 다시 듣는다. 끝난 뒤 잠깐 쉬어 스피커 소리 꼬리가 마이크에 들어가지 않게 한다
+export const CONTINUOUS_KEY = "cropy:voice-continuous";
+const AUTO_LISTEN_DELAY_MS = 300;
+// 연속 대화 중 말이 없어 취소된 횟수가 이만큼 이어지면 자동으로 다시 듣지 않고 대기로 돌아간다
+const MAX_SILENT_ROUNDS = 2;
+
+function readContinuous(): boolean {
+  try {
+    return localStorage.getItem(CONTINUOUS_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
 const VOICE_ERROR = "음성 안내를 시작하지 못했어요";
 const NO_SPEECH_ERROR = "말씀을 듣지 못했어요. 다시 시도해 주세요.";
 const UNHEARD_ERROR = "말씀을 알아듣지 못했어요. 다시 말씀해 주세요.";
@@ -51,6 +65,13 @@ export function useVoiceConversation() {
   const abortRef = useRef<AbortController | null>(null);
   const speechOwner = useRef(Symbol("voice-mode"));
 
+  // 연속 대화 설정과, 자동으로 다시 듣기 위한 예약·무발화 횟수
+  const [continuous, setContinuousState] = useState(readContinuous);
+  const continuousRef = useRef(continuous);
+  const autoListenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silentRoundsRef = useRef(0);
+  const startRef = useRef<() => Promise<void>>(async () => {});
+
   const recordingRef = useRef<VoiceRecording | null>(null);
   const stateRef = useRef<VoiceModeState>("idle");
 
@@ -77,6 +98,36 @@ export function useVoiceConversation() {
   // 긴 async 함수 안에서 현재 상태를 다시 읽는다 (입구의 상태 검사로 좁혀진 타입에 묶이지 않도록)
   const isState = useCallback((expected: VoiceModeState) => stateRef.current === expected, []);
 
+  const setContinuous = useCallback((next: boolean) => {
+    continuousRef.current = next;
+    setContinuousState(next);
+    try {
+      localStorage.setItem(CONTINUOUS_KEY, next ? "on" : "off");
+    } catch {
+      // 저장이 막힌 환경 — 이번 화면에만 적용된다
+    }
+  }, []);
+
+  const clearAutoListen = useCallback(() => {
+    if (autoListenTimerRef.current !== null) {
+      clearTimeout(autoListenTimerRef.current);
+      autoListenTimerRef.current = null;
+    }
+  }, []);
+
+  // 잠깐 쉰 뒤 다시 듣는다. 그 사이 화면을 벗어나거나 사용자가 다른 조작을 했으면 그만둔다
+  const scheduleAutoListen = useCallback(() => {
+    clearAutoListen();
+    if (!continuousRef.current) return;
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+    autoListenTimerRef.current = setTimeout(() => {
+      autoListenTimerRef.current = null;
+      if (stateRef.current === "idle" && !busyRef.current && continuousRef.current) {
+        void startRef.current();
+      }
+    }, AUTO_LISTEN_DELAY_MS);
+  }, [clearAutoListen]);
+
   const clearVadTimer = useCallback(() => {
     if (vadTimerRef.current !== null) {
       clearInterval(vadTimerRef.current);
@@ -97,6 +148,7 @@ export function useVoiceConversation() {
   const cancel = useCallback(() => {
     generationRef.current += 1;
     resetVad();
+    clearAutoListen();
 
     recordingRef.current?.cancel();
     recordingRef.current = null;
@@ -110,7 +162,7 @@ export function useVoiceConversation() {
     setAudio(null);
     setError(null);
     updateState("idle");
-  }, [resetVad, updateState]);
+  }, [clearAutoListen, resetVad, updateState]);
 
   // 수동 종료 및 VAD 자동 종료에서 공통 사용
   const stop = useCallback(async () => {
@@ -177,6 +229,7 @@ export function useVoiceConversation() {
         updateState("idle");
         return;
       }
+      silentRoundsRef.current = 0;
       setTranscript(text);
 
       // 2. 기능 고르기 → 3. 답변 문장. 화면 상태는 진입 전 화면(진단 결과·사진 없음)에서 읽는다
@@ -211,6 +264,8 @@ export function useVoiceConversation() {
       await speakAndWait(reply, speechOwner.current);
       if (generation === generationRef.current && isState("speaking")) {
         updateState("idle");
+        // 연속 대화: 다 읽었으면 버튼 없이 다시 듣는다 (끊긴 경우는 cancel()이 처리했으므로 여기 오지 않는다)
+        scheduleAutoListen();
       }
     } catch {
       if (generation === generationRef.current) {
@@ -228,7 +283,19 @@ export function useVoiceConversation() {
         busyRef.current = false;
       }
     }
-  }, [clearVadTimer, isState, resetVad, updateState]);
+  }, [clearVadTimer, isState, resetVad, scheduleAutoListen, updateState]);
+
+  // 연속 대화 중 말이 없었을 때: 한 번은 조용히 다시 듣고, 계속 없으면 안내 뒤 대기로 돌아간다
+  const giveUpOrRetry = useCallback(() => {
+    cancel();
+    silentRoundsRef.current += 1;
+    if (continuousRef.current && silentRoundsRef.current < MAX_SILENT_ROUNDS) {
+      scheduleAutoListen();
+      return;
+    }
+    silentRoundsRef.current = 0;
+    setError(NO_SPEECH_ERROR);
+  }, [cancel, scheduleAutoListen]);
 
   const start = useCallback(async () => {
     if (busyRef.current || stateRef.current !== "idle") {
@@ -238,6 +305,7 @@ export function useVoiceConversation() {
     busyRef.current = true;
     const generation = ++generationRef.current;
 
+    clearAutoListen();
     resetVad();
     setAnalysisAvailable(true);
     setError(null);
@@ -329,8 +397,7 @@ export function useVoiceConversation() {
           !analysisUnavailableRef.current &&
           elapsed >= NO_SPEECH_MS
         ) {
-          cancel();
-          setError(NO_SPEECH_ERROR);
+          giveUpOrRetry();
           return;
         }
 
@@ -339,8 +406,7 @@ export function useVoiceConversation() {
           if (speechDetectedRef.current || analysisUnavailableRef.current) {
             void stop();
           } else {
-            cancel();
-            setError(NO_SPEECH_ERROR);
+            giveUpOrRetry();
           }
         }
       }, 100);
@@ -362,10 +428,12 @@ export function useVoiceConversation() {
         busyRef.current = false;
       }
     }
-  }, [cancel, clearVadTimer, resetVad, stop, updateState]);
+  }, [clearAutoListen, clearVadTimer, giveUpOrRetry, resetVad, stop, updateState]);
+  startRef.current = start;
 
   const handleMicClick = useCallback(() => {
     if (stateRef.current === "idle") {
+      silentRoundsRef.current = 0; // 사용자가 직접 눌렀으니 무발화 횟수는 처음부터
       void start();
     } else if (stateRef.current === "listening") {
       void stop();
@@ -385,6 +453,10 @@ export function useVoiceConversation() {
       recordingRef.current = null;
       abortRef.current?.abort();
       abortRef.current = null;
+      if (autoListenTimerRef.current !== null) {
+        clearTimeout(autoListenTimerRef.current);
+        autoListenTimerRef.current = null;
+      }
     };
   }, [clearVadTimer]);
 
@@ -396,6 +468,8 @@ export function useVoiceConversation() {
     audio,
     transcript,
     assistantText,
+    continuous,
+    setContinuous,
     start,
     stop,
     cancel,
