@@ -10,10 +10,24 @@ describe("matchWakeWord", () => {
     ["어 크로삐 사진 찍어 줘", "사진 찍어 줘"],
     ["그로피 님 안녕", "안녕"],
   ])("%s → 이어진 말 %s", (text, remainder) => {
-    expect(matchWakeWord(text)).toEqual({ remainder });
+    expect(matchWakeWord(text)).toEqual({ remainder, by: "name" });
   });
 
-  it.each(["이거 무슨 병이야", "오늘 날씨 좋다", "크로마키 켜 줘", ""])("호출어 없음: %s", (text) => {
-    expect(matchWakeWord(text)).toBeNull();
+  it.each([
+    ["야", ""],
+    ["야 이거 무슨 병이야", "이거 무슨 병이야"],
+    ["야, 크로피 약 얼마나 타", "약 얼마나 타"],
+    ["저기요 사진 찍어 줘", "사진 찍어 줘"],
+    ["여보세요", ""],
+    ["이봐 이거 뭐야", "이거 뭐야"],
+  ])("부르는 말 %s → 이어진 말 %s", (text, remainder) => {
+    expect(matchWakeWord(text)).toEqual({ remainder, by: "call" });
   });
+
+  it.each(["이거 무슨 병이야", "오늘 날씨 좋다", "크로마키 켜 줘", "", "병이야", "이거 야 뭐야", "야채 심었어", "얘기 좀 하자"])(
+    "호출어 없음: %s",
+    (text) => {
+      expect(matchWakeWord(text)).toBeNull();
+    },
+  );
 });
