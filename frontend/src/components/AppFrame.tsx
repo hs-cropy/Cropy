@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
-import { VoiceToggle } from "@/features/voice";
 import { APP_NAV_ITEMS, currentNavKey } from "./appNav";
 import { AppShell, AppShellFooter } from "./AppShell";
 import { Header } from "./Header";
@@ -11,6 +10,17 @@ import { DiagnosisSessionProvider, useDiagnosisSession } from "./diagnosis/Diagn
 import type { NavItem } from "./navItem";
 import { requestNewDiagnosis } from "./newDiagnosis";
 import { TextSizeToggle } from "./TextSizeToggle";
+import {  clearVoiceReturn, readVoiceReturn, } from "./voice-mode/voiceNavigation";
+import { VoiceGuideToggle } from "@/features/voice/components/VoiceGuideToggle";
+import { VoiceModeEntry } from "./voice-mode/VoiceModeEntry";
+
+const HEADER_SWITCH_CLASS =
+  "min-w-[5.625rem] " +
+  "[[data-textsize=large]_&]:min-w-0 " +
+  "xl:w-[8.25rem] " +
+  "xl:justify-between " +
+  "xl:gap-3 " +
+  "xl:px-[0.9375rem]";
 
 // md~lg 는 Figma 에 없는 폭이라 글자 길이에 맞춘다. 스토리도 같은 값을 쓴다.
 // 큰글씨에서는 90px 최소 폭이 113px 로 커져 320px 화면의 로고 자리가 사라지므로 최소 폭을 푼다
@@ -56,6 +66,37 @@ function Frame({ children }: { children: ReactNode }) {
     if (main?.contains(document.activeElement)) return;
     main?.querySelector<HTMLElement>("[role=region][tabindex]")?.focus({ preventScroll: true });
   }, [pathname]);
+  // 음성 모드에서 돌아오면 저장된 문서 스크롤 위치 복원
+  useEffect(() => {
+    if (pathname === "/voice-mode") return;
+
+    const previous = readVoiceReturn();
+    if (!previous) return;
+
+    const currentPath =
+      window.location.pathname + window.location.search;
+
+    // 저장된 진입 화면으로 돌아왔을 때만 복원
+    if (currentPath !== previous.path) return;
+
+    let secondFrame = 0;
+
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        window.scrollTo({
+          top: previous.scrollY,
+          behavior: "instant",
+        });
+
+        clearVoiceReturn();
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+    };
+  }, [pathname]);
 
   // "새 진단"은 이전 사진·결과를 비우고 촬영 화면 처음으로 간다 (Figma 03 개발 가이드).
   // 촬영 화면에서 다시 누르면 같은 주소라 화면이 그대로 남으므로 처음 상태로 돌아가라고 알린다.
@@ -77,6 +118,11 @@ function Frame({ children }: { children: ReactNode }) {
     requestNewDiagnosis();
   };
 
+  // 음성 모드는 전용 전체 화면을 사용한다.
+  // DiagnosisSessionProvider는 상위 AppFrame에서 유지한다.
+  if (pathname === "/voice-mode") {
+    return <>{children}</>;
+  }
   return (
     <AppShell
       ref={shellRef}
@@ -88,10 +134,11 @@ function Frame({ children }: { children: ReactNode }) {
           homeHref="/home"
           actions={
             <>
-              {/* Figma 헤더 토글: 모바일은 둘 다 90px(큰글씨에서는 늘어난다),
-                  넓은 데스크탑(xl)은 둘 다 132px·좌우 15px·글자 왼쪽·스위치 오른쪽(간격 12px) */}
-              <TextSizeToggle className={HEADER_TOGGLE} />
-              <VoiceToggle className={HEADER_TOGGLE} />
+              <TextSizeToggle className={HEADER_SWITCH_CLASS} />
+
+              <VoiceGuideToggle className={HEADER_SWITCH_CLASS} />
+
+              <VoiceModeEntry />
             </>
           }
         />

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setVoiceEnabled, VOICE_SETTING_KEY } from "../hooks/useVoiceSetting";
 import { installFakeSpeech, spokenTexts, type FakeSpeech } from "../testing/fakeSpeech";
-import { VoiceToggle } from "./VoiceToggle";
+import { VoiceGuideToggle } from "./VoiceGuideToggle";
 
 const navigation = vi.hoisted(() => ({ pathname: "/home" }));
 vi.mock("next/navigation", () => ({
@@ -25,7 +25,7 @@ function toggleButton() {
 
 describe("VoiceToggle", () => {
   it('기본은 꺼짐이다. 이름은 "음성 안내"로 고정하고 상태는 aria-checked 로 알린다', () => {
-    render(<VoiceToggle />);
+    render(<VoiceGuideToggle />);
 
     expect(toggleButton().getAttribute("aria-checked")).toBe("false");
     // 좁은 화면에서는 "음성", md 부터 "음성 안내"로 보인다
@@ -36,7 +36,7 @@ describe("VoiceToggle", () => {
   });
 
   it("켜면 저장하고, 홈에서는 켬 안내에 이어 홈 안내를 읽는다", () => {
-    render(<VoiceToggle />);
+    render(<VoiceGuideToggle />);
 
     fireEvent.click(toggleButton());
 
@@ -47,7 +47,7 @@ describe("VoiceToggle", () => {
 
   it("홈이 아닌 화면에서 켜면 켬 안내만 읽는다", () => {
     navigation.pathname = "/history";
-    render(<VoiceToggle />);
+    render(<VoiceGuideToggle />);
 
     fireEvent.click(toggleButton());
 
@@ -56,7 +56,7 @@ describe("VoiceToggle", () => {
 
   it("끄면 저장하고 읽던 문장을 끊는다", () => {
     setVoiceEnabled(true);
-    render(<VoiceToggle />);
+    render(<VoiceGuideToggle />);
 
     fireEvent.click(toggleButton());
 
@@ -68,20 +68,39 @@ describe("VoiceToggle", () => {
 
   it("저장된 설정이 켜짐이면 켜진 상태로 보인다", () => {
     setVoiceEnabled(true);
-    render(<VoiceToggle />);
+    render(<VoiceGuideToggle />);
 
     expect(toggleButton().getAttribute("aria-checked")).toBe("true");
   });
 
-  it("Web Speech를 지원하지 않는 브라우저에서는 스위치를 숨긴다", () => {
+  it("Web Speech 미지원 브라우저에서도 스위치를 표시하고 비활성화한다", () => {
     vi.unstubAllGlobals();
-    render(<VoiceToggle />);
+    render(<VoiceGuideToggle />);
 
-    expect(screen.queryByRole("switch")).toBeNull();
+    const toggle = toggleButton();
+
+    // 미지원 환경에서도 스위치가 DOM에 존재한다.
+    expect(toggle).not.toBeNull();
+    expect(toggle.hasAttribute("disabled")).toBe(true);
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    expect(toggle.getAttribute("aria-describedby")).toBe(
+      "voice-guide-unsupported",
+    );
+
+    // 미지원 사유를 스크린리더에 제공한다.
+    expect(
+      screen.getByText("이 브라우저에서는 음성 안내를 지원하지 않아요."),
+    ).toBeTruthy();
+
+    // 비활성화된 스위치를 눌러도 저장 상태가 바뀌지 않는다.
+    fireEvent.click(toggle);
+
+    expect(localStorage.getItem(VOICE_SETTING_KEY)).toBeNull();
+    expect(synth.speak).not.toHaveBeenCalled();
   });
 
   it("배치용 className 을 스위치에 전달한다", () => {
-    render(<VoiceToggle className="xl:w-[8.25rem]" />);
+    render(<VoiceGuideToggle className="xl:w-[8.25rem]" />);
 
     expect(Array.from(toggleButton().classList)).toContain("xl:w-[8.25rem]");
   });
