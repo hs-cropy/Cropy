@@ -46,6 +46,21 @@ const NO_CAMERA_TEXT = "카메라가 꺼져 있어요. 카메라 켜기를 누�
 const CAPTURE_FAILED_TEXT = "사진을 찍지 못했어요. 잎이 보이게 비추고 다시 말씀해 주세요.";
 const CAPTURING_TEXT = "찍었어요. 잠시만요.";
 
+/** 방금 찍어 진단한 사진. 미리보기 구석에 썸네일과 병명으로 남겨 "무엇에 대해 답하는지" 보여 준다 */
+export interface LastShot {
+  url: string | null;
+  diseaseName: string;
+  /** 재촬영 안내가 있으면 다음엔 어디를 비출지 영상 위에 표시한다 */
+  recapture: { region: string; instruction: string } | null;
+}
+
+export interface VoiceTurn {
+  role: "user" | "assistant";
+  text: string;
+}
+
+const MAX_TURNS = 12;
+
 export interface UseVoiceConversationOptions {
   /** 지금 카메라 장면을 사진 파일로. 카메라가 없거나 꺼져 있으면 null. 음성 모드 화면이 넘긴다 */
   captureFrame?: () => Promise<File | null>;
@@ -80,6 +95,13 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
   const screenRef = useRef(screen);
   const captureFrameRef = useRef(captureFrame);
   captureFrameRef.current = captureFrame;
+  const [lastShot, setLastShot] = useState<LastShot | null>(null);
+  const lastShotUrlRef = useRef<string | null>(null);
+  const [history, setHistory] = useState<VoiceTurn[]>([]);
+  const addTurn = useCallback((turn: VoiceTurn) => {
+    if (!turn.text.trim()) return;
+    setHistory((prev) => [...prev, turn].slice(-MAX_TURNS));
+  }, []);
   const abortRef = useRef<AbortController | null>(null);
   const speechOwner = useRef(Symbol("voice-mode"));
 
@@ -208,6 +230,15 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
     const result = await diagnoseImage(file, undefined, { signal });
     if (signal.aborted) return [];
     adoptDiagnosis(result.id);
+    // 찍은 사진을 미리보기 구석에 남긴다. 이전 사진의 URL은 거둔다
+    if (lastShotUrlRef.current) URL.revokeObjectURL(lastShotUrlRef.current);
+    const url = typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : null;
+    lastShotUrlRef.current = url;
+    setLastShot({
+      url,
+      diseaseName: result.disease_name,
+      recapture: result.recapture ? { region: result.recapture.region, instruction: result.recapture.instruction } : null,
+    });
     try {
       return await fetchSpeechScript(result.id, signal);
     } catch (cause) {
@@ -232,10 +263,13 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
     setAssistantText("");
     updateState("thinking");
     try {
+      addTurn({ role: "user", text: "(셔터로 촬영)" });
       const reply = await captureAndDescribe(controller.signal);
       if (generation !== generationRef.current || controller.signal.aborted) return;
       abortRef.current = null;
-      setAssistantText(Array.isArray(reply) ? reply.join(" ") : reply);
+      const replyText = Array.isArray(reply) ? reply.join(" ") : reply;
+      setAssistantText(replyText);
+      addTurn({ role: "assistant", text: replyText });
       updateState("speaking");
       busyRef.current = false;
       await speakAndWait(reply, speechOwner.current);
@@ -250,7 +284,7 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
     } finally {
       if (generation === generationRef.current) busyRef.current = false;
     }
-  }, [cancel, captureAndDescribe, isState, scheduleAutoListen, updateState]);
+  }, [addTurn, cancel, captureAndDescribe, isState, scheduleAutoListen, updateState]);
 
   // 수동 종료 및 VAD 자동 종료에서 공통 사용
   const stop = useCallback(async () => {
@@ -319,6 +353,7 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
       }
       silentRoundsRef.current = 0;
       setTranscript(text);
+      addTurn({ role: "user", text });
 
       // 2. 기능 고르기 → 3. 답변 문장. "찍어 줘"는 모델에 보내지 않고 앱이 바로 찍어 진단한다
       const current = screenRef.current;
@@ -351,7 +386,9 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
 
       // 4. 읽기. 다 읽으면 다시 대기. 그 사이 마이크를 누르면 cancel()이 낭독을 끊고 idle로 돌린다
       abortRef.current = null;
-      setAssistantText(Array.isArray(reply) ? reply.join(" ") : reply);
+      const replyText = Array.isArray(reply) ? reply.join(" ") : reply;
+      setAssistantText(replyText);
+      addTurn({ role: "assistant", text: replyText });
       updateState("speaking");
       busyRef.current = false;
       await speakAndWait(reply, speechOwner.current);
@@ -376,7 +413,7 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
         busyRef.current = false;
       }
     }
-  }, [captureAndDescribe, clearVadTimer, isState, resetVad, scheduleAutoListen, updateState]);
+  }, [addTurn, captureAndDescribe, clearVadTimer, isState, resetVad, scheduleAutoListen, updateState]);
 
   // 연속 대화 중 말이 없었을 때: 한 번은 조용히 다시 듣고, 계속 없으면 안내 뒤 대기로 돌아간다
   const giveUpOrRetry = useCallback(() => {
@@ -559,6 +596,10 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
       // 음성 모드를 벗어날 때 마이크를 끈다 (브라우저의 녹음 표시도 같이 꺼진다)
       releaseStream(streamRef.current);
       streamRef.current = null;
+      if (lastShotUrlRef.current) {
+        URL.revokeObjectURL(lastShotUrlRef.current);
+        lastShotUrlRef.current = null;
+      }
     };
   }, [clearVadTimer]);
 
@@ -574,6 +615,8 @@ export function useVoiceConversation({ captureFrame }: UseVoiceConversationOptio
     setContinuous,
     /** 지금 이야기하는 진단(없으면 null)과 화면 단계 */
     screen,
+    lastShot,
+    history,
     captureNow,
     start,
     stop,

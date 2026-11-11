@@ -2,6 +2,7 @@
 
 import type { RefObject } from "react";
 import type { CameraStatus } from "@/types/camera";
+import type { LastShot } from "@/features/voice/hooks/useVoiceConversation";
 
 export interface VoiceCamera {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -11,14 +12,17 @@ export interface VoiceCamera {
   /** 지금 보이는 장면을 찍어 진단한다 */
   onShutter: () => void;
   shutterDisabled?: boolean;
+  /** 방금 찍어 진단한 사진. 구석에 썸네일·병명으로 남기고, 재촬영 안내가 있으면 영상 위에 표시한다 */
+  lastShot?: LastShot | null;
 }
 
 /**
  * 음성 모드 안의 작은 카메라 미리보기. 말로("찍어 줘") 또는 셔터 버튼으로 지금 장면을 진단한다.
  * 촬영 화면의 전체 화면 뷰파인더와 달리 대화 화면 안에 머문다.
  */
-export function VoiceCameraPreview({ videoRef, status, onStart, onShutter, shutterDisabled = false }: VoiceCamera) {
+export function VoiceCameraPreview({ videoRef, status, onStart, onShutter, shutterDisabled = false, lastShot = null }: VoiceCamera) {
   const streaming = status === "streaming";
+  const recapture = streaming ? lastShot?.recapture ?? null : null;
   return (
     <div className="w-full">
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-black/80">
@@ -47,6 +51,34 @@ export function VoiceCameraPreview({ videoRef, status, onStart, onShutter, shutt
                 </button>
               </>
             )}
+          </div>
+        )}
+        {/* 재촬영 안내: 다음엔 어디를 비출지 영상 위에 바로 보여 준다 (Gemini Live의 시각 안내처럼) */}
+        {recapture && (
+          <>
+            <div aria-hidden="true" className="pointer-events-none absolute inset-4 rounded-xl border-2 border-dashed border-[#F5B301]/90" />
+            <div
+              role="note"
+              className="absolute left-3 right-3 top-3 rounded-xl bg-[#F5B301] px-3 py-2 text-left text-xs font-semibold text-[#3D2F1A] shadow"
+            >
+              다음엔 {recapture.region}을(를) 비춰 주세요
+              <span className="block font-normal">{recapture.instruction}</span>
+            </div>
+          </>
+        )}
+        {/* 방금 찍은 사진: 지금 어떤 결과에 대해 답하는지 보여 준다 */}
+        {streaming && lastShot && (
+          <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-xl bg-black/55 p-1.5 pr-3 text-left text-white">
+            {lastShot.url ? (
+              // eslint-disable-next-line @next/next/no-img-element -- blob URL은 next/image로 최적화할 수 없다
+              <img src={lastShot.url} alt="방금 찍은 사진" className="h-12 w-12 rounded-lg object-cover" />
+            ) : (
+              <span aria-hidden="true" className="icon-[lucide--image] h-6 w-6" />
+            )}
+            <span className="text-xs leading-tight">
+              <span className="block text-white/70">방금 찍은 결과</span>
+              <span className="block font-semibold">{lastShot.diseaseName}</span>
+            </span>
           </div>
         )}
         {streaming && (

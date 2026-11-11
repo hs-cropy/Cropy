@@ -76,7 +76,7 @@ function resetPipeline() {
   pipeline.speakAndWait.mockReset().mockResolvedValue(undefined);
   pipeline.cancelSpeech.mockReset();
   pipeline.fetchSpeechScript.mockReset().mockResolvedValue(["고추 탄저병으로 분류됐어요.", "병든 잎을 떼어 내세요."]);
-  pipeline.diagnoseImage.mockReset().mockResolvedValue({ id: "new-diag", disease_name: "고추 탄저병" });
+  pipeline.diagnoseImage.mockReset().mockResolvedValue({ id: "new-diag", disease_name: "고추 탄저병", recapture: null });
   pipeline.screen = { diagnosisId: "diag-1", uiStage: "result", path: "/history/diag-1" };
 }
 
@@ -549,6 +549,29 @@ describe("useVoiceConversation", () => {
     expect(pipeline.speakAndWait).toHaveBeenCalledWith(["고추 탄저병으로 분류됐어요.", "병든 잎을 떼어 내세요."], expect.any(Symbol));
     expect(result.current.screen).toEqual({ diagnosisId: "new-diag", uiStage: "result", path: "/home" });
     expect(sessionStorage.getItem("cropy:lastDiagnosisId")).toBe("new-diag");
+  });
+
+  it("찍은 사진은 썸네일·병명·재촬영 안내로 남고, 주고받은 말은 기록에 쌓인다", async () => {
+    vi.stubGlobal("URL", { ...URL, createObjectURL: vi.fn(() => "blob:shot-1"), revokeObjectURL: vi.fn() });
+    pipeline.diagnoseImage.mockResolvedValueOnce({
+      id: "new-diag", disease_name: "무 검은무늬병",
+      recapture: { region: "잎 뒷면", instruction: "잎을 뒤집어 뒷면이 꽉 차게 찍어 주세요", margin: 0.1, candidates: [] },
+    });
+    pipeline.transcribe.mockResolvedValueOnce("찍어 줘");
+    const captureFrame = vi.fn().mockResolvedValue(new File(["jpg"], "leaf.jpg", { type: "image/jpeg" }));
+
+    const { result } = renderHook(() => useVoiceConversation({ captureFrame }));
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+
+    expect(result.current.lastShot).toEqual({
+      url: "blob:shot-1", diseaseName: "무 검은무늬병",
+      recapture: { region: "잎 뒷면", instruction: "잎을 뒤집어 뒷면이 꽉 차게 찍어 주세요" },
+    });
+    expect(result.current.history).toEqual([
+      { role: "user", text: "찍어 줘" },
+      { role: "assistant", text: "고추 탄저병으로 분류됐어요. 병든 잎을 떼어 내세요." },
+    ]);
   });
 
   it("찍은 뒤의 질문은 방금 찍은 진단으로 답한다", async () => {
