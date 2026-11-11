@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     low_confidence_threshold: float = Field(default=0.8, ge=0, le=1)
     recovery_ttl_hours: int = Field(default=24, ge=1, le=168)
     offline_bundle_dir: Path = Path("../frontend/public/offline-assets")
+    # 기능 선택 모델의 함수 계약(모델 폴더 cropy_prompt.json 형식). 기본값은 ml/qwen/spec_v2.py에서 만든 사본이다.
+    # 배포 모델을 바꾸면 그 모델 폴더의 cropy_prompt.json을 가리키게 한다 (app/services/function_contract.py 참고)
+    llm_function_contract_path: Path = Path(__file__).resolve().parent.parent / "data" / "function_contract.json"
 
     # 음성 안내 (app/services/tts_service.py 참고)
     tts_engine: Literal["off", "mock", "http"] = "off"

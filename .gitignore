@@ -96,6 +96,8 @@ frontend/public/offline-assets/manifest*.json
 # Application seed fixtures are not the AI Hub training dataset
 !backend/app/data/
 backend/app/data/*
+# 기능 선택 모델의 함수 계약 (ml/qwen/spec_v2.py에서 생성)
+!backend/app/data/function_contract.json
 !backend/app/data/seed/
 backend/app/data/seed/*
 !backend/app/data/seed/diseases.json
