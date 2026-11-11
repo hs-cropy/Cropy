@@ -35,9 +35,17 @@ class InvalidAudioError(ValueError):
     """STT 서버가 음성 파일을 받아들이지 않음(형식·크기)."""
 
 
+# SenseVoice는 language="ko"로 둬도 짧거나 불분명한 말은 일본어(가나)·한자로 적는다("なょ？", "끝ねさ？",
+# "ロキ？ 이 병…", 2026-11-12 음성 모드 녹음). 한국어 앱에서 그 글자는 뜻이 없으므로 지우고 남은 한국어만 쓴다
+_NON_KOREAN_CJK = re.compile(r"[぀-ヿㇰ-ㇿ㐀-䶿一-鿿豈-﫿ｦ-ﾟ]+")
+# 전각 문장부호(。？！，)도 문장부호로 본다
+_FULLWIDTH = str.maketrans({"。": ".", "？": "?", "！": "!", "，": ",", "、": ","})
+
+
 def normalize_transcript(text: str) -> str:
-    """문장부호 제거, 공백 정리. 모델 학습 문장과 같은 꼴로 맞춘다."""
-    cleaned = _PUNCTUATION.sub(" ", text)
+    """일본어·한자 글자 제거, 문장부호 제거, 공백 정리. 모델 학습 문장과 같은 꼴로 맞춘다."""
+    cleaned = _NON_KOREAN_CJK.sub(" ", text.translate(_FULLWIDTH))
+    cleaned = _PUNCTUATION.sub(" ", cleaned)
     return _SPACES.sub(" ", cleaned).strip()
 
 

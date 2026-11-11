@@ -38,6 +38,13 @@ def diagnosis_id(client, sample_image) -> str:
     ("이거, 뭐야? 진짜…", "이거 뭐야 진짜"),
     ("0.5배 희석해도 돼?", "0.5배 희석해도 돼"),
     ("   ", ""),
+    # language="ko"여도 SenseVoice가 짧은 말을 일본어·한자로 적은 실제 사례 (2026-11-12)
+    ("なょ？", ""),
+    ("供よ？", ""),
+    ("끝ねさ？", "끝"),
+    ("ロキ？ 이 병 무병 걸린 거야.", "이 병 무병 걸린 거야"),
+    ("사진진 찍어줘。", "사진진 찍어줘"),
+    ("그費？ 그록피 이거 진단해줘.", "그 그록피 이거 진단해줘"),
 ])
 def test_normalize_transcript_strips_punctuation(raw, expected):
     assert stt_service.normalize_transcript(raw) == expected
