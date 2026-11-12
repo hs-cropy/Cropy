@@ -1,4 +1,4 @@
-﻿"""Score Qwen predictions against reviewed human evaluation rows."""
+"""Score Qwen predictions against reviewed human evaluation rows."""
 
 import argparse
 import csv
@@ -10,9 +10,11 @@ from spec_v2 import format_call, parse_call
 
 def read_gold(path):
     gold = {}
+    excluded_count = 0
     with path.open(encoding="utf-8-sig", newline="") as file:
         for row in csv.DictReader(file, strict=True):
-            if row["작성자"].strip() == "예시" or row["검수결과(ok/수정/삭제)"].strip() != "ok":
+            if row["작성자"].strip() == "예시" or row["검수결과(ok/수정/삭제)"].strip().lower() != "ok":
+                excluded_count += 1
                 continue
             key = row["eval_id"].strip()
             if not key or key in gold:
@@ -26,11 +28,13 @@ def read_gold(path):
             gold[key] = parse_call(format_call(row["의도한 함수"].strip(), arguments))
     if not gold:
         raise ValueError("채점할 검수 완료(ok) 행이 없습니다.")
-    return gold
+    return gold, excluded_count
 
 
 def read_predictions(path, gold):
     predictions = {}
+    seen = set()
+    ignored_count = 0
     for number, line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), 1):
         if not line.strip():
             continue
@@ -38,10 +42,14 @@ def read_predictions(path, gold):
         if not isinstance(item, dict) or not isinstance(item.get("eval_id"), str) or not isinstance(item.get("output"), str):
             raise ValueError(f"출력 {number}행: eval_id와 output은 문자열이어야 합니다.")
         key = item["eval_id"].strip()
-        if key not in gold or key in predictions:
-            raise ValueError(f"출력 {number}행: 채점 대상이 아니거나 중복된 ID: {key!r}")
+        if not key or key in seen:
+            raise ValueError(f"출력 {number}행: 비어 있거나 중복된 ID: {key!r}")
+        seen.add(key)
+        if key not in gold:
+            ignored_count += 1
+            continue
         predictions[key] = item["output"]
-    return predictions
+    return predictions, ignored_count
 
 
 def score(gold, predictions):
@@ -84,11 +92,14 @@ def main():
     parser.add_argument("predictions_jsonl", type=Path)
     args = parser.parse_args()
     try:
-        gold = read_gold(args.gold_csv)
-        predictions = read_predictions(args.predictions_jsonl, gold)
+        gold, excluded_count = read_gold(args.gold_csv)
+        predictions, ignored_count = read_predictions(args.predictions_jsonl, gold)
     except (OSError, ValueError, TypeError, AttributeError, KeyError, csv.Error) as error:
         parser.exit(1, f"채점 실패: {error}\n")
-    print(json.dumps(score(gold, predictions), ensure_ascii=False, indent=2))
+    result = score(gold, predictions)
+    result["excluded_gold_row_count"] = excluded_count
+    result["ignored_output_count"] = ignored_count
+    print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
