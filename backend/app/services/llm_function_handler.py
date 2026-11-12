@@ -35,6 +35,8 @@ def handle_function_output(
     output: str,
     context: DiagnosisLLMInput,
     contract: FunctionContract,
+    *,
+    ui_stage: str | None = None,
 ) -> LLMFunctionResponse:
     call = parse_function_output(output, contract)
 
@@ -45,6 +47,16 @@ def handle_function_output(
         _check_handler_arguments(contract, call.function_name, "target", len(_CLARIFICATION_QUESTIONS))
         question = _CLARIFICATION_QUESTIONS[call.arguments["target"] - 1]
         return _response(call.function_name, context, "needs_clarification", question)
+
+    if call.function_name == "get_usage_guidance":
+        spec = next(item for item in contract.functions if item.name == call.function_name)
+        if spec.arguments != (("topic", 6), ("delivery", 2)):
+            raise InvalidFunctionContract(
+                "unsupported handler contract: get_usage_guidance"
+            )
+        return _usage_guidance_response(
+            call.arguments["topic"], call.arguments["delivery"], ui_stage
+        )
 
     if call.function_name == "chit_chat":
         if call.arguments:
@@ -423,4 +435,51 @@ def _metrics_response(topic, context):
         + listing
         + ". 기록에 없는 후보의 점수는 알 수 없습니다."
         + limit,
+    )
+
+
+_USAGE_STEPS = {
+    2: ("진단할 잎을 화면에 맞춰 주세요.", "초점이 맞으면 사진을 찍어 주세요."),
+    3: ("작물 선택 메뉴를 열어 주세요.", "지금 진단할 작물을 골라 주세요."),
+    5: ("화면에 표시된 오류 안내를 확인해 주세요.", "다시 시도 버튼이 보이면 눌러 주세요."),
+}
+
+_USAGE_NEXT_STEPS = {
+    "no_photo": ("진단할 작물을 골라 주세요.", "잎 사진을 찍어 주세요."),
+    "photo_ready": ("촬영한 사진을 확인해 주세요.", "진단을 시작해 주세요."),
+    "analyzing": ("분석이 끝날 때까지 잠시 기다려 주세요.",),
+    "result": ("화면에서 진단 결과를 확인해 주세요.", "아래 안내를 살펴봐 주세요."),
+    "error": _USAGE_STEPS[5],
+}
+
+
+def _usage_guidance_response(
+    topic: int, delivery: int, ui_stage: str | None
+) -> LLMFunctionResponse:
+    steps = None
+    if topic == 1:
+        steps = _USAGE_NEXT_STEPS.get(ui_stage)
+    elif topic == 4 and ui_stage == "analyzing":
+        steps = _USAGE_NEXT_STEPS["analyzing"]
+    else:
+        steps = _USAGE_STEPS.get(topic)
+
+    if steps is None:
+        if topic == 6:
+            text = "직전 안내를 확인할 수 없어요. 다시 듣고 싶은 내용을 말씀해 주세요."
+        else:
+            text = "현재 화면 상태를 확인할 수 없어요. 화면에 표시된 안내를 확인해 주세요."
+        return LLMFunctionResponse(
+            function_name="get_usage_guidance",
+            status="insufficient_information",
+            text=text,
+        )
+
+    text = steps[0] if delivery == 1 else "\n".join(
+        f"{number}. {step}" for number, step in enumerate(steps, 1)
+    )
+    return LLMFunctionResponse(
+        function_name="get_usage_guidance",
+        status="ok",
+        text=text,
     )

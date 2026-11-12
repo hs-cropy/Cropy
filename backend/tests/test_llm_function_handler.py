@@ -154,7 +154,6 @@ def test_invalid_tokens_are_rejected(context):
     "output",
     [
         "<hs_4>(topic=2, product=1)<hs_end>",
-        "<hs_7>(topic=1, delivery=1)<hs_end>",
     ],
 )
 def test_unimplemented_function_is_distinct_from_user_scope(context, output):
@@ -468,3 +467,42 @@ def test_chit_chat_returns_short_app_guidance(context):
     assert result.status == "ok"
     assert "작물 진단" in result.text
     assert context.disease_name not in result.text
+
+
+def test_usage_guidance_uses_explicit_stage_and_delivery(context):
+    brief = handle_function_output(
+        "<hs_7>(topic=1, delivery=1)<hs_end>",
+        context, CONTRACT, ui_stage="no_photo",
+    )
+    detailed = handle_function_output(
+        "<hs_7>(topic=1, delivery=2)<hs_end>",
+        context, CONTRACT, ui_stage="no_photo",
+    )
+    result = handle_function_output(
+        "<hs_7>(topic=1, delivery=1)<hs_end>",
+        context, CONTRACT, ui_stage="result",
+    )
+
+    assert brief.function_name == "get_usage_guidance"
+    assert brief.status == detailed.status == result.status == "ok"
+    assert "작물을 골라" in brief.text
+    assert detailed.text.splitlines()[0] == f"1. {brief.text}"
+    assert detailed.text.splitlines()[1].startswith("2. ")
+    assert "진단 결과" in result.text
+
+
+def test_usage_guidance_without_stage_or_previous_reply_does_not_guess(context):
+    for topic in (1, 4, 6):
+        result = handle_function_output(
+            f"<hs_7>(topic={topic}, delivery=1)<hs_end>", context, CONTRACT
+        )
+        assert result.status == "insufficient_information"
+
+
+def test_usage_guidance_static_topics_work_without_stage(context):
+    for topic, phrase in ((2, "초점"), (3, "작물 선택"), (5, "다시 시도")):
+        result = handle_function_output(
+            f"<hs_7>(topic={topic}, delivery=2)<hs_end>", context, CONTRACT
+        )
+        assert result.status == "ok"
+        assert phrase in result.text
