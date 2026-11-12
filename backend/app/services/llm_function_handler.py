@@ -48,6 +48,16 @@ def handle_function_output(
         question = _CLARIFICATION_QUESTIONS[call.arguments["target"] - 1]
         return _response(call.function_name, context, "needs_clarification", question)
 
+    if call.function_name == "get_pesticide_information":
+        spec = next(item for item in contract.functions if item.name == call.function_name)
+        if spec.arguments != (("topic", 11), ("product", 2)):
+            raise InvalidFunctionContract(
+                "unsupported handler contract: get_pesticide_information"
+            )
+        return _pesticide_information_response(
+            context, call.arguments["topic"], call.arguments["product"]
+        )
+
     if call.function_name == "get_usage_guidance":
         spec = next(item for item in contract.functions if item.name == call.function_name)
         if spec.arguments != (("topic", 6), ("delivery", 2)):
@@ -483,3 +493,79 @@ def _usage_guidance_response(
         status="ok",
         text=text,
     )
+
+
+def _pesticide_information_response(
+    context: DiagnosisLLMInput, topic: int, product: int
+) -> LLMFunctionResponse:
+    name = "get_pesticide_information"
+    unavailable = (
+        "이 진단 기록에서 요청하신 농약 정보를 확인할 수 없어요. "
+        "제품 표시사항과 PSIS 등록정보를 확인해 주세요."
+    )
+    if _retake_reason(context) is not None or context.decision_status != "disease":
+        return _response(
+            name, context, "insufficient_information",
+            "농약 정보를 안내하기 전에 작물과 병해를 확인해 주세요.",
+        )
+    if topic == 11:
+        return _response(
+            name, context, "insufficient_information",
+            "이 기록으로는 혼용 가능 여부를 확인할 수 없어요. 제품 표시사항을 확인해 주세요.",
+        )
+
+    candidates = context.pesticides
+    if product == 1 and len(candidates) > 1:
+        return _response(
+            name, context, "needs_clarification", "어떤 농약 제품인지 이름을 알려 주세요.",
+        )
+    verified = [
+        item for item in candidates
+        if item.source == "PSIS"
+        and item.verification_status == "verified"
+        and item.synced_at is not None
+        and item.name.strip()
+    ]
+    if not verified:
+        return _response(name, context, "insufficient_information", unavailable)
+
+    if topic == 10 and (product == 1 or len({item.name for item in verified}) < 2):
+        return _response(
+            name, context, "insufficient_information",
+            "비교하려면 확인된 제품 정보가 두 개 이상 필요해요.",
+        )
+
+    entries = []
+    for item in verified:
+        phi = item.safety.phi_days
+        reentry = item.safety.reentry_hours
+        fields = {
+            1: None,
+            2: item.dilution,
+            3: item.usage,
+            4: f"수확 전 사용 금지 기간 {phi}일" if phi is not None else None,
+            5: f"살포 후 재출입 간격 {reentry}시간" if reentry is not None else None,
+            6: "이 기록에 PSIS 검증 정보가 있어요",
+            7: item.active_ingredient,
+            8: item.active_ingredient,
+            9: item.safety_notes,
+            10: item.active_ingredient,
+        }
+        value = fields[topic]
+        if topic in (1, 8, 10):
+            entries.append(f"{item.name}: {value.strip()}" if value and value.strip() else item.name)
+        elif value and value.strip():
+            entries.append(f"{item.name}: {value.strip()}")
+        elif product == 2:
+            entries.append(f"{item.name}: 요청하신 항목은 확인되지 않았어요")
+
+    if not entries or (
+        topic not in (1, 8, 10)
+        and all(entry.endswith("요청하신 항목은 확인되지 않았어요") for entry in entries)
+    ):
+        return _response(name, context, "insufficient_information", unavailable)
+
+    text = "; ".join(dict.fromkeys(entries))
+    if topic == 10:
+        text = "확인된 제품 정보를 나란히 안내할게요. " + text
+    return _response(name, context, "ok", text)

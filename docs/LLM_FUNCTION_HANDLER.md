@@ -93,7 +93,6 @@ response = handle_function_output(
 
 다음 기능은 파서에서 유효하게 분석되더라도 아직 handler가 구현되어 있지 않다.
 
-- `get_pesticide_information`
 
 - `handle_scope_limit`
 
@@ -357,3 +356,10 @@ Mock 결과에는 다음 문구를 붙인다.
 호출부에서 \`ui_stage\`를 제공하면 현재 화면에 맞는 다음 행동을 안내한다.
 화면 상태가 필요한 요청에 해당 정보가 없거나 직전 안내를 다시 들을 수 없는 경우에는
 \`insufficient_information\`을 반환한다.
+
+### 농약 정보 안내
+
+\`get_pesticide_information\`은 진단 기록의 PSIS 검증 항목만 사용한다.
+현재 제품이 모호하면 제품 이름을 되묻고, 확인된 정보가 없거나
+혼용 가능 여부를 확인할 수 없으면 정보 부족 응답을 반환한다.
+제품 선택 식별자를 받기 전에는 기록에 제품이 하나일 때만 현재 제품으로 처리한다.

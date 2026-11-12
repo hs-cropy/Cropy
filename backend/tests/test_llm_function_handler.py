@@ -5,7 +5,6 @@ from pydantic import ValidationError
 
 from app.schemas.llm import DiagnosisLLMInput
 from app.services.llm_function_handler import (
-    FunctionHandlerNotImplemented,
     handle_function_output,
 )
 from app.services.llm_function_parser import (
@@ -150,15 +149,6 @@ def test_invalid_tokens_are_rejected(context):
         )
 
 
-@pytest.mark.parametrize(
-    "output",
-    [
-        "<hs_4>(topic=2, product=1)<hs_end>",
-    ],
-)
-def test_unimplemented_function_is_distinct_from_user_scope(context, output):
-    with pytest.raises(FunctionHandlerNotImplemented):
-        handle_function_output(output, context, CONTRACT)
 
 @pytest.mark.parametrize(
     "status, phrase",
@@ -506,3 +496,80 @@ def test_usage_guidance_static_topics_work_without_stage(context):
         )
         assert result.status == "ok"
         assert phrase in result.text
+
+
+def test_pesticide_information_uses_only_verified_records(context):
+    context.decision_status = "disease"
+    context.decision_reasons = []
+    context.recapture = None
+    context.pesticides = [
+        {
+            "name": "테스트 제품 A",
+            "source": "PSIS",
+            "verification_status": "verified",
+            "synced_at": "2026-01-01T00:00:00Z",
+            "dilution": "테스트 희석값",
+            "usage": "테스트 사용법",
+            "active_ingredient": "테스트 성분",
+            "safety": {"phi_days": 0, "reentry_hours": 0},
+            "safety_notes": "테스트 확인사항",
+        },
+        {
+            "name": "미검증 제품 B",
+            "source": "PSIS",
+            "dilution": "표시하면 안 되는 값",
+        },
+    ]
+    expected = {
+        1: "테스트 제품 A",
+        2: "테스트 희석값",
+        3: "테스트 사용법",
+        4: "0일",
+        5: "0시간",
+        6: "PSIS 검증",
+        7: "테스트 성분",
+        8: "테스트 제품 A",
+        9: "테스트 확인사항",
+    }
+    for topic, phrase in expected.items():
+        result = handle_function_output(
+            f"<hs_4>(topic={topic}, product=2)<hs_end>", context, CONTRACT
+        )
+        assert result.function_name == "get_pesticide_information"
+        assert result.status == "ok"
+        assert phrase in result.text
+        assert "미검증 제품 B" not in result.text
+        assert "표시하면 안 되는 값" not in result.text
+
+    current = handle_function_output("<hs_4>(topic=2, product=1)<hs_end>", context, CONTRACT)
+    assert current.status == "needs_clarification"
+    assert "테스트 희석값" not in current.text
+
+    for topic in (10, 11):
+        result = handle_function_output(
+            f"<hs_4>(topic={topic}, product=2)<hs_end>", context, CONTRACT
+        )
+        assert result.status == "insufficient_information"
+
+
+def test_pesticide_information_does_not_infer_missing_values(context):
+    context.decision_status = "disease"
+    context.decision_reasons = []
+    context.recapture = None
+    call = "<hs_4>(topic=2, product=1)<hs_end>"
+    context.pesticides = []
+    assert handle_function_output(call, context, CONTRACT).status == "insufficient_information"
+
+    context.pesticides = [{
+        "name": "테스트 제품 A",
+        "source": "PSIS",
+        "verification_status": "verified",
+        "synced_at": "2026-01-01T00:00:00Z",
+    }]
+    assert handle_function_output(call, context, CONTRACT).status == "insufficient_information"
+
+    context.pesticides[0]["dilution"] = "표시하면 안 되는 값"
+    context.decision_status = "crop_mismatch"
+    result = handle_function_output(call, context, CONTRACT)
+    assert result.status == "insufficient_information"
+    assert "표시하면 안 되는 값" not in result.text
