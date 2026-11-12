@@ -498,11 +498,17 @@ def test_usage_guidance_static_topics_work_without_stage(context):
         assert phrase in result.text
 
 
+def _validated_pesticides(items):
+    from app.schemas.llm import LLMPesticideInfo
+
+    return [LLMPesticideInfo.model_validate(item) for item in items]
+
+
 def test_pesticide_information_uses_only_verified_records(context):
     context.decision_status = "disease"
     context.decision_reasons = []
     context.recapture = None
-    context.pesticides = [
+    context.pesticides = _validated_pesticides([
         {
             "name": "테스트 제품 A",
             "source": "PSIS",
@@ -519,7 +525,7 @@ def test_pesticide_information_uses_only_verified_records(context):
             "source": "PSIS",
             "dilution": "표시하면 안 되는 값",
         },
-    ]
+    ])
     expected = {
         1: "테스트 제품 A",
         2: "테스트 희석값",
@@ -560,16 +566,39 @@ def test_pesticide_information_does_not_infer_missing_values(context):
     context.pesticides = []
     assert handle_function_output(call, context, CONTRACT).status == "insufficient_information"
 
-    context.pesticides = [{
+    context.pesticides = _validated_pesticides([{
         "name": "테스트 제품 A",
         "source": "PSIS",
         "verification_status": "verified",
         "synced_at": "2026-01-01T00:00:00Z",
-    }]
+    }])
     assert handle_function_output(call, context, CONTRACT).status == "insufficient_information"
 
-    context.pesticides[0]["dilution"] = "표시하면 안 되는 값"
+    context.pesticides[0].dilution = "표시하면 안 되는 값"
     context.decision_status = "crop_mismatch"
     result = handle_function_output(call, context, CONTRACT)
     assert result.status == "insufficient_information"
     assert "표시하면 안 되는 값" not in result.text
+
+
+def test_pesticide_information_compares_two_verified_products(context):
+    context.decision_status = "disease"
+    context.decision_reasons = []
+    context.recapture = None
+    context.pesticides = _validated_pesticides([
+        {
+            "name": name,
+            "active_ingredient": ingredient,
+            "source": "PSIS",
+            "verification_status": "verified",
+            "synced_at": "2026-01-01T00:00:00Z",
+        }
+        for name, ingredient in (("Product A", "Ingredient A"), ("Product B", "Ingredient B"))
+    ])
+
+    result = handle_function_output(
+        "<hs_4>(topic=10, product=2)<hs_end>", context, CONTRACT
+    )
+    assert result.status == "ok"
+    assert "Product A: Ingredient A" in result.text
+    assert "Product B: Ingredient B" in result.text
