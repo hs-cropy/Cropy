@@ -435,13 +435,20 @@ export function useCaptureScreen({
   // 화면 폭이 정해지거나 바뀐 렌더는 사용자 동작이 아니므로 옮기지 않는다
   // — 새로고침할 때마다 제목에 초점이 가면 안 된다
   const previousViewRef = useRef({ view, desktopMatch });
+
   useEffect(() => {
     const previous = previousViewRef.current;
     previousViewRef.current = { view, desktopMatch };
+    // 화면 종류가 그대로거나 반응형 레이아웃만 변경된 경우는 제외한다.
     if (previous.view === view || previous.desktopMatch !== desktopMatch) return;
+    // 촬영 화면이 보이지 않으면 다른 화면의 스크롤을 건드리지 않는다.
     if (!visible) return;
+    // 같은 URL 안에서 촬영 단계가 변경되면 상단으로 이동한다.
+    document.scrollingElement?.scrollTo({ top: 0, behavior: "instant" });
     const active = document.activeElement;
-    if (!active || active === document.body) titleRef.current?.focus({ preventScroll: true });
+    if (!active || active === document.body) {
+      titleRef.current?.focus({ preventScroll: true });
+    }
   }, [view, visible, desktopMatch]);
 
   // start() 는 클릭 처리 안에서 바로 불러야 iOS 가 권한을 묻는다

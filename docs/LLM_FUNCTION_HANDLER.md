@@ -76,31 +76,23 @@ response = handle_function_output(
 
 모델 계약의 함수표에는 인자별 허용 개수가 들어 있다. handler의 정수별 의미는 현재 hs-call-v2 학습 계약을 따른다.
 
-구현된 기능은 인자 이름과 허용 개수가 예상과 일치하는지 추가 확인한다. 다르면 `InvalidFunctionContract`를 발생시킨다.
-
+핸들러는 인자 이름과 허용 개수를 추가 확인한다. 진단·점수·재촬영·관리 안내는 topic, 확인 질문은 target, 지원 범위 안내는 reason을 사용한다. 다르면 InvalidFunctionContract를 발생시킨다.
 허용 개수만으로는 같은 개수 안에서 의미가 재배열된 변경까지 감지할 수 없다. 학습 계약의 인자 의미나 순서가 바뀌면 handler와 테스트도 함께 갱신해야 한다.
 
 ## 구현 범위
 
 | 기능 | 지원하는 topic |
-
 |---|---|
-
 | `get_diagnosis` | result, severity, observation, provenance, impact, food_safety, change |
-
 | `get_prediction_metrics` | confidence, ranking, distribution, limits, comparison |
-
 | `get_recapture_guidance` | where, why, certainty, provenance |
+| `get_care_information` | causes, prevention, priority |
 
 `handle_scope_limit`은 `reason` 인자로 지원 범위를 안내한다.
 
 다음 기능은 파서에서 유효하게 분석되더라도 아직 handler가 구현되어 있지 않다.
 
-- `get_care_information`
-
 - `get_pesticide_information`
-
-- `clarify_request`
 
 - `get_usage_guidance`
 
@@ -127,14 +119,16 @@ response = handle_function_output(
 현재 구현에서 사용하는 상태는 다음과 같다.
 
 | status | 의미 |
-
 |---|---|
-
 | `ok` | 저장된 근거나 명시적인 한계 설명으로 안내할 수 있음 |
-
 | `insufficient_information` | 요청한 내용을 안내할 근거가 부족함 |
+| `needs_clarification` | 답변에 필요한 대상을 사용자에게 다시 확인함 |
 
 `ok`는 확진이나 정보의 추가 검증이 완료됐다는 뜻이 아니다.
+
+## 확인 질문
+
+`clarify_request`는 작물, 병명, 질문 주제, 점수, 심각도, 진단 기록, 농약 제품, 음성 인식(`stt`) 순으로 여덟 가지 `target`을 지원한다. 예를 들어 `<hs_5>(target=7)<hs_end>`는 사용자에게 농약 제품 이름을 알려 달라고 요청한다. 어떤 작물이나 제품을 뜻하는지 추측하지 않는다.
 
 ## 재촬영 안내
 
@@ -269,6 +263,13 @@ AI가 매긴 점수이며 실제 발병 확률이나 피해 수준이 아님을 
 점수는 후보를 비교하기 위한 값이며 실제 발병 확률이나 피해 수준을 의미하지 않는다고 설명한다.
 
 백분율과 점수 차이는 소수점 둘째 자리까지 표시하고 불필요한 끝자리 0은 제거한다.
+
+## 원인·예방·관리 안내
+
+- `causes`: 저장된 `causes`로 일반적인 원인을 설명한다. 사진 속 작물의 실제 원인을 확인했다고 말하지 않는다.
+- `prevention`: 저장된 `prevention`과 `management_actions`를 안내한다.
+- `priority`: `management_actions`에서 비어 있지 않은 첫 항목을 저장된 순서대로 안내한다.
+- 해당 정보가 없거나 재촬영이 필요한 불확실한 판정이면 `insufficient_information`을 반환한다.
 
 ## 입력 검증과 출처 표시
 

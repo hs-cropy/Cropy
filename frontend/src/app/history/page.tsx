@@ -37,22 +37,13 @@ const GRADE_OPTIONS: {
   { value: "low", label: "낮음" },
 ];
 
-// PR #75의 AppShellPage는 window가 아니라
-// 내부 region 요소에서 스크롤이 발생한다.
-function getHistoryScrollElement(): HTMLElement | null {
-  return document.querySelector<HTMLElement>(
-    '[role="region"][aria-label="진단 이력"]'
-  );
+// AppShell은 헤더부터 문서 전체가 스크롤된다 (본문 영역이 따로 스크롤되지 않는다).
+function getHistoryScrollElement(): HTMLElement {
+  return (document.scrollingElement as HTMLElement | null) ?? document.documentElement;
 }
 
 function scrollHistoryToTop() {
-  const scroller = getHistoryScrollElement();
-
-  if (scroller) {
-    scroller.scrollTop = 0;
-  } else {
-    window.scrollTo(0, 0);
-  }
+  getHistoryScrollElement().scrollTop = 0;
 }
 
 export default function HistoryPage() {
@@ -154,7 +145,7 @@ export default function HistoryPage() {
           crop,
           grade,
           page,
-          scrollY: scroller?.scrollTop ?? window.scrollY,
+          scrollY: scroller.scrollTop,
         })
       );
     } catch {
@@ -296,13 +287,7 @@ export default function HistoryPage() {
     pendingScrollRef.current = null;
 
     const frame = requestAnimationFrame(() => {
-      const scroller = getHistoryScrollElement();
-
-      if (scroller) {
-        scroller.scrollTop = position;
-      } else {
-        window.scrollTo(0, position);
-      }
+      getHistoryScrollElement().scrollTop = position;
     });
 
     return () => cancelAnimationFrame(frame);
