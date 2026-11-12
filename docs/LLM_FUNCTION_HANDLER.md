@@ -89,6 +89,8 @@ response = handle_function_output(
 | `get_recapture_guidance` | where, why, certainty, provenance |
 | `get_care_information` | causes, prevention, priority |
 
+`chit_chat`은 인자 없이 짧은 응답과 앱 기능 안내를 반환한다.
+
 다음 기능은 파서에서 유효하게 분석되더라도 아직 handler가 구현되어 있지 않다.
 
 - `get_pesticide_information`
@@ -96,8 +98,6 @@ response = handle_function_output(
 - `handle_scope_limit`
 
 - `get_usage_guidance`
-
-- `chit_chat`
 
 미구현 기능은 `FunctionHandlerNotImplemented`를 발생시킨다. 이를 사용자 질문이 서비스 범위를 벗어났다는 응답으로 바꾸지 않는다.
 

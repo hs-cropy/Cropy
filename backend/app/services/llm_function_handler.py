@@ -46,6 +46,17 @@ def handle_function_output(
         question = _CLARIFICATION_QUESTIONS[call.arguments["target"] - 1]
         return _response(call.function_name, context, "needs_clarification", question)
 
+    if call.function_name == "chit_chat":
+        if call.arguments:
+            raise InvalidFunctionContract(
+                "unsupported handler contract: chit_chat"
+            )
+        return LLMFunctionResponse(
+            function_name="chit_chat",
+            status="ok",
+            text="안녕하세요! 작물 진단이나 앱 사용 방법이 궁금하면 물어봐 주세요.",
+        )
+
     topics = _TOPICS.get(call.function_name)
     if topics is None:
         raise FunctionHandlerNotImplemented(

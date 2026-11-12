@@ -155,7 +155,6 @@ def test_invalid_tokens_are_rejected(context):
     [
         "<hs_4>(topic=2, product=1)<hs_end>",
         "<hs_7>(topic=1, delivery=1)<hs_end>",
-        "<hs_8>()<hs_end>",
     ],
 )
 def test_unimplemented_function_is_distinct_from_user_scope(context, output):
@@ -460,3 +459,12 @@ def test_care_keeps_mock_provenance(care_context):
     result = handle_function_output("<hs_3>(topic=2)<hs_end>", care_context, CONTRACT)
     assert result.status == "ok"
     assert result.text.startswith("데모 결과")
+
+
+def test_chit_chat_returns_short_app_guidance(context):
+    result = handle_function_output("<hs_8>()<hs_end>", context, CONTRACT)
+
+    assert result.function_name == "chit_chat"
+    assert result.status == "ok"
+    assert "작물 진단" in result.text
+    assert context.disease_name not in result.text
