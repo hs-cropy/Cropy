@@ -1,0 +1,156 @@
+function	arguments	context	utterance
+get_diagnosis	topic=result	rs_gochu	고추가 시들시들해요
+get_diagnosis	topic=result	rs_gochu	고추에 병이 온 것 같아요
+get_diagnosis	topic=result	rs_gochu	우리 고추 어디 아픈 거예요
+get_diagnosis	topic=result	rs_gochu	고추 상태가 안 좋아 보여요
+get_diagnosis	topic=observation	rs_gochu	고추 잎에 뭐가 생겼어요
+get_diagnosis	topic=result	rs_gochu	고추가 영 시원찮아요
+clarify_request	target=crop	rs_gochu	무가 시들시들해요
+clarify_request	target=crop	rs_gochu	우리 무 어디 아픈 거예요
+clarify_request	target=crop	rs_gochu	무 잎에 뭐가 생겼어요
+clarify_request	target=crop	rs_gochu	배추에 병이 온 것 같아요
+clarify_request	target=crop	rs_gochu	배추 상태가 안 좋아 보여요
+clarify_request	target=crop	rs_gochu	배추가 영 시원찮아요
+handle_scope_limit	reason=crop	rs_gochu	오이가 시들시들해요
+handle_scope_limit	reason=crop	rs_gochu	토마토에 병이 온 것 같아요
+handle_scope_limit	reason=crop	rs_gochu	우리 상추 어디 아픈 거예요
+handle_scope_limit	reason=crop	rs_gochu	감자 상태가 안 좋아 보여요
+handle_scope_limit	reason=crop	rs_gochu	가지 잎에 뭐가 생겼어요
+handle_scope_limit	reason=crop	rs_gochu	양파가 영 시원찮아요
+get_diagnosis	topic=result	rs_mu	무가 시들시들해요
+get_diagnosis	topic=result	rs_mu	무에 병이 온 것 같아요
+get_diagnosis	topic=result	rs_mu	우리 무 어디 아픈 거예요
+get_diagnosis	topic=result	rs_mu	무 상태가 안 좋아 보여요
+get_diagnosis	topic=observation	rs_mu	무 잎에 뭐가 생겼어요
+get_diagnosis	topic=result	rs_mu	무가 영 시원찮아요
+clarify_request	target=crop	rs_mu	고추가 시들시들해요
+clarify_request	target=crop	rs_mu	우리 고추 어디 아픈 거예요
+clarify_request	target=crop	rs_mu	고추 잎에 뭐가 생겼어요
+clarify_request	target=crop	rs_mu	배추에 병이 온 것 같아요
+clarify_request	target=crop	rs_mu	배추 상태가 안 좋아 보여요
+clarify_request	target=crop	rs_mu	배추가 영 시원찮아요
+handle_scope_limit	reason=crop	rs_mu	감자가 시들시들해요
+handle_scope_limit	reason=crop	rs_mu	가지에 병이 온 것 같아요
+handle_scope_limit	reason=crop	rs_mu	우리 양파 어디 아픈 거예요
+handle_scope_limit	reason=crop	rs_mu	딸기 상태가 안 좋아 보여요
+handle_scope_limit	reason=crop	rs_mu	참외 잎에 뭐가 생겼어요
+handle_scope_limit	reason=crop	rs_mu	대파가 영 시원찮아요
+get_diagnosis	topic=result	rs_baechu	배추가 시들시들해요
+get_diagnosis	topic=result	rs_baechu	배추에 병이 온 것 같아요
+get_diagnosis	topic=result	rs_baechu	우리 배추 어디 아픈 거예요
+get_diagnosis	topic=result	rs_baechu	배추 상태가 안 좋아 보여요
+get_diagnosis	topic=observation	rs_baechu	배추 잎에 뭐가 생겼어요
+get_diagnosis	topic=result	rs_baechu	배추가 영 시원찮아요
+clarify_request	target=crop	rs_baechu	고추가 시들시들해요
+clarify_request	target=crop	rs_baechu	우리 고추 어디 아픈 거예요
+clarify_request	target=crop	rs_baechu	고추 잎에 뭐가 생겼어요
+clarify_request	target=crop	rs_baechu	무에 병이 온 것 같아요
+clarify_request	target=crop	rs_baechu	무 상태가 안 좋아 보여요
+clarify_request	target=crop	rs_baechu	무가 영 시원찮아요
+handle_scope_limit	reason=crop	rs_baechu	딸기가 시들시들해요
+handle_scope_limit	reason=crop	rs_baechu	참외에 병이 온 것 같아요
+handle_scope_limit	reason=crop	rs_baechu	우리 대파 어디 아픈 거예요
+handle_scope_limit	reason=crop	rs_baechu	고구마 상태가 안 좋아 보여요
+handle_scope_limit	reason=crop	rs_baechu	호박 잎에 뭐가 생겼어요
+handle_scope_limit	reason=crop	rs_baechu	마늘가 영 시원찮아요
+get_diagnosis	topic=result	rs_gochu	고추 탄저병 맞아요
+get_diagnosis	topic=result	rs_gochu	이거 탄저병이에요
+get_diagnosis	topic=result	rs_mu	무 노균병이 맞는 거예요
+get_diagnosis	topic=result	rs_mu	노균병 걸린 거 맞아요
+get_diagnosis	topic=result	rs_baechu	배추 검은썩음병이라는 거예요
+get_diagnosis	topic=severity	rs_gochu	심각도 높음이 뭐예요
+get_diagnosis	topic=severity	rs_gochu	높음이라고 써 있는데 무슨 말이에요
+get_diagnosis	topic=severity	rs_gochu	심각도가 높다는 게 무슨 뜻이에요
+get_diagnosis	topic=severity	rs_gochu	이 병 심한 거예요
+get_diagnosis	topic=severity	rs_mu	심각도 보통이 뭐예요
+get_diagnosis	topic=severity	rs_mu	보통이라고 나왔는데 무슨 뜻이에요
+get_diagnosis	topic=severity	rs_mu	얼마나 심각한 거예요
+get_diagnosis	topic=severity	rs_baechu	심각도 낮음이면 괜찮은 거예요
+get_diagnosis	topic=severity	rs_baechu	낮음이라고 써 있는데 무슨 말이에요
+get_diagnosis	topic=severity	rs_baechu	심각도가 뭐예요
+get_care_information	topic=causes	rs_gochu	이 병은 왜 생기는 거예요
+get_care_information	topic=causes	rs_gochu	뭐 때문에 병이 난 거예요
+get_care_information	topic=causes	rs_gochu	이거 원인이 뭐예요
+get_care_information	topic=causes	rs_mu	왜 이런 병에 걸렸어요
+get_care_information	topic=causes	rs_mu	병이 왜 온 거예요
+get_care_information	topic=causes	rs_mu	병이 생긴 이유가 뭐예요
+get_care_information	topic=causes	rs_baechu	어쩌다 이렇게 된 거예요
+get_care_information	topic=causes	rs_baechu	이 병 왜 걸리는 거예요
+get_care_information	topic=prevention	rs_gochu	더 안 번지게 하려면 어떡해요
+get_care_information	topic=prevention	rs_gochu	이 병 어떻게 잡아요
+get_care_information	topic=prevention	rs_gochu	이거 어떻게 치료해요
+get_care_information	topic=prevention	rs_gochu	약 치는 거 말고 뭘 해야 돼요
+get_care_information	topic=prevention	rs_mu	옆 포기로 안 옮게 하려면 어째요
+get_care_information	topic=prevention	rs_mu	어떻게 하면 나아요
+get_care_information	topic=prevention	rs_mu	다음엔 안 걸리게 하려면 어떻게 해요
+get_care_information	topic=prevention	rs_baechu	병 안 퍼지게 관리하는 법 알려 주세요
+get_care_information	topic=prevention	rs_baechu	이 병 어떻게 다스려요
+get_care_information	topic=prevention	rs_baechu	어떻게 관리해야 돼요
+get_care_information	topic=priority	rs_gochu	병 걸렸으면 제일 먼저 뭘 해야 돼요
+get_care_information	topic=priority	rs_gochu	관리할 때 뭐가 제일 급해요
+get_care_information	topic=priority	rs_gochu	병 잡으려면 뭐부터 해요
+get_care_information	topic=priority	rs_mu	지금 당장 뭐부터 손대야 돼요 병 때문에
+get_care_information	topic=priority	rs_mu	가장 급한 조치가 뭐예요
+get_care_information	topic=priority	rs_mu	병든 포기 뭐부터 해요
+get_care_information	topic=priority	rs_baechu	병 잡으려면 제일 먼저 할 일이 뭐예요
+get_care_information	topic=priority	rs_baechu	관리 중에 뭐부터 하면 돼요
+get_diagnosis	topic=provenance	rs_gochu	이 얘기 어디서 나온 거예요
+get_diagnosis	topic=provenance	rs_gochu	누가 이렇게 하라고 한 거예요
+get_diagnosis	topic=provenance	rs_gochu	이거 출처가 어디예요
+get_diagnosis	topic=provenance	rs_mu	어디 자료를 보고 알려 주는 거예요
+get_diagnosis	topic=provenance	rs_mu	이건 누구 말이에요
+get_diagnosis	topic=provenance	rs_mu	무슨 근거로 이렇게 말하는 거예요
+get_diagnosis	topic=provenance	rs_baechu	이 내용 믿을 만한 데서 나온 거예요
+get_diagnosis	topic=provenance	rs_baechu	이거 어디서 알아낸 거예요
+get_pesticide_information	topic=usage, product=current	rs_gochu	이 약 어떻게 써요
+get_pesticide_information	topic=usage, product=current	rs_gochu	이 농약 쓰는 법 알려 주세요
+get_pesticide_information	topic=usage, product=current	rs_gochu	이거 몇 번 쳐야 돼요
+get_pesticide_information	topic=usage, product=current	rs_gochu	약 치는 방법이 어떻게 돼요
+get_pesticide_information	topic=usage, product=current	rs_mu	이 약 어떻게 뿌려요
+get_pesticide_information	topic=usage, product=current	rs_mu	약은 언제 치면 돼요
+get_pesticide_information	topic=usage, product=current	rs_mu	이 약 몇 번까지 쳐도 돼요
+get_pesticide_information	topic=usage, product=current	rs_baechu	이 약 어떻게 치는 거예요
+get_pesticide_information	topic=usage, product=current	rs_baechu	농약 사용법 좀 알려 주세요
+get_pesticide_information	topic=usage, product=current	rs_baechu	이 약 아침에 쳐요 저녁에 쳐요
+get_pesticide_information	topic=phi, product=current	rs_gochu	약 치고 며칠 있다가 따야 돼요
+get_pesticide_information	topic=phi, product=current	rs_gochu	약 친 고추 언제부터 먹어도 돼요
+get_pesticide_information	topic=phi, product=current	rs_gochu	어제 약 쳤는데 오늘 따도 돼요
+get_pesticide_information	topic=phi, product=current	rs_mu	농약 친 거 먹어도 돼요
+get_pesticide_information	topic=phi, product=current	rs_mu	약 치고 얼마나 지나야 먹을 수 있어요
+get_pesticide_information	topic=phi, product=current	rs_mu	수확 며칠 전까지 약 쳐도 돼요
+get_pesticide_information	topic=phi, product=current	rs_baechu	약 뿌리고 바로 수확해도 돼요
+get_pesticide_information	topic=phi, product=current	rs_baechu	약 친 배추 바로 김장해도 돼요
+get_pesticide_information	topic=ingredient, product=current	rs_gochu	그 뭐냐 그 약 성분이 뭐예요
+get_pesticide_information	topic=ingredient, product=current	rs_gochu	이 약 뭘로 만든 거예요
+get_pesticide_information	topic=ingredient, product=current	rs_mu	저기 그 약에 뭐가 들었어요
+get_pesticide_information	topic=ingredient, product=current	rs_mu	아 그 뭐더라 그 농약 성분이 뭐예요
+get_pesticide_information	topic=ingredient, product=current	rs_baechu	이 약 성분 좀 알려 주세요
+clarify_request	target=topic	rs_gochu	약 이름이랑 타는 양을 한꺼번에 알려 주세요
+clarify_request	target=topic	rs_gochu	원인이랑 약 치는 법 다 알려 주세요
+clarify_request	target=topic	rs_mu	성분하고 쓰는 시기 둘 다 알려 주세요
+clarify_request	target=topic	rs_mu	점수랑 관리법을 한 번에 말해 줘요
+clarify_request	target=topic	rs_baechu	병 이름이랑 약을 같이 말해 주세요
+clarify_request	target=topic	rs_baechu	희석 배수하고 수확 전 며칠인지 같이 알려 주세요
+get_diagnosis	topic=observation	rs_gochu	고추에 점 같은 게 생겼어요
+get_diagnosis	topic=observation	rs_gochu	고추 열매에 까만 게 보여요
+get_diagnosis	topic=observation	rs_mu	무 잎에 하얀 가루 같은 게 있어요
+get_diagnosis	topic=observation	rs_mu	무 잎에 얼룩이 졌는데 이게 뭐예요
+get_diagnosis	topic=observation	rs_baechu	배추 잎에 누런 반점이 생겼어요
+get_diagnosis	topic=observation	rs_baechu	배추에 뭐가 났는데 이게 뭐예요
+get_diagnosis	topic=result	rs_gochu	우리 고추 왜 이래요
+get_diagnosis	topic=result	rs_mu	무가 왜 이 모양이에요
+get_diagnosis	topic=result	rs_baechu	배추 왜 이런 거예요
+get_pesticide_information	topic=list, product=all	rs_gochu	약은 뭘 쳐야 돼요
+get_pesticide_information	topic=list, product=all	rs_gochu	약 좀 추천해 주세요
+get_pesticide_information	topic=list, product=all	rs_mu	이 병에 듣는 약이 뭐예요
+get_pesticide_information	topic=list, product=all	rs_mu	뭘 뿌려야 하는지 모르겠어요
+get_pesticide_information	topic=list, product=all	rs_baechu	어떤 농약을 사야 돼요
+clarify_request	target=record	rs_gochu	예전에 찍은 사진 결과 볼 수 있어요
+clarify_request	target=record	rs_mu	저번 주에 검사한 거 어디 있어요
+clarify_request	target=record	rs_baechu	전에 진단받은 기록 보여 주세요
+clarify_request	target=topic	rs_gochu	이것 좀 해 주세요
+clarify_request	target=topic	rs_mu	그거 해 줘요
+clarify_request	target=topic	rs_baechu	이거 어떻게 좀 해 봐요
+get_usage_guidance	topic=next_step, delivery=brief	rs_photo_gochu	이 사진 좀 봐 주세요
+get_usage_guidance	topic=next_step, delivery=brief	rs_photo_mu	사진 찍었는데 이제 어떻게 해요
+get_usage_guidance	topic=next_step, delivery=brief	rs_photo_baechu	분석 시작해 주세요

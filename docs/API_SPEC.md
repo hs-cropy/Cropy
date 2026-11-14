@@ -316,17 +316,18 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 
 | 엔드포인트/필드 | 용도 |
 |---|---|
-| `GET /api/v1/history?crop_type=무&severity=high&page=1&size=20` | 작물·등급 필터. `total`은 최종 필터 건수, `crop_total`은 작물 조건 건수, `unfiltered_total`은 전체 건수 |
+| `GET /api/v1/history?crop_type=무&severity=high&page=1&size=20` | 작물·등급 필터. `total`은 최종 필터 건수, `crop_total`은 작물 조건 건수, `unfiltered_total`은 전체 건수 판별 불가 기록은 목록·건수에서 뺀다(#179 이전 기록 포함). |
 | 이력 요약 `category`, `severity`, `is_refined`, `content_status` | 정상/병해·등급·재촬영·과거 안내 상태 표시 |
 | 진단 `management_actions`, `content_version`, `content_status` | 관리 안내와 당시 콘텐츠 버전. 이전 스냅샷 없는 기록은 `current_reference` |
 | `current_pesticides` | 당시 `pesticides`와 구분한 현재 카탈로그. 과거 이력의 최신 조건 확인에 사용 |
 | `decision_status`, `decision_reasons`, `policy_version` | `decision-v2`. 판별 불가(`not_crop`, 단독) → 작물 불일치 → 혼동 → 낮은 신뢰도 우선순위와 모든 해당 이유 |
 | `initial_predictions`, `is_refined` | 최초 상위 후보와 재촬영 여부 |
-| `save_status`, `recovery_token` | `saved` 또는 DB 저장 실패의 `failed`. 실패해도 보관 성공한 경우 결과를 반환 |
+| `save_status`, `recovery_token` | `saved` 또는 DB 저장 실패의 `failed`. 실패해도 보관 성공한 경우 결과를 반환. `skipped`는 판별 불가(작물 잎 아님)라 기록·사진·멱등 키를 남기지 않은 결과(#179) — `id`로 이력·재촬영·음성 안내를 조회할 수 없고 `image_url`은 null |
+| `speech_script` | `skipped` 결과의 음성 안내 문장 목록. 저장된 결과는 null이며 `/diagnose/{id}/speech/script`를 쓴다 |
 | `POST /api/v1/results/{token}/save` | 서버에 보관된 결과만 재저장. 임의 진단 JSON은 받지 않으며 재추론하지 않음 |
 | `GET /api/v1/capabilities` | 사진 형식·용량·픽셀, 판단 기준, 실행 준비, 복구 보관 시간 |
 | `GET /api/v1/offline/manifest` | 준비된 브라우저 모델·전처리·병해 안내 묶음 메타데이터. 기능 선택 모델 묶음이 있으면 `function_models`(`mobile_clf`·`web_qwen`별 `version`·`base_url`·`total_bytes`·파일별 `name`·`bytes`·`sha256`)를 함께 준다. 이 값은 `version` 계산에 들어가지 않는다 |
-| `POST /api/v1/offline/records` | multipart `metadata`, `file`, 선택적 `refined_file`로 기기 기록 동기화 |
+| `POST /api/v1/offline/records` | multipart `metadata`, `file`, 선택적 `refined_file`로 기기 기록 동기화. 판별 불가 기록은 저장하지 않고 `save_status=skipped`로 응답 |
 
 진단·재촬영의 선택적 `Idempotency-Key`는 최대 128자다. 같은 작업·키·사진·작물은 동일 응답을 재사용한다. 다른 본문이면 `409 IDEMPOTENCY_CONFLICT`다. 성공 응답은 진단과 같은 DB 트랜잭션에 저장한다. 기존 기록보다 오래된 복구 결과는 `409 DIAGNOSIS_CHANGED`, 만료 초안은 `410 RESULT_EXPIRED`다. 기본 복구 TTL은 24시간이며 `RECOVERY_TTL_HOURS`로 1~168시간 설정한다.
 
@@ -444,9 +445,11 @@ DB는 diseases 테이블에 TEXT/JSON 컬럼을 추가한다. 시작 시 기존 
 마이그레이션을 사용하며 진단 이력은 삭제하지 않는다. Docker 배포는 새 시드가
 포함되도록 이미지를 재빌드한다.
 
-`docs/api/openapi.json` 및 `openapi.html`은 이 변경의 배포용 명세다.
+`docs/api/openapi.json` 및 `openapi.html`은 배포용 명세다(마지막 생성: 2026-11-15, develop 855b89b, 업무 API 18개).
+`backend`에서 `app.main.app.openapi()`로 JSON을 만들고, HTML은 같은 명세를 내장해 ReDoc v2.5.0이 브라우저에서 그린다.
 백엔드 병합 후 `hs-cropy/locallife-api-docs` 저장소의 `docs/api-docs.json`,
-`docs/api-docs.html`에 각각 복사하고 해당 저장소 PR로 배포한다.
+`docs/api-docs.html`에 각각 복사해 배포한다. 공개 사이트 사본은 특허 출원 전이라
+`CapabilitiesResponse` 예시의 `confusion_margin`·`second_photo_weight`·`top1_recapture_pairs` 값을 비운다.
 이 저장소 변경만으로 외부 문서 사이트가 갱신되지는 않는다.
 
 현재 `summary_message`는 병해 6종에 공통 문구 1종, 정상 3종에 공통 문구 1종을 제공한다. 클래스마다 서로 다른 요약 문구를 제공하는 것은 아니다.

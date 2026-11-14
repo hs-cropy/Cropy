@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cropy 분류기 휴대폰 측정</title>
+<style>
+:root { --paper:#FBF8F1; --surface:#fff; --ink:#3D2F1A; --khaki:#8C7B54; --line:#E8E0CF; --brand:#F5B301; --ok:#3F7D3A; --bad:#B0452C; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --paper:#1C1812; --surface:#262019; --ink:#F1E9DA; --khaki:#B8A87F; --line:#3A3226; --ok:#8CC985; --bad:#EE8B72; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font: 15px/1.6 system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left)); }
+main { max-width: 640px; margin: 0 auto; display:flex; flex-direction:column; gap:16px; }
+h1 { font-size: 22px; margin: 4px 0 0; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+.k { color:var(--khaki); font-size:13px; }
+button { font: inherit; font-weight:700; border:0; border-radius:10px; padding:12px 14px; background:var(--brand); color:#3D2F1A; cursor:pointer; }
+button:disabled { opacity:.45; cursor:default; }
+button.ghost { background:transparent; border:1px solid var(--line); color:var(--ink); font-weight:500; }
+.row { display:flex; gap:8px; flex-wrap:wrap; }
+.bar { height:8px; background:var(--line); border-radius:4px; overflow:hidden; }
+.bar i { display:block; height:100%; width:0; background:var(--brand); }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+td, th { padding:6px 4px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+th { color:var(--khaki); font-weight:500; }
+td.n { text-align:right; font-variant-numeric: tabular-nums; white-space:nowrap; }
+.ok { color:var(--ok); font-weight:700; } .bad { color:var(--bad); font-weight:700; }
+code { font-family: ui-monospace, Consolas, monospace; font-size:12px; word-break: break-all; }
+input, select { font: inherit; width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--paper); color:var(--ink); }
+#log { white-space: pre-wrap; font-family: ui-monospace, Consolas, monospace; font-size:12px; color:var(--khaki); max-height: 160px; overflow:auto; }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <div class="k">CROPY · 오프라인 웹 소형 분류기 (KoELECTRA-small int8, 약 14MB)</div>
+    <h1>휴대폰에서 기능 선택 분류기 돌려 보기</h1>
+    <div class="k">Qwen 대신 쓰는 아이폰용 후보. 같은 화면 상태와 문장을 넣고 같은 <code>&lt;hs_N&gt;(…)</code> 호출을 냅니다.</div>
+  </div>
+
+  <section class="card" id="device"><b>이 기기</b><div id="devinfo" class="k">확인하는 중…</div></section>
+
+  <section class="card">
+    <b>1. 모델 받기·불러오기</b>
+    <div class="k">약 15MB(모델 14MB + 토크나이저 0.8MB). 두 번째부터는 기기에 저장된 파일을 씁니다.</div>
+    <div class="row"><button id="load">불러오기 (CPU)</button><button id="loadgpu" class="ghost">WebGPU로 시도</button></div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="loadinfo" class="k"></div>
+  </section>
+
+  <section class="card">
+    <b>2. 기본 시험 16문장</b>
+    <div class="k">Qwen 측정과 같은 16문장(기능 8개 × 2). 첫 문장은 준비 시간이 포함돼 느릴 수 있습니다.</div>
+    <div class="row"><button id="runall" disabled>16문장 실행</button><button id="loop" class="ghost" disabled>16문장 × 5회 (메모리 누수 확인)</button></div>
+    <table><thead><tr><th>#</th><th>발화 / 출력</th><th class="n">시간</th></tr></thead><tbody id="rows"></tbody></table>
+    <div id="summary" class="k"></div>
+  </section>
+
+  <section class="card">
+    <b>3. 직접 입력</b>
+    <select id="ctxsel"></select>
+    <input id="utt" placeholder="예: 이 병 약 얼마나 타서 뿌려">
+    <div class="row"><button id="ask" disabled>실행</button></div>
+    <div id="answer" class="k"></div>
+  </section>
+
+  <section class="card">
+    <b>4. 결과 보내기</b>
+    <div class="k">아래 버튼으로 결과를 복사해 Claude에게 붙여 넣어 주세요.</div>
+    <div class="row"><button id="copy" class="ghost">결과 복사</button></div>
+    <div id="log"></div>
+  </section>
+</main>
+
+<script type="module">
+import { env, AutoTokenizer } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2';
+import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/ort.all.min.mjs';
+
+env.allowLocalModels = false;
+env.allowRemoteModels = true;
+env.remoteHost = new URL('./', location.href).href;
+env.remotePathTemplate = '{model}/';
+env.useBrowserCache = true;
+ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.23.0/dist/';
+
+const $ = (id) => document.getElementById(id);
+const MODEL = 'clf';                       // served by serve.py as /clf/<file>
+const MAX_LEN = 256;                       // same as training
+// The classifier was trained with overlapping topics folded together (v7/v8 notebooks); fold the presets' expected
+// labels the same way before comparing. Keys: <hs_N> index + argument; values: {from: to} in 1-based Qwen numbering.
+const TOPIC_MERGE = { '1.topic': { 5: 2, 4: 1 }, '2.topic': { 4: 3 }, '4.topic': { 9: 6 } };
+const foldExpected = (s) => s.replace(/<hs_(\d+)>\(([^)]*)\)/, (m, fn, body) =>
+  `<hs_${fn}>(${body.replace(/([a-z_]+)=(\d+)/g, (mm, k, v) => `${k}=${(TOPIC_MERGE[`${fn}.${k}`] || {})[+v] ?? v}`)})`);
+const report = { page: 'cropy-clf-mobile-1', started: new Date().toISOString(), device: {}, load: null, runs: [] };
+let tok, session, labels, presets, feedNames;
+const log = (m) => { $('log').textContent += m + '\n'; };
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function stage(text) { try { localStorage.setItem('cropy-clf-stage', JSON.stringify({ text, at: new Date().toISOString() })); } catch (e) {} }
+try {
+  const last = JSON.parse(localStorage.getItem('cropy-clf-stage') || 'null');
+  if (last) { report.lastVisitStage = last; $('loadinfo').innerHTML = `지난번 마지막 단계: <b>${esc(last.text)}</b> (${last.at.slice(11, 19)} UTC)`; }
+} catch (e) {}
+
+async function deviceInfo() {
+  const d = report.device;
+  d.ua = navigator.userAgent; d.cores = navigator.hardwareConcurrency || null; d.memoryGB = navigator.deviceMemory || null;
+  d.webgpu = !!navigator.gpu; d.crossOriginIsolated = !!self.crossOriginIsolated;
+  $('devinfo').innerHTML = [`WebGPU: <b>${d.webgpu ? '있음' : '없음'}</b> · 멀티스레드 wasm: <b>${d.crossOriginIsolated ? '가능' : '불가(단일 스레드)'}</b>`,
+    `메모리(대략): ${d.memoryGB ? d.memoryGB + 'GB' : '알 수 없음'} · 코어 ${d.cores || '-'}`].join('<br>');
+}
+
+// Model bytes go through the same Cache Storage transformers.js uses, so a second visit is offline.
+async function fetchCached(name, onProgress) {
+  const key = env.remoteHost + MODEL + '/' + name;
+  const cache = await caches.open(env.cacheKey || 'transformers-cache');
+  const hit = await cache.match(key);
+  if (hit) return await hit.arrayBuffer();
+  const resp = await fetch(MODEL + '/' + name, { cache: 'no-store' });
+  if (!resp.ok) throw new Error(name + ' ' + resp.status);
+  const total = +resp.headers.get('content-length') || 0;
+  let got = 0;
+  const counter = new TransformStream({ transform(chunk, ctl) { got += chunk.byteLength; if (total) onProgress(got, total); ctl.enqueue(chunk); } });
+  const body = await new Response(resp.body.pipeThrough(counter)).arrayBuffer();
+  try { await cache.put(key, new Response(body.slice(0), { headers: { 'content-type': 'application/octet-stream' } })); } catch (e) { log('cache put failed ' + e); }
+  return body;
+}
+
+async function load(device) {
+  $('load').disabled = $('loadgpu').disabled = true;
+  const t0 = performance.now();
+  stage('시작');
+  try {
+    try { report.device.persisted = await navigator.storage.persist(); } catch (e) {}
+    presets = await (await fetch('presets.json')).json();
+    labels = await (await fetch(MODEL + '/labels.json', { cache: 'no-store' })).json();
+    stage('토크나이저');
+    tok = await AutoTokenizer.from_pretrained(MODEL);
+    const tTok = performance.now();
+    stage('모델 받는 중');
+    const bytes = await fetchCached('model_int8.onnx', (g, t) => { $('prog').style.width = (100 * g / t).toFixed(1) + '%'; $('loadinfo').textContent = `받는 중 ${(g / 2 ** 20).toFixed(1)} / ${(t / 2 ** 20).toFixed(1)} MB`; });
+    const tDl = performance.now();
+    stage(`세션 만드는 중 (${device})`);
+    const providers = device === 'webgpu' ? ['webgpu', 'wasm'] : ['wasm'];
+    session = await ort.InferenceSession.create(bytes, { executionProviders: providers, graphOptimizationLevel: 'all' });
+    feedNames = session.inputNames;
+    const sec = (performance.now() - t0) / 1000;
+    report.load = { device, seconds: +sec.toFixed(1), tokenizerSeconds: +((tTok - t0) / 1000).toFixed(1), downloadSeconds: +((tDl - tTok) / 1000).toFixed(1),
+                    sessionSeconds: +((performance.now() - tDl) / 1000).toFixed(1), modelMB: +(bytes.byteLength / 2 ** 20).toFixed(1), inputs: feedNames, outputs: session.outputNames };
+    stage('불러오기 완료');
+    $('prog').style.width = '100%';
+    $('loadinfo').innerHTML = `불러오기 완료: <b>${sec.toFixed(1)}초</b> (${device}, 모델 ${report.load.modelMB}MB, 세션 ${report.load.sessionSeconds}초)`;
+    $('runall').disabled = $('loop').disabled = $('ask').disabled = false;
+    presets.forEach((p, i) => $('ctxsel').insertAdjacentHTML('beforeend', `<option value="${i}">화면 상태: ${p.function} 예시 ${i + 1}</option>`));
+    log(`load ${device} ${sec.toFixed(1)}s inputs=${feedNames.join(',')}`);
+  } catch (e) {
+    report.load = { device, error: String(e && e.message || e) };
+    stage('실패: ' + String(e && e.message || e).slice(0, 80));
+    $('loadinfo').innerHTML = `<span class="bad">불러오기 실패</span>: ${esc(String(e && e.message || e))}`;
+    log('load error ' + (e && e.stack || e));
+    $('load').disabled = $('loadgpu').disabled = false;
+  }
+}
+
+const argmax = (a) => { let b = 0; for (let i = 1; i < a.length; i++) if (a[i] > a[b]) b = i; return b; };
+const softmaxMax = (a) => { const m = Math.max(...a); let s = 0; for (const v of a) s += Math.exp(v - m); return 1 / s; };
+
+async function run(utterance, contextJson, label = '') {
+  stage(`실행 ${label}`);
+  const t0 = performance.now();
+  // Same pair encoding as training: (utterance, compact context JSON), truncating only the context.
+  const enc = tok(utterance, { text_pair: contextJson, truncation: true, max_length: MAX_LEN });
+  const n = enc.input_ids.dims[1];
+  const feeds = {};
+  for (const name of feedNames) {
+    const src = enc[name] || (name === 'token_type_ids' ? { data: new BigInt64Array(n), dims: [1, n] } : null);
+    if (!src) throw new Error('입력 없음: ' + name);
+    feeds[name] = new ort.Tensor('int64', BigInt64Array.from(src.data, BigInt), [1, n]);
+  }
+  const tTok = performance.now();
+  const out = await session.run(feeds);
+  const t1 = performance.now();
+  const fnLogits = Array.from(out.fn_logits.data);
+  const fi = argmax(fnLogits);
+  const fn = labels.functions[fi];
+  const args = [];
+  for (const h of labels.heads) {
+    if (h.function !== fn) continue;
+    const o = out[`${h.function}.${h.argument}`];
+    args.push(`${h.argument}=${argmax(Array.from(o.data)) + 1}`);
+  }
+  const text = `<hs_${fi}>(${args.join(', ')})<hs_end>`;
+  return { tokens: n, tokenizeMs: Math.round(tTok - t0), inferMs: Math.round(t1 - tTok), totalMs: Math.round(t1 - t0), fnConf: +softmaxMax(fnLogits).toFixed(3), output: text };
+}
+
+async function runAll(tag = '') {
+  $('rows').innerHTML = '';
+  let correct = 0;
+  const runs = [];
+  for (let i = 0; i < presets.length; i++) {
+    const p = presets[i];
+    try {
+      const r = await run(p.utterance, p.context_json, `${i + 1}번`);
+      const expected = foldExpected(p.expected);
+      const ok = r.output === expected;
+      correct += ok;
+      runs.push({ i, function: p.function, ok, ...r });
+      $('rows').insertAdjacentHTML('beforeend', `<tr><td>${i + 1}</td><td>${esc(p.utterance)}<br><code class="${ok ? 'ok' : 'bad'}">${esc(r.output)}</code>${ok ? '' : `<br><span class="k">정답 ${esc(expected)}</span>`}<br><span class="k">${r.tokens}토큰 · 확신 ${r.fnConf}</span></td><td class="n">${r.totalMs}ms</td></tr>`);
+    } catch (e) {
+      runs.push({ i, function: p.function, error: String(e && e.message || e) });
+      $('rows').insertAdjacentHTML('beforeend', `<tr><td>${i + 1}</td><td colspan="2" class="bad">실패: ${esc(String(e && e.message || e))}</td></tr>`);
+      log('run error ' + (e && e.stack || e));
+    }
+  }
+  const ok = runs.filter((r) => r.totalMs != null);
+  const totals = ok.slice(1).map((r) => r.totalMs).sort((a, b) => a - b);
+  const med = totals.length ? totals[Math.floor(totals.length / 2)] : null;
+  const summary = { tag, correct, total: presets.length, firstRunMs: ok[0] && ok[0].totalMs, medianMs: med, maxMs: totals.at(-1) ?? null };
+  report.runs.push({ tag, summary, runs });
+  $('summary').innerHTML = `${tag ? tag + ' · ' : ''}정답 <b>${correct}/${presets.length}</b> · 첫 문장 ${summary.firstRunMs}ms · 중앙값 <b>${med}ms</b> · 최대 ${summary.maxMs}ms (첫 문장 제외)`;
+  return summary;
+}
+
+$('load').onclick = () => load('wasm');
+$('loadgpu').onclick = () => load('webgpu');
+$('runall').onclick = async () => { $('runall').disabled = $('loop').disabled = true; await runAll(); $('runall').disabled = $('loop').disabled = false; };
+$('loop').onclick = async () => {
+  $('runall').disabled = $('loop').disabled = true;
+  const meds = [];
+  for (let k = 1; k <= 5; k++) { const s = await runAll(`${k}회차`); meds.push(s.medianMs); }
+  report.loop = { medians: meds, jsHeapMB: performance.memory ? +(performance.memory.usedJSHeapSize / 2 ** 20).toFixed(1) : null };
+  $('summary').innerHTML += `<br>5회 중앙값: ${meds.join(' / ')} ms`;
+  $('runall').disabled = $('loop').disabled = false;
+};
+$('ask').onclick = async () => {
+  const u = $('utt').value.trim();
+  if (!u) return;
+  $('ask').disabled = true;
+  try {
+    const r = await run(u, presets[+$('ctxsel').value].context_json, '직접');
+    report.runs.push({ custom: u, ...r });
+    $('answer').innerHTML = `<code>${esc(r.output)}</code> · 확신 ${r.fnConf} · ${r.totalMs}ms`;
+  } catch (e) { $('answer').innerHTML = `<span class="bad">실패</span>: ${esc(String(e))}`; }
+  $('ask').disabled = false;
+};
+$('copy').onclick = async () => {
+  const s = JSON.stringify(report);
+  try { await navigator.clipboard.writeText(s); $('copy').textContent = '복사했어요'; }
+  catch (e) { $('log').textContent = s; $('copy').textContent = '아래 글을 길게 눌러 복사하세요'; }
+};
+deviceInfo();
+</script>
+</body>
+</html>

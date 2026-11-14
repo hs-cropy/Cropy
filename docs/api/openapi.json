@@ -382,7 +382,7 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v2:low=0.5",
+                      "policy_version": "decision-v3:low=0.8",
                       "save_status": "saved",
                       "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
                       "management_actions": [
@@ -430,7 +430,7 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v2:low=0.5",
+                      "policy_version": "decision-v3:low=0.8",
                       "save_status": "failed",
                       "recovery_token": "ed6b3b3a-ecb4-4fc9-a681-4d870567fb62",
                       "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
@@ -581,7 +581,7 @@
             }
           },
           "503": {
-            "description": "모델(MODEL_UNAVAILABLE), DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가",
+            "description": "진단 대기 시간 초과(SERVER_BUSY), 모델(MODEL_UNAVAILABLE), DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가",
             "headers": {
               "X-Request-ID": {
                 "description": "요청 추적 ID",
@@ -699,7 +699,7 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v2:low=0.5",
+                      "policy_version": "decision-v3:low=0.8",
                       "save_status": "saved",
                       "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
                       "management_actions": [
@@ -762,7 +762,7 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v2:low=0.5",
+                      "policy_version": "decision-v3:low=0.8",
                       "save_status": "failed",
                       "recovery_token": "ed6b3b3a-ecb4-4fc9-a681-4d870567fb62",
                       "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
@@ -928,7 +928,7 @@
             }
           },
           "503": {
-            "description": "모델(MODEL_UNAVAILABLE), DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가",
+            "description": "진단 대기 시간 초과(SERVER_BUSY), 모델(MODEL_UNAVAILABLE), DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가",
             "headers": {
               "X-Request-ID": {
                 "description": "요청 추적 ID",
@@ -1140,7 +1140,7 @@
             }
           },
           "503": {
-            "description": "저장 실패(SAVE_FAILED), DB 사용 불가(DATABASE_UNAVAILABLE), 복구 저장소 사용 불가(RECOVERY_STORAGE_UNAVAILABLE)",
+            "description": "진단 대기 시간 초과(SERVER_BUSY), 저장 실패(SAVE_FAILED), DB 사용 불가(DATABASE_UNAVAILABLE), 복구 저장소 사용 불가(RECOVERY_STORAGE_UNAVAILABLE)",
             "headers": {
               "X-Request-ID": {
                 "description": "요청 추적 ID",
@@ -1641,6 +1641,301 @@
         }
       }
     },
+    "/api/v1/diagnose/{diagnosis_id}/speech/script": {
+      "get": {
+        "tags": [
+          "diagnosis"
+        ],
+        "summary": "음성 안내 문장",
+        "description": "이 기기의 진단 기록을 음성으로 읽을 문장으로 돌려줍니다. 숫자·단위는 한글 발음으로 풀어 씁니다. TTS 엔진과 무관하게 제공되므로, 음성 파일을 받을 수 없으면 이 문장을 브라우저 내장 음성으로 읽습니다.",
+        "operationId": "speech_text_api_v1_diagnose__diagnosis_id__speech_script_get",
+        "parameters": [
+          {
+            "name": "diagnosis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Diagnosis Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeechScript"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "전체 요청 본문 크기 초과 (REQUEST_TOO_LARGE)",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "요청 크기가 너무 큽니다. 업로드할 파일 크기를 줄여 주세요.",
+                  "code": "REQUEST_TOO_LARGE",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "요청 항목을 확인해 주세요.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "요청 항목을 확인해 주세요.",
+                  "code": "VALIDATION_ERROR",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "처리되지 않은 서버 예외. 공통 JSON 오류 형식을 보장하지 않습니다.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Internal Server Error"
+              }
+            }
+          },
+          "404": {
+            "description": "진단 기록을 찾을 수 없습니다.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "진단 기록을 찾을 수 없습니다.",
+                  "code": "DIAGNOSIS_NOT_FOUND",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "기록 처리에 실패했습니다. 다시 시도해 주세요.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "기록 처리에 실패했습니다. 다시 시도해 주세요.",
+                  "code": "DATABASE_UNAVAILABLE",
+                  "retryable": true,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/diagnose/{diagnosis_id}/speech": {
+      "get": {
+        "tags": [
+          "diagnosis"
+        ],
+        "summary": "음성 안내 wav",
+        "description": "음성 안내 문장을 서버 TTS로 합성한 wav를 돌려줍니다. 문장마다 합성·캐시해 이어 붙이므로 다른 진단과 겹치는 문장은 다시 합성하지 않습니다. TTS가 꺼져 있거나, 합성에 실패하거나, TTS_RESPONSE_BUDGET_SECONDS(기본 20초) 안에 모든 문장을 만들지 못하면 503 TTS_UNAVAILABLE이며, 이때는 /speech/script 문장을 대신 읽습니다. 그때까지 만든 문장은 캐시에 남아 다음 요청은 남은 문장만 합성합니다. 단일 바이트 Range 요청(206/416)과 ETag 기반 If-Range를 지원합니다.",
+        "operationId": "speech_audio_api_v1_diagnose__diagnosis_id__speech_get",
+        "parameters": [
+          {
+            "name": "diagnosis_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Diagnosis Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "wav 음성",
+            "content": {
+              "audio/wav": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "전체 요청 본문 크기 초과 (REQUEST_TOO_LARGE)",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "요청 크기가 너무 큽니다. 업로드할 파일 크기를 줄여 주세요.",
+                  "code": "REQUEST_TOO_LARGE",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "요청 항목을 확인해 주세요.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "요청 항목을 확인해 주세요.",
+                  "code": "VALIDATION_ERROR",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "처리되지 않은 서버 예외. 공통 JSON 오류 형식을 보장하지 않습니다.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Internal Server Error"
+              }
+            }
+          },
+          "206": {
+            "content": {
+              "audio/wav": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "description": "Range 요청에 대한 wav 일부"
+          },
+          "416": {
+            "description": "Range가 음성 길이를 벗어남. Content-Range: bytes */전체 길이"
+          },
+          "404": {
+            "description": "진단 기록을 찾을 수 없습니다.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "진단 기록을 찾을 수 없습니다.",
+                  "code": "DIAGNOSIS_NOT_FOUND",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "TTS 사용 불가(TTS_UNAVAILABLE) 또는 DB 사용 불가(DATABASE_UNAVAILABLE)",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "음성 안내를 만들 수 없습니다.",
+                  "code": "TTS_UNAVAILABLE",
+                  "retryable": true,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/diseases": {
       "get": {
         "tags": [
@@ -2105,7 +2400,7 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v2:low=0.5",
+                      "policy_version": "decision-v3:low=0.8",
                       "save_status": "saved",
                       "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
                       "management_actions": [
@@ -2153,7 +2448,7 @@
                       "content_status": "snapshot",
                       "decision_status": "disease",
                       "decision_reasons": [],
-                      "policy_version": "decision-v2:low=0.5",
+                      "policy_version": "decision-v3:low=0.8",
                       "save_status": "failed",
                       "recovery_token": "ed6b3b3a-ecb4-4fc9-a681-4d870567fb62",
                       "summary_message": "증상을 살피고 아래 관리 방법을 참고하세요.",
@@ -2304,7 +2599,7 @@
             }
           },
           "503": {
-            "description": "DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가",
+            "description": "진단 대기 시간 초과(SERVER_BUSY), DB(DATABASE_UNAVAILABLE), 사진 저장소(IMAGE_STORAGE_UNAVAILABLE), 복구 저장소(RECOVERY_STORAGE_UNAVAILABLE) 사용 불가",
             "headers": {
               "X-Request-ID": {
                 "description": "요청 추적 ID",
@@ -2329,6 +2624,461 @@
           }
         }
       }
+    },
+    "/api/v1/voice/transcribe": {
+      "post": {
+        "tags": [
+          "voice"
+        ],
+        "summary": "음성(wav) 받아 적기",
+        "description": "16비트 PCM wav 본문(`Content-Type: audio/wav`)을 STT 서버로 넘겨 문장을 돌려줍니다. 브라우저 녹음(webm·mp4)은 클라이언트에서 16kHz 모노 wav로 바꿔 보냅니다. 학습 문장에 맞춰 문장부호는 지웁니다. 말소리가 없으면 빈 문자열입니다. STT_ENGINE이 off이거나 STT 서버가 응답하지 않으면 503 STT_UNAVAILABLE입니다.",
+        "operationId": "voice_transcribe_api_v1_voice_transcribe_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "음성이 STT_MAX_AUDIO_MB(기본 5MB)를 넘음",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "음성이 너무 깁니다.",
+                  "code": "AUDIO_TOO_LARGE",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "요청 항목을 확인해 주세요.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "요청 항목을 확인해 주세요.",
+                  "code": "VALIDATION_ERROR",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "처리되지 않은 서버 예외. 공통 JSON 오류 형식을 보장하지 않습니다.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Internal Server Error"
+              }
+            }
+          },
+          "400": {
+            "description": "wav가 아니거나 비어 있음",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "음성 파일을 읽을 수 없습니다.",
+                  "code": "AUDIO_INVALID",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "음성 인식을 사용할 수 없음",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "음성 인식을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+                  "code": "STT_UNAVAILABLE",
+                  "retryable": true,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/voice/select-function": {
+      "post": {
+        "tags": [
+          "voice"
+        ],
+        "summary": "발화와 화면 상태로 기능 고르기 (서버 경유)",
+        "description": "발화와 보고 있는 진단(`diagnosis_id`, 선택)·화면 단계(`ui_stage`)로 학습 때와 같은 화면 상태를 만들어 기능 선택 모델 서버에 넘기고, 결과 호출 문자열과 모델에 넣은 화면 상태를 돌려줍니다. 결과는 그대로 `/voice/function-call`에 보냅니다. 브라우저·보드에서 모델을 직접 돌리는 기기는 이 단계를 건너뜁니다. FUNCTION_SELECTOR_ENGINE이 off이거나 모델 서버가 응답하지 않으면 503 FUNCTION_SELECTOR_UNAVAILABLE입니다.",
+        "operationId": "voice_select_function_api_v1_voice_select_function_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectFunctionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelectFunctionResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "전체 요청 본문 크기 초과 (REQUEST_TOO_LARGE)",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "요청 크기가 너무 큽니다. 업로드할 파일 크기를 줄여 주세요.",
+                  "code": "REQUEST_TOO_LARGE",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "요청 항목을 확인해 주세요.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "요청 항목을 확인해 주세요.",
+                  "code": "VALIDATION_ERROR",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "처리되지 않은 서버 예외. 공통 JSON 오류 형식을 보장하지 않습니다.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Internal Server Error"
+              }
+            }
+          },
+          "404": {
+            "description": "진단 기록을 찾을 수 없습니다.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "진단 기록을 찾을 수 없습니다.",
+                  "code": "DIAGNOSIS_NOT_FOUND",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "기능 선택 모델 서버 사용 불가(FUNCTION_SELECTOR_UNAVAILABLE) 또는 DB(DATABASE_UNAVAILABLE)",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "질문을 알아듣는 기능을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+                  "code": "FUNCTION_SELECTOR_UNAVAILABLE",
+                  "retryable": true,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/voice/function-call": {
+      "post": {
+        "tags": [
+          "voice"
+        ],
+        "summary": "기능 호출 문자열로 답변 문장 만들기",
+        "description": "기능 선택 모델이 낸 `<hs_번호>(인자=값, ...)<hs_end>` 한 줄과 진단 문맥을 받아, 저장된 진단 근거로 읽어 줄 답변 문장을 돌려줍니다. 문맥은 이 기기의 `diagnosis_id` 또는 브라우저 오프라인 진단의 `context`(LLM 입력 계약) 중 하나로 줍니다. 모델이 서버·브라우저·보드 어디서 돌았는지는 `source`로만 구분하고 동작은 같습니다. 형식이 틀리거나 계약 범위를 벗어난 호출은 400, 아직 handler가 없는 기능은 501입니다.",
+        "operationId": "voice_function_call_api_v1_voice_function_call_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceFunctionCallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMFunctionResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "전체 요청 본문 크기 초과 (REQUEST_TOO_LARGE)",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "요청 크기가 너무 큽니다. 업로드할 파일 크기를 줄여 주세요.",
+                  "code": "REQUEST_TOO_LARGE",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "요청 항목을 확인해 주세요.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "요청 항목을 확인해 주세요.",
+                  "code": "VALIDATION_ERROR",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "처리되지 않은 서버 예외. 공통 JSON 오류 형식을 보장하지 않습니다.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Internal Server Error"
+              }
+            }
+          },
+          "400": {
+            "description": "기능 호출 문자열이 계약과 맞지 않음",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "기능 호출 형식이 올바르지 않습니다.",
+                  "code": "FUNCTION_CALL_INVALID",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "진단 기록을 찾을 수 없습니다.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "진단 기록을 찾을 수 없습니다.",
+                  "code": "DIAGNOSIS_NOT_FOUND",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "형식은 유효하지만 아직 답변을 만들 수 없는 기능",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "아직 답변을 준비하지 못한 기능입니다.",
+                  "code": "FUNCTION_NOT_IMPLEMENTED",
+                  "retryable": false,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "함수 계약 파일을 읽을 수 없음(FUNCTION_CONTRACT_UNAVAILABLE) 또는 DB(DATABASE_UNAVAILABLE)",
+            "headers": {
+              "X-Request-ID": {
+                "description": "요청 추적 ID",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "detail": "음성 기능을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+                  "code": "FUNCTION_CONTRACT_UNAVAILABLE",
+                  "retryable": true,
+                  "request_id": "c60fdccb-782e-4f84-a847-dfe2408f744a"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2337,7 +3087,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "description": "JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진. image/* 또는 application/octet-stream(MIME 누락 가능). 실제 디코딩으로 검증하며 새 형식·고해상도 사진은 긴 변 4096픽셀 이하 JPEG로 변환합니다. 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조. RAW 지원은 서버 디코더가 읽을 수 있는 압축 방식에 한합니다."
           }
@@ -2352,7 +3102,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "description": "JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진. image/* 또는 application/octet-stream(MIME 누락 가능). 실제 디코딩으로 검증하며 새 형식·고해상도 사진은 긴 변 4096픽셀 이하 JPEG로 변환합니다. 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조. RAW 지원은 서버 디코더가 읽을 수 있는 압축 방식에 한합니다."
           }
@@ -2380,7 +3130,7 @@
           },
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "description": "JPG/PNG, HEIC/HEIF, DNG(RAW), WebP, AVIF 사진. image/* 또는 application/octet-stream(MIME 누락 가능). 실제 디코딩으로 검증하며 새 형식·고해상도 사진은 긴 변 4096픽셀 이하 JPEG로 변환합니다. 파일·픽셀 한도는 /api/v1/capabilities의 upload 참조. RAW 지원은 서버 디코더가 읽을 수 있는 압축 방식에 한합니다."
           },
@@ -2388,7 +3138,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "format": "binary"
+                "contentMediaType": "application/octet-stream"
               },
               {
                 "type": "null"
@@ -2465,9 +3215,15 @@
                   5
                 ]
               ],
-              "low_confidence_threshold": 0.5,
+              "low_confidence_threshold": 0.8,
               "second_photo_weight": 0.6,
-              "version": "decision-v2"
+              "top1_recapture_pairs": [
+                [
+                  2,
+                  3
+                ]
+              ],
+              "version": "decision-v3"
             },
             "execution": {
               "browser_bundle_available": false,
@@ -2524,6 +3280,17 @@
             "type": "array",
             "title": "Confusion Pairs",
             "description": "혼동쌍 모델 클래스 ID"
+          },
+          "top1_recapture_pairs": {
+            "items": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Top1 Recapture Pairs",
+            "description": "1순위가 속하기만 하면 마진과 무관하게 재촬영을 안내하는 혼동쌍(첫 사진에만 적용)"
           }
         },
         "type": "object",
@@ -2532,7 +3299,8 @@
           "low_confidence_threshold",
           "confusion_margin",
           "second_photo_weight",
-          "confusion_pairs"
+          "confusion_pairs",
+          "top1_recapture_pairs"
         ],
         "title": "DecisionCapabilities"
       },
@@ -2862,10 +3630,11 @@
             "type": "string",
             "enum": [
               "saved",
-              "failed"
+              "failed",
+              "skipped"
             ],
             "title": "Save Status",
-            "description": "DB 저장 상태. failed여도 진단 결과는 반환될 수 있음",
+            "description": "DB 저장 상태. failed여도 진단 결과는 반환될 수 있음. skipped: 판별 불가(작물 잎 아님)라 기록으로 남기지 않음 — id로 이력·재촬영·음성 안내를 조회할 수 없으므로 speech_script를 쓴다",
             "default": "saved"
           },
           "recovery_token": {
@@ -2879,6 +3648,21 @@
             ],
             "title": "Recovery Token",
             "description": "저장 실패 시 /api/v1/results/{token}/save에 사용할 토큰"
+          },
+          "speech_script": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speech Script",
+            "description": "저장하지 않은 결과(skipped)의 음성 안내 문장. 저장된 결과는 /diagnose/{id}/speech/script를 쓴다"
           }
         },
         "type": "object",
@@ -2913,7 +3697,7 @@
             "management_actions": [
               "감염 부위 제거"
             ],
-            "policy_version": "decision-v2:low=0.5",
+            "policy_version": "decision-v3:low=0.8",
             "predicted_crop": "고추",
             "prediction_mode": "model",
             "save_status": "saved",
@@ -2937,6 +3721,176 @@
             "updated_at": "2026-10-15T00:00:00Z"
           }
         ]
+      },
+      "DiagnosisLLMInput": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "disease_name": {
+            "type": "string",
+            "title": "Disease Name"
+          },
+          "crop_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crop Type"
+          },
+          "selected_crop": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Crop"
+          },
+          "predicted_crop": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Crop"
+          },
+          "crop_mismatch": {
+            "type": "boolean",
+            "title": "Crop Mismatch"
+          },
+          "prediction_mode": {
+            "type": "string",
+            "title": "Prediction Mode"
+          },
+          "decision_status": {
+            "type": "string",
+            "title": "Decision Status"
+          },
+          "decision_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Decision Reasons"
+          },
+          "policy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Version"
+          },
+          "management_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Management Actions"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "top_predictions": {
+            "items": {
+              "$ref": "#/components/schemas/LLMPredictionItem"
+            },
+            "type": "array",
+            "title": "Top Predictions"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "causes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Causes"
+          },
+          "prevention": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Prevention"
+          },
+          "pesticides": {
+            "items": {
+              "$ref": "#/components/schemas/LLMPesticideInfo"
+            },
+            "type": "array",
+            "title": "Pesticides"
+          },
+          "recapture": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LLMRecaptureGuidance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "disease_name",
+          "selected_crop",
+          "predicted_crop",
+          "crop_mismatch",
+          "prediction_mode",
+          "decision_status",
+          "decision_reasons",
+          "policy_version",
+          "category",
+          "severity",
+          "confidence"
+        ],
+        "title": "DiagnosisLLMInput"
       },
       "DiagnosisSummary": {
         "properties": {
@@ -3241,6 +4195,224 @@
           }
         ]
       },
+      "LLMFunctionResponse": {
+        "properties": {
+          "function_name": {
+            "type": "string",
+            "title": "Function Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "insufficient_information",
+              "needs_clarification",
+              "unsupported_scope"
+            ],
+            "title": "Status"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "function_name",
+          "status",
+          "text"
+        ],
+        "title": "LLMFunctionResponse"
+      },
+      "LLMPesticideInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "dilution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dilution"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage"
+          },
+          "safety": {
+            "$ref": "#/components/schemas/LLMPesticideSafety"
+          },
+          "active_ingredient": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Ingredient"
+          },
+          "safety_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safety Notes"
+          },
+          "usage_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage Id"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status",
+            "description": "농약 사용 조건 검증 상태",
+            "default": "legacy_unverified"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "LLMPesticideInfo"
+      },
+      "LLMPesticideSafety": {
+        "properties": {
+          "phi_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phi Days"
+          },
+          "reentry_hours": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reentry Hours"
+          }
+        },
+        "type": "object",
+        "title": "LLMPesticideSafety"
+      },
+      "LLMPredictionItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "예측 클래스의 표시 이름",
+            "examples": [
+              "고추 탄저병"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "confidence"
+        ],
+        "title": "LLMPredictionItem"
+      },
+      "LLMRecaptureGuidance": {
+        "properties": {
+          "region": {
+            "type": "string",
+            "title": "Region"
+          },
+          "instruction": {
+            "type": "string",
+            "title": "Instruction"
+          },
+          "margin": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Margin"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/RecaptureCandidate"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "region",
+          "instruction",
+          "margin",
+          "candidates"
+        ],
+        "title": "LLMRecaptureGuidance"
+      },
       "ManagementActionDetail": {
         "properties": {
           "title": {
@@ -3379,6 +4551,16 @@
             "type": "array",
             "title": "Ids",
             "description": "혼동쌍 클래스 ID"
+          },
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "margin",
+              "top1"
+            ],
+            "title": "Trigger",
+            "description": "margin: 상위 두 후보가 쌍이고 마진이 좁을 때, top1: 1순위가 쌍에 속하면 항상(첫 사진만)",
+            "default": "margin"
           },
           "region": {
             "type": "string",
@@ -3901,6 +5083,115 @@
         "title": "RecaptureGuidance",
         "description": "1차 진단이 혼동쌍에 낮은 마진으로 떨어졌을 때, 어느 부위를 다시 찍을지 안내."
       },
+      "SelectFunctionRequest": {
+        "properties": {
+          "utterance": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Utterance"
+          },
+          "diagnosis_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnosis Id"
+          },
+          "ui_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "no_photo",
+                  "photo_ready",
+                  "analyzing",
+                  "result",
+                  "error"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ui Stage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "utterance"
+        ],
+        "title": "SelectFunctionRequest",
+        "examples": [
+          {
+            "diagnosis_id": "2ad7851e-375d-4099-b24b-872aa6a0ad04",
+            "ui_stage": "result",
+            "utterance": "이 병 약 얼마나 타서 뿌려"
+          }
+        ]
+      },
+      "SelectFunctionResponse": {
+        "properties": {
+          "function_call": {
+            "type": "string",
+            "title": "Function Call"
+          },
+          "context": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "function_call",
+          "context"
+        ],
+        "title": "SelectFunctionResponse"
+      },
+      "SpeechScript": {
+        "properties": {
+          "sentences": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sentences"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sentences",
+          "text"
+        ],
+        "title": "SpeechScript",
+        "description": "음성으로 읽어줄 문장. TTS 서버가 없을 때 프론트가 브라우저 음성으로 읽는 데도 쓴다."
+      },
+      "TranscriptResponse": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "TranscriptResponse"
+      },
       "UploadCapabilities": {
         "properties": {
           "formats": {
@@ -3940,6 +5231,82 @@
           "max_pixels"
         ],
         "title": "UploadCapabilities"
+      },
+      "VoiceFunctionCallRequest": {
+        "properties": {
+          "diagnosis_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnosis Id"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DiagnosisLLMInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "function_call": {
+            "type": "string",
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Function Call"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "server",
+              "web_qwen",
+              "ios_clf",
+              "board_rkllm",
+              "test"
+            ],
+            "title": "Source",
+            "default": "server"
+          },
+          "ui_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "no_photo",
+                  "photo_ready",
+                  "analyzing",
+                  "result",
+                  "error"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ui Stage"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "function_call"
+        ],
+        "title": "VoiceFunctionCallRequest",
+        "examples": [
+          {
+            "diagnosis_id": "2ad7851e-375d-4099-b24b-872aa6a0ad04",
+            "function_call": "<hs_0>(topic=1)<hs_end>",
+            "source": "ios_clf"
+          }
+        ]
       },
       "LocalPrediction": {
         "properties": {
@@ -4070,6 +5437,10 @@
     {
       "name": "offline",
       "description": "브라우저 추론 묶음 정보와 기기 기록 동기화"
+    },
+    {
+      "name": "voice",
+      "description": "음성 질문: 기능 선택 모델의 출력으로 답변 문장 만들기"
     }
   ]
 }

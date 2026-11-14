@@ -25,6 +25,7 @@ from app.services.pesticide_service import pesticide_infos
 from app.services.recapture import apply_pair_specialist, check_recapture, fuse_predictions
 from app.services.decision import crop_mismatch, decision
 from app.services.result_recovery import lookup, commit_result
+from app.services.speech_script import build_script
 
 
 class PredictionContractError(RuntimeError):
@@ -154,6 +155,18 @@ def _recapture(primary: Disease, predictions, diseases: dict[int, Disease], refi
     return check_recapture(predictions, {c: d.name for c, d in diseases.items()}, refined=refined)
 
 
+def is_not_crop(disease: Disease) -> bool:
+    """판별 불가(작물 잎으로 볼 수 없는 사진). 기록으로 남기지 않는다(#179)."""
+    return disease.category == "other"
+
+
+def unsaved_result(result: DiagnoseResponse) -> DiagnoseResponse:
+    """판별 불가 응답. 화면·음성 안내는 그대로 주되 저장하지 않았음을 알리고, 사진 주소는 비운다."""
+    result = result.model_copy(update={"save_status": "skipped", "recovery_token": None,
+                                       "image_url": None, "refined_image_url": None})
+    return result.model_copy(update={"speech_script": build_script(result)})
+
+
 def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str | None,
                    request_context=None, recover_save_failure=False, device_id=None) -> DiagnoseResponse:
     cached = lookup(db, request_context)
@@ -178,6 +191,14 @@ def diagnose_image(db: Session, file_bytes: bytes, filename: str, crop_type: str
             content_snapshot=_content(db, primary), severity_snapshot=primary.severity,
             device_id=device_id, **context,
         )
+        if is_not_crop(primary):
+            # 기록·멱등 키·복구 토큰을 남기지 않는다. 사진도 어디서도 참조하지 않으므로 지운다
+            with db.no_autoflush:
+                result = unsaved_result(_response(db, diagnosis))
+            # disease 관계를 거쳐 세션에 딸려 들어갔을 수 있으므로 되돌린다
+            db.rollback()
+            _remove_file(saved_path)
+            return result
         db.add(diagnosis)
         with db.no_autoflush:
             result = _response(db, diagnosis)
@@ -259,13 +280,14 @@ def refine_diagnosis(db: Session, diagnosis_id: str, file_bytes: bytes, filename
 def get_history(db: Session, page: int, size: int, crop_type: str | None = None, severity: str | None = None,
                 device_id: str | None = None) -> PaginatedHistory:
     # device_id=None matches only unscoped (pre-device) rows; the API always passes a device.
-    query = db.query(Diagnosis).filter(Diagnosis.device_id == device_id)
+    # 판별 불가 기록은 더 만들지 않지만(#179) 그 전에 쌓인 것도 목록·건수에서 뺀다
+    query = db.query(Diagnosis).join(Disease).filter(Diagnosis.device_id == device_id, Disease.category != "other")
     unfiltered_total = query.count()
     if crop_type:
         query = query.filter(Diagnosis.crop_type == crop_type)
     crop_total = query.count()
     if severity:
-        query = query.join(Disease).filter(func.coalesce(Diagnosis.severity_snapshot, Disease.severity) == severity)
+        query = query.filter(func.coalesce(Diagnosis.severity_snapshot, Disease.severity) == severity)
     total = query.count()
     items = query.order_by(Diagnosis.created_at.desc(), Diagnosis.id.desc()).offset((page - 1) * size).limit(size).all()
     return PaginatedHistory(

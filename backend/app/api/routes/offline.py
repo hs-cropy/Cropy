@@ -166,6 +166,20 @@ def import_record(db, metadata, content, extension, refined_content, refined_ext
             candidates=[dict(name=names[i], cue=pair["cues"][str(i)]) for i in pair["ids"]])
     snapshot["decision"] = decision(dist[0][1], crop_mismatch(m.selected_crop, source["crop_type"], source["category"]),
                                     guidance, source["category"], policy.get("low_confidence_threshold", .5))
+    if service.is_not_crop(primary):
+        # 판별 불가 기록은 서버에 남기지 않는다(#179). 사진도 쓰지 않고, 같은 응답을 다시 받아도 그대로다
+        record = Diagnosis(id=id, disease=primary, confidence=dist[0][1],
+            top_predictions=[dict(name=names[i], confidence=p) for i, p in dist[:3]],
+            original_predictions=[list(p) for p in dist1], selected_crop=m.selected_crop,
+            crop_type=m.selected_crop, prediction_mode="browser",
+            model_version=m.model_version, preprocessing_version=m.preprocessing_version,
+            content_snapshot=snapshot, severity_snapshot=source["severity"],
+            created_at=m.created_at, updated_at=datetime.now(timezone.utc), device_id=device_id)
+        try:
+            with db.no_autoflush:
+                return service.unsaved_result(service._response(db, record))
+        finally:
+            db.rollback()
     try:
         write_image(original, content)
         if second:

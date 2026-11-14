@@ -251,6 +251,15 @@ describe("Accordion — 디자인 사양", () => {
     );
   });
 
+  it("머리는 터치로 눌러도 배경이 바뀌지 않고, 마우스 기기에서만 호버 배경을 준다", () => {
+    render(<Accordion items={ITEMS} />);
+    const list = classes(trigger("증상"));
+
+    expect(list.filter((name) => /(^|:)(active|hover):bg-|:hover/.test(name))).toEqual([
+      "[@media(hover:hover)]:hover:bg-cropy-surface-canvas",
+    ]);
+  });
+
   it("화살표는 20px 장식이고 펼치면 위를 가리킨다", async () => {
     render(<Accordion items={ITEMS} />);
     const icon = () => trigger("증상").querySelector("[aria-hidden]") as Element;

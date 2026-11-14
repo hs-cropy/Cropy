@@ -496,6 +496,44 @@ describe("진단 결과 (M-03 · D-03)", () => {
     expect(screen.getByRole("button", { name: "다시 촬영하기" })).toBeTruthy();
   });
 
+  it.each([
+    ["저신뢰", { confidence: 0.42, decision_reasons: ["low_confidence"] }, "추가 확인이 필요해요"],
+    [
+      "판별 불가",
+      { disease_name: "판별 불가", category: "other" as const, decision_status: "not_crop",
+        decision_reasons: ["not_crop"] },
+      "작물 잎을 찾지 못했어요",
+    ],
+  ])("%s 결과의 촬영 방법 보기는 펼치지 않고 촬영 화면의 가이드로 옮긴다", async (_, extra, heading) => {
+    vi.mocked(diagnoseImage).mockResolvedValue(response(extra));
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await screen.findByRole("heading", { name: heading });
+
+    const guide = screen.getByRole("link", { name: "촬영 방법 보기" });
+    expect(guide.getAttribute("href")).toBe("/home#guide");
+    await userEvent.click(guide);
+
+    await waitFor(() => expect(title()).toBe("촬영 방법"));
+    expect(fakeNavigation.pathname).toBe("/home");
+    expect(window.location.hash).toBe("#guide");
+  });
+
+  it("저신뢰 결과에서 Ctrl 을 누르고 연 촬영 방법 보기(새 탭)는 이 화면을 옮기지 않는다", async () => {
+    vi.mocked(diagnoseImage).mockResolvedValue(
+      response({ confidence: 0.42, decision_reasons: ["low_confidence"] }),
+    );
+    const { container } = renderHome();
+    pickPhoto(container);
+    await userEvent.click(screen.getByRole("button", { name: "이 사진으로 진단하기" }));
+    await screen.findByRole("heading", { name: "추가 확인이 필요해요" });
+
+    fireEvent.click(screen.getByRole("link", { name: "촬영 방법 보기" }), { ctrlKey: true });
+
+    expect(fakeNavigation.pathname).toBe("/diagnosis");
+  });
+
   it("브라우저 카메라가 없으면 저신뢰 결과의 다시 촬영하기는 기기 카메라(파일 선택)를 연다", async () => {
     vi.mocked(diagnoseImage).mockResolvedValue(
       response({ confidence: 0.42, decision_reasons: ["low_confidence"] }),
@@ -1073,6 +1111,95 @@ describe("후보 혼동의 추가 촬영 — 촬영 화면에서 찍고 다시 �
     expect(fakeNavigation.pathname).toBe("/diagnosis");
     expect(refineDiagnosis).toHaveBeenCalledWith("d1", expect.any(File), expect.anything());
     expect(diagnoseImage).not.toHaveBeenCalled();
+  });
+
+  it("이력 상세는 본문에 따로 둔 뒤로 줄 없이, 헤더의 뒤로 버튼으로 이력 목록에 돌아간다 (Figma M-08)", async () => {
+    vi.mocked(fetchDiagnosisDetail).mockResolvedValue(response());
+    render(
+      <AppFrame>
+        <FakeRoutes
+          routes={{ "/history": <p>이력 목록 화면</p>, "/history/d1": <HistoryDetailPage /> }}
+        />
+      </AppFrame>,
+    );
+    await goTo("/history/d1");
+    await waitFor(() =>
+      expect(screen.getAllByRole("heading", { name: "고추 탄저병" }).length).toBeGreaterThan(0),
+    );
+
+    expect(screen.queryByRole("navigation", { name: "이력 상세 탐색" })).toBeNull();
+    const main = within(screen.getByRole("main"));
+    expect(main.queryByRole("link", { name: /이력 목록/ })).toBeNull();
+
+    // 본문 밖(앱 헤더)에 있는 뒤로 버튼
+    const back = screen.getByRole("link", { name: "뒤로, 이력 목록으로" });
+    expect(screen.getByRole("main").contains(back)).toBe(false);
+    await userEvent.click(back);
+    expect(await screen.findByText("이력 목록 화면")).toBeTruthy();
+  });
+
+  it("이력 상세는 처음에만 마스코트 로딩을 보이고, 다시 열면 로딩 없이 지난 기록을 바로 보인다", async () => {
+    const loading = () => screen.queryByRole("heading", { name: "진단 기록을 불러오고 있어요" });
+    let resolve!: (value: DiagnoseResponse) => void;
+    vi.mocked(fetchDiagnosisDetail).mockImplementation(
+      () => new Promise((res) => {
+        resolve = res;
+      }),
+    );
+    render(
+      <AppFrame>
+        <FakeRoutes
+          routes={{ "/history": <p>이력</p>, "/history/d1": <HistoryDetailPage /> }}
+        />
+      </AppFrame>,
+    );
+    await goTo("/history/d1");
+
+    // 처음: 마스코트가 있는 진행 중 안내 (spinner 카드가 아니다)
+    await waitFor(() => expect(loading()).toBeTruthy());
+    const card = loading()?.closest("section") as HTMLElement;
+    expect(card.querySelector("img")?.getAttribute("src")).toMatch(/mascot|analyzing/);
+    expect(card.querySelector(".animate-spin")).toBeNull();
+    await act(async () => resolve(response()));
+    expect(screen.getAllByRole("heading", { name: "고추 탄저병" }).length).toBeGreaterThan(0);
+
+    await goTo("/history");
+    await goTo("/history/d1");
+
+    // 다시 열면 첫 화면부터 기록이 있고, 뒤에서 새로 불러온 결과로 고친다
+    expect(loading()).toBeNull();
+    expect(screen.getAllByRole("heading", { name: "고추 탄저병" }).length).toBeGreaterThan(0);
+    await act(async () => resolve(response({ disease_name: "무 노균병" })));
+    expect(screen.getAllByRole("heading", { name: "무 노균병" }).length).toBeGreaterThan(0);
+  });
+
+  it("다시 연 이력 상세는 새로 불러오기가 실패해도 기록을 두지만, 기록이 없어졌으면(404) 알린다", async () => {
+    vi.mocked(fetchDiagnosisDetail).mockResolvedValueOnce(response());
+    render(
+      <AppFrame>
+        <FakeRoutes
+          routes={{ "/history": <p>이력</p>, "/history/d1": <HistoryDetailPage /> }}
+        />
+      </AppFrame>,
+    );
+    await goTo("/history/d1");
+    await screen.findAllByRole("heading", { name: "고추 탄저병" });
+
+    vi.mocked(fetchDiagnosisDetail).mockRejectedValueOnce(new Error("network"));
+    await goTo("/history");
+    await goTo("/history/d1");
+    await act(async () => {});
+    expect(screen.getAllByRole("heading", { name: "고추 탄저병" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    vi.mocked(fetchDiagnosisDetail).mockRejectedValueOnce(
+      new ApiError("진단 기록을 찾을 수 없습니다.", "NOT_FOUND", 404, false),
+    );
+    await goTo("/history");
+    await goTo("/history/d1");
+
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "고추 탄저병" })).toBeNull();
   });
 
   it("다른 화면으로 가면 추가 촬영을 그만둔다", async () => {

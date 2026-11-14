@@ -115,8 +115,12 @@ class DiagnoseResponse(TimestampedResponse):
     policy_version: str | None = Field(None, description="판단 정책 버전")
     is_refined: bool = Field(False, description="재촬영 반영 여부")
     initial_predictions: list[PredictionItem] = Field(default_factory=list, description="재촬영 전 최초 예측 후보")
-    save_status: Literal["saved", "failed"] = Field("saved", description="DB 저장 상태. failed여도 진단 결과는 반환될 수 있음")
+    save_status: Literal["saved", "failed", "skipped"] = Field(
+        "saved", description="DB 저장 상태. failed여도 진단 결과는 반환될 수 있음. skipped: 판별 불가(작물 잎 아님)라 "
+        "기록으로 남기지 않음 — id로 이력·재촬영·음성 안내를 조회할 수 없으므로 speech_script를 쓴다")
     recovery_token: str | None = Field(None, description="저장 실패 시 /api/v1/results/{token}/save에 사용할 토큰")
+    speech_script: list[str] | None = Field(
+        None, description="저장하지 않은 결과(skipped)의 음성 안내 문장. 저장된 결과는 /diagnose/{id}/speech/script를 쓴다")
 
 
 class SpeechScript(BaseModel):

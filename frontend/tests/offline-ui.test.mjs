@@ -14,7 +14,7 @@ function setup({escape=String}={}){
  crypto:{randomUUID:()=> 'new-record'},setBusy(v){context.busy=v;},async predict(){return [];},summarize(){return result;},
  async storeRecord(record){context.result(record);return true;},message:e=>e.message,
  notices:{new:null,result:null,records:null},calls:[],notice(where,name){context.calls.push([where,name]);context.notices[where]=name;},toasts:[],toast(text){context.toasts.push(text);},say(text){$('state').textContent=text;},renderHeader(){},view:'new',document:{activeElement:null,body:{}},
- went:[],go(name){context.went.push(name);context.view=name;},resets:0,resetPhoto(){context.resets++;context.selected=null;},
+ went:[],go(name){context.went.push(name);context.view=name;},resets:0,resetPhoto(){context.resets++;context.selected=null;},secondRoles(){},
  gradeOf,isNotCrop,recordTime,URL:{createObjectURL(file){const url='blob:'+file.name;urls.made.push(url);return url;},revokeObjectURL(url){urls.revoked.push(url);}}});
  vm.runInContext(source.slice(source.indexOf('function result('),source.indexOf('async function storeRecord('))+
  source.slice(source.indexOf('async function diagnose('),source.indexOf('async function refine(')),context);
@@ -299,4 +299,110 @@ test('not-crop result keeps retake guidance instead of management guidance', () 
   const html = h.$('result').innerHTML;
   assert.match(html, /잎이 잘 보이게 다시 찍어 주세요/);
   assert.doesNotMatch(html, /노출되면 안 되는/);
+});
+
+const offlineHtml=(await readFile(new URL('../public/offline/index.html',import.meta.url),'utf8')).replaceAll('\r\n','\n');
+test('photo and second-photo pickers each have a gallery input and a camera input, both hidden behind buttons',()=>{
+ const inputs=Object.fromEntries((offlineHtml.match(/<input[^>]*type="file"[^>]*>/g)??[]).map(tag=>[tag.match(/id="([^"]+)"/)[1],tag]));
+ assert.deepEqual(Object.keys(inputs).sort(),['file','file-camera','second','second-camera']);
+ // capture 가 없으면 안드로이드는 갤러리만, capture 가 있으면 카메라를 바로 연다
+ for(const id of ['file','second'])assert.doesNotMatch(inputs[id],/\scapture\b/);
+ for(const id of ['file-camera','second-camera'])assert.match(inputs[id],/\scapture="environment"/);
+ for(const tag of Object.values(inputs)){
+  assert.match(tag,/accept="image\/jpeg,image\/png"/);assert.match(tag,/class="sr-only"/);assert.match(tag,/tabindex="-1"/);assert.match(tag,/aria-label="[^"]+"/);
+ }
+});
+test('the photo picker follows the online new diagnosis screen (M-01-0) without the online size limit',()=>{
+ for(const text of ['진단할 사진을 선택해주세요','>사진 선택하기<','>카메라로 촬영<','>이 기기에서 진단하기<','>다른 사진 선택하기<','>추가 사진 촬영<','>갤러리에서 선택<','>두 사진으로 다시 확인<'])
+  assert.ok(offlineHtml.includes(text),text);
+ // 오프라인 묶음의 용량 제한은 온라인(100 MB)과 다르다
+ assert.doesNotMatch(offlineHtml,/100\s?MB/);
+ // 진단 시작·새 진단은 고르는 창을 바로 열지 않는다 (갤러리·카메라를 사용자가 고른다)
+ assert.match(source,/\$\('start'\)\.addEventListener\('click',\(\)=>go\('new'\)\);/);
+ const startNew=source.slice(source.indexOf('function startNew(){'),source.indexOf("$('new-photo').addEventListener"));
+ assert.doesNotMatch(startNew,/\.click\(\)/);
+});
+// app.mjs 의 사진 고르기 부분만 가짜 DOM 에서 돌린다
+function pickerSetup({desktop=false}={}){
+ const nodes=new Map(),clicks=[],urls={made:[],revoked:[]};
+ const $=id=>{if(!nodes.has(id)){const classes=new Set(id==='second-pick-gallery'?['secondary']:[]);const listeners={};
+  nodes.set(id,{id,value:'',files:[],hidden:false,textContent:'',src:'',disabled:false,classes,listeners,
+   classList:{toggle(name,force){const on=force??!classes.has(name);if(on)classes.add(name);else classes.delete(name);},contains:name=>classes.has(name)},
+   addEventListener(type,fn){listeners[type]=fn;},click(){clicks.push(id);}});}
+  return nodes.get(id);};
+ const body={},focus=[];
+ const context=vm.createContext({$,desktop,busy:false,selected:null,savedId:null,previewUrl:undefined,photoSource:'gallery',secondFile:null,secondSource:'camera',
+  view:'new',went:[],go(name){context.went.push(name);context.view=name;},notices:[],notice(where,name){context.notices.push([where,name]);},
+  document:{body,activeElement:body},focus,
+  setBusy(){},diagnose(){},refine(){},URL:{createObjectURL(file){const url='blob:'+file.name;urls.made.push(url);return url;},revokeObjectURL(url){urls.revoked.push(url);}}});
+ for(const id of ['diagnose','diagnosis-title'])$(id).focus=()=>focus.push(id);
+ const start=source.indexOf('const pickPhoto'),end=source.indexOf("$('new-photo').addEventListener");
+ assert.ok(start>0&&end>start,'picker block boundaries');
+ vm.runInContext(source.slice(start,end),context);
+ const fire=(id,type='click')=>nodes.get(id).listeners[type]();
+ const choose=(id,file)=>{$(id).files=file?[file]:[];$(id).value=file?'C:\\fakepath\\'+file.name:'';fire(id,'change');};
+ return {context,$,clicks,urls,fire,choose};
+}
+test('picker buttons open the gallery or the camera input, and "다른 사진" reopens where the photo came from',()=>{
+ const h=pickerSetup();
+ h.fire('pick-gallery');h.fire('dropzone');h.fire('pick-camera');
+ assert.deepEqual(h.clicks,['file','file','file-camera']);
+ h.choose('file-camera',{name:'cam.jpg'});
+ assert.equal(h.context.selected.name,'cam.jpg');assert.equal(h.context.photoSource,'camera');
+ // 같은 사진을 다시 골라도 change 가 오게 입력을 비운다
+ assert.equal(h.$('file-camera').value,'');
+ assert.equal(h.$('pick-again').textContent,'다른 사진 촬영하기');
+ assert.equal(h.$('preview').src,'blob:cam.jpg');assert.equal(h.$('dropzone').hidden,true);
+ assert.ok(h.$('pick-actions').classList.contains('hidden'));assert.ok(!h.$('selected-actions').classList.contains('hidden'));
+ h.clicks.length=0;h.fire('pick-again');assert.deepEqual(h.clicks,['file-camera']);
+ h.choose('file',{name:'gal.jpg'});assert.equal(h.$('pick-again').textContent,'다른 사진 선택하기');
+ h.clicks.length=0;h.fire('pick-again');assert.deepEqual(h.clicks,['file']);
+ assert.deepEqual(h.urls.revoked,['blob:cam.jpg']);
+});
+test('after choosing a photo, focus moves from the hidden picker button to the diagnose button',()=>{
+ const h=pickerSetup();h.choose('file',{name:'a.jpg'});
+ assert.deepEqual(h.context.focus,['diagnose']);
+ // 아직 진단할 수 없으면(모델 준비 전) 카드 제목으로
+ const off=pickerSetup();off.$('diagnose').disabled=true;off.choose('file-camera',{name:'b.jpg'});
+ assert.deepEqual(off.context.focus,['diagnosis-title']);
+ // 다른 곳에 포커스가 있으면 건드리지 않는다
+ const kept=pickerSetup();kept.context.document.activeElement={closest:()=>null};kept.choose('file',{name:'c.jpg'});
+ assert.deepEqual(kept.context.focus,[]);
+});
+test('cancelling the picker keeps the photo that was already chosen',()=>{
+ const h=pickerSetup();
+ h.choose('file',{name:'kept.jpg'});h.choose('file',null);h.choose('file-camera',null);
+ assert.equal(h.context.selected.name,'kept.jpg');assert.deepEqual(h.urls.revoked,[]);assert.equal(h.$('preview').src,'blob:kept.jpg');
+});
+test('starting a new diagnosis clears the photo and shows the pickers without opening one',()=>{
+ const h=pickerSetup();h.choose('file-camera',{name:'a.jpg'});h.clicks.length=0;
+ h.context.startNew();
+ assert.equal(h.context.selected,null);assert.equal(h.context.photoSource,'gallery');assert.deepEqual(h.clicks,[]);
+ assert.equal(h.$('dropzone').hidden,false);assert.ok(!h.$('pick-actions').classList.contains('hidden'));
+ assert.ok(h.$('selected-actions').classList.contains('hidden'));assert.deepEqual(h.context.went,['new']);
+});
+test('a second photo from the camera or the gallery is kept for refine, which then becomes the main action',()=>{
+ const h=pickerSetup();
+ assert.equal(h.$('second-pick-camera').classList.contains('secondary'),false);assert.equal(h.$('second-pick-gallery').classList.contains('secondary'),true);
+ h.fire('second-pick-camera');h.fire('second-pick-gallery');assert.deepEqual(h.clicks,['second-camera','second']);
+ h.choose('second-camera',{name:'leaf.jpg'});
+ assert.equal(h.context.secondFile.name,'leaf.jpg');assert.equal(h.context.secondSource,'camera');assert.equal(h.$('second-camera').value,'');
+ assert.equal(h.$('refine').hidden,false);assert.match(h.$('second-name').textContent,/leaf\.jpg/);
+ assert.equal(h.$('second-pick-camera').classList.contains('secondary'),true);
+ h.choose('second',null);assert.equal(h.context.secondFile.name,'leaf.jpg');
+});
+test('desktop hides the camera buttons because browsers ignore capture there',()=>{
+ const h=pickerSetup({desktop:true});
+ assert.equal(h.$('pick-camera').hidden,true);assert.equal(h.$('second-pick-camera').hidden,true);
+ // 카메라 버튼이 없으니 갤러리가 추가 사진의 주 버튼이다
+ assert.equal(h.$('second-pick-gallery').classList.contains('secondary'),false);
+ // 추가 사진을 고르면 갤러리도 보조로 내려 "두 사진으로 다시 확인" 만 주 버튼이다
+ h.choose('second',{name:'s.jpg'});assert.equal(h.$('second-pick-gallery').classList.contains('secondary'),true);
+ assert.equal(pickerSetup().$('pick-camera').hidden,false);
+});
+test('refine uses the kept second photo and clearing it restores the pickers',()=>{
+ assert.match(source,/async function refine\(\) \{\n  const file = secondFile;/);
+ const h=setup();h.context.secondFile={name:'x.jpg'};h.$('refine').hidden=false;
+ h.context.result(h.record('one'));h.context.result(h.record('two'));
+ assert.equal(h.context.secondFile,null);assert.equal(h.$('refine').hidden,true);assert.equal(h.$('second-name').textContent,'');
 });

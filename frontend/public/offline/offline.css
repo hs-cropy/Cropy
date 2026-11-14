@@ -164,6 +164,19 @@ select { min-height: 2.75rem; margin-left: .5rem; padding: 0 .5rem; border: 1px 
 .status { padding: .75rem; border-radius: .75rem; background: var(--cropy-green-50); font-size: .875rem; }
 .status.danger { background: #fff1f0; }
 #preview { max-height: 17.5rem; border-radius: .75rem; object-fit: contain; }
+/* 사진 고르기 (온라인 UploadDropzone · M-01-0): 점선 자리, 아래로 주 버튼 "사진 선택하기"·보조 "카메라로 촬영" */
+button.dropzone {
+  flex-direction: column; gap: .5rem; min-height: 11rem; padding: 1.5rem 1rem;
+  border: 1px dashed var(--cropy-border); border-radius: 1rem; background: var(--cropy-surface-canvas); color: var(--cropy-text-primary);
+}
+button.dropzone:hover, button.dropzone:active { background: var(--cropy-green-50); }
+.dropzone svg { width: 2rem; height: 2rem; color: var(--cropy-green-600); }
+.dropzone strong { font-size: 1rem; line-height: 1.5rem; }
+.dropzone span { color: var(--cropy-text-secondary); font-size: .8125rem; line-height: 1.25rem; font-weight: 400; }
+.pick-actions { display: flex; flex-direction: column; gap: .5rem; }
+.pick-actions > button { width: 100%; }
+/* 비어 있어도 알림 영역(role=status)이 접근성 트리에 남게 display:none 대신 보이지 않게만 한다 */
+.second-name:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 #state:empty { display: none; }
 /* 문구가 있으면 그 아래 결과·사진 고르기는 간격을 줄인다 */
 .state { margin: 2.125rem 0 0; }

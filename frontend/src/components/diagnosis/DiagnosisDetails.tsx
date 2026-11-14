@@ -60,22 +60,25 @@ export function DiagnosisDetails({
     (p) => p.verification_status === "verified"
   );
 
+  // 증상 설명은 줄바꿈마다 문단으로 나눈다. 공백뿐이면 설명이 없는 것으로 본다
+  const symptoms = (result.description ?? "")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
   const items: AccordionItem[] = [
     // 1. 증상
     {
       id: "symptoms",
       title: "증상",
-      content: result.description ? (
-        <div className="space-y-3">
-          <p className="whitespace-pre-line text-cropy-body-lg text-cropy-text-primary">
-            {result.description}
-          </p>
-
-          <p className="text-cropy-helper text-cropy-text-secondary">
-            사진 속 증상과 비교해 주세요.
-            AI 진단은 참고용입니다.
-          </p>
-        </div>
+      // Figma(M-03-E1): 문단마다 14/22px 보조색, 문단 간격 12px (Accordion 본문 스타일을 그대로 쓴다)
+      content: symptoms.length ? (
+        <>
+          {symptoms.map((line, index) => (
+            <p key={index}>{line}</p>
+          ))}
+          <p>사진 속 증상과 비교해 주세요. AI 진단은 참고용입니다.</p>
+        </>
       ) : (
         <MissingInformation message="이 병해의 증상 설명을 확인할 수 없어요." />
       ),

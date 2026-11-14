@@ -34,9 +34,14 @@ try {
   assert.equal(await page.evaluate(() => location.hash), '#result');
   assert.equal(await page.locator('#view-title').innerText(), '진단 결과');
   assert.ok(await page.locator('#diagnosis').isHidden());
-  await page.locator('#new-photo').evaluate(button => { HTMLInputElement.prototype.click = () => {}; button.click(); });
+  // 새 진단은 고르는 창을 바로 열지 않고 갤러리·카메라 버튼을 보인다
+  await page.locator('#new-photo').evaluate(button => {
+    window.openedPicker = false; HTMLInputElement.prototype.click = () => { window.openedPicker = true; }; button.click();
+  });
   assert.equal(await page.locator('#view-title').innerText(), '새 진단');
-  assert.ok(await page.locator('#diagnose').isVisible());
+  assert.equal(await page.evaluate(() => window.openedPicker), false);
+  assert.ok(await page.locator('#pick-gallery').isVisible());
+  assert.ok(await page.locator('#selected-actions').isHidden());
   // 지난 결과는 진단 결과 탭에 남아 있다
   await open('result');
   assert.equal(await page.locator('#view-title').innerText(), '진단 결과');

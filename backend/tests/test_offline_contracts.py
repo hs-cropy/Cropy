@@ -83,6 +83,13 @@ def test_ten_class_bundle_syncs_other_and_rejects_nine_class_records(client, sam
     assert other.status_code == 200, other.text
     body = other.json()
     assert (body["decision_status"], body["crop_mismatch"], body["crop_type"]) == ("not_crop", False, "배추")
+    # #179: 판별 불가 기록은 서버에 남기지 않는다. 다시 보내도 같은 답이고 이력에 나오지 않는다
+    assert body["save_status"] == "skipped" and body["image_url"] is None and body["speech_script"]
+    again = sync("5f0c2a57-3d1e-4f43-9a8a-2b8f3c1d9e01", 10, 9)
+    assert again.status_code == 200 and again.json()["save_status"] == "skipped"
+    listed = [item["id"] for item in client.get("/api/v1/history", params={"size": 100}).json()["items"]]
+    assert "5f0c2a57-3d1e-4f43-9a8a-2b8f3c1d9e01" not in listed
+    assert client.get("/api/v1/history/5f0c2a57-3d1e-4f43-9a8a-2b8f3c1d9e01").status_code == 404
     assert sync("5f0c2a57-3d1e-4f43-9a8a-2b8f3c1d9e02", 9, 0).status_code == 422
     meta = dict(client_record_id="5f0c2a57-3d1e-4f43-9a8a-2b8f3c1d9e03", model_version=manifest["model_version"],
         preprocessing_version=manifest["preprocessing_version"], bundle_version=manifest["version"],

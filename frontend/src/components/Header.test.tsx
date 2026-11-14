@@ -73,6 +73,29 @@ describe("Header", () => {
     expect(screen.queryByRole("img")).toBeNull();
   });
 
+  it("leading 을 주면 lg 미만에서는 로고 대신 그것을, lg 부터는 로고를 보인다", () => {
+    render(<Header homeHref="/" leading={<a href="/back">뒤로</a>} />);
+
+    const back = screen.getByRole("link", { name: "뒤로" });
+    expect(back.parentElement?.className.split(" ")).toContain("lg:hidden");
+    const home = screen.getByRole("link", { name: "Cropy 홈" });
+    expect(home.parentElement?.className.split(" ")).toEqual(
+      expect.arrayContaining(["hidden", "lg:flex"]),
+    );
+    expect(home.parentElement?.className.split(" ")).not.toContain("flex");
+    // 뒤로 버튼이 로고보다 앞(왼쪽)에 온다
+    expect(back.compareDocumentPosition(home) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("leading 이 없으면 로고 자리는 그대로다", () => {
+    render(<Header homeHref="/" />);
+
+    const classes = screen.getByRole("link", { name: "Cropy 홈" }).parentElement!.className.split(" ");
+    expect(classes).toContain("flex");
+    expect(classes).not.toContain("hidden");
+    expect(classes).not.toContain("lg:flex");
+  });
+
   it("항목을 넘긴 순서대로 긴 라벨로 그린다", () => {
     render(<Header items={ITEMS} />);
 

@@ -42,6 +42,11 @@ interface HeaderProps extends Omit<ComponentPropsWithRef<"header">, "children"> 
   navLabel?: string;
   /** 오른쪽에 놓는 것 (큰 글자·음성 스위치). 상태와 동작은 쓰는 쪽이 갖는다 */
   actions?: ReactNode;
+  /**
+   * lg 미만에서 로고 대신 놓는 것 (이력 상세의 뒤로 버튼, Figma M-08 MobileShell/Back).
+   * lg 부터는 데스크탑 화면(D-08)처럼 로고를 그대로 보인다
+   */
+  leading?: ReactNode;
 }
 
 /**
@@ -55,6 +60,7 @@ export function Header({
   homeLabel = "Cropy 홈",
   navLabel = "주요 메뉴",
   actions,
+  leading,
   className,
   ...rest
 }: HeaderProps) {
@@ -72,7 +78,13 @@ export function Header({
       )}
     >
       <div className={BAR}>
-        <div className="flex min-w-0 xl:w-[7.75rem] xl:shrink-0">
+        {leading && <div className="flex min-w-0 lg:hidden">{leading}</div>}
+        <div
+          className={cn(
+            "flex min-w-0 xl:w-[7.75rem] xl:shrink-0",
+            leading && "hidden lg:flex",
+          )}
+        >
           {homeHref ? (
             <Link
               href={homeHref}

@@ -12,21 +12,21 @@
     "<hs_8>",
     "<hs_end>"
   ],
-  "rows": 6222,
+  "rows": 6757,
   "split": {
-    "train": 5062,
+    "train": 5597,
     "validation": 1160
   },
   "train_function": {
-    "clarify_request": 635,
+    "get_diagnosis": 797,
+    "clarify_request": 722,
+    "handle_scope_limit": 685,
+    "get_care_information": 664,
     "get_recapture_guidance": 633,
-    "handle_scope_limit": 626,
-    "get_diagnosis": 611,
+    "get_pesticide_information": 595,
     "chit_chat": 593,
     "get_prediction_metrics": 560,
-    "get_care_information": 560,
-    "get_pesticide_information": 506,
-    "get_usage_guidance": 338
+    "get_usage_guidance": 348
   },
   "validation_function": {
     "handle_scope_limit": 150,
@@ -42,19 +42,20 @@
   "source": {
     "v11": 4856,
     "seed_chit_chat": 634,
+    "seed_real_speech": 535,
     "seed_get_usage_guidance": 293,
     "seed_train_patch": 232,
     "v12_usage": 207
   },
   "augmentation": {
-    "original": 3015,
-    "banmal": 2097,
-    "spacing": 581,
-    "dialect_chungcheong": 306,
-    "dialect_gyeongsang": 113,
-    "dialect_jeolla": 110
+    "original": 3170,
+    "banmal": 2249,
+    "spacing": 706,
+    "dialect_chungcheong": 326,
+    "dialect_gyeongsang": 166,
+    "dialect_jeolla": 140
   },
-  "honorific_share": 0.41,
+  "honorific_share": 0.406,
   "dropped": {
     "duplicate": 502,
     "train_text_in_validation": 2
@@ -81,5 +82,28 @@
     },
     "patch_added": 232,
     "patch_dropped": {}
+  },
+  "real_speech_patch": {
+    "added": 535,
+    "dropped": {
+      "spacing_thinned": 285
+    },
+    "same_text_other_answer": 36,
+    "by_function": {
+      "get_diagnosis": 186,
+      "get_care_information": 104,
+      "get_pesticide_information": 89,
+      "clarify_request": 87,
+      "handle_scope_limit": 59,
+      "get_usage_guidance": 10
+    },
+    "by_augmentation": {
+      "original": 155,
+      "banmal": 152,
+      "spacing": 125,
+      "dialect_gyeongsang": 53,
+      "dialect_jeolla": 30,
+      "dialect_chungcheong": 20
+    }
   }
 }
