@@ -5,7 +5,8 @@
  *   2. selectFunction  문장 + 화면 상태 → "<hs_N>(…)<hs_end>"  POST /api/v1/voice/select-function (서버 경유)
  *   3. answerFunction  호출 문자열 + 진단 → 답변 문장           POST /api/v1/voice/function-call
  *
- * 2단계는 기기에 따라 브라우저 안 모델(아이폰 분류기, PC·안드로이드 Qwen)로 바뀐다(#165). 그때도 1·3단계는 그대로다.
+ * 2단계는 기기에 따라 브라우저 안 모델(휴대폰 분류기, WebGPU PC 의 Qwen)로 바뀐다. 어느 쪽을 쓸지는 functionSelector.ts 가 고른다(#165).
+ * 그때도 1·3단계는 그대로다.
  */
 
 import { ApiError } from "@/lib/api";
@@ -13,7 +14,8 @@ import { ApiError } from "@/lib/api";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
 export type UiStage = "no_photo" | "photo_ready" | "analyzing" | "result" | "error";
-export type FunctionCallSource = "server" | "web_qwen" | "ios_clf" | "board_rkllm";
+// 호출 문자열을 고른 기능 선택기. mobile_clf 는 휴대폰(iPhone·안드로이드) 분류기다 (서버는 예전 이름 ios_clf 도 받는다)
+export type FunctionCallSource = "server" | "web_qwen" | "mobile_clf" | "board_rkllm";
 
 export interface FunctionAnswer {
   function_name: string;

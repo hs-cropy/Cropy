@@ -179,6 +179,20 @@ class ManifestValidation(BaseModel):
     mobile_hardware: str = Field(description="모바일 기기 실측 상태")
 
 
+class FunctionModelFile(BaseModel):
+    name: str = Field(description="묶음 안 상대 경로", examples=["model_int8.onnx"])
+    bytes: int
+    sha256: str = Field(description="파일 SHA-256. 브라우저가 파일마다 검증한 뒤 저장")
+
+
+class FunctionModelBundle(BaseModel):
+    version: str = Field(description="파일 목록(이름·크기·SHA-256)의 SHA-256")
+    base_url: str = Field(description="프론트엔드 정적 자산 경로. 파일 URL은 base_url/name",
+                          examples=["/offline-assets/function/mobile_clf/0123456789abcdef"])
+    total_bytes: int
+    files: list[FunctionModelFile]
+
+
 class ManifestResponse(BaseModel):
     """scripts/export_browser_model.py가 생성하는 묶음의 문서용 스키마."""
     version: str = Field(description="모델·전처리·참고 정보·정책을 포함한 묶음 SHA-256")
@@ -198,3 +212,5 @@ class ManifestResponse(BaseModel):
     diseases: list[ManifestDisease] = Field(description="클래스별 병해·방제 참고 정보")
     policy: ManifestPolicy = Field(description="묶음에 포함된 판단·재촬영 정책")
     validation: ManifestValidation = Field(description="내보내기 검증 결과와 미검증 범위")
+    function_models: dict[str, FunctionModelBundle] | None = Field(
+        None, description="기기 종류별 기능 선택 모델 묶음 (mobile_clf: 휴대폰 분류기, web_qwen: PC WebGPU). 준비된 묶음이 없으면 생략")

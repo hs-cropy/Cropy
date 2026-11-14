@@ -146,6 +146,9 @@ progress::-moz-progress-bar { border-radius: .1875rem; background: var(--cropy-g
 .update { align-self: center; min-height: 2.75rem; border: 0; background: none; color: var(--cropy-text-secondary); font-size: .8125rem; font-weight: 500; text-decoration: underline; }
 .view > .update { display: flex; margin: .5rem auto 0; } /* 상태 카드 아래 (화면 묶음은 flex 가 아니라 align-self 가 듣지 않는다) */
 .update:hover, .update:active { background: none; color: var(--cropy-text-primary); }
+/* 음성 질문 파일 카드 (#166). 상태 카드 아래 같은 열에 둔다 */
+#voice-card { margin-top: 1rem; }
+#voice-card h2 { font-size: 1.125rem; line-height: 1.5rem; font-weight: 700; }
 
 /* 사진 진단·기기 기록 (app.mjs 가 그리는 결과와 목록 포함) */
 .section { margin-top: 1rem; }
@@ -335,6 +338,7 @@ body:has(#update-dialog[open]) [data-view="prepare"] { visibility: hidden; }
   .with-nav .lead { margin-top: .5rem; line-height: 1.4375rem; }
   .phase { margin-top: .9375rem; }
   .feedback { width: 30rem; margin: 3.125rem auto 0; }
+  #voice-card { width: 30rem; margin: 1rem auto 0; }
   .feedback .mascot { width: 5rem; height: 5rem; }
   /* Figma 에 없는 사진 진단·기록은 상태 카드와 같은 열에 둔다 */
   .with-nav .section, .with-nav .note { width: 30rem; margin-left: auto; margin-right: auto; }

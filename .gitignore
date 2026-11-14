@@ -48,6 +48,8 @@ frontend/public/offline-runtime/
 frontend/public/offline-assets/*.onnx
 frontend/public/offline-assets/tmp*/
 frontend/public/offline-assets/manifest*.json
+frontend/public/offline-assets/function/
+frontend/public/offline-assets/function-models*.json
 
 # Models and local working/reference material are not source commits
 *.pth

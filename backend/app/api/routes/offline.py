@@ -40,12 +40,32 @@ def load_manifest(version=None):
     return data
 
 
+def load_function_models():
+    """기기별 기능 선택 모델 묶음(function-models.json). 없거나 읽지 못하면 None이다.
+
+    CNN 묶음 version(manifest.json 전체 해시)에 섞지 않으려고 파일을 따로 둔다.
+    섞으면 기능 선택 모델만 바뀌어도 CNN만 받은 기기에 업데이트 안내가 뜬다.
+    """
+    path = settings.offline_bundle_dir / "function-models.json"
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
 @router.get("/manifest", summary="현재 브라우저 모델 묶음 조회",
-            description="현재 manifest.json을 반환합니다. 모델 URL·해시·전처리·클래스·정책 및 검증 정보를 제공합니다. model_url은 프론트엔드 정적 자산 경로입니다. 묶음이 준비되지 않았으면 503입니다.",
+            description="현재 manifest.json을 반환합니다. 모델 URL·해시·전처리·클래스·정책 및 검증 정보를 제공합니다. model_url은 프론트엔드 정적 자산 경로입니다. "
+                        "기능 선택 모델 묶음(function-models.json)이 있으면 function_models에 기기 종류별로 담습니다. 이 값은 version 계산에 들어가지 않습니다. "
+                        "묶음이 준비되지 않았으면 503입니다.",
             responses={200: {"model": ManifestResponse},
                        503: error_response("오프라인 모델을 먼저 준비해 주세요.", "OFFLINE_BUNDLE_UNAVAILABLE", True)})
 def manifest():
-    return load_manifest()
+    data = load_manifest()
+    function_models = load_function_models()
+    return {**data, "function_models": function_models} if function_models else data
 
 
 class LocalPrediction(BaseModel):

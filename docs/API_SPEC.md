@@ -326,7 +326,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 | `speech_script` | `skipped` 결과의 음성 안내 문장 목록. 저장된 결과는 null이며 `/diagnose/{id}/speech/script`를 쓴다 |
 | `POST /api/v1/results/{token}/save` | 서버에 보관된 결과만 재저장. 임의 진단 JSON은 받지 않으며 재추론하지 않음 |
 | `GET /api/v1/capabilities` | 사진 형식·용량·픽셀, 판단 기준, 실행 준비, 복구 보관 시간 |
-| `GET /api/v1/offline/manifest` | 준비된 브라우저 모델·전처리·병해 안내 묶음 메타데이터 |
+| `GET /api/v1/offline/manifest` | 준비된 브라우저 모델·전처리·병해 안내 묶음 메타데이터. 기능 선택 모델 묶음이 있으면 `function_models`(`mobile_clf`·`web_qwen`별 `version`·`base_url`·`total_bytes`·파일별 `name`·`bytes`·`sha256`)를 함께 준다. 이 값은 `version` 계산에 들어가지 않는다 |
 | `POST /api/v1/offline/records` | multipart `metadata`, `file`, 선택적 `refined_file`로 기기 기록 동기화. 판별 불가 기록은 저장하지 않고 `save_status=skipped`로 응답 |
 
 진단·재촬영의 선택적 `Idempotency-Key`는 최대 128자다. 같은 작업·키·사진·작물은 동일 응답을 재사용한다. 다른 본문이면 `409 IDEMPOTENCY_CONFLICT`다. 성공 응답은 진단과 같은 DB 트랜잭션에 저장한다. 기존 기록보다 오래된 복구 결과는 `409 DIAGNOSIS_CHANGED`, 만료 초안은 `410 RESULT_EXPIRED`다. 기본 복구 TTL은 24시간이며 `RECOVERY_TTL_HOURS`로 1~168시간 설정한다.
@@ -368,7 +368,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 
 ### POST /voice/function-call
 
-음성 질문의 답변 문장 생성. 기능 선택 모델(Qwen 또는 아이폰용 소형 분류기)이 낸 호출 한 줄과 진단 문맥을 받아, 저장된 진단 근거로 읽어 줄 문장을 돌려준다. 모델 실행·STT·TTS는 하지 않는다. 모델이 서버·브라우저(PC·안드로이드 Qwen q4f16, 아이폰 분류기 int8)·오렌지파이(RKLLM) 어디서 돌았든 이 엔드포인트 하나를 쓴다.
+음성 질문의 답변 문장 생성. 기능 선택 모델(Qwen 또는 휴대폰용 소형 분류기)이 낸 호출 한 줄과 진단 문맥을 받아, 저장된 진단 근거로 읽어 줄 문장을 돌려준다. 모델 실행·STT·TTS는 하지 않는다. 모델이 서버·브라우저(WebGPU PC Qwen q4f16, 휴대폰(iPhone·안드로이드) 분류기 int8)·오렌지파이(RKLLM) 어디서 돌았든 이 엔드포인트 하나를 쓴다.
 
 **Request:** `application/json`
 
@@ -377,7 +377,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 | diagnosis_id | string | 둘 중 하나 | 이 기기의 저장된 진단 id. 다른 기기의 기록은 404 |
 | context | DiagnosisLLMInput | 둘 중 하나 | 브라우저 오프라인 진단처럼 서버 기록이 없을 때의 LLM 입력 계약 (`schemas/llm.py`) |
 | function_call | string (≤512자) | Yes | 모델 출력 한 줄. 예: `<hs_4>(topic=2, product=1)<hs_end>` |
-| source | `server` / `web_qwen` / `ios_clf` / `board_rkllm` / `test` | No | 어느 기능 선택기가 만들었는지. 로그·통계용이며 동작은 같다 (기본 `server`) |
+| source | `server` / `web_qwen` / `mobile_clf` / `board_rkllm` / `test` | No | 어느 기능 선택기가 만들었는지. 로그·통계용이며 동작은 같다 (기본 `server`). `mobile_clf`는 휴대폰(iPhone·안드로이드) 분류기다. 예전 이름 `ios_clf`도 받는다 |
 | ui_stage | `no_photo` / `photo_ready` / `analyzing` / `result` / `error` | No | 지금 화면 단계. 사용 안내(`get_usage_guidance`)가 다음 할 일을 고를 때 쓴다. 없으면 화면이 필요한 안내는 `insufficient_information` |
 
 `diagnosis_id`와 `context`를 둘 다 보내거나 둘 다 빼면 422다.
@@ -413,7 +413,7 @@ REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_typ
 
 현재 CNN↔백엔드는 동일 Python 프로세스의 함수 호출이다. 입력은 검증된 이미지 경로, 출력은 전체/Top-3 `(model_class_id, score)`이며 체크포인트 규격은 [MODEL_SPEC](MODEL_SPEC.md)를 따른다. 프론트는 [api.ts](../frontend/src/lib/api.ts)와 [응답 타입](../frontend/src/types/diagnosis.ts)을 사용한다. nullable 응답과 TypeScript 선택 필드의 정합은 후속 코드 보완 대상이다.
 
-음성 질문은 `POST /voice/transcribe` → `POST /voice/select-function`(서버 경유일 때) → `POST /voice/function-call` 세 단계로 연결됐다(2026-11-11). 프론트의 음성 모드(`features/voice/hooks/useVoiceConversation.ts`)가 이 순서로 부르고 답변은 브라우저 음성으로 읽는다. 기능 선택 모델 자체는 기기별로 다른 곳에서 돈다: 오렌지파이는 RKLLM, PC·안드로이드 브라우저는 Qwen q4f16, 아이폰 Safari는 소형 분류기. STT 연결과 브라우저 안의 기능 선택기는 계획 단계다. 브라우저 카메라 촬영과 Web Speech API TTS 안내는 구현되어 있으며 보드 음성 통합과 구분한다. 데이터 시트의 get_diagnosis 등 기능명은 REST 엔드포인트가 아니라 `function_call` 문자열 안의 함수 번호다.
+음성 질문은 `POST /voice/transcribe` → `POST /voice/select-function`(서버 경유일 때) → `POST /voice/function-call` 세 단계로 연결됐다(2026-11-11). 프론트의 음성 모드(`features/voice/hooks/useVoiceConversation.ts`)가 이 순서로 부르고 답변은 브라우저 음성으로 읽는다. 기능 선택 모델 자체는 기기별로 다른 곳에서 돈다: 오렌지파이는 RKLLM, WebGPU PC 브라우저는 Qwen q4f16, 휴대폰(iPhone·안드로이드) 브라우저는 소형 분류기(2026-11-12 결정). 프론트의 `features/voice/lib/functionSelector.ts`가 기기에 맞는 선택기를 고르고, 붙은 구현이 없거나 준비되지 않았거나 실패하면 서버 경유(`/voice/select-function`)로 고른다. 실제로 고른 선택기를 `function-call`의 `source`로 보낸다. 측정·디버그용으로 음성 모드 주소에 `?selector=server|mobile_clf|web_qwen|board_rkllm`을 붙이면 강제하고(기억됨), `?selector=auto`로 푼다. 브라우저 안 선택기 구현(#167·#168)과 보드 선택기(#169)는 아직 없다(#165). 브라우저 카메라 촬영과 Web Speech API TTS 안내는 구현되어 있으며 보드 음성 통합과 구분한다. 데이터 시트의 get_diagnosis 등 기능명은 REST 엔드포인트가 아니라 `function_call` 문자열 안의 함수 번호다.
 
 ## 진단 결과 카드 안내 필드
 

@@ -42,6 +42,13 @@
 </div>
 </section>
 <button id="resume" class="update" type="button" hidden>오프라인 준비 다시 보기</button>
+<!-- 음성 질문 파일(기능 선택 모델, 선택). 진단 파일이 준비된 뒤 이 기기에 맞는 묶음이 있으면 보인다 (app.mjs 의 renderVoiceBundle) -->
+<section class="card" id="voice-card" hidden aria-labelledby="voice-title">
+<h2 id="voice-title">음성 질문 파일 (선택)</h2>
+<p id="voice-text" class="muted" role="status"></p>
+<div class="progress" id="voice-progress-wrap" hidden><progress id="voice-progress" max="100" value="0" aria-labelledby="voice-title"></progress><p id="voice-progress-text" class="muted"></p></div>
+<div class="actions single"><button id="voice-get" type="button" hidden>파일 받기</button></div>
+</section>
 </div>
 
 <!-- 화면 2·3 · 새 진단 (#new, 예전 #analyze) 과 진단 결과 (#result). 분석 실패 카드와 문구 자리를 같이 쓰려고 한 묶음이다.

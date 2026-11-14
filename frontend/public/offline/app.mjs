@@ -1,5 +1,6 @@
 import * as ort from '/offline-runtime/ort.wasm.bundle.min.mjs';
 import { softmax, distribution, fuse, summarize, failurePhase, viewFromHash, recordsNotice, updateAvailable, isDesktopDevice, gradeOf, isNotCrop, syncStateOf, resultTimeSentence, recordTime } from './core.mjs';
+import { FUNCTION_CACHE, functionBundleKind, bundleGuide, bundleState, downloadBundle, missingBundleFiles, staleBundleKeys, formatBytes } from './core.mjs';
 
 ort.env.wasm.wasmPaths = '/offline-runtime/';
 ort.env.wasm.numThreads = 1;
@@ -258,6 +259,7 @@ async function prepare() {
     if (previous) await previous.release().catch(() => {});
     $('progress').value = 100;
     show('ready');
+    renderVoiceBundle().catch(() => {});
     // 권한 창을 띄우는 브라우저가 있어 답을 기다리지 않는다 (기다리면 그동안 사진을 고를 수 없다)
     navigator.storage?.persist?.().catch(() => {});
   } catch (error) {
@@ -660,6 +662,95 @@ $('speak').addEventListener('click',()=>{
 navigator.serviceWorker?.addEventListener('message',event=>{
   if(event.data?.type==='cropy-offline-stay')say('인터넷에 연결되어 있지 않아 이 화면에 머물러요. 연결되면 다시 눌러 주세요.');
 });
+// ── 음성 질문 파일 (기능 선택 모델 묶음, #166) ──
+// 휴대폰은 소형 분류기, WebGPU 가 있는 PC 는 Qwen 묶음을 받는다 (core.mjs 의 functionBundleKind). 진단 파일(CNN)과 따로 받고,
+// 진단 파일이 준비된 뒤에만 보인다. 서버에 묶음이 없거나 받을 묶음이 없는 기기면 카드를 숨긴다.
+// 파일은 Cache Storage(transformers-cache)에 파일 주소를 키로 넣고, 다 받으면 IndexedDB assets 'fn:<kind>' 에 묶음 정보를 적는다
+// PC 는 navigator.gpu 가 있어도 어댑터를 못 받는 경우(GPU 차단·VM 등)가 있어 어댑터까지 확인한다. 휴대폰은 GPU 를 묻지 않는다
+let voiceKind, voiceKindChecked;
+const resolveVoiceKind = () => voiceKindChecked ??= (async () => {
+  const kind = functionBundleKind({userAgent:navigator.userAgent, touchPoints:navigator.maxTouchPoints, webgpu:true});
+  if (kind !== 'web_qwen') return kind;
+  // 드라이버에 따라 답이 오지 않을 수 있어 1.5초만 기다린다 (functionSelector.ts 의 hasWebGpu 와 같다)
+  let timer;
+  try { return (await Promise.race([navigator.gpu?.requestAdapter(), new Promise(resolve => { timer = setTimeout(resolve, 1500, null); })])) ? kind : null; }
+  catch { return null; } finally { clearTimeout(timer); }
+})();
+let voiceBundle = null, voiceBusy = false;
+const voiceKey = kind => 'fn:' + kind;
+async function renderVoiceBundle() {
+  const card = $('voice-card');
+  voiceKind = await resolveVoiceKind();
+  if (!voiceKind || !session || !('caches' in window)) { card.hidden = true; return; }
+  if (voiceBusy) return;
+  let record = null;
+  try { record = await db('assets','get',null,voiceKey(voiceKind)); } catch {}
+  if (navigator.onLine) {
+    try {
+      const res = await fetch('/offline-assets/function-models.json', {cache:'no-store', signal:AbortSignal.timeout(5000)});
+      voiceBundle = res.ok ? (await res.json())?.[voiceKind] || null : null;
+    } catch {}
+  }
+  // 받아 둔 기록이 있어도 브라우저가 캐시를 지웠으면 받은 적 없는 것으로 본다
+  if (record) {
+    try { if ((await missingBundleFiles(record, await caches.open(FUNCTION_CACHE), location.origin)).length) record = null; }
+    catch { record = null; }
+  }
+  // 렌더가 겹쳐 돌 수 있어(준비 완료·부팅·online) 이 렌더가 본 묶음을 지역 값으로 쓴다
+  const server = voiceBundle;
+  const state = bundleState(record, server);
+  if (voiceBusy) return;
+  if (state === 'none' && !server) { card.hidden = true; return; }
+  card.hidden = false; $('voice-progress-wrap').hidden = true;
+  if (state === 'ready') { $('voice-text').textContent = '음성 질문 파일을 이 기기에 받아 뒀어요.'; $('voice-get').hidden = true; return; }
+  let estimate = null;
+  try { estimate = await navigator.storage.estimate(); } catch {}
+  // 기다리는 동안 받기를 시작했으면 진행 화면을 덮지 않는다
+  if (voiceBusy) return;
+  const guide = bundleGuide(voiceKind, server.total_bytes, estimate);
+  $('voice-text').textContent = (state === 'update' ? '새 음성 질문 파일이 있어요. ' : '') + guide.text;
+  $('voice-get').textContent = state === 'update' ? '새 파일 받기' : '파일 받기';
+  $('voice-get').hidden = false; $('voice-get').disabled = false;
+}
+async function getVoiceBundle() {
+  if (voiceBusy || !voiceBundle) return;
+  voiceBusy = true;
+  const target = voiceBundle;
+  $('voice-get').disabled = true; $('voice-progress-wrap').hidden = false; $('voice-progress').value = 0;
+  $('voice-progress-text').textContent = '받는 중 0%';
+  // 진단 파일 받기와 같이 30초 동안 받은 바이트가 없으면 끊는다. 다시 받으면 다 받은 파일은 건너뛴다
+  const stall = new AbortController(); let timer;
+  const alive = () => { clearTimeout(timer); timer = setTimeout(() => stall.abort(), 30000); };
+  try {
+    alive();
+    const cache = await caches.open(FUNCTION_CACHE);
+    await downloadBundle(target, {fetch:(url, options) => fetch(url, options), cache, digest:bytes => crypto.subtle.digest('SHA-256', bytes),
+      origin:location.origin, signal:stall.signal, onBytes:alive, onIdle:() => clearTimeout(timer),
+      onProgress:(done, total) => {
+        const percent = Math.min(100, done / total * 100);
+        $('voice-progress').value = percent;
+        $('voice-progress-text').textContent = `받는 중 ${Math.floor(percent)}% (${formatBytes(done)} / ${formatBytes(total)})`;
+      }});
+    clearTimeout(timer);
+    await db('assets','put',{...target, kind:voiceKind, saved_at:new Date().toISOString()},voiceKey(voiceKind));
+    // 새 버전을 다 받은 뒤에 이전 버전 파일을 지운다 (받다 실패하면 이전 파일이 남는다)
+    for (const url of staleBundleKeys((await cache.keys()).map(request => request.url), voiceKind, target.base_url, location.origin)) await cache.delete(url);
+    navigator.storage?.persist?.().catch(() => {});
+    voiceBusy = false;
+    await renderVoiceBundle();
+    toast('음성 질문 파일을 받았어요.');
+  } catch (error) {
+    voiceBusy = false;
+    const phase = failurePhase(error, navigator.onLine);
+    $('voice-text').textContent = phase === 'paused' ? '연결이 끊겨 받기를 멈췄어요. 다시 받으면 다 받은 파일 다음부터 이어서 받아요.'
+      : phase === 'storage-full' ? '저장 공간이 부족해 받지 못했어요. 공간을 확보한 뒤 다시 받아주세요.'
+      // 연결된 상태의 네트워크 오류(TypeError)는 브라우저 영어 문구 대신 안내 문구를 보인다
+      : error instanceof TypeError ? '음성 질문 파일을 받지 못했어요. 연결을 확인하고 다시 받아주세요.' : message(error);
+    $('voice-get').textContent = '다시 받기'; $('voice-get').hidden = false; $('voice-get').disabled = false;
+  } finally { clearTimeout(timer); }
+}
+$('voice-get').addEventListener('click',getVoiceBundle);
+addEventListener('online',()=>{renderVoiceBundle().catch(()=>{});});
 // 주소의 # 화면을 먼저 보인다. 모델을 다 불러온 뒤 한 번 더 확인한다 (없으면 새 진단 대신 준비 화면)
 route();
 try {
@@ -669,7 +760,7 @@ try {
 } catch(error){show('not-ready');$('ready').textContent=message(error);}
 await history().catch(error => { say(message(error)); });
 setBusy(false);
-loaded=true;route();checkUpdate();
+loaded=true;route();checkUpdate();renderVoiceBundle().catch(()=>{});
 // 설치 안내의 "오프라인 파일 받기"는 ?prepare=1 로 들어와 바로 받기를 시작한다.
 // 새로고침해도 다시 받지 않게 주소에서 지운다
 if(!session&&new URLSearchParams(location.search).has('prepare')){window.history.replaceState(null,'',location.pathname);prepare();}

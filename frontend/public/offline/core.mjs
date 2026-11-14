@@ -125,3 +125,82 @@ export function recordTime(value) {
   const pad = n => String(n).padStart(2, '0');
   return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} · ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+// ── 기능 선택 모델 묶음 (#166) ──
+// 음성 질문의 기능 선택 모델은 기기마다 다르다: 휴대폰(iPhone·안드로이드)은 소형 분류기(mobile_clf, 약 15MB),
+// WebGPU 가 있는 PC 는 Qwen q4f16(web_qwen, 약 1.34GB). 그 밖의 기기는 서버가 고르므로 받을 파일이 없다
+export const FUNCTION_CACHE = 'transformers-cache';
+export function functionBundleKind({ userAgent, touchPoints = 0, webgpu = false }) {
+  const kind = deviceKind({ userAgent, touchPoints });
+  if (kind === 'ios' || kind === 'android') return 'mobile_clf';
+  return webgpu ? 'web_qwen' : null;
+}
+// 묶음 파일의 주소. Cache Storage 키도 이 주소라, transformers.js 가 같은 주소로 요청하면 캐시에서 읽는다
+export const bundleFileUrl = (bundle, file, origin) => new URL(bundle.base_url.replace(/\/$/, '') + '/' + file.name, origin).href;
+export function formatBytes(bytes) {
+  if (bytes >= 1024 ** 3) return (bytes / 1024 ** 3).toFixed(1) + 'GB';
+  return Math.max(1, Math.round(bytes / 1024 ** 2)) + 'MB';
+}
+// 받기 전 안내. estimate 는 navigator.storage.estimate() 결과(없으면 null). 남은 공간 추정이 묶음의 1.2배보다 작으면 부족으로 본다
+export function bundleGuide(kind, totalBytes, estimate) {
+  const size = '약 ' + formatBytes(totalBytes);
+  const text = kind === 'web_qwen'
+    ? `이 PC에서 음성 질문을 인터넷 없이 쓰려면 ${size} 파일을 받아요. Wi-Fi처럼 안정된 연결에서 받아주세요.`
+    : `이 휴대폰에서 음성 질문을 인터넷 없이 쓰려면 ${size} 파일을 받아요.`;
+  const free = estimate && Number.isFinite(estimate.quota) && Number.isFinite(estimate.usage) ? estimate.quota - estimate.usage : null;
+  const enough = free === null || free >= totalBytes * 1.2;
+  return { text: enough ? text : `${text} 남은 저장 공간(약 ${formatBytes(Math.max(0, free))})이 부족할 수 있어요.`, enough };
+}
+// 받아 둔 묶음 기록(IndexedDB assets 'fn:<kind>')과 서버 묶음을 비교한다. none: 받은 적 없음, update: 새 버전, ready: 최신
+export function bundleState(record, serverBundle) {
+  if (!record?.version) return 'none';
+  return serverBundle && /^[0-9a-f]{64}$/.test(String(serverBundle.version)) && serverBundle.version !== record.version ? 'update' : 'ready';
+}
+const hex = buffer => Array.from(new Uint8Array(buffer), x => x.toString(16).padStart(2, '0')).join('');
+// 묶음을 파일 단위로 받는다. 파일마다 크기·SHA-256 을 확인한 뒤에만 캐시에 넣으므로 검증에 실패한 파일은 남지 않는다.
+// 이미 캐시에 같은 크기로 있는 파일은 건너뛴다 (끊겼다 다시 받으면 이어서 받는다). 파일 하나씩 메모리에 모아 검증한다(가장 큰 파일 약 300MB)
+// deps: fetch, cache(Cache Storage 의 한 캐시), digest(bytes → ArrayBuffer), origin, signal, onProgress(done, total, file),
+// onBytes(): 요청을 시작하거나 바이트를 받을 때마다(정지 감시 타이머를 다시 건다), onIdle(): 본문을 다 받아 검증·저장하는 동안(타이머를 멈춘다)
+export async function downloadBundle(bundle, { fetch, cache, digest, origin, signal, onProgress = () => {}, onBytes = () => {}, onIdle = () => {} }) {
+  const total = bundle.files.reduce((sum, file) => sum + file.bytes, 0);
+  let done = 0, skipped = 0;
+  for (const file of bundle.files) {
+    const url = bundleFileUrl(bundle, file, origin);
+    const hit = await cache.match(url);
+    if (hit && Number(hit.headers.get('content-length')) === file.bytes) {
+      done += file.bytes; skipped += 1; onProgress(done, total, file); continue;
+    }
+    onBytes();
+    const response = await fetch(url, { cache: 'no-store', signal });
+    if (!response.ok || !response.body) throw new Error('음성 질문 파일을 받지 못했어요. 연결을 확인하고 다시 받아주세요.');
+    const chunks = []; let received = 0;
+    const reader = response.body.getReader();
+    while (true) {
+      const { done: end, value } = await reader.read(); if (end) break;
+      chunks.push(value); received += value.length; onBytes();
+      if (received > file.bytes) { await reader.cancel().catch(() => {}); break; }
+      onProgress(done + received, total, file);
+    }
+    // 300MB 파일은 합치기·해시·저장에 시간이 걸려 연결이 멀쩡해도 정지로 보일 수 있으므로 감시를 멈춘다
+    onIdle();
+    if (received !== file.bytes) throw new Error('음성 질문 파일 크기가 맞지 않아요. 다시 받아주세요.');
+    const bytes = new Uint8Array(received); let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+    chunks.length = 0;
+    if (hex(await digest(bytes)) !== file.sha256) throw Object.assign(new Error('음성 질문 파일 검증에 실패했어요. 다시 받아주세요.'), { name: 'IntegrityError' });
+    await cache.put(url, new Response(bytes, { headers: { 'content-type': response.headers.get('content-type') || 'application/octet-stream', 'content-length': String(file.bytes) } }));
+    done += file.bytes; onProgress(done, total, file);
+  }
+  return { skipped };
+}
+// 캐시에서 빠진 파일. 받아 둔 기록이 있어도 브라우저가 캐시를 지웠을 수 있어(특히 iOS) 불러오기 전에 확인한다
+export async function missingBundleFiles(bundle, cache, origin) {
+  const missing = [];
+  for (const file of bundle.files) if (!(await cache.match(bundleFileUrl(bundle, file, origin)))) missing.push(file.name);
+  return missing;
+}
+// 새 버전을 받은 뒤 지울 같은 종류의 이전 버전 캐시 키 (주소에 version 폴더가 들어 있다)
+export function staleBundleKeys(urls, kind, keepBaseUrl, origin) {
+  const prefix = new URL('/offline-assets/function/' + kind + '/', origin).href;
+  const keep = new URL(keepBaseUrl.replace(/\/$/, '') + '/', origin).href;
+  return urls.filter(url => url.startsWith(prefix) && !url.startsWith(keep));
+}

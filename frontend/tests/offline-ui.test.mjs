@@ -201,7 +201,7 @@ for(const failure of ['model','asset read']){
   let historyCalls=0;const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{});return nodes.get(id);};
   const context=vm.createContext({$,bundle:null,session:null,URLSearchParams,location:{search:''},
    async db(){if(failure==='asset read')throw new Error('asset read failed');return {manifest:{},model:[]};},
-   async initSession(){throw new Error('model failed');},async history(){historyCalls++;},message:e=>e.message,setBusy(){},show(){},route(){},checkUpdate(){}});
+   async initSession(){throw new Error('model failed');},async history(){historyCalls++;},message:e=>e.message,setBusy(){},show(){},route(){},checkUpdate(){},async renderVoiceBundle(){}});
   await vm.runInContext('(async()=>{'+source.slice(source.lastIndexOf('\ntry {'))+'})()',context);
   assert.equal(historyCalls,1);assert.match($('ready').textContent,/failed/);
  });
