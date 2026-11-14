@@ -1,0 +1,169 @@
+[
+ {
+  "name": "일반 결과",
+  "diagnosis": {
+   "id": "d1",
+   "disease_name": "고추 탄저병",
+   "confidence": 0.9223,
+   "top_predictions": [
+    {
+     "name": "고추 탄저병",
+     "confidence": 0.9223
+    },
+    {
+     "name": "고추 정상",
+     "confidence": 0.05
+    },
+    {
+     "name": "고추 흰가루병",
+     "confidence": 0.02
+    }
+   ],
+   "causes": [],
+   "pesticides": [
+    {
+     "name": "약0"
+    },
+    {
+     "name": "약1"
+    },
+    {
+     "name": "약2"
+    },
+    {
+     "name": "약3"
+    },
+    {
+     "name": "약4"
+    },
+    {
+     "name": "약5"
+    },
+    {
+     "name": "약6"
+    }
+   ],
+   "prevention": [],
+   "created_at": "2026-11-15T00:00:00Z",
+   "crop_type": "고추",
+   "selected_crop": null,
+   "predicted_crop": "고추",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "disease",
+   "severity": "high",
+   "decision_status": "disease",
+   "save_status": "saved",
+   "recapture": null
+  },
+  "ui_stage": "result",
+  "expected": "{\"ui_stage\":\"result\",\"predicted_crop\":\"고추\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"disease\",\"disease_name\":\"고추 탄저병\",\"confidence\":0.9223,\"top_predictions\":[{\"name\":\"고추 탄저병\",\"confidence\":0.9223},{\"name\":\"고추 정상\",\"confidence\":0.05}],\"severity\":\"high\",\"decision_status\":\"disease\",\"save_status\":\"saved\",\"pesticides\":[\"약0\",\"약1\",\"약2\",\"약3\",\"약4\"]}"
+ },
+ {
+  "name": "진단 없음",
+  "diagnosis": null,
+  "ui_stage": "no_photo",
+  "expected": "{\"ui_stage\":\"no_photo\"}"
+ },
+ {
+  "name": "진단 없음 단계 없음",
+  "diagnosis": null,
+  "ui_stage": null,
+  "expected": "{\"ui_stage\":\"no_photo\"}"
+ },
+ {
+  "name": "정상·작물 불일치·1.0",
+  "diagnosis": {
+   "id": "d1",
+   "disease_name": "무 정상",
+   "confidence": 1.0,
+   "top_predictions": [
+    {
+     "name": "무 정상",
+     "confidence": 1.0
+    }
+   ],
+   "causes": [],
+   "pesticides": [],
+   "prevention": [],
+   "created_at": "2026-11-15T00:00:00Z",
+   "crop_type": "고추",
+   "selected_crop": "배추",
+   "predicted_crop": "무",
+   "crop_mismatch": true,
+   "prediction_mode": "model",
+   "category": "normal",
+   "severity": null,
+   "decision_status": "disease",
+   "save_status": "saved",
+   "recapture": null
+  },
+  "ui_stage": "result",
+  "expected": "{\"ui_stage\":\"result\",\"selected_crop\":\"배추\",\"predicted_crop\":\"무\",\"crop_mismatch\":true,\"prediction_mode\":\"model\",\"category\":\"normal\",\"disease_name\":\"무 정상\",\"confidence\":1.0,\"top_predictions\":[{\"name\":\"무 정상\",\"confidence\":1.0}],\"decision_status\":\"disease\",\"save_status\":\"saved\"}"
+ },
+ {
+  "name": "재촬영",
+  "diagnosis": {
+   "id": "d1",
+   "disease_name": "무 검은무늬병",
+   "confidence": 0.9223,
+   "top_predictions": [
+    {
+     "name": "고추 탄저병",
+     "confidence": 0.9223
+    },
+    {
+     "name": "고추 정상",
+     "confidence": 0.05
+    },
+    {
+     "name": "고추 흰가루병",
+     "confidence": 0.02
+    }
+   ],
+   "causes": [],
+   "pesticides": [
+    {
+     "name": "약0"
+    },
+    {
+     "name": "약1"
+    },
+    {
+     "name": "약2"
+    },
+    {
+     "name": "약3"
+    },
+    {
+     "name": "약4"
+    },
+    {
+     "name": "약5"
+    },
+    {
+     "name": "약6"
+    }
+   ],
+   "prevention": [],
+   "created_at": "2026-11-15T00:00:00Z",
+   "crop_type": "고추",
+   "selected_crop": null,
+   "predicted_crop": "고추",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "disease",
+   "severity": "high",
+   "decision_status": "confusion",
+   "save_status": "saved",
+   "recapture": {
+    "region": "잎 뒷면",
+    "instruction": "뒷면을 찍어 주세요",
+    "margin": 0.1,
+    "candidates": []
+   }
+  },
+  "ui_stage": null,
+  "expected": "{\"ui_stage\":\"result\",\"predicted_crop\":\"고추\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"disease\",\"disease_name\":\"무 검은무늬병\",\"confidence\":0.9223,\"top_predictions\":[{\"name\":\"고추 탄저병\",\"confidence\":0.9223},{\"name\":\"고추 정상\",\"confidence\":0.05}],\"severity\":\"high\",\"decision_status\":\"confusion\",\"save_status\":\"saved\",\"recapture\":{\"region\":\"잎 뒷면\"},\"pesticides\":[\"약0\",\"약1\",\"약2\",\"약3\",\"약4\"]}"
+ }
+]
