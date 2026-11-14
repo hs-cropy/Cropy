@@ -249,4 +249,25 @@ describe("voiceRecorder", () => {
     // 녹음 자원은 중복 해제되지 않는다.
     expect(stopTrack).toHaveBeenCalledTimes(1);
   });
+
+  it("keepStream이면 종료해도 마이크를 끄지 않고, 같은 스트림을 다음 녹음에 다시 쓴다", async () => {
+    const first = await startVoiceRecording({ keepStream: true });
+    await first.stop();
+    expect(stopTrack).not.toHaveBeenCalled();
+
+    const live = { active: true, getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
+    const second = await startVoiceRecording({ stream: live, keepStream: true });
+    expect(getUserMedia).toHaveBeenCalledTimes(1); // 두 번째는 권한·장치를 다시 열지 않는다
+    expect(second.stream).toBe(live);
+
+    const { releaseStream } = await import("./voiceRecorder");
+    releaseStream(second.stream);
+    expect(stopTrack).toHaveBeenCalledTimes(1);
+  });
+
+  it("끝난 스트림을 받으면 새로 연다", async () => {
+    const dead = { active: false, getTracks: () => [] } as unknown as MediaStream;
+    await startVoiceRecording({ stream: dead });
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+  });
 });
