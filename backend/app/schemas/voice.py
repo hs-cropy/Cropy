@@ -8,7 +8,9 @@ from app.schemas.llm import DiagnosisLLMInput
 from app.services.voice_context import UiStage
 
 # 어느 기능 선택기가 문자열을 만들었는지. 동작은 같고 로그·통계에만 쓴다.
-FunctionCallSource = Literal["server", "web_qwen", "ios_clf", "board_rkllm", "test"]
+# mobile_clf: 휴대폰(iPhone·안드로이드) 소형 분류기 (2026-11-12 결정으로 안드로이드도 분류기를 쓴다, #165).
+# ios_clf 는 같은 분류기의 예전 이름이다. 이미 배포된 클라이언트를 위해 받기만 한다
+FunctionCallSource = Literal["server", "web_qwen", "mobile_clf", "board_rkllm", "test", "ios_clf"]
 
 
 class VoiceFunctionCallRequest(BaseModel):
@@ -19,7 +21,7 @@ class VoiceFunctionCallRequest(BaseModel):
                 {
                     "diagnosis_id": "2ad7851e-375d-4099-b24b-872aa6a0ad04",
                     "function_call": "<hs_0>(topic=1)<hs_end>",
-                    "source": "ios_clf",
+                    "source": "mobile_clf",
                 }
             ]
         },

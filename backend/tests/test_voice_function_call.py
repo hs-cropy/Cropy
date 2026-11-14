@@ -56,9 +56,21 @@ def test_implemented_functions_return_sentences(client, diagnosis_id, call, func
 
 
 def test_context_body_works_without_server_record(client, llm_context):
-    res = client.post(URL, json={"context": llm_context, "function_call": "<hs_0>(topic=1)<hs_end>", "source": "ios_clf"})
+    res = client.post(URL, json={"context": llm_context, "function_call": "<hs_0>(topic=1)<hs_end>", "source": "mobile_clf"})
     assert res.status_code == 200, res.text
     assert res.json()["function_name"] == "get_diagnosis"
+
+
+@pytest.mark.parametrize("source", ["server", "mobile_clf", "web_qwen", "board_rkllm", "ios_clf"])
+def test_every_selector_source_is_accepted(client, llm_context, source):
+    # ios_clf 는 mobile_clf 의 예전 이름이라 이미 배포된 클라이언트를 위해 계속 받는다
+    res = client.post(URL, json={"context": llm_context, "function_call": "<hs_0>(topic=1)<hs_end>", "source": source})
+    assert res.status_code == 200, res.text
+
+
+def test_unknown_source_is_rejected(client, llm_context):
+    res = client.post(URL, json={"context": llm_context, "function_call": "<hs_0>(topic=1)<hs_end>", "source": "android_qwen"})
+    assert res.status_code == 422
 
 
 def test_context_and_diagnosis_id_are_exclusive(client, diagnosis_id, llm_context):
