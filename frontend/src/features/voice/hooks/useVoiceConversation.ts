@@ -343,7 +343,7 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
           // 진단 없이 답할 수 있는 기능(사용 안내·잡담)은 handler가 생기면 여기서 연결한다 (#162)
           reply = NO_DIAGNOSIS_TEXT;
         } else {
-          reply = (await answerFunction(current.diagnosisId, selected.function_call, "server", controller.signal)).text;
+          reply = (await answerFunction(current.diagnosisId, selected.function_call, "server", controller.signal, current.uiStage)).text;
         }
       }
     } catch (cause) {

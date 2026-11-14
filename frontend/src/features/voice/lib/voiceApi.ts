@@ -67,10 +67,11 @@ export async function answerFunction(
   functionCall: string,
   source: FunctionCallSource = "server",
   signal?: AbortSignal,
+  uiStage?: UiStage,
 ): Promise<FunctionAnswer> {
   const res = await fetch(API_BASE + "/api/v1/voice/function-call", {
     method: "POST", headers: { "Content-Type": "application/json" }, signal,
-    body: JSON.stringify({ diagnosis_id: diagnosisId, function_call: functionCall, source }),
+    body: JSON.stringify({ diagnosis_id: diagnosisId, function_call: functionCall, source, ui_stage: uiStage }),
   });
   return parse(res);
 }

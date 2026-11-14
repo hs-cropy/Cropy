@@ -411,7 +411,7 @@ describe("useVoiceConversation", () => {
     expect(pipeline.recordingToWav).toHaveBeenCalledTimes(1);
     expect(pipeline.transcribe).toHaveBeenCalledTimes(1);
     expect(pipeline.selectFunction).toHaveBeenCalledWith("이 병 뭐야", pipeline.screen, expect.any(AbortSignal));
-    expect(pipeline.answerFunction).toHaveBeenCalledWith("diag-1", "<hs_0>(topic=1)<hs_end>", "server", expect.any(AbortSignal));
+    expect(pipeline.answerFunction).toHaveBeenCalledWith("diag-1", "<hs_0>(topic=1)<hs_end>", "server", expect.any(AbortSignal), "result");
     expect(pipeline.speakAndWait).toHaveBeenCalledWith("현재 진단은 고추 탄저병입니다.", expect.any(Symbol));
     const order = [pipeline.transcribe, pipeline.selectFunction, pipeline.answerFunction, pipeline.speakAndWait]
       .map((fn) => fn.mock.invocationCallOrder[0]);
@@ -659,7 +659,7 @@ describe("useVoiceConversation", () => {
     await act(async () => { await result.current.stop(); });
 
     expect(pipeline.selectFunction).toHaveBeenCalledWith("이거 무슨 병이야", expect.objectContaining({ diagnosisId: "new-diag", uiStage: "result" }), expect.any(AbortSignal));
-    expect(pipeline.answerFunction).toHaveBeenCalledWith("new-diag", "<hs_0>(topic=1)<hs_end>", "server", expect.any(AbortSignal));
+    expect(pipeline.answerFunction).toHaveBeenCalledWith("new-diag", "<hs_0>(topic=1)<hs_end>", "server", expect.any(AbortSignal), "result");
   });
 
   it("\"사진은 어떻게 찍어\"는 촬영이 아니라 모델에 보낸다", async () => {

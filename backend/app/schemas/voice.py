@@ -9,7 +9,6 @@ from app.services.voice_context import UiStage
 
 # 어느 기능 선택기가 문자열을 만들었는지. 동작은 같고 로그·통계에만 쓴다.
 FunctionCallSource = Literal["server", "web_qwen", "ios_clf", "board_rkllm", "test"]
-UiStage = Literal["no_photo", "photo_ready", "analyzing", "result", "error"]
 
 
 class VoiceFunctionCallRequest(BaseModel):
