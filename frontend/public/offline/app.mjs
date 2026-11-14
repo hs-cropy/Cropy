@@ -7,6 +7,9 @@ const $ = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let bundle, session, selected, current, busy = false;
 let previewUrl;
+// 사진을 어디서 골랐는지 ('gallery'|'camera'). "다른 사진" 은 같은 곳을 다시 연다.
+// 추가 사진은 고르자마자 입력을 비우므로(같은 사진을 다시 골라도 change 가 오게) 고른 파일을 따로 둔다
+let photoSource = 'gallery', secondFile = null, secondSource = 'camera';
 // 지금 보이는 화면, 저장된 모델을 다 불러왔는지, 기록 저장 공간이 모자랐는지, 나중에로 닫은 기록 안내
 // offered: 이번 접속에서 업데이트를 이미 물었는지 (나중에를 누르면 다시 묻지 않는다)
 // savedId: 방금 기기에 저장한 기록 (새 사진을 고를 때까지 머리에 저장 완료를 보인다)
@@ -206,7 +209,8 @@ function setBusy(value) {
   $('refine').disabled = value || !current;
   $('prepare').disabled = $('update-accept').disabled = value;
   $('start').disabled = value || !session;
-  for (const id of ['file','crop','second','new-photo','empty-new']) $(id).disabled = value;
+  for (const id of ['file','file-camera','crop','second','second-camera','new-photo','empty-new',
+    'dropzone','pick-gallery','pick-camera','pick-again','second-pick-camera','second-pick-gallery']) $(id).disabled = value;
   for (const id of ['analyze-card','records-card']) $(id).querySelector('[data-act="primary"]').disabled = value;
   for (const button of $('history').querySelectorAll('button')) button.disabled = value || button.dataset.locked === 'true';
 }
@@ -290,7 +294,7 @@ async function predict(file) {
 }
 function result(record) {
   // 다른 기록의 결과로 바뀌면 그 전 결과의 추가 사진과 추가 사진 확인 실패 카드는 내린다
-  if (current?.id !== record.id) { $('second').value = ''; notices.result = null; }
+  if (current?.id !== record.id) { clearSecond(); notices.result = null; }
   current = record; const r = record.result;
   $('result').innerHTML = resultHtml(record, resultPhotos(record), canRefine(record));
   $('refine-area').classList.toggle('hidden', !canRefine(record));
@@ -302,9 +306,14 @@ function result(record) {
   $('retry-local')?.addEventListener('click', async () => {if (busy) return; setBusy(true); try {await storeRecord(record);} finally {setBusy(false);}});
   syncAnalyzeView(); renderHeader();
 }
+// 고른 추가 사진을 내린다 (다른 기록으로 바뀌었거나 새 진단을 시작했다). 고르기 버튼이 다시 주 버튼이 된다
+function clearSecond() {
+  secondFile = null; $('second').value = ''; $('second-camera').value = ''; $('second-name').textContent = '';
+  $('refine').hidden = true; secondRoles(false);
+}
 // 결과를 내린다 (보던 기록 삭제). 진단 결과 화면은 빈 안내로 돌아가고, 기록은 기기에 그대로 있다
 function clearResult() {
-  current = null; notices.result = null; $('result').replaceChildren(); $('refine-area').classList.add('hidden'); $('second').value = ''; $('speak').disabled = true; $('state').textContent = '';
+  current = null; notices.result = null; $('result').replaceChildren(); $('refine-area').classList.add('hidden'); clearSecond(); $('speak').disabled = true; $('state').textContent = '';
   for (const url of resultUrls) URL.revokeObjectURL(url);
   resultFiles = []; resultUrls = [];
   syncAnalyzeView(); renderHeader();
@@ -422,7 +431,7 @@ async function storeRecord(record) {
 }
 async function diagnose() {
   if (busy || !selected) return;
-  $('second').value = '';
+  clearSecond();
   const photo = selected, crop = $('crop').value;
   notice('new', null);
   setBusy(true); say('이 기기에서 분석하고 있어요.');
@@ -448,7 +457,7 @@ function analysisFailed(error, where) {
   if (view !== where) toast('이 기기에서 분석하지 못했어요.');
 }
 async function refine() {
-  const file = $('second').files[0];
+  const file = secondFile;
   if (busy) return;
   // 분석 실패 카드에서 다시 눌렀을 때도 아래 문구가 보이게 카드를 먼저 닫는다.
   // 그사이 서버에 보내 다시 확인할 수 없게 됐으면 카드만 닫고 결과를 보인다
@@ -462,7 +471,8 @@ async function refine() {
     const combined = fuse(base.predictions,second,bundle.policy.second_photo_weight);
     const record = {...base,refined_file:file,refined_predictions:second,sync_status:'pending',saved:false,
       result:summarize(bundle,combined,base.selected_crop,true)};
-    result(record); if (await storeRecord(record)) $('state').textContent = '';
+    // 쓴 추가 사진은 내린다. 다시 추가 촬영이 필요하면 새 사진을 고른다 (실패하면 다시 시도하게 남긴다)
+    clearSecond(); result(record); if (await storeRecord(record)) $('state').textContent = '';
   } catch (error) { analysisFailed(error, 'result'); }
   finally { setBusy(false); }
 }
@@ -546,14 +556,16 @@ $('update-later').addEventListener('click',()=>$('update-dialog').close());
 // Esc 로 닫아도 나중에와 같다. 닫히면 머리를 원래 상태로 되돌린다
 $('update-dialog').addEventListener('close',renderHeader);
 addEventListener('online',checkUpdate);
-$('start').addEventListener('click',()=>{go('new');$('file').click();});
+// 진단 시작: 새 진단 화면으로만 간다. 갤러리·카메라 중 무엇으로 고를지는 사용자가 정한다
+$('start').addEventListener('click',()=>go('new'));
 $('manage').addEventListener('click',()=>{go('records');$('records').scrollIntoView();});
 // 분석 실패 카드: 같은 사진으로 다시 분석하거나, 카드를 닫고 다른 사진을 고른다.
 // 진단 결과 화면의 카드는 추가 사진 확인 실패, 새 진단 화면의 카드는 진단 실패다
 $('analyze-card').querySelector('[data-act="primary"]').addEventListener('click',()=>view==='result'?refine():diagnose());
 $('analyze-card').querySelector('[data-act="secondary"]').addEventListener('click',()=>{
-  if(view==='result'){notice('result',null);if(canRefine(current))$('second').click();return;}
-  notice('new',null);$('file').click();
+  // 다른 사진: 앞서 고른 곳(카메라·갤러리)을 다시 연다. 누른 그 자리에서 열어야 브라우저가 막지 않는다
+  if(view==='result'){notice('result',null);if(canRefine(current))pickSecond(secondSource);return;}
+  notice('new',null);pickPhoto(photoSource);
 });
 // 기록 안내 카드: 저장 공간 관리는 목록으로, 동기화 재시도는 실패한 기록을 차례로 다시 보낸다
 $('records-card').querySelector('[data-act="primary"]').addEventListener('click',async event=>{
@@ -572,24 +584,66 @@ addEventListener('online',updateRecordsNotice);addEventListener('offline',update
 // 나중에: 카드를 접고 다시 펼칠 버튼만 남긴다 (준비 버튼이 모두 카드 안에 있다)
 $('later').addEventListener('click',()=>{$('status-card').hidden=true;$('resume').hidden=false;$('resume').focus();});
 $('resume').addEventListener('click',()=>{$('status-card').hidden=false;$('resume').hidden=true;$('status-title').focus();});
-$('file').addEventListener('change',()=>{
+// 사진 고르기 (온라인 새 진단 M-01-0·RecapturePanel). 갤러리 입력(#file·#second)과 카메라 입력(capture)을 따로 연다.
+// 데스크탑 브라우저는 capture 를 무시하고 파일 선택창을 열어 "카메라로 촬영" 이 맞지 않으므로 카메라 버튼을 숨긴다
+const pickPhoto = source => (source==='camera'?$('file-camera'):$('file')).click();
+const pickSecond = source => (source==='gallery'?$('second'):$('second-camera')).click();
+if(desktop)for(const id of ['pick-camera','second-pick-camera'])$(id).hidden=true;
+// 추가 사진을 고르면 "두 사진으로 다시 확인" 이 주 버튼이 되고 고르기 버튼은 보조로 내린다. 데스크탑은 갤러리가 주 버튼이다
+function secondRoles(picked){
+  $('second-pick-camera').classList.toggle('secondary',picked);
+  $('second-pick-gallery').classList.toggle('secondary',picked||!desktop);
+}
+secondRoles(false);
+// 고르기 전에는 점선 자리와 고르기 버튼, 고른 뒤에는 미리보기와 진단 버튼
+function showPhoto(shown){
+  $('dropzone').hidden=shown;$('pick-actions').classList.toggle('hidden',shown);
+  $('selected-actions').classList.toggle('hidden',!shown);$('preview').classList.toggle('hidden',!shown);
+}
+function onPhoto(source,input){
+  const file=input.files[0];
+  // 고르기를 취소하면 빈 change 가 올 수 있다. 앞서 고른 사진을 그대로 둔다
+  if(!file)return;
+  // 같은 사진을 다시 골라도 change 가 오게 비운다 (고른 파일은 selected 가 갖는다)
+  input.value='';
   // 새 사진을 고르면 진단 실패 카드를 닫는다. 지난 결과는 진단 결과 화면에 그대로 둔다
-  selected=$('file').files[0];savedId=null;notice('new',null);if(previewUrl)URL.revokeObjectURL(previewUrl);
-  if(selected){previewUrl=URL.createObjectURL(selected);$('preview').src=previewUrl;$('preview').classList.remove('hidden');}
-  setBusy(busy);
-});
+  selected=file;photoSource=source;savedId=null;notice('new',null);if(previewUrl)URL.revokeObjectURL(previewUrl);
+  previewUrl=URL.createObjectURL(file);$('preview').src=previewUrl;
+  $('pick-again').textContent=source==='camera'?'다른 사진 촬영하기':'다른 사진 선택하기';
+  showPhoto(true);setBusy(busy);
+  // 누른 고르기 버튼이 숨었으면 포커스가 사라지지 않게 진단 버튼(못 누르면 카드 제목)으로 옮긴다
+  const focused=document.activeElement;
+  if(!focused||focused===document.body||focused.closest('#pick-actions,#dropzone'))
+    ($('diagnose').disabled?$('diagnosis-title'):$('diagnose')).focus();
+}
+function onSecond(source,input){
+  const file=input.files[0];
+  if(!file)return;
+  input.value='';secondFile=file;secondSource=source;
+  $('second-name').textContent=`고른 추가 사진: ${file.name}`;$('refine').hidden=false;secondRoles(true);setBusy(busy);
+}
+$('file').addEventListener('change',()=>onPhoto('gallery',$('file')));
+$('file-camera').addEventListener('change',()=>onPhoto('camera',$('file-camera')));
+$('second').addEventListener('change',()=>onSecond('gallery',$('second')));
+$('second-camera').addEventListener('change',()=>onSecond('camera',$('second-camera')));
+$('dropzone').addEventListener('click',()=>pickPhoto('gallery'));
+$('pick-gallery').addEventListener('click',()=>pickPhoto('gallery'));
+$('pick-camera').addEventListener('click',()=>pickPhoto('camera'));
+$('pick-again').addEventListener('click',()=>pickPhoto(photoSource));
+$('second-pick-camera').addEventListener('click',()=>pickSecond('camera'));
+$('second-pick-gallery').addEventListener('click',()=>pickSecond('gallery'));
 $('diagnose').addEventListener('click',diagnose);$('refine').addEventListener('click',refine);
 // 고른 사진과 미리보기를 내린다 (진단을 마쳤거나 새 사진으로 진단하기). 결과는 진단 결과 화면에 남는다
 function resetPhoto(){
-  selected=null;$('file').value='';if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=null;$('preview').classList.add('hidden');
+  selected=null;photoSource='gallery';$('file').value='';$('file-camera').value='';
+  if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=null;showPhoto(false);
   savedId=null;setBusy(busy);
 }
-// 새 사진으로 진단하기·빈 결과의 새 진단 시작하기: 새 진단 화면으로 가서 사진 고르기를 연다.
-// 준비된 모델이 없으면 route 가 준비 화면으로 보낸다
+// 새 사진으로 진단하기·빈 결과의 새 진단 시작하기: 새 진단 화면으로 가서 사진 고르기를 보인다.
+// 갤러리·카메라 중 무엇으로 고를지는 사용자가 정한다. 준비된 모델이 없으면 route 가 준비 화면으로 보낸다
 function startNew(){
   if(busy)return;
   resetPhoto();notice('new',null);go('new');
-  if(view==='new')$('file').click();
 }
 $('new-photo').addEventListener('click',startNew);$('empty-new').addEventListener('click',startNew);
 // 새 진단 화면에서 새 진단 탭을 다시 누르면 떠 있던 진단 실패 카드를 닫는다 (같은 # 이라 hashchange 가 없어도 notice 가 다시 그린다).

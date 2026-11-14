@@ -110,7 +110,7 @@ export function DiagnosisPage() {
     session.navigate(CAPTURE_PATH, "camera");
   };
 
-  /** 진단 시작 안내의 "촬영 방법 보기": 가이드는 촬영 화면에 있어 그리로 옮겨 연다 */
+  /** 진단 시작 안내·저신뢰/판별 불가 결과의 "촬영 방법 보기": 가이드는 촬영 화면에 있어 그리로 옮겨 연다 */
   const handleOpenGuide = () => {
     cancelSpeech();
     session.navigate(CAPTURE_PATH, "guide");
@@ -150,6 +150,7 @@ export function DiagnosisPage() {
             session.reset();
             handleShoot();
           }}
+          onOpenGuide={handleOpenGuide}
         />
       )}
     </div>

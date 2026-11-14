@@ -128,6 +128,46 @@ describe("AppFrame", () => {
     }
   });
 
+  it.each(["/history/abc", "/history/abc/"])(
+    "이력 상세(%s)는 모바일 헤더의 로고 자리에 이력 목록으로 가는 뒤로 버튼이 있다 (Figma M-08)",
+    (pathname) => {
+      navigation.pathname = pathname;
+      render(<AppFrame>화면</AppFrame>);
+
+      const header = within(screen.getByRole("banner"));
+      const back = header.getByRole("link", { name: "뒤로, 이력 목록으로" });
+      expect(back.getAttribute("href")).toBe("/history");
+      expect(back.textContent).toBe("뒤로");
+      expect(back.parentElement?.className.split(" ")).toContain("lg:hidden");
+      // 데스크탑(D-08)은 로고를 그대로 둔다
+      expect(header.getByRole("link", { name: "Cropy 홈" }).getAttribute("href")).toBe("/home");
+    },
+  );
+
+  it.each(["/", "/home", "/history", "/history/", "/history/abc/edit", "/diagnosis"])(
+    "%s 에는 뒤로 버튼이 없다",
+    (pathname) => {
+      navigation.pathname = pathname;
+      render(<AppFrame>화면</AppFrame>);
+
+      expect(screen.queryByRole("link", { name: "뒤로, 이력 목록으로" })).toBeNull();
+    },
+  );
+
+  it("뒤로 버튼은 좁은 화면(390px 미만)·큰글씨에서 화살표만 남겨 스위치 밑으로 숨지 않는다", () => {
+    navigation.pathname = "/history/abc";
+    render(<AppFrame>화면</AppFrame>);
+
+    const back = screen.getByRole("link", { name: "뒤로, 이력 목록으로" });
+    // 고정 폭 없이 글자 폭에 맞추고, 그래도 모자라면 줄어든다
+    expect(back.className).not.toMatch(/\bmin-w-28\b|\bw-28\b/);
+    expect(back.className.split(" ")).toEqual(expect.arrayContaining(["min-h-11", "min-w-0"]));
+    const label = within(back).getByText("뒤로");
+    expect(label.className.split(" ")).toEqual(
+      expect.arrayContaining(["max-[389px]:sr-only", "[[data-textsize=large]_&]:sr-only"]),
+    );
+  });
+
   it("로고는 홈으로 간다", () => {
     render(<AppFrame>화면</AppFrame>);
 

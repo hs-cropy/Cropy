@@ -58,7 +58,11 @@
 <!-- 진단 결과. 카드들은 app.mjs 의 resultHtml 이 그린다. 추가 사진 입력은 다시 그려도 고른 파일이 남게 밖에 둔다 -->
 <section class="result-view" id="result-view" hidden aria-label="진단 결과"><div id="result"></div>
 <section class="card hidden" id="refine-area" aria-labelledby="refine-title"><h2 id="refine-title">추가 촬영</h2><p id="guidance" class="muted"></p>
-<label>추가 사진 <input id="second" type="file" accept="image/jpeg,image/png" capture="environment"></label><button id="refine" type="button">두 사진으로 다시 확인</button></section>
+<!-- 추가 사진 (온라인 RecapturePanel): 카메라로 찍거나 갤러리에서 고른 뒤 두 사진으로 다시 확인한다 -->
+<input id="second" class="sr-only" type="file" accept="image/jpeg,image/png" tabindex="-1" aria-label="갤러리에서 추가 사진 선택">
+<input id="second-camera" class="sr-only" type="file" accept="image/jpeg,image/png" capture="environment" tabindex="-1" aria-label="카메라로 추가 촬영">
+<p id="second-name" class="muted second-name" role="status"></p>
+<div class="pick-actions"><button id="refine" type="button" hidden>두 사진으로 다시 확인</button><button id="second-pick-camera" type="button">추가 사진 촬영</button><button id="second-pick-gallery" class="secondary" type="button">갤러리에서 선택</button></div></section>
 <div class="result-tools"><button id="speak" class="secondary" type="button" disabled>결과 읽기</button><button id="new-photo" class="text-button" type="button">새 사진으로 진단하기</button></div>
 </section>
 <!-- 결과가 없는 진단 결과 화면 (온라인 DiagnosisEmptyState.tsx). 오프라인에는 촬영 방법 화면이 없어 그 링크는 뺀다 -->
@@ -69,10 +73,21 @@
 <div class="actions single"><button id="empty-new" type="button">새 진단 시작하기</button></div>
 <p class="label-mobile">지난 진단은 이력에서 확인할 수 있어요.</p>
 </section>
-<section class="card section" id="diagnosis" aria-labelledby="diagnosis-title"><h2 id="diagnosis-title">사진 진단</h2>
+<!-- 사진 고르기 (온라인 새 진단 · 사진 선택 M-01-0): 갤러리와 카메라를 따로 연다.
+     capture 가 없으면 안드로이드는 갤러리만 열어서 카메라 입력을 따로 둔다. 데스크탑은 capture 를 무시하므로 카메라 버튼을 숨긴다 (app.mjs) -->
+<section class="card section" id="diagnosis" aria-labelledby="diagnosis-title"><h2 id="diagnosis-title" tabindex="-1">사진 진단</h2>
 <label>작물 <select id="crop"><option value="">자동 감지</option><option>고추</option><option>무</option><option>배추</option></select></label>
-<input id="file" type="file" accept="image/jpeg,image/png" capture="environment" aria-label="진단할 사진"><img id="preview" alt="선택한 사진" class="hidden">
-<div class="row"><button id="diagnose" type="button" disabled>이 기기에서 진단하기</button></div>
+<input id="file" class="sr-only" type="file" accept="image/jpeg,image/png" tabindex="-1" aria-label="갤러리 사진 선택">
+<input id="file-camera" class="sr-only" type="file" accept="image/jpeg,image/png" capture="environment" tabindex="-1" aria-label="기기 카메라 촬영">
+<!-- 누르면 갤러리를 여는 자리. 같은 일을 하는 "사진 선택하기" 버튼이 있어 보조 기술과 키보드에서는 건너뛴다 -->
+<button id="dropzone" class="dropzone" type="button" tabindex="-1" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+<strong>진단할 사진을 선택해주세요</strong>
+<span>JPG 또는 PNG 사진<br>(여기를 누르면 사진을 선택할 수 있어요)</span>
+</button>
+<img id="preview" alt="선택한 사진" class="hidden">
+<div class="pick-actions" id="pick-actions"><button id="pick-gallery" type="button">사진 선택하기</button><button id="pick-camera" class="secondary" type="button">카메라로 촬영</button></div>
+<div class="pick-actions hidden" id="selected-actions"><button id="diagnose" type="button" disabled>이 기기에서 진단하기</button><button id="pick-again" class="secondary" type="button">다른 사진 선택하기</button></div>
 </section>
 
 <p class="muted note">모델 분류는 확진을 뜻하지 않아요. 농약 사용 조건은 오프라인 묶음에 포함하지 않으며 최신 등록정보·제품 라벨을 별도로 확인해야 해요.</p>
