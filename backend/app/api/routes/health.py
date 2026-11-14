@@ -14,6 +14,7 @@ from app.services.ml_service import (
     is_model_ready,
 )
 from app.services.decision import POLICY_VERSION
+from app.services.function_contract import is_function_contract_available
 from app.services.recapture import DEFAULT_MARGIN, FUSE_WEIGHT_SECOND, CONFUSION_PAIRS
 
 router = APIRouter()
@@ -34,7 +35,7 @@ def capabilities():
                                               if entry.get("trigger") == "top1"]},
         "execution": {"server_inference": is_model_ready(), "browser_bundle_available": (settings.offline_bundle_dir / "manifest.json").is_file(),
                       "browser_inference": "device_validation_required",
-                      "voice_commands": False},
+                      "voice_commands": is_function_contract_available()},
         "recovery_ttl_hours": settings.recovery_ttl_hours,
     }
 

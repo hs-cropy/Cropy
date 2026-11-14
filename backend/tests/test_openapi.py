@@ -32,6 +32,7 @@ def test_all_registered_apis_have_documented_success_contracts(client):
         ("/api/v1/diseases", "get"), ("/api/v1/diseases/{disease_id}", "get"),
         ("/api/v1/offline/manifest", "get"), ("/api/v1/offline/records", "post"),
         ("/api/v1/diagnose/{diagnosis_id}/speech/script", "get"),
+        ("/api/v1/voice/function-call", "post"),
     }
     no_content = {("/api/v1/history/{diagnosis_id}", "delete")}
     audio = {("/api/v1/diagnose/{diagnosis_id}/speech", "get")}

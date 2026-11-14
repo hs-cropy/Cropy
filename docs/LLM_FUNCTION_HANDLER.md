@@ -38,6 +38,8 @@ response = handle_function_output(
 
 이 모듈은 LLM 실행, HTTP API 연결, DB 조회, TTS 합성을 수행하지 않는다.
 
+HTTP로는 `POST /api/v1/voice/function-call`이 이 함수를 호출한다. 요청의 `diagnosis_id`(이 기기의 저장된 진단)나 `context`(LLM 입력 계약)로 문맥을 만들고, 계약은 설정 `LLM_FUNCTION_CONTRACT_PATH`(기본 `backend/app/data/function_contract.json`, `app/services/function_contract.py`)에서 한 번 읽어 둔다. 오류는 `InvalidFunctionOutput` → 400 `FUNCTION_CALL_INVALID`, `FunctionHandlerNotImplemented` → 501 `FUNCTION_NOT_IMPLEMENTED`, `InvalidFunctionContract`·계약 파일 없음 → 503 `FUNCTION_CONTRACT_UNAVAILABLE`로 바뀐다. 자세한 계약은 [API_SPEC](API_SPEC.md)의 `POST /voice/function-call`.
+
 ## v2 파서와의 연결
 
 출력 형식은 다음과 같다.
@@ -357,18 +359,18 @@ Mock 결과에는 다음 문구를 붙인다.
 
 이 변경은 파서와 저장된 진단 컨텍스트를 연결하는 서비스 계층 구현이다.
 
-실제 모델 호출, API 연결, TTS 연결 및 Orange Pi 실행은 별도 통합과 검증이 필요하다. 선행 PR #127이 develop에 반영된 뒤 최신 develop 기준으로 최종 확인한다.
+API 연결은 `POST /api/v1/voice/function-call`로 됐다(2026-11-11). 기능 선택 모델은 기기별로 다른 곳에서 돌고(오렌지파이 RKLLM, PC·안드로이드 브라우저 Qwen q4f16, 아이폰 Safari 소형 분류기) 모두 같은 문자열을 이 엔드포인트로 보낸다. 아이폰용 분류기는 뜻이 겹치는 topic을 접어서 보내므로(예측 지표 comparison→ranking, limits→confidence, 재촬영 provenance→certainty, 농약 checklist→verification) 그 topic들은 분류기 경로에서 오지 않는다. 실제 모델 호출, STT·TTS 연결, Orange Pi 실행은 별도 이슈(#163, #165~#170)에서 진행한다.
 
 ### 앱 사용 안내
 
-\`get_usage_guidance\`는 \`topic\` 1~6과 \`delivery\` 1~2를 받는다.
-호출부에서 \`ui_stage\`를 제공하면 현재 화면에 맞는 다음 행동을 안내한다.
+`get_usage_guidance`는 `topic` 1~6과 `delivery` 1~2를 받는다.
+음성 API는 요청의 `ui_stage`를 넘기며, 이 값이 있으면 현재 화면에 맞는 다음 행동을 안내한다.
 화면 상태가 필요한 요청에 해당 정보가 없거나 직전 안내를 다시 들을 수 없는 경우에는
-\`insufficient_information\`을 반환한다.
+`insufficient_information`을 반환한다.
 
 ### 농약 정보 안내
 
-\`get_pesticide_information\`은 진단 기록의 PSIS 검증 항목만 사용한다.
+`get_pesticide_information`은 진단 기록의 PSIS 검증 항목만 사용한다.
 현재 제품이 모호하면 제품 이름을 되묻고, 확인된 정보가 없거나
 혼용 가능 여부를 확인할 수 없으면 정보 부족 응답을 반환한다.
 제품 선택 식별자를 받기 전에는 기록에 제품이 하나일 때만 현재 제품으로 처리한다.

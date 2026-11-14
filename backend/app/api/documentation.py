@@ -29,6 +29,7 @@ TAGS = [
     {"name": "diagnosis", "description": "사진 진단, 재촬영, 저장 복구 및 진단 이력"},
     {"name": "diseases", "description": "병해충·정상 클래스와 방제 참고 정보"},
     {"name": "offline", "description": "브라우저 추론 묶음 정보와 기기 기록 동기화"},
+    {"name": "voice", "description": "음성 질문: 기능 선택 모델의 출력으로 답변 문장 만들기"},
 ]
 
 DESCRIPTION = """AI 기반 농작물 병해충 진단 및 스마트 방제 지원 API.

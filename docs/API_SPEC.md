@@ -343,6 +343,43 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 개발용 Mock은 시연을 허용하더라도 실제 모델 준비 완료로 표시하지 않는다.
 모델 파일·실행 설정 변경은 프로세스 재시작 후 반영된다.
 
+### POST /voice/function-call
+
+음성 질문의 답변 문장 생성. 기능 선택 모델(Qwen 또는 아이폰용 소형 분류기)이 낸 호출 한 줄과 진단 문맥을 받아, 저장된 진단 근거로 읽어 줄 문장을 돌려준다. 모델 실행·STT·TTS는 하지 않는다. 모델이 서버·브라우저(PC·안드로이드 Qwen q4f16, 아이폰 분류기 int8)·오렌지파이(RKLLM) 어디서 돌았든 이 엔드포인트 하나를 쓴다.
+
+**Request:** `application/json`
+
+| Field | Type | Required | 설명 |
+|-------|------|----------|------|
+| diagnosis_id | string | 둘 중 하나 | 이 기기의 저장된 진단 id. 다른 기기의 기록은 404 |
+| context | DiagnosisLLMInput | 둘 중 하나 | 브라우저 오프라인 진단처럼 서버 기록이 없을 때의 LLM 입력 계약 (`schemas/llm.py`) |
+| function_call | string (≤512자) | Yes | 모델 출력 한 줄. 예: `<hs_4>(topic=2, product=1)<hs_end>` |
+| source | `server` / `web_qwen` / `ios_clf` / `board_rkllm` / `test` | No | 어느 기능 선택기가 만들었는지. 로그·통계용이며 동작은 같다 (기본 `server`) |
+| ui_stage | `no_photo` / `photo_ready` / `analyzing` / `result` / `error` | No | 지금 화면 단계. 사용 안내(`get_usage_guidance`)가 다음 할 일을 고를 때 쓴다. 없으면 화면이 필요한 안내는 `insufficient_information` |
+
+`diagnosis_id`와 `context`를 둘 다 보내거나 둘 다 빼면 422다.
+
+**Response:** `200 OK`
+
+```json
+{ "function_name": "get_diagnosis", "status": "ok", "text": "현재 기록의 진단 결과는 무 검은무늬병입니다. ..." }
+```
+
+`status`는 `ok`, `insufficient_information`, `needs_clarification`, `unsupported_scope` 중 하나다. 문장은 TTS로 읽는 용도이며 확진이나 농약 처방이 아니다. 함수 번호와 인자의 뜻은 서버 설정 `LLM_FUNCTION_CONTRACT_PATH`의 계약 파일(모델 폴더 `cropy_prompt.json` 형식, 기본값은 `backend/app/data/function_contract.json`)을 따른다.
+
+**Errors:**
+
+| 코드 | 상태 | 의미 |
+|---|---|---|
+| `FUNCTION_CALL_INVALID` | 400 | 형식이 아니거나 없는 함수 번호, 인자 이름·순서·범위가 계약과 다름 |
+| `DIAGNOSIS_NOT_FOUND` | 404 | 이 기기에 그 진단이 없음 |
+| `FUNCTION_NOT_IMPLEMENTED` | 501 | 계약에는 있지만 handler가 없는 기능. 현재 9개 기능은 모두 구현되어 있다 ([LLM 함수 handler](LLM_FUNCTION_HANDLER.md)) |
+| `FUNCTION_CONTRACT_UNAVAILABLE` | 503 | 계약 파일을 읽을 수 없거나 handler와 맞지 않음 (`retryable: true`) |
+
+`GET /api/v1/capabilities`의 `execution.voice_commands`는 계약 파일을 읽을 수 있을 때 `true`다.
+
+---
+
 ## 통신 형식과 인증·보안
 
 REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_type`은 query로 전송한다. 오류는 `detail`을 가진 JSON이며 일반 HTTP 오류는 문자열, FastAPI 입력 검증 422는 오류 항목 배열일 수 있다.
@@ -353,7 +390,7 @@ REST/HTTP, 요청 파일은 multipart/form-data, 응답은 JSON이다. `crop_typ
 
 현재 CNN↔백엔드는 동일 Python 프로세스의 함수 호출이다. 입력은 검증된 이미지 경로, 출력은 전체/Top-3 `(model_class_id, score)`이며 체크포인트 규격은 [MODEL_SPEC](MODEL_SPEC.md)를 따른다. 프론트는 [api.ts](../frontend/src/lib/api.ts)와 [응답 타입](../frontend/src/types/diagnosis.ts)을 사용한다. nullable 응답과 TypeScript 선택 필드의 정합은 후속 코드 보완 대상이다.
 
-Qwen 기능 토큰/handler와 STT 통합은 계획 단계다. 브라우저 카메라 촬영과 Web Speech API TTS 안내는 구현되어 있으며 보드 음성 통합과 구분한다. 데이터 시트의 get_diagnosis 등 기능명을 현재 REST 엔드포인트로 간주하지 않는다. 실제 호출·인자·오류·시간 제한은 [LLM 계획](LLM_FINETUNING_PLAN.md)에 따라 통합 시 확정한다.
+Qwen 기능 호출의 출구는 `POST /voice/function-call`로 연결됐다(2026-11-11). 기능 선택 모델 자체는 기기별로 다른 곳에서 돈다: 오렌지파이는 RKLLM, PC·안드로이드 브라우저는 Qwen q4f16, 아이폰 Safari는 소형 분류기. STT 연결과 브라우저 안의 기능 선택기는 계획 단계다. 브라우저 카메라 촬영과 Web Speech API TTS 안내는 구현되어 있으며 보드 음성 통합과 구분한다. 데이터 시트의 get_diagnosis 등 기능명은 REST 엔드포인트가 아니라 `function_call` 문자열 안의 함수 번호다.
 
 ## 진단 결과 카드 안내 필드
 
