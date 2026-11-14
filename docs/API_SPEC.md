@@ -445,9 +445,11 @@ DB는 diseases 테이블에 TEXT/JSON 컬럼을 추가한다. 시작 시 기존 
 마이그레이션을 사용하며 진단 이력은 삭제하지 않는다. Docker 배포는 새 시드가
 포함되도록 이미지를 재빌드한다.
 
-`docs/api/openapi.json` 및 `openapi.html`은 이 변경의 배포용 명세다.
+`docs/api/openapi.json` 및 `openapi.html`은 배포용 명세다(마지막 생성: 2026-11-15, develop 855b89b, 업무 API 18개).
+`backend`에서 `app.main.app.openapi()`로 JSON을 만들고, HTML은 같은 명세를 내장해 ReDoc v2.5.0이 브라우저에서 그린다.
 백엔드 병합 후 `hs-cropy/locallife-api-docs` 저장소의 `docs/api-docs.json`,
-`docs/api-docs.html`에 각각 복사하고 해당 저장소 PR로 배포한다.
+`docs/api-docs.html`에 각각 복사해 배포한다. 공개 사이트 사본은 특허 출원 전이라
+`CapabilitiesResponse` 예시의 `confusion_margin`·`second_photo_weight`·`top1_recapture_pairs` 값을 비운다.
 이 저장소 변경만으로 외부 문서 사이트가 갱신되지는 않는다.
 
 현재 `summary_message`는 병해 6종에 공통 문구 1종, 정상 3종에 공통 문구 1종을 제공한다. 클래스마다 서로 다른 요약 문구를 제공하는 것은 아니다.
