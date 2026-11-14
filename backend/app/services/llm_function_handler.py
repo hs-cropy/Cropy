@@ -48,6 +48,9 @@ def handle_function_output(
         question = _CLARIFICATION_QUESTIONS[call.arguments["target"] - 1]
         return _response(call.function_name, context, "needs_clarification", question)
 
+    if call.function_name == "handle_scope_limit":
+        return _scope_limit_response(call.arguments, context, contract)
+
     if call.function_name == "get_pesticide_information":
         spec = next(item for item in contract.functions if item.name == call.function_name)
         if spec.arguments != (("topic", 11), ("product", 2)):
@@ -138,6 +141,30 @@ def _has_reason(context, reason):
         context.decision_status == reason
         or reason in context.decision_reasons
         or (reason == "crop_mismatch" and context.crop_mismatch)
+    )
+
+
+# reason의 1부터 시작하는 번호 순서는 hs-call-v2 학습 계약과 같다.
+_SCOPE_LIMIT_MESSAGES = (
+    "현재 고추·무·배추만 진단할 수 있어요. 이 중 한 작물의 잎을 찍어 주세요.",
+    "앱이 물 주기, 주문, 기기 조작 같은 일을 직접 실행할 수는 없어요. "
+    "진단 결과나 관리 방법이 궁금하시면 물어봐 주세요.",
+    "사진으로 진단하려면 고추·무·배추 중 한 작물의 잎을 "
+    "밝은 곳에서 초점을 맞춰 찍어 주세요.",
+)
+
+
+def _scope_limit_response(arguments, context, contract):
+    function_name = "handle_scope_limit"
+    specification = next(item for item in contract.functions if item.name == function_name)
+    if specification.arguments != (("reason", len(_SCOPE_LIMIT_MESSAGES)),):
+        raise InvalidFunctionContract(f"unsupported handler contract: {function_name}")
+
+    return _response(
+        function_name,
+        context,
+        "unsupported_scope",
+        _SCOPE_LIMIT_MESSAGES[arguments["reason"] - 1],
     )
 
 
