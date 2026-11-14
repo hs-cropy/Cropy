@@ -107,3 +107,14 @@ def test_far_words_are_not_forced_into_terms(lexicon):
 
 def test_single_syllable_and_non_hangul_terms_are_ignored():
     assert Lexicon(["무", "PHI", "고추"]).terms == [("고추", "고추", "ㄱㅗㅊㅜ")]
+
+
+def test_aliases_may_contain_digits_but_terms_may_not():
+    # 음성 모드 실제 녹음(2026-11-11): "고추에" → "5추에". 틀리게 들은 형태는 그대로 찾아 바꾸므로 숫자가 섞여도 받는다
+    lexicon = Lexicon(["고추 = 5추", "탄저병 = 탄졌던", "5추"])
+    text, corrections = lexicon.correct("5추에 잎에 점이 생겼어")
+    assert text == "고추에 잎에 점이 생겼어"
+    assert [(c.heard, c.term) for c in corrections] == [("5추", "고추")]
+    assert lexicon.correct("이거 탄졌던 거 맞아")[0] == "이거 탄저병 거 맞아"
+    assert all(term != "5추" for term, _, _ in lexicon.terms)
+    assert "55" not in Lexicon(["고추 = 55"]).aliases
