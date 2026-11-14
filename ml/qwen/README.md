@@ -2,6 +2,8 @@
 
 v11 데이터를 마음AI HomeIoT 예시(`[AI Expo] 2025 AI Expo HomeIoT 데이터 시트.xlsx`) 형식에 맞춰 다시 구성한 학습 데이터다. **기능 이름과 인자 의미는 v11/v12 계약을 그대로 유지**하고, 출력 형식과 데이터 구성만 바꿨다. validation은 사람 검수를 마쳤고(아래 "검수 반영"), train은 아직 사람 승인 전(`labels_human_validated: false`)이다.
 
+> 배포용 모델 파일(서버·휴대폰 분류기·웹·보드)의 위치·크기·SHA-256과 검사 방법은 [`MODEL_ASSETS.md`](MODEL_ASSETS.md)에 있다.
+
 ## 왜 바꿨나
 
 | 문제 (v11) | 근거 | v2 |
