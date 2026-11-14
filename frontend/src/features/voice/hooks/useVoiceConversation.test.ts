@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useVoiceConversation } from "./useVoiceConversation";
 import { VoicePermissionError } from "@/features/voice/lib/voiceRecorder";
 import type { UiStage } from "@/features/voice/lib/voiceApi";
+import { registerSelector, resetFunctionSelectors, SELECTOR_OVERRIDE_KEY } from "@/features/voice/lib/functionSelector";
 
 const fakeStream = { active: true, getTracks: () => [{ stop: () => {} }] } as unknown as MediaStream;
 
@@ -394,6 +395,45 @@ describe("useVoiceConversation", () => {
     expect(result.current.state).toBe("idle");
     expect(result.current.audio).toBeNull();
     expect(result.current.error).toBeNull();
+  });
+
+  // 기기 안 기능 선택기(#165): 붙어 있고 준비됐으면 그것이 고르고 source 로 알린다. 실패하면 서버로 다시 고른다
+  describe("기능 선택기", () => {
+    afterEach(() => resetFunctionSelectors());
+
+    async function ask() {
+      const { result } = renderHook(() => useVoiceConversation());
+      await act(async () => {
+        await result.current.start();
+      });
+      await act(async () => {
+        await result.current.stop();
+      });
+      return result;
+    }
+
+    it("기기 안 선택기가 고르면 그 source 로 답변을 요청한다", async () => {
+      localStorage.setItem(SELECTOR_OVERRIDE_KEY, "mobile_clf");
+      const select = vi.fn(async () => ({ function_call: "<hs_2>(topic=1)<hs_end>" }));
+      registerSelector({ kind: "mobile_clf", isReady: async () => true, select });
+
+      await ask();
+
+      expect(select).toHaveBeenCalledWith("이 병 뭐야", pipeline.screen, expect.any(AbortSignal));
+      expect(pipeline.selectFunction).not.toHaveBeenCalled();
+      expect(pipeline.answerFunction).toHaveBeenCalledWith("diag-1", "<hs_2>(topic=1)<hs_end>", "mobile_clf", expect.any(AbortSignal), "result");
+    });
+
+    it("기기 안 선택기가 실패하면 서버가 고르고 source 는 server 다", async () => {
+      localStorage.setItem(SELECTOR_OVERRIDE_KEY, "mobile_clf");
+      registerSelector({ kind: "mobile_clf", isReady: async () => true, select: async () => { throw new Error("wasm crashed"); } });
+
+      const result = await ask();
+
+      expect(pipeline.selectFunction).toHaveBeenCalledTimes(1);
+      expect(pipeline.answerFunction).toHaveBeenCalledWith("diag-1", "<hs_0>(topic=1)<hs_end>", "server", expect.any(AbortSignal), "result");
+      expect(result.current.assistantText).toBe("현재 진단은 고추 탄저병입니다.");
+    });
   });
 
   it("수동 녹음 종료 후 받아 적기 → 기능 고르기 → 답변 → 낭독 순으로 호출한다", async () => {

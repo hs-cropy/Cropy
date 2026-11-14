@@ -1,6 +1,6 @@
 // 음성 모드의 상태와 녹음 버튼 동작 관리.
 // 녹음 종료 → (thinking) 받아 적기 → 기능 고르기 → 답변 문장 → (speaking) 읽기 → idle.
-// 기능 선택 모델은 기기마다 다른 곳에서 돌 수 있지만(#165), 이 훅은 voiceApi 세 단계만 안다.
+// 기능 선택 모델은 기기마다 다른 곳에서 돈다(#165). 어느 것을 쓸지는 functionSelector 가 고르고, 이 훅은 결과와 source 만 넘긴다.
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -11,7 +11,8 @@ import { isCaptureCommand } from "@/features/voice/lib/captureIntent";
 import { isExitCommand } from "@/features/voice/lib/exitIntent";
 import { matchWakeWord } from "@/features/voice/lib/wakeWord";
 import { cancelSpeech, speakAndWait } from "@/features/voice/lib/speech";
-import { answerFunction, fetchSpeechScript, selectFunction, transcribe } from "@/features/voice/lib/voiceApi";
+import { answerFunction, fetchSpeechScript, transcribe } from "@/features/voice/lib/voiceApi";
+import { selectFunctionCall } from "@/features/voice/lib/functionSelector";
 import { LAST_DIAGNOSIS_KEY, readVoiceScreen, type VoiceScreen } from "@/features/voice/lib/voiceScreen";
 import { playListenCue } from "@/features/voice/lib/listenCue";
 import { releaseStream, startVoiceRecording, VoicePermissionError, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
@@ -337,13 +338,13 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
         reply = await captureAndDescribe(controller.signal);
         if (!live()) return;
       } else {
-        const selected = await selectFunction(text, current, controller.signal);
+        const selected = await selectFunctionCall(text, current, controller.signal);
         if (!live()) return;
         if (!current.diagnosisId) {
           // 진단 없이 답할 수 있는 기능(사용 안내·잡담)은 handler가 생기면 여기서 연결한다 (#162)
           reply = NO_DIAGNOSIS_TEXT;
         } else {
-          reply = (await answerFunction(current.diagnosisId, selected.function_call, "server", controller.signal, current.uiStage)).text;
+          reply = (await answerFunction(current.diagnosisId, selected.function_call, selected.source, controller.signal, current.uiStage)).text;
         }
       }
     } catch (cause) {
