@@ -14,5 +14,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-  localStorage.clear();
+  // node 환경 테스트(// @vitest-environment node)에는 localStorage가 없다
+  if (typeof localStorage !== "undefined") localStorage.clear();
 });
