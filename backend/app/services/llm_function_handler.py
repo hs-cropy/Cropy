@@ -35,6 +35,8 @@ def handle_function_output(
     output: str,
     context: DiagnosisLLMInput,
     contract: FunctionContract,
+    *,
+    ui_stage: str | None = None,
 ) -> LLMFunctionResponse:
     call = parse_function_output(output, contract)
 
@@ -45,6 +47,40 @@ def handle_function_output(
         _check_handler_arguments(contract, call.function_name, "target", len(_CLARIFICATION_QUESTIONS))
         question = _CLARIFICATION_QUESTIONS[call.arguments["target"] - 1]
         return _response(call.function_name, context, "needs_clarification", question)
+
+    if call.function_name == "handle_scope_limit":
+        return _scope_limit_response(call.arguments, context, contract)
+
+    if call.function_name == "get_pesticide_information":
+        spec = next(item for item in contract.functions if item.name == call.function_name)
+        if spec.arguments != (("topic", 11), ("product", 2)):
+            raise InvalidFunctionContract(
+                "unsupported handler contract: get_pesticide_information"
+            )
+        return _pesticide_information_response(
+            context, call.arguments["topic"], call.arguments["product"]
+        )
+
+    if call.function_name == "get_usage_guidance":
+        spec = next(item for item in contract.functions if item.name == call.function_name)
+        if spec.arguments != (("topic", 6), ("delivery", 2)):
+            raise InvalidFunctionContract(
+                "unsupported handler contract: get_usage_guidance"
+            )
+        return _usage_guidance_response(
+            call.arguments["topic"], call.arguments["delivery"], ui_stage
+        )
+
+    if call.function_name == "chit_chat":
+        if call.arguments:
+            raise InvalidFunctionContract(
+                "unsupported handler contract: chit_chat"
+            )
+        return LLMFunctionResponse(
+            function_name="chit_chat",
+            status="ok",
+            text="안녕하세요! 작물 진단이나 앱 사용 방법이 궁금하면 물어봐 주세요.",
+        )
 
     topics = _TOPICS.get(call.function_name)
     if topics is None:
@@ -105,6 +141,30 @@ def _has_reason(context, reason):
         context.decision_status == reason
         or reason in context.decision_reasons
         or (reason == "crop_mismatch" and context.crop_mismatch)
+    )
+
+
+# reason의 1부터 시작하는 번호 순서는 hs-call-v2 학습 계약과 같다.
+_SCOPE_LIMIT_MESSAGES = (
+    "현재 고추·무·배추만 진단할 수 있어요. 이 중 한 작물의 잎을 찍어 주세요.",
+    "앱이 물 주기, 주문, 기기 조작 같은 일을 직접 실행할 수는 없어요. "
+    "진단 결과나 관리 방법이 궁금하시면 물어봐 주세요.",
+    "사진으로 진단하려면 고추·무·배추 중 한 작물의 잎을 "
+    "밝은 곳에서 초점을 맞춰 찍어 주세요.",
+)
+
+
+def _scope_limit_response(arguments, context, contract):
+    function_name = "handle_scope_limit"
+    specification = next(item for item in contract.functions if item.name == function_name)
+    if specification.arguments != (("reason", len(_SCOPE_LIMIT_MESSAGES)),):
+        raise InvalidFunctionContract(f"unsupported handler contract: {function_name}")
+
+    return _response(
+        function_name,
+        context,
+        "unsupported_scope",
+        _SCOPE_LIMIT_MESSAGES[arguments["reason"] - 1],
     )
 
 
@@ -413,3 +473,126 @@ def _metrics_response(topic, context):
         + ". 기록에 없는 후보의 점수는 알 수 없습니다."
         + limit,
     )
+
+
+_USAGE_STEPS = {
+    2: ("진단할 잎을 화면에 맞춰 주세요.", "초점이 맞으면 사진을 찍어 주세요."),
+    3: ("작물 선택 메뉴를 열어 주세요.", "지금 진단할 작물을 골라 주세요."),
+    5: ("화면에 표시된 오류 안내를 확인해 주세요.", "다시 시도 버튼이 보이면 눌러 주세요."),
+}
+
+_USAGE_NEXT_STEPS = {
+    "no_photo": ("진단할 작물을 골라 주세요.", "잎 사진을 찍어 주세요."),
+    "photo_ready": ("촬영한 사진을 확인해 주세요.", "진단을 시작해 주세요."),
+    "analyzing": ("분석이 끝날 때까지 잠시 기다려 주세요.",),
+    "result": ("화면에서 진단 결과를 확인해 주세요.", "아래 안내를 살펴봐 주세요."),
+    "error": _USAGE_STEPS[5],
+}
+
+
+def _usage_guidance_response(
+    topic: int, delivery: int, ui_stage: str | None
+) -> LLMFunctionResponse:
+    steps = None
+    if topic == 1:
+        steps = _USAGE_NEXT_STEPS.get(ui_stage)
+    elif topic == 4 and ui_stage == "analyzing":
+        steps = _USAGE_NEXT_STEPS["analyzing"]
+    else:
+        steps = _USAGE_STEPS.get(topic)
+
+    if steps is None:
+        if topic == 6:
+            text = "직전 안내를 확인할 수 없어요. 다시 듣고 싶은 내용을 말씀해 주세요."
+        else:
+            text = "현재 화면 상태를 확인할 수 없어요. 화면에 표시된 안내를 확인해 주세요."
+        return LLMFunctionResponse(
+            function_name="get_usage_guidance",
+            status="insufficient_information",
+            text=text,
+        )
+
+    text = steps[0] if delivery == 1 else "\n".join(
+        f"{number}. {step}" for number, step in enumerate(steps, 1)
+    )
+    return LLMFunctionResponse(
+        function_name="get_usage_guidance",
+        status="ok",
+        text=text,
+    )
+
+
+def _pesticide_information_response(
+    context: DiagnosisLLMInput, topic: int, product: int
+) -> LLMFunctionResponse:
+    name = "get_pesticide_information"
+    unavailable = (
+        "이 진단 기록에서 요청하신 농약 정보를 확인할 수 없어요. "
+        "제품 표시사항과 PSIS 등록정보를 확인해 주세요."
+    )
+    if _retake_reason(context) is not None or context.decision_status != "disease":
+        return _response(
+            name, context, "insufficient_information",
+            "농약 정보를 안내하기 전에 작물과 병해를 확인해 주세요.",
+        )
+    if topic == 11:
+        return _response(
+            name, context, "insufficient_information",
+            "이 기록으로는 혼용 가능 여부를 확인할 수 없어요. 제품 표시사항을 확인해 주세요.",
+        )
+
+    candidates = context.pesticides
+    if product == 1 and len(candidates) > 1:
+        return _response(
+            name, context, "needs_clarification", "어떤 농약 제품인지 이름을 알려 주세요.",
+        )
+    verified = [
+        item for item in candidates
+        if item.source == "PSIS"
+        and item.verification_status == "verified"
+        and item.synced_at is not None
+        and item.name.strip()
+    ]
+    if not verified:
+        return _response(name, context, "insufficient_information", unavailable)
+
+    if topic == 10 and (product == 1 or len({item.name for item in verified}) < 2):
+        return _response(
+            name, context, "insufficient_information",
+            "비교하려면 확인된 제품 정보가 두 개 이상 필요해요.",
+        )
+
+    entries = []
+    for item in verified:
+        phi = item.safety.phi_days
+        reentry = item.safety.reentry_hours
+        fields = {
+            1: None,
+            2: item.dilution,
+            3: item.usage,
+            4: f"수확 전 사용 금지 기간 {phi}일" if phi is not None else None,
+            5: f"살포 후 재출입 간격 {reentry}시간" if reentry is not None else None,
+            6: "이 기록에 PSIS 검증 정보가 있어요",
+            7: item.active_ingredient,
+            8: item.active_ingredient,
+            9: item.safety_notes,
+            10: item.active_ingredient,
+        }
+        value = fields[topic]
+        if topic in (1, 8, 10):
+            entries.append(f"{item.name}: {value.strip()}" if value and value.strip() else item.name)
+        elif value and value.strip():
+            entries.append(f"{item.name}: {value.strip()}")
+        elif product == 2:
+            entries.append(f"{item.name}: 요청하신 항목은 확인되지 않았어요")
+
+    if not entries or (
+        topic not in (1, 8, 10)
+        and all(entry.endswith("요청하신 항목은 확인되지 않았어요") for entry in entries)
+    ):
+        return _response(name, context, "insufficient_information", unavailable)
+
+    text = "; ".join(dict.fromkeys(entries))
+    if topic == 10:
+        text = "확인된 제품 정보를 나란히 안내할게요. " + text
+    return _response(name, context, "ok", text)

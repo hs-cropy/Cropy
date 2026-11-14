@@ -81,8 +81,29 @@ def test_invalid_calls_are_rejected_with_400(client, diagnosis_id, call):
     assert res.json()["code"] == "FUNCTION_CALL_INVALID"
 
 
-def test_not_implemented_function_returns_501(client, diagnosis_id):
-    # 잡담은 형식상 유효하지만 handler가 아직 없다. 구현되면 이 테스트는 200으로 바꾼다.
+def test_chit_chat_is_answered(client, diagnosis_id):
+    res = client.post(URL, json={"diagnosis_id": diagnosis_id, "function_call": "<hs_8>()<hs_end>"})
+    assert res.status_code == 200, res.text
+    assert res.json()["function_name"] == "chit_chat" and res.json()["status"] == "ok"
+
+
+def test_usage_guidance_uses_ui_stage(client, diagnosis_id):
+    call = "<hs_7>(topic=1, delivery=1)<hs_end>"
+    without = client.post(URL, json={"diagnosis_id": diagnosis_id, "function_call": call})
+    assert without.status_code == 200 and without.json()["status"] == "insufficient_information"
+    on_result = client.post(URL, json={"diagnosis_id": diagnosis_id, "function_call": call, "ui_stage": "result"})
+    assert on_result.status_code == 200 and on_result.json()["status"] == "ok"
+
+
+def test_unimplemented_function_returns_501(client, diagnosis_id, monkeypatch):
+    # 계약에 새 기능이 생겼는데 handler가 아직 없을 때
+    from app.api.routes import voice
+    from app.services.llm_function_handler import FunctionHandlerNotImplemented
+
+    def not_ready(*args, **kwargs):
+        raise FunctionHandlerNotImplemented("new_function")
+
+    monkeypatch.setattr(voice, "handle_function_output", not_ready)
     res = client.post(URL, json={"diagnosis_id": diagnosis_id, "function_call": "<hs_8>()<hs_end>"})
     assert res.status_code == 501, res.text
     assert res.json()["code"] == "FUNCTION_NOT_IMPLEMENTED"

@@ -78,8 +78,7 @@ response = handle_function_output(
 
 모델 계약의 함수표에는 인자별 허용 개수가 들어 있다. handler의 정수별 의미는 현재 hs-call-v2 학습 계약을 따른다.
 
-핸들러는 인자 이름과 허용 개수를 추가 확인한다. 안내 기능은 `topic`, 확인 질문은 `target`을 사용한다. 다르면 `InvalidFunctionContract`를 발생시킨다.
-
+핸들러는 인자 이름과 허용 개수를 추가 확인한다. 진단·점수·재촬영·관리 안내는 topic, 확인 질문은 target, 지원 범위 안내는 reason을 사용한다. 다르면 InvalidFunctionContract를 발생시킨다.
 허용 개수만으로는 같은 개수 안에서 의미가 재배열된 변경까지 감지할 수 없다. 학습 계약의 인자 의미나 순서가 바뀌면 handler와 테스트도 함께 갱신해야 한다.
 
 ## 구현 범위
@@ -91,17 +90,15 @@ response = handle_function_output(
 | `get_recapture_guidance` | where, why, certainty, provenance |
 | `get_care_information` | causes, prevention, priority |
 
-다음 기능은 파서에서 유효하게 분석되더라도 아직 handler가 구현되어 있지 않다.
+`handle_scope_limit`은 `reason` 인자로 지원 범위를 안내한다.
 
-- `get_pesticide_information`
+`get_pesticide_information`은 기록에 있는 PSIS 검증 농약 정보만 안내한다.
 
-- `handle_scope_limit`
+`get_usage_guidance`는 화면 상태(`ui_stage`)에 맞춰 다음 할 일을 안내한다.
 
-- `get_usage_guidance`
+`chit_chat`은 인자 없이 짧은 응답과 앱 기능 안내를 반환한다.
 
-- `chit_chat`
-
-미구현 기능은 `FunctionHandlerNotImplemented`를 발생시킨다. 이를 사용자 질문이 서비스 범위를 벗어났다는 응답으로 바꾸지 않는다.
+9개 기능 모두 handler가 구현되어 있다. 계약에 새 기능이 추가되었는데 handler가 없으면 `FunctionHandlerNotImplemented`를 발생시킨다. 이를 사용자 질문이 서비스 범위를 벗어났다는 응답으로 바꾸지 않는다.
 
 ## 응답 형식
 
@@ -222,6 +219,16 @@ response = handle_function_output(
 현재 입력만으로 실제 피해량, 식용 안전, 회복·악화 추세를 판단하지 않는다.
 
 해당 한계를 설명하고 `insufficient_information`을 반환한다.
+
+## 지원 범위 안내
+
+`handle_scope_limit`은 `unsupported_scope`를 반환하며, `reason`에 따라 다음을 안내한다.
+
+- `1` (crop): 진단 대상은 고추·무·배추다.
+- `2` (action): 앱은 물 주기, 주문, 기기 조작을 직접 실행하지 않는다.
+- `3` (input): 진단할 작물의 잎을 밝은 곳에서 초점을 맞춰 촬영하도록 안내한다.
+
+예를 들어 `<hs_6>(reason=2)<hs_end>`는 동작을 실행할 수 없는 이유를 안내한다.
 
 ## 점수 안내
 
@@ -353,3 +360,17 @@ Mock 결과에는 다음 문구를 붙인다.
 이 변경은 파서와 저장된 진단 컨텍스트를 연결하는 서비스 계층 구현이다.
 
 API 연결은 `POST /api/v1/voice/function-call`로 됐다(2026-11-11). 기능 선택 모델은 기기별로 다른 곳에서 돌고(오렌지파이 RKLLM, PC·안드로이드 브라우저 Qwen q4f16, 아이폰 Safari 소형 분류기) 모두 같은 문자열을 이 엔드포인트로 보낸다. 아이폰용 분류기는 뜻이 겹치는 topic을 접어서 보내므로(예측 지표 comparison→ranking, limits→confidence, 재촬영 provenance→certainty, 농약 checklist→verification) 그 topic들은 분류기 경로에서 오지 않는다. 실제 모델 호출, STT·TTS 연결, Orange Pi 실행은 별도 이슈(#163, #165~#170)에서 진행한다.
+
+### 앱 사용 안내
+
+`get_usage_guidance`는 `topic` 1~6과 `delivery` 1~2를 받는다.
+음성 API는 요청의 `ui_stage`를 넘기며, 이 값이 있으면 현재 화면에 맞는 다음 행동을 안내한다.
+화면 상태가 필요한 요청에 해당 정보가 없거나 직전 안내를 다시 들을 수 없는 경우에는
+`insufficient_information`을 반환한다.
+
+### 농약 정보 안내
+
+`get_pesticide_information`은 진단 기록의 PSIS 검증 항목만 사용한다.
+현재 제품이 모호하면 제품 이름을 되묻고, 확인된 정보가 없거나
+혼용 가능 여부를 확인할 수 없으면 정보 부족 응답을 반환한다.
+제품 선택 식별자를 받기 전에는 기록에 제품이 하나일 때만 현재 제품으로 처리한다.
