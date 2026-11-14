@@ -198,3 +198,26 @@ v2c 라벨(validation 1,160행) 기준 세 번의 학습:
 한 건씩 생성으로 다시 평가한 평균 모델은 97.0%다. 16개씩 생성과 다른 답은 1행뿐이고(한 건씩 쪽이 맞음), 저장 후 다시 불러와도 같다.
 
 **결정(2026-11-03): 보드·서버에는 평균 모델 `cropy_qwen_v2/soup_v2_v2b_v2c/merged_hf`를 쓴다.** 어댑터가 아니라 병합된 모델이므로 PEFT 없이 그대로 불러온다. 프롬프트·토큰 정보는 같은 폴더의 `cropy_prompt.json`.
+
+## 기능 선택 모델 서버 (2026-11-11)
+
+`select_server.py`: 발화 + 화면 상태 → `<hs_N>(인자=값)<hs_end>` 한 줄을 내는 작은 FastAPI 서버. 백엔드의
+`POST /api/v1/voice/select-function`(설정 `FUNCTION_SELECTOR_ENGINE=http`, `FUNCTION_SELECTOR_URL`)이 부른다.
+모델을 백엔드 프로세스에 올리지 않는 이유는 메모리(float32 약 9GB)와 의존성(torch·transformers) 때문이다. STT(8200)·TTS(8100)와 같은 방식이다.
+
+```
+python -m uvicorn select_server:app --app-dir ml/qwen --host 127.0.0.1 --port 8300
+# QWEN_DIR=<병합 모델 폴더, cropy_prompt.json 포함>  QWEN_THREADS=8  QWEN_DEVICE=cpu|cuda
+```
+
+| 경로 | 입력 | 출력 |
+|---|---|---|
+| `GET /health` | - | `status`(loading/ready/error), `device`, `load_seconds`, `prefix_tokens`, `busy` |
+| `POST /select` | `{"utterance": "...", "context": {...}}` | `{"function_call": "<hs_4>(topic=2, product=1)<hs_end>", "input_tokens", "new_tokens", "elapsed_ms"}` |
+
+- 화면 상태에는 `spec_v2.compact_context`를 한 번 더 적용한다(멱등). 백엔드(`services/voice_context.py`)와 브라우저 안 선택기가 같은 규칙으로 줄여 보내므로 입력이 학습 때와 같아진다.
+- 시스템 프롬프트(약 1,160토큰)의 상태를 기동 때 한 번 계산해 두고 요청마다 발화·화면 상태만 읽는다. PC CPU(float32)에서 문장당 2~5초.
+- 출력은 검증하지 않고 그대로 돌려준다. 형식·범위 검사는 백엔드 파서가 하고, 틀리면 사용자에게 "질문을 잘 이해하지 못했어요"로 간다.
+- 인증은 없다. 같은 PC나 보드 안(127.0.0.1)에서만 부른다. 외부 테스터용 평가 서버(`eval/`)와는 별개다.
+- **브라우저·보드 선택기와의 관계**: 아이폰 분류기·PC/안드로이드 Qwen q4f16·오렌지파이 RKLLM은 이 서버를 거치지 않고 기기 안에서 같은 문자열을 만든다(#165~#169). 그때도 입력(발화, `compact_context`, `cropy_prompt.json`의 시스템 프롬프트)과 출력 계약은 이 서버와 같아야 하고, 결과는 모두 `/api/v1/voice/function-call`로 간다. 오프라인 화면(`frontend/public/offline/`)에 붙일 때 이 계약을 그대로 쓴다.
+- 테스트: `ml/tests/test_select_server.py` (모델 없이 계약만).
