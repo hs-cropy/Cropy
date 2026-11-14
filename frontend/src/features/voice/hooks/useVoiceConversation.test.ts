@@ -691,6 +691,20 @@ describe("useVoiceConversation", () => {
     expect(result.current.state).toBe("idle");
   });
 
+  it("판별 불가는 저장되지 않으므로 현재 진단을 바꾸지 않고 응답의 안내 문장을 읽는다 (#179)", async () => {
+    pipeline.screen = { diagnosisId: "old-diag", uiStage: "result", path: "/diagnosis" };
+    pipeline.diagnoseImage.mockResolvedValueOnce({
+      id: "unsaved", disease_name: "판별 불가", category: "other", recapture: null, save_status: "skipped",
+      speech_script: ["사진에서 작물 잎을 찾지 못했어요.", "잎이 잘 보이게 다시 찍어 주세요."],
+    });
+    const captureFrame = vi.fn().mockResolvedValue(new File(["jpg"], "desk.jpg", { type: "image/jpeg" }));
+    const { result } = renderHook(() => useVoiceConversation({ captureFrame }));
+    await act(async () => { await result.current.captureNow(); });
+    expect(pipeline.fetchSpeechScript).not.toHaveBeenCalled();
+    expect(result.current.assistantText).toContain("작물 잎을 찾지 못했어요");
+    expect(result.current.screen.diagnosisId).toBe("old-diag");
+  });
+
   it("두 번째 녹음부터는 열어 둔 마이크 스트림을 다시 쓴다", async () => {
     const { result } = renderHook(() => useVoiceConversation());
     await act(async () => { await result.current.start(); });
