@@ -1,0 +1,22 @@
+[
+ {
+  "utterance": "이거 무슨 병이야",
+  "context": {
+   "ui_stage": "result",
+   "predicted_crop": "고추",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "disease",
+   "disease_name": "고추 탄저병",
+   "confidence": 0.9223
+  },
+  "expected_suffix": "<|im_end|>\n<|im_start|>user\n{\"utterance\":\"이거 무슨 병이야\",\"context\":{\"ui_stage\":\"result\",\"predicted_crop\":\"고추\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"disease\",\"disease_name\":\"고추 탄저병\",\"confidence\":0.9223}}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+ },
+ {
+  "utterance": "약 \"얼마나\" 타?\n",
+  "context": {
+   "ui_stage": "no_photo"
+  },
+  "expected_suffix": "<|im_end|>\n<|im_start|>user\n{\"utterance\":\"약 \\\"얼마나\\\" 타?\\n\",\"context\":{\"ui_stage\":\"no_photo\"}}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+ }
+]

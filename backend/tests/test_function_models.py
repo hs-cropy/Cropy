@@ -116,3 +116,12 @@ def test_publish_rejects_missing_files_unknown_kind_and_size_mismatch(tmp_path):
     with pytest.raises(ValueError, match="형식"):
         exporter.publish_function_bundle("web_qwen", qwen, tmp_path / "out")
     assert not (tmp_path / "out/function-models.json").exists()
+
+
+def test_publish_rejects_file_too_big_for_browser_cache(tmp_path, monkeypatch):
+    # Chrome은 1GB가 넘는 응답을 Cache Storage에 넣지 못한다. 한도를 낮춰 나누지 않은 큰 파일을 막는지 본다
+    monkeypatch.setattr(exporter, "MAX_BUNDLE_FILE_BYTES", 8)
+    source = mobile_source(tmp_path / "clf")
+    with pytest.raises(ValueError, match="shard_bundle"):
+        exporter.publish_function_bundle("mobile_clf", source, tmp_path / "out")
+    assert not (tmp_path / "out/function-models.json").exists()

@@ -17,7 +17,6 @@ import { WordPieceTokenizer } from "./wordpiece";
 
 export const FUNCTION_CACHE = "transformers-cache";
 const DB_NAME = "cropy-on-device";
-const RECORD_KEY = "fn:mobile_clf";
 const MAX_LENGTH = 256; // 학습과 같다
 const REQUIRED = ["model_int8.onnx", "tokenizer.json", "labels.json"];
 
@@ -40,12 +39,13 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-export async function readBundleRecord(): Promise<BundleRecord | null> {
+/** 오프라인 화면이 다 받은 뒤 적어 둔 묶음 정보 (`fn:<kind>`). 없으면 null */
+export async function readBundleRecord(kind = "mobile_clf"): Promise<BundleRecord | null> {
   if (typeof indexedDB === "undefined") return null;
   const db = await openDb();
   try {
     return await new Promise((resolve, reject) => {
-      const request = db.transaction("assets", "readonly").objectStore("assets").get(RECORD_KEY);
+      const request = db.transaction("assets", "readonly").objectStore("assets").get(`fn:${kind}`);
       request.onsuccess = () => resolve((request.result as BundleRecord | undefined) ?? null);
       request.onerror = () => reject(request.error);
     });
