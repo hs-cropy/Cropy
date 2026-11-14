@@ -61,6 +61,11 @@ cd backend
 ```
 
 - `mobile_clf` 폴더에는 `model_int8.onnx`·`tokenizer.json`·`tokenizer_config.json`·`labels.json`이 있어야 한다. `web_qwen` 폴더는 `files.json`(`[[이름, 바이트], ...]`)에 적힌 파일과 `prefix_q4f16.json`·`prefix_q4f16.bin`이 있어야 하고, 크기가 `files.json`과 다르면 멈춘다.
+- 묶음 파일 하나는 512MB를 넘을 수 없다. 브라우저가 파일을 통째로 받아 SHA-256을 확인한 뒤 캐시에 넣는데, Chrome은 1GB가 넘는 응답을 Cache Storage에 넣지 못한다(2026-11-15 1.09GB 디코더에서 확인). Drive의 `web_onnx/2b_soup6/bundle`은 나누지 않은 원본이므로 아래 순서로 준비한다(`ml/qwen/MODEL_ASSETS.md`).
+  1. q4f16 파일만 새 폴더에 복사: `config.json`·`generation_config.json`·`tokenizer.json`·`tokenizer_config.json`·`chat_template.jinja`·`cropy_prompt.json`·`onnx/decoder_model_merged_q4f16.onnx(+_data)`·`onnx/embed_tokens_q4f16.onnx(+_data)` (q4 그래프는 CPU용이라 뺀다)
+  2. `python ml/qwen/onnx_web/shard_bundle.py --bundle <폴더> --graphs decoder_model_merged_q4f16.onnx,embed_tokens_q4f16.onnx` → 256MB 이하 조각과 `config.json`의 `use_external_data_format`
+  3. `python ml/qwen/onnx_web/prefix_state.py --bundle <폴더>` → `prefix_q4f16.json`·`.bin` (시스템 프롬프트 1,161토큰 상태, 23MB)
+  4. 폴더의 모든 파일로 `files.json`(`[[이름, 바이트], ...]`)을 만든 뒤 위 export 명령
 - 스크립트는 파일마다 SHA-256을 계산해 `offline-assets/function/<kind>/<version 앞 16자>/`에 복사하고 `offline-assets/function-models.json`을 원자적으로 교체한다. 묶음 `version`은 파일 목록(이름·크기·SHA-256)의 해시다. CNN `manifest.json`과 파일을 나눠 두므로 기능 선택 모델만 바뀌어도 CNN 업데이트 다이얼로그가 뜨지 않는다.
 - `GET /api/v1/offline/manifest`는 `function-models.json`이 있으면 `function_models`로 합쳐 준다. 오프라인 화면은 CNN처럼 정적 파일 `/offline-assets/function-models.json`을 직접 읽는다.
 - 오프라인 화면은 진단 파일이 준비된 뒤 **음성 질문 파일 (선택)** 카드를 보인다. 받기 전에 기기 종류와 `navigator.storage.estimate()`로 크기·Wi-Fi·저장 공간 안내를 바꾼다. 파일마다 크기와 SHA-256을 확인한 뒤에만 Cache Storage `transformers-cache`에 넣으므로 검증에 실패한 파일은 남지 않는다. 키는 파일 주소(`<origin><base_url>/<name>`)다. #167·#168에서 transformers.js가 같은 주소로 요청하면 네트워크 없이 캐시에서 읽는다. 다 받으면 IndexedDB `assets`의 `fn:<kind>`에 묶음 정보를 적고 이전 버전 파일을 지운다. 연결이 끊기면 다시 받을 때 이미 받은 파일을 건너뛴다. 브라우저가 캐시를 지웠으면(특히 iOS) 다시 받기를 보인다.

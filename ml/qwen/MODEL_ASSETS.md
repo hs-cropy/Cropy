@@ -27,7 +27,7 @@
 | 종류 | 둘 곳 | 이어지는 설정 |
 |---|---|---|
 | `server` | 아무 폴더 (예: `eval/models/merged_hf`) | `QWEN_DIR=<폴더> python -m uvicorn select_server:app --port 8300` (`ml/qwen/`), 백엔드 `FUNCTION_SELECTOR_ENGINE=http` |
-| `mobile_clf`, `web_qwen` | 아무 폴더 | `backend/scripts/export_browser_model.py --function-bundle mobile_clf=<폴더> --function-bundle web_qwen=<폴더>` → `frontend/public/offline-assets/function/<kind>/<version>/`에 복사되고 `function-models.json`이 갱신된다 (`docs/OFFLINE_WEB.md`, #166) |
+| `mobile_clf`, `web_qwen` | 아무 폴더 (`web_qwen`은 먼저 256MB 이하로 나누고 프롬프트 상태를 만든다: `docs/OFFLINE_WEB.md`) | `backend/scripts/export_browser_model.py --function-bundle mobile_clf=<폴더> --function-bundle web_qwen=<폴더>` → `frontend/public/offline-assets/function/<kind>/<version>/`에 복사되고 `function-models.json`이 갱신된다 (`docs/OFFLINE_WEB.md`, #166) |
 | `board_rkllm` | 보드의 모델 폴더 | `docs/reports/week11/오렌지파이_Qwen_보드_배포_가이드.md`, #169 |
 
 ## 검사

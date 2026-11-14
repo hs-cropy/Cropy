@@ -67,6 +67,10 @@ def _inside(root, name):
     return path
 
 
+# 묶음 파일 하나의 최대 크기. shard_bundle.py 기본값(256MB)으로 나누면 넘지 않는다
+MAX_BUNDLE_FILE_BYTES = 512 * 2**20
+
+
 def function_bundle_files(kind, source):
     if kind == "mobile_clf":
         names = list(MOBILE_CLF_FILES)
@@ -89,6 +93,11 @@ def function_bundle_files(kind, source):
         _safe_name(name)
         if not _inside(source, name).is_file():
             raise ValueError(f"{kind} 묶음에 필요한 파일이 없습니다: {name}")
+        # 브라우저는 파일 하나를 통째로 메모리에 받아 SHA-256을 확인한 뒤 Cache Storage에 넣는다.
+        # Chrome은 1GB가 넘는 응답을 캐시에 넣지 못하므로(2026-11-15 1.09GB 디코더에서 확인) 큰 파일은 나눠야 한다
+        if (source / name).stat().st_size > MAX_BUNDLE_FILE_BYTES:
+            raise ValueError(f"{name} 이 {MAX_BUNDLE_FILE_BYTES // 2**20}MB 를 넘습니다. "
+                             "ml/qwen/onnx_web/shard_bundle.py 로 나눈 뒤 files.json 을 다시 만드세요")
     return names
 
 
