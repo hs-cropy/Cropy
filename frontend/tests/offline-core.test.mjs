@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { gradeOf, isNotCrop, resultTimeSentence, recordTime } from '../public/offline/core.mjs';
-import { softmax, fuse, summarize, installView, isDesktopDevice, DESKTOP_VIEWS, failurePhase, viewFromHash, recordsNotice, updateAvailable } from '../public/offline/core.mjs';
+import { softmax, fuse, summarize, installView, isDesktopDevice, DESKTOP_VIEWS, failurePhase, viewFromHash, recordsNotice, updateAvailable, syncStateOf } from '../public/offline/core.mjs';
 const bundle = { model_version: 'm1', preprocessing_version: 'p1', version: 'v1',
   diseases: [{model_class_id: 2, name: '검은무늬병', crop_type: '무', category:'disease'},
              {model_class_id: 3, name:'노균병', crop_type:'무', category:'disease'}],
@@ -149,6 +149,15 @@ test('records show sync-failed first, sync-pending only while offline', () => {
   assert.equal(recordsNotice(records('pending'), true), null);
   assert.equal(recordsNotice(records('saved'), false), null);
   assert.equal(recordsNotice([], false), null);
+});
+test('not-crop records stay on the device and never ask for a server retry (#179)', () => {
+  const notCrop = status => ({ sync_status: status, result: { category: 'other' } });
+  assert.equal(syncStateOf(notCrop('failed')), 'local_only');
+  assert.equal(syncStateOf(notCrop('pending')), 'local_only');
+  assert.equal(syncStateOf(notCrop('saved')), 'saved');   // 예전에 이미 올라간 기록
+  assert.equal(syncStateOf({ sync_status: 'failed', result: { category: 'disease' } }), 'failed');
+  assert.equal(recordsNotice([notCrop('failed')], true), null);
+  assert.equal(recordsNotice([notCrop('pending')], false), null);
 });
 test('an update is offered only for a different, well-formed bundle version', () => {
   const a = 'a'.repeat(64), b = 'b'.repeat(64);
