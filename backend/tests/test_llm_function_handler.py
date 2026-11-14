@@ -311,6 +311,35 @@ def dispatch(function_name, topic, context):
     )
 
 
+@pytest.mark.parametrize(
+    ("reason", "expected"),
+    [
+        (1, "고추·무·배추만 진단"),
+        (2, "직접 실행할 수는 없어요"),
+        (3, "밝은 곳에서 초점을 맞춰"),
+    ],
+)
+def test_scope_limit_explains_the_selected_reason(context, reason, expected):
+    before = context.model_dump()
+    result = handle_function_output(f"<hs_6>(reason={reason})<hs_end>", context, CONTRACT)
+
+    assert result.function_name == "handle_scope_limit"
+    assert result.status == "unsupported_scope"
+    assert expected in result.text
+    assert context.disease_name not in result.text
+    assert context.model_dump() == before
+
+
+@pytest.mark.parametrize("argument,count", [("topic", 3), ("reason", 4)])
+def test_scope_limit_rejects_an_incompatible_contract(context, argument, count):
+    functions = list(CONTRACT.functions)
+    functions[6] = FunctionSpec("handle_scope_limit", ((argument, count),))
+    contract = replace(CONTRACT, functions=tuple(functions))
+
+    with pytest.raises(InvalidFunctionContract):
+        handle_function_output(f"<hs_6>({argument}=1)<hs_end>", context, contract)
+
+
 def test_result_preserves_confusion_state(context):
     result = dispatch("get_diagnosis", "result", context)
 
