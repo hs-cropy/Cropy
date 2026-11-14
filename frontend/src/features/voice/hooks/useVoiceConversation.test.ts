@@ -465,6 +465,37 @@ describe("useVoiceConversation", () => {
     expect(result.current.error).toBeNull();
   });
 
+  it("안드로이드에서는 답을 읽기 전에 마이크를 놓는다 (켜 두면 speechSynthesis 소리가 나지 않음)", async () => {
+    const stopTrack = vi.fn();
+    const androidStream = { active: true, getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
+    recorderMock.start.mockImplementation(async () => ({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: androidStream }));
+    const ua = vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (Linux; Android 14; SM-S921N) AppleWebKit/537.36 Chrome/131 Mobile Safari/537.36");
+    pipeline.speakAndWait.mockImplementationOnce(async () => { expect(stopTrack).toHaveBeenCalled(); });
+
+    const { result } = renderHook(() => useVoiceConversation());
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+
+    expect(pipeline.speakAndWait).toHaveBeenCalledTimes(1);
+    expect(stopTrack).toHaveBeenCalled();
+    ua.mockRestore();
+  });
+
+  it("안드로이드가 아니면 답을 읽는 동안에도 마이크를 유지한다", async () => {
+    const stopTrack = vi.fn();
+    const pcStream = { active: true, getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
+    recorderMock.start.mockImplementation(async () => ({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: pcStream }));
+    const ua = vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36");
+
+    const { result } = renderHook(() => useVoiceConversation());
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+
+    expect(pipeline.speakAndWait).toHaveBeenCalledTimes(1);
+    expect(stopTrack).not.toHaveBeenCalled();
+    ua.mockRestore();
+  });
+
   it("답변을 읽는 동안은 speaking이고, 다 읽으면 idle로 돌아온다", async () => {
     let finishSpeaking!: () => void;
     pipeline.speakAndWait.mockImplementationOnce(() => new Promise<void>((resolve) => { finishSpeaking = resolve; }));
