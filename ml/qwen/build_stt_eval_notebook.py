@@ -1,0 +1,138 @@
+"""Write the Colab notebook that scores the deployed Qwen model on real STT output instead of typed text.
+
+Output
+  cropy_qwen_v2_stt_eval_colab.ipynb   upload to Drive MyDrive/cropy_qwen_v2/ with onnx_web/eval_web_onnx.py in
+                                        cropy_qwen_v2/stt_eval_scripts/ and the roundtrip file in cropy_qwen_v2/stt_eval/
+
+Input: stt_roundtrip/roundtrip.py output (validation 1,160 rows x clean / snr10 / snr5, MeloTTS -> SenseVoice STT).
+Model: the browser bundle web_onnx/2b/bundle (q4f16), which answered like the float model on 297/300 rows.
+Every run uses all 1,160 validation rows, so typed vs STT differences are measured on the same rows and labels.
+"""
+import hashlib
+import json
+from pathlib import Path
+
+import build_train_notebook as train
+
+HERE = Path(__file__).resolve().parent
+SCRIPT = HERE / "onnx_web" / "eval_web_onnx.py"
+TEXTS = "val_stt.jsonl"
+# (tag, condition, text field, strip punctuation): typed baseline, what the app will feed, and two ablations
+RUNS = [
+    ("_typed", None, None, False),
+    ("_clean", "clean", "stt_text", True),
+    ("_snr10", "snr10", "stt_text", True),
+    ("_snr5", "snr5", "stt_text", True),
+    ("_clean_punct", "clean", "stt_text", False),
+    ("_clean_raw", "clean", "stt_raw", True),
+]
+
+
+def lf_sha(path):
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
+def notebook(data_sha, texts_sha):
+    md, code = train.md, train.code
+    cells = [
+        md(f"""
+# Cropy Qwen STT 강건성 평가
+
+지금까지 Qwen 정확도(97.0%)는 사람이 쓴 문장으로 잰 값이다. 같은 검증 1,160문장을 **합성 음성(MeloTTS) → 실제 STT(SenseVoice)**로
+받아 적은 문장으로 다시 재서, 실제 사용에서 얼마나 떨어지는지 본다. 라벨은 그대로다.
+
+| 실행 | 입력 |
+|---|---|
+| `_typed` | 원문 (기준) |
+| `_clean` · `_snr10` · `_snr5` | STT 결과(용어 보정 후, 문장부호 제거) · 조용 / 잡음 10dB / 잡음 5dB |
+| `_clean_punct` | 조용, 문장부호를 지우지 않음 (학습 데이터에 문장부호가 없어서 앱에서 지워야 하는지 확인) |
+| `_clean_raw` | 조용, 용어 보정 전 문장 (보정이 도움이 되는지 확인) |
+
+- 모델: 웹 묶음 `web_onnx/2b/bundle`의 q4f16 (원본과 300건 중 297건 같은 답).
+- 런타임: **A100**(L4도 됨). 실행 6번 × 1,160건, 약 30분. 결과는 `cropy_qwen_v2/stt_eval/`.
+- 먼저 Drive `cropy_qwen_v2/stt_eval/`에 `{TEXTS}`를 올린다(바탕화면에 복사해 둠).
+"""),
+        code(f"""
+from google.colab import drive
+drive.mount('/content/drive')
+from pathlib import Path
+import hashlib, json, os, shutil, subprocess, sys
+DRIVE_DIR = Path('/content/drive/MyDrive/cropy_qwen_v2')
+DATA_FILE = DRIVE_DIR / '{train.DATA_FILE}'
+DATA_SHA256 = '{data_sha}'
+OUT = DRIVE_DIR / 'stt_eval'
+TEXTS = OUT / '{TEXTS}'
+TEXTS_SHA256 = '{texts_sha}'
+BUNDLE_DRIVE = DRIVE_DIR / 'web_onnx' / '2b' / 'bundle'
+WORK = Path('/content/stt_eval')
+WORK.mkdir(parents=True, exist_ok=True)
+RUNS = {RUNS!r}
+assert hashlib.sha256(DATA_FILE.read_bytes()).hexdigest() == DATA_SHA256, '데이터 파일이 노트북과 다릅니다'
+assert TEXTS.exists(), f'{{TEXTS}}를 먼저 올리세요'
+assert hashlib.sha256(TEXTS.read_bytes().replace(bytes([13, 10]), bytes([10]))).hexdigest() == TEXTS_SHA256, 'STT 결과 파일이 노트북과 다릅니다'
+BUNDLE = WORK / 'bundle'
+if not (BUNDLE / 'cropy_prompt.json').exists():
+    shutil.copytree(BUNDLE_DRIVE, BUNDLE, dirs_exist_ok=True)
+print('묶음', sum(f.stat().st_size for f in BUNDLE.rglob('*') if f.is_file()) / 2**30, 'GB')
+"""),
+        code(f"""
+subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-q', 'onnxruntime-gpu==1.31.1', 'transformers==5.19.0', 'tokenizers==0.23.2'])
+data = (DRIVE_DIR / 'stt_eval_scripts' / 'eval_web_onnx.py').read_bytes().replace(bytes([13, 10]), bytes([10]))
+assert hashlib.sha256(data).hexdigest() == '{lf_sha(SCRIPT)}', 'eval_web_onnx.py가 노트북과 다릅니다(다시 올리세요)'
+(WORK / 'eval_web_onnx.py').write_bytes(data)
+
+def run(*argv):
+    p = subprocess.Popen([sys.executable, '-u', *map(str, argv)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                         env=dict(os.environ, PYTHONUNBUFFERED='1'))
+    for line in p.stdout:
+        print(line, end='')
+    assert p.wait() == 0, f'{{argv[0]}} 실패'
+"""),
+        md("## 평가 (실행마다 1,160건, 끝난 실행은 건너뜀)"),
+        code("""
+for tag, cond, field, strip in RUNS:
+    if (OUT / f'web_q4f16{tag}_metrics.json').exists():
+        print('이미 있음', tag); continue
+    args = ['--bundle', BUNDLE, '--data', DATA_FILE, '--data-sha', DATA_SHA256, '--dtype', 'q4f16', '--out-dir', WORK,
+            '--sim-n', -1, '--device', 'cuda', '--tag', tag]
+    if cond:
+        args += ['--texts', TEXTS, '--condition', cond, '--text-field', field]
+    if strip:
+        args += ['--strip-punct']
+    run(WORK / 'eval_web_onnx.py', *args)
+    for name in (f'web_q4f16{tag}_metrics.json', f'web_q4f16{tag}_cases.jsonl'):
+        shutil.copy(WORK / name, OUT / name)
+"""),
+        md("## 요약"),
+        code("""
+rows = []
+for tag, cond, field, strip in RUNS:
+    m = json.loads((OUT / f'web_q4f16{tag}_metrics.json').read_text())
+    rows.append((tag, m))
+    print(f"{tag:14s} 형식 {m['format_valid']:.4f} 기능 {m['function']:.4f} 인자까지 {m['exact']:.4f}")
+base = dict(rows)['_typed']
+print()
+print(f"{'함수':28s}" + ''.join(f'{t:>14s}' for t, _ in rows))
+for fn in base['per_function']:
+    print(f'{fn:28s}' + ''.join(f"{m['per_function'][fn]['exact']:14.3f}" for _, m in rows))
+(OUT / 'summary.json').write_text(json.dumps({t: {k: m[k] for k in ('format_valid', 'function', 'exact', 'per_function')} for t, m in rows},
+                                             ensure_ascii=False, indent=2))
+"""),
+    ]
+    return {"cells": cells, "metadata": {"accelerator": "GPU", "colab": {"provenance": [], "gpuType": "A100"},
+                                         "kernelspec": {"display_name": "Python 3", "name": "python3"},
+                                         "language_info": {"name": "python"}},
+            "nbformat": 4, "nbformat_minor": 5}
+
+
+def main(texts_path):
+    sha = hashlib.sha256((train.DATA / train.DATA_FILE).read_bytes()).hexdigest()
+    texts_sha = lf_sha(Path(texts_path))
+    out = HERE / "cropy_qwen_v2_stt_eval_colab.ipynb"
+    out.write_text(json.dumps(notebook(sha, texts_sha), ensure_ascii=False, indent=1), encoding="utf-8", newline="\n")
+    print(json.dumps(dict(notebook=str(out), texts_sha=texts_sha, script_sha=lf_sha(SCRIPT))))
+
+
+if __name__ == "__main__":
+    import sys
+    main(sys.argv[1])

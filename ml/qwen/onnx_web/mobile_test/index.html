@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cropy Qwen 휴대폰 측정</title>
+<style>
+:root { --paper:#FBF8F1; --surface:#fff; --ink:#3D2F1A; --khaki:#8C7B54; --line:#E8E0CF; --brand:#F5B301; --ok:#3F7D3A; --bad:#B0452C; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --paper:#1C1812; --surface:#262019; --ink:#F1E9DA; --khaki:#B8A87F; --line:#3A3226; --ok:#8CC985; --bad:#EE8B72; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font: 15px/1.6 system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left)); }
+main { max-width: 640px; margin: 0 auto; display:flex; flex-direction:column; gap:16px; }
+h1 { font-size: 22px; margin: 4px 0 0; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+.k { color:var(--khaki); font-size:13px; }
+button { font: inherit; font-weight:700; border:0; border-radius:10px; padding:12px 14px; background:var(--brand); color:#3D2F1A; cursor:pointer; }
+button:disabled { opacity:.45; cursor:default; }
+button.ghost { background:transparent; border:1px solid var(--line); color:var(--ink); font-weight:500; }
+.row { display:flex; gap:8px; flex-wrap:wrap; }
+.bar { height:8px; background:var(--line); border-radius:4px; overflow:hidden; }
+.bar i { display:block; height:100%; width:0; background:var(--brand); }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+td, th { padding:6px 4px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+th { color:var(--khaki); font-weight:500; }
+td.n { text-align:right; font-variant-numeric: tabular-nums; white-space:nowrap; }
+.ok { color:var(--ok); font-weight:700; } .bad { color:var(--bad); font-weight:700; }
+code { font-family: ui-monospace, Consolas, monospace; font-size:12px; word-break: break-all; }
+textarea, input, select { font: inherit; width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--paper); color:var(--ink); }
+#log { white-space: pre-wrap; font-family: ui-monospace, Consolas, monospace; font-size:12px; color:var(--khaki); max-height: 160px; overflow:auto; }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <div class="k">CROPY · 오프라인 웹 Qwen 2B (q4f16, WebGPU) 측정</div>
+    <h1>휴대폰에서 기능 선택 모델 돌려 보기</h1>
+  </div>
+
+  <section class="card" id="device"><b>이 기기</b><div id="devinfo" class="k">확인하는 중…</div></section>
+
+  <section class="card">
+    <b>1. 모델 받기·불러오기</b>
+    <div class="k">처음 한 번 약 1.34GB를 받습니다(약 260MB씩 나눠 받음). Wi-Fi에서 하세요. 다시 열면 기기에 저장된 파일을 씁니다. 탭이 꺼졌다 다시 열리면 아래에 지난번 마지막 단계가 표시됩니다.</div>
+    <div class="row"><button id="prefetch">① 파일만 먼저 받기</button></div>
+    <div class="k">①은 파일을 하나씩 받아 메모리에 쌓지 않고 바로 기기에 저장합니다. 끊기면 다시 누르면 이어서 받습니다. 다 받은 뒤 ②를 누르세요.</div>
+    <div class="row"><button id="load">② 불러오기</button><button id="loadwasm" class="ghost">WebGPU 없이(CPU) 시도</button></div>
+    <div class="bar"><i id="prog"></i></div>
+    <div id="loadinfo" class="k"></div>
+  </section>
+
+  <section class="card">
+    <b>2. 기본 시험 16문장</b>
+    <div class="k">기능 8개 × 2문장. 첫 문장은 GPU 준비 시간이 포함돼 느릴 수 있습니다.</div>
+    <div class="row"><button id="short" class="ghost" disabled>짧은 입력 시험 (약 30토큰)</button><button id="runall" disabled>16문장 실행</button></div>
+    <div id="shortinfo" class="k"></div>
+    <table><thead><tr><th>#</th><th>발화 / 출력</th><th class="n">첫 토큰</th><th class="n">전체</th></tr></thead><tbody id="rows"></tbody></table>
+    <div id="summary" class="k"></div>
+  </section>
+
+  <section class="card">
+    <b>3. 직접 입력</b>
+    <select id="ctxsel"></select>
+    <input id="utt" placeholder="예: 이 병 약 얼마나 타서 뿌려">
+    <div class="row"><button id="ask" disabled>실행</button></div>
+    <div id="answer" class="k"></div>
+  </section>
+
+  <section class="card">
+    <b>4. 결과 보내기</b>
+    <div class="k">아래 버튼으로 결과를 복사해 Claude에게 붙여 넣어 주세요.</div>
+    <div class="row"><button id="copy" class="ghost">결과 복사</button></div>
+    <div id="log"></div>
+  </section>
+</main>
+
+<script type="module">
+import { env, AutoTokenizer, AutoModelForCausalLM, DynamicCache, Tensor } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.2';
+
+// Serve the bundle as if it were a model hub: <origin>/model/<file>
+env.allowLocalModels = false;
+env.allowRemoteModels = true;
+env.remoteHost = new URL('./', location.href).href;
+env.remotePathTemplate = '{model}/';
+env.useBrowserCache = true;
+
+const $ = (id) => document.getElementById(id);
+const SIZE = new URLSearchParams(location.search).get('size') === '08b' ? '08b' : '2b';
+const MODEL = SIZE === '08b' ? 'model08b' : 'model2';   // separate cache keys per model
+const FILES = SIZE === '08b' ? 'files08b.json' : 'files.json';
+// Prompt tokens are fed in chunks of this size (0 = all at once). Same output, much lower peak memory on phones.
+const CHUNK = Math.max(0, parseInt(new URLSearchParams(location.search).get('chunk') ?? '128', 10) || 0);
+// prefix=0 turns off the precomputed system-prompt state (prefix_state.py), so the phone prefills all ~1,270 tokens.
+const USE_PREFIX = new URLSearchParams(location.search).get('prefix') !== '0';
+const report = { page: 'cropy-qwen-mobile-3', chunk: CHUNK, usePrefix: USE_PREFIX, size: new URLSearchParams(location.search).get('size') || '2b', started: new Date().toISOString(), device: {}, load: null, prefix: null, runs: [] };
+let tok, model, prompt, presets, endId, prefixMeta = null, prefixBuf = null, DTYPE = 'q4f16';
+const log = (m) => { $('log').textContent += m + '\n'; };
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// Last stage reached, kept across a tab kill so the next visit shows how far the previous attempt got.
+function stage(text) {
+  try { localStorage.setItem('cropy-stage', JSON.stringify({ text, at: new Date().toISOString() })); } catch (e) {}
+}
+try {
+  const last = JSON.parse(localStorage.getItem('cropy-stage') || 'null');
+  if (last) {
+    report.lastVisitStage = last;
+    $('loadinfo').innerHTML = `지난번 마지막 단계: <b>${esc(last.text)}</b> (${last.at.slice(11, 19)} UTC)`;
+  }
+} catch (e) {}
+
+async function deviceInfo() {
+  const d = report.device;
+  d.ua = navigator.userAgent;
+  d.cores = navigator.hardwareConcurrency || null;
+  d.memoryGB = navigator.deviceMemory || null;
+  d.webgpu = !!navigator.gpu;
+  if (navigator.gpu) {
+    try {
+      const a = await navigator.gpu.requestAdapter();
+      d.adapter = a ? { f16: a.features.has('shader-f16'), info: a.info ? { vendor: a.info.vendor, architecture: a.info.architecture, description: a.info.description } : null,
+                        maxBuffer: a.limits.maxBufferSize, maxStorage: a.limits.maxStorageBufferBindingSize } : null;
+    } catch (e) { d.adapterError = String(e); }
+  }
+  try { const est = await navigator.storage.estimate(); d.storageQuotaGB = +(est.quota / 2 ** 30).toFixed(1); } catch (e) {}
+  $('devinfo').innerHTML = [
+    `WebGPU: <b>${d.webgpu ? (d.adapter ? (d.adapter.f16 ? '있음 (fp16 지원)' : '있음 (fp16 미지원)') : '어댑터 없음') : '없음'}</b>`,
+    `GPU: ${d.adapter && d.adapter.info ? [d.adapter.info.vendor, d.adapter.info.architecture].filter(Boolean).join(' ') || '정보 없음' : '-'}`,
+    `메모리(대략): ${d.memoryGB ? d.memoryGB + 'GB' : '알 수 없음'} · 코어 ${d.cores || '-'} · 저장 한도 ${d.storageQuotaGB ?? '-'}GB`,
+  ].join('<br>');
+}
+
+async function load(device) {
+  $('load').disabled = $('loadwasm').disabled = true;
+  const t0 = performance.now();
+  const files = {};
+  try { report.device.persisted = await navigator.storage.persist(); } catch (e) { report.device.persisted = 'error'; }
+  stage('시작');
+  let lastStage = 0;
+  const progress = (p) => {
+    if (p.status === 'done' && p.file) stage('받음: ' + p.file);
+    if (p.status === 'progress' && p.total) {
+      files[p.file] = [p.loaded, p.total];
+      const sum = Object.values(files).reduce((a, [l, t]) => [a[0] + l, a[1] + t], [0, 0]);
+      $('prog').style.width = (100 * sum[0] / sum[1]).toFixed(1) + '%';
+      $('loadinfo').textContent = `받는 중 ${(sum[0] / 2 ** 20).toFixed(0)} / ${(sum[1] / 2 ** 20).toFixed(0)} MB`;
+      const mb = Math.floor(sum[0] / 2 ** 20 / 100);
+      if (mb > lastStage) { lastStage = mb; stage(`받는 중 ${mb * 100}MB (${p.file})`); }
+    }
+  };
+  try {
+    // Small text files are re-fetched every load: config.json changes when graphs are added, and a copy fetched while
+    // the server was restarting (truncated body through the tunnel) was cached and broke JSON parsing on the iPhone.
+    // The big weight files (.onnx_data*, .bin) stay cached.
+    try {
+      const c = await caches.open(env.cacheKey || 'transformers-cache');
+      let dropped = 0;
+      for (const req of await c.keys()) {
+        if (req.url.includes('/' + MODEL + '/') && /\.(json|jinja|onnx)$/.test(req.url) && !/\.onnx_data/.test(req.url)) { await c.delete(req); dropped += 1; }
+      }
+      log(`cache: ${dropped} small files dropped, will re-fetch`);
+    } catch (e) { log('cache cleanup failed ' + e); }
+    prompt = await (await fetch(MODEL + '/cropy_prompt.json')).json();
+    presets = await (await fetch('presets.json')).json();
+    endId = prompt.new_tokens[prompt.stop_token];
+    tok = await AutoTokenizer.from_pretrained(MODEL);
+    const tTok = performance.now();
+    // The wasm (CPU) backend has no fp16 kernels (session creation fails with "could not find an implementation"
+    // for MatMulNBits/fp16 ops), so CPU uses the q4 graphs (4-bit weights, fp32 activations).
+    // The wasm backend also lacks GatherBlockQuantized (the 4-bit embedding lookup), so the small embedding graph
+    // stays on WebGPU and only the decoder (the memory-heavy part) runs on the CPU.
+    DTYPE = device === 'wasm' ? 'q4' : 'q4f16';
+    const perFile = device === 'wasm'
+      ? { dtype: { embed_tokens: 'q4', decoder_model_merged: 'q4' }, device: { embed_tokens: 'webgpu', decoder_model_merged: 'wasm' } }
+      : { dtype: DTYPE, device };
+    model = await AutoModelForCausalLM.from_pretrained(MODEL, { ...perFile, progress_callback: progress });
+    stage('불러오기 완료');
+    if (USE_PREFIX) {
+      // Decoder state after the fixed system prompt, computed on the PC with the same graphs (prefix_state.py).
+      // ~23MB (fp16) / ~46MB (fp32); with it a question prefills only its own ~110 tokens instead of ~1,270.
+      stage('프롬프트 상태 받는 중');
+      const metaRes = await fetch(MODEL + `/prefix_${DTYPE}.json`);
+      if (metaRes.ok) {
+        prefixMeta = await metaRes.json();
+        prefixBuf = await (await fetch(MODEL + `/prefix_${DTYPE}.bin`)).arrayBuffer();
+        report.prefix = { tokens: prefixMeta.prefix_len, mb: +(prefixBuf.byteLength / 2 ** 20).toFixed(1), tensors: Object.keys(prefixMeta.tensors).length };
+        stage(`프롬프트 상태 받음 (${prefixMeta.prefix_len}토큰, ${report.prefix.mb}MB)`);
+        log(`prefix state ${prefixMeta.prefix_len} tokens ${report.prefix.mb}MB`);
+      } else {
+        report.prefix = { error: 'no prefix_q4f16.json (' + metaRes.status + ')' };
+        log('prefix state missing: full prefill');
+      }
+    }
+    const sec = (performance.now() - t0) / 1000;
+    report.load = { device, seconds: +sec.toFixed(1), tokenizerSeconds: +((tTok - t0) / 1000).toFixed(1) };
+    $('prog').style.width = '100%';
+    $('loadinfo').innerHTML = `불러오기 완료: <b>${sec.toFixed(1)}초</b> (${device})`;
+    $('runall').disabled = $('ask').disabled = $('short').disabled = false;
+    presets.forEach((p, i) => $('ctxsel').insertAdjacentHTML('beforeend', `<option value="${i}">화면 상태: ${p.function} 예시 ${i + 1}</option>`));
+    log(`load ${device} ${sec.toFixed(1)}s`);
+  } catch (e) {
+    report.load = { device, error: String(e && e.message || e) };
+    stage('실패: ' + String(e && e.message || e).slice(0, 80));
+    $('loadinfo').innerHTML = `<span class="bad">불러오기 실패</span>: ${String(e && e.message || e)}`;
+    log('load error ' + (e && e.stack || e));
+    $('load').disabled = $('loadwasm').disabled = false;
+  }
+}
+
+function buildPrompt(utterance, contextJson) {
+  // context string comes from Python json.dumps (same bytes as training); the utterance string escapes identically
+  const user = '{"utterance":' + JSON.stringify(utterance) + ',"context":' + contextJson + '}';
+  return '<|im_start|>system\n' + prompt.system_prompt + '<|im_end|>\n<|im_start|>user\n' + user + '<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n';
+}
+
+async function run(utterance, context, rawText = null, label = '') {
+  stage(`실행 ${label}: 토큰 변환`);
+  const enc = tok(rawText ?? buildPrompt(utterance, context), { add_special_tokens: false });
+  const n = enc.input_ids.dims[1];
+  let first = null, puts = 0;
+  const streamer = { put() { puts += 1; if (puts === 2) { first = performance.now(); stage(`실행 ${label}: 첫 토큰 나옴 (${n}토큰 입력)`); } }, end() {} };
+  const t0 = performance.now();
+  // return_dict_in_generate: generate() builds a NEW cache object every step and, when a cache was passed in, keeps the
+  // final one alive without returning it unless asked. Without this each question leaked its final state (~25MB of
+  // GPU buffers): on the iPhone the tab died after 6 questions.
+  const genCfg = { max_new_tokens: 16, do_sample: false, eos_token_id: [endId, 248046], streamer, return_dict_in_generate: true };
+  let out, cache = null, start = 0;
+  const ids = enc.input_ids.data;
+  if (prefixMeta && prefixMeta.prefix_len < n && prefixMeta.prefix_ids.every((v, i) => BigInt(v) === BigInt(ids[i]))) {
+    // Start from the stored state; fresh tensor views each run (the cache is disposed after generation).
+    const pkv = {};
+    for (const [k, t] of Object.entries(prefixMeta.tensors)) {
+      pkv[k] = t.dtype === 'float16' ? new Tensor('float16', new Uint16Array(prefixBuf, t.offset, t.bytes / 2), t.shape)
+                                     : new Tensor('float32', new Float32Array(prefixBuf, t.offset, t.bytes / 4), t.shape);
+    }
+    cache = new DynamicCache(pkv);
+    start = prefixMeta.prefix_len;
+  } else if (prefixMeta) {
+    log(`prefix mismatch on ${label}: full prefill`);
+  }
+  const usedPrefix = start > 0;
+  if (usedPrefix || (CHUNK && n > CHUNK)) {
+    // Prefill ids[start : n-1] chunk by chunk into the linear-attention / KV cache, then let generate() take the last token.
+    // Checked in Node against one-shot generate on the same prompt: identical tokens (with and without the prefix state).
+    const step = CHUNK || (n - start);
+    const present2past = (k) => k.replace('present_conv', 'past_conv').replace('present_recurrent', 'past_recurrent').replace('present', 'past_key_values');
+    for (let a = start; a < n - 1; a += step) {
+      const b = Math.min(n - 1, a + step), len = b - a;
+      stage(`실행 ${label}: 입력 ${b}/${n}토큰 처리 중 (${usedPrefix ? `저장된 ${start}토큰 뒤부터, ` : ''}${step}씩)`);
+      const pos = new BigInt64Array(3 * len);
+      for (let r = 0; r < 3; r++) for (let i = 0; i < len; i++) pos[r * len + i] = BigInt(a + i);
+      const res = await model.forward({
+        input_ids: new Tensor('int64', BigInt64Array.from(ids.slice(a, b)), [1, len]),
+        attention_mask: new Tensor('int64', new BigInt64Array(b).fill(1n), [1, b]),
+        position_ids: new Tensor('int64', pos, [3, 1, len]),
+        num_logits_to_keep: new Tensor('int64', [1n], []),
+        past_key_values: cache,
+      });
+      const pkv = {};
+      for (const k in res) {
+        if (k.startsWith('present')) pkv[present2past(k)] = res[k];
+        else if (res[k] && res[k].location === 'gpu-buffer') res[k].dispose();
+      }
+      if (cache) cache.update(pkv); else cache = new DynamicCache(pkv);
+    }
+    stage(`실행 ${label}: 마지막 토큰과 생성`);
+    out = await model.generate({ input_ids: enc.input_ids, attention_mask: enc.attention_mask, past_key_values: cache, ...genCfg });
+  } else {
+    stage(`실행 ${label}: ${n}토큰 한꺼번에 처리 중`);
+    out = await model.generate({ ...enc, ...genCfg });
+  }
+  const t1 = performance.now();
+  if (out.past_key_values) await out.past_key_values.dispose();
+  if (cache) await cache.dispose();
+  stage(`실행 ${label}: 끝`);
+  const gen = Array.from(out.sequences.data, Number).slice(n);
+  const text = tok.decode(gen, { skip_special_tokens: false }).replace('<|im_end|>', '').trim();
+  return { promptTokens: n, prefilledTokens: n - start, usedPrefix, firstMs: first ? Math.round(first - t0) : null, totalMs: Math.round(t1 - t0), newTokens: gen.length, output: text };
+}
+
+// ① Stream each file straight into the cache transformers.js reads from (same cache name and URL key),
+// one file at a time, so nothing piles up in page memory while downloading.
+async function prefetch() {
+  $('prefetch').disabled = true;
+  try { report.device.persisted = await navigator.storage.persist(); } catch (e) {}
+  const t0 = performance.now();
+  try {
+    // q4 graphs are only for the CPU (wasm) path; cpu=1 in the URL downloads them too.
+    const wantCpu = new URLSearchParams(location.search).get('cpu') === '1';
+    const files = (await (await fetch(FILES)).json()).filter(([name]) => wantCpu || !/_q4\.(onnx|json|bin)/.test(name));
+    const total = files.reduce((a, [, n]) => a + n, 0);
+    const cache = await caches.open(env.cacheKey || 'transformers-cache');
+    let done = 0, skipped = 0;
+    for (const [name, size] of files) {
+      const key = env.remoteHost + MODEL + '/' + name;
+      if (await cache.match(key)) { done += size; skipped += 1; continue; }
+      stage('① 받는 중: ' + name);
+      const resp = await fetch(MODEL + '/' + name, { cache: 'no-store' });
+      if (!resp.ok) throw new Error(name + ' ' + resp.status);
+      let got = 0;
+      const counter = new TransformStream({ transform(chunk, ctl) {
+        got += chunk.byteLength;
+        $('prog').style.width = (100 * (done + got) / total).toFixed(1) + '%';
+        $('loadinfo').textContent = `① 받는 중 ${((done + got) / 2 ** 20).toFixed(0)} / ${(total / 2 ** 20).toFixed(0)} MB · ${name}`;
+        ctl.enqueue(chunk);
+      } });
+      await cache.put(key, new Response(resp.body.pipeThrough(counter), { headers: resp.headers }));
+      done += size;
+      stage('① 저장함: ' + name);
+    }
+    report.prefetch = { seconds: +((performance.now() - t0) / 1000).toFixed(1), files: files.length, skipped };
+    stage('① 받기 끝');
+    $('prog').style.width = '100%';
+    $('loadinfo').innerHTML = `① 받기 끝 (${(total / 2 ** 20).toFixed(0)} MB, ${report.prefetch.seconds}초, 이미 있던 파일 ${skipped}개). 이제 <b>② 불러오기</b>를 누르세요.`;
+  } catch (e) {
+    report.prefetch = { error: String(e && e.message || e) };
+    stage('① 실패: ' + String(e && e.message || e).slice(0, 80));
+    $('loadinfo').innerHTML = `<span class="bad">받기 실패</span>: ${esc(String(e && e.message || e))} · 다시 누르면 이어서 받습니다.`;
+  }
+  $('prefetch').disabled = false;
+}
+$('prefetch').onclick = prefetch;
+$('load').onclick = () => load('webgpu');
+$('loadwasm').onclick = () => load('wasm');
+
+// Short prompt (no system prompt): if this works but the 16 sentences (~1,250 tokens each) crash, prompt length is the cause.
+$('short').onclick = async () => {
+  $('short').disabled = true;
+  try {
+    const text = '<|im_start|>user\n고추 잎에 갈색 반점이 생겼어요 무슨 병인가요<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n';
+    const r = await run('', '', text, '짧은 입력');
+    report.shortTest = r;
+    $('shortinfo').innerHTML = `짧은 입력 성공: ${r.promptTokens}토큰 · 첫 토큰 ${(r.firstMs / 1000).toFixed(2)}초 · 전체 ${(r.totalMs / 1000).toFixed(2)}초 · 출력 <code>${esc(r.output)}</code>`;
+  } catch (e) {
+    report.shortTest = { error: String(e && e.message || e) };
+    $('shortinfo').innerHTML = `<span class="bad">짧은 입력 실패</span>: ${esc(String(e && e.message || e))}`;
+  }
+  $('short').disabled = false;
+};
+
+$('runall').onclick = async () => {
+  $('runall').disabled = true;
+  $('rows').innerHTML = '';
+  let correct = 0;
+  for (let i = 0; i < presets.length; i++) {
+    const p = presets[i];
+    try {
+      const r = await run(p.utterance, p.context_json, null, `${i + 1}번`);
+      const ok = r.output === p.expected;
+      correct += ok;
+      report.runs.push({ i, function: p.function, ok, ...r });
+      $('rows').insertAdjacentHTML('beforeend', `<tr><td>${i + 1}</td><td>${esc(p.utterance)}<br><code class="${ok ? 'ok' : 'bad'}">${esc(r.output)}</code>${ok ? '' : `<br><span class="k">정답 ${esc(p.expected)}</span>`}<br><span class="k">${r.usedPrefix ? `저장 상태 사용, ${r.prefilledTokens}토큰만 처리` : `${r.promptTokens}토큰 전부 처리`}</span></td><td class="n">${(r.firstMs / 1000).toFixed(2)}초</td><td class="n">${(r.totalMs / 1000).toFixed(2)}초</td></tr>`);
+    } catch (e) {
+      report.runs.push({ i, function: p.function, error: String(e && e.message || e) });
+      $('rows').insertAdjacentHTML('beforeend', `<tr><td>${i + 1}</td><td colspan="3" class="bad">실패: ${String(e && e.message || e)}</td></tr>`);
+      log('run error ' + (e && e.stack || e));
+    }
+  }
+  const ok = report.runs.filter((r) => r.firstMs);
+  const firsts = ok.slice(1).map((r) => r.firstMs).sort((a, b) => a - b);
+  const totals = ok.slice(1).map((r) => r.totalMs).sort((a, b) => a - b);
+  const med = (a) => a.length ? a[Math.floor(a.length / 2)] : null;
+  report.summary = { correct, total: presets.length, firstRunFirstMs: ok[0] && ok[0].firstMs, medianFirstMs: med(firsts), medianTotalMs: med(totals) };
+  $('summary').innerHTML = `정답 <b>${correct}/${presets.length}</b> · 첫 토큰 중앙값 <b>${(med(firsts) / 1000).toFixed(2)}초</b> · 전체 중앙값 <b>${(med(totals) / 1000).toFixed(2)}초</b> (첫 문장 제외)`;
+  $('runall').disabled = false;
+};
+
+$('ask').onclick = async () => {
+  const u = $('utt').value.trim();
+  if (!u) return;
+  $('ask').disabled = true;
+  try {
+    const r = await run(u, presets[+$('ctxsel').value].context_json);
+    report.runs.push({ custom: u, ...r });
+    $('answer').innerHTML = `<code>${esc(r.output)}</code> · 첫 토큰 ${(r.firstMs / 1000).toFixed(2)}초 · 전체 ${(r.totalMs / 1000).toFixed(2)}초`;
+  } catch (e) { $('answer').innerHTML = `<span class="bad">실패</span>: ${e}`; }
+  $('ask').disabled = false;
+};
+
+$('copy').onclick = async () => {
+  const s = JSON.stringify(report);
+  try { await navigator.clipboard.writeText(s); $('copy').textContent = '복사했어요'; }
+  catch (e) { $('log').textContent = s; $('copy').textContent = '아래 글을 길게 눌러 복사하세요'; }
+};
+
+deviceInfo();
+if (SIZE === '08b') {
+  document.querySelector('h1').textContent = '0.8B 메모리 측정 (학습 전 원본: 답은 틀려도 됨)';
+  document.querySelector('.k').textContent = `CROPY · 오프라인 웹 Qwen 0.8B (q4f16, 약 576MB) · ${USE_PREFIX ? '시스템 프롬프트 상태를 미리 계산해 사용자 문장만 처리' : '프롬프트 전체 처리(비교용)'}`;
+  document.querySelectorAll('.card .k').forEach((el) => { el.textContent = el.textContent.replace('약 1.34GB를 받습니다(약 260MB씩 나눠 받음)', '약 576MB를 받습니다'); });
+}
+</script>
+</body>
+</html>

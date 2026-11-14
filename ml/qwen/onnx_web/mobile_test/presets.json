@@ -1,0 +1,319 @@
+[
+ {
+  "function": "get_diagnosis",
+  "utterance": "무 결 과에서 한 가지 궁금해요 표시된 심각도가 현장에서 잰 값인가요",
+  "context": {
+   "ui_stage": "result",
+   "selected_crop": "무",
+   "predicted_crop": "무",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "disease",
+   "disease_name": "무 검은무늬병",
+   "confidence": 0.91,
+   "top_predictions": [
+    {
+     "name": "무 검은무늬병",
+     "confidence": 0.91
+    },
+    {
+     "name": "무 정상",
+     "confidence": 0.08
+    }
+   ]
+  },
+  "expected": "<hs_0>(topic=2)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"selected_crop\":\"무\",\"predicted_crop\":\"무\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"disease\",\"disease_name\":\"무 검은무늬병\",\"confidence\":0.91,\"top_predictions\":[{\"name\":\"무 검은무늬병\",\"confidence\":0.91},{\"name\":\"무 정상\",\"confidence\":0.08}]}"
+ },
+ {
+  "function": "get_diagnosis",
+  "utterance": "배추 사진을 화긴하고 있어요 가장 높게 나온 병명 후보를 알려주세요",
+  "context": {
+   "ui_stage": "result",
+   "selected_crop": "배추",
+   "predicted_crop": "배추",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "normal",
+   "disease_name": "배추 정상",
+   "confidence": 0.72,
+   "top_predictions": [
+    {
+     "name": "배추 정상",
+     "confidence": 0.72
+    },
+    {
+     "name": "배추 검은썩음병",
+     "confidence": 0.27
+    }
+   ],
+   "severity": "low"
+  },
+  "expected": "<hs_0>(topic=1)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"selected_crop\":\"배추\",\"predicted_crop\":\"배추\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"normal\",\"disease_name\":\"배추 정상\",\"confidence\":0.72,\"top_predictions\":[{\"name\":\"배추 정상\",\"confidence\":0.72},{\"name\":\"배추 검은썩음병\",\"confidence\":0.27}],\"severity\":\"low\"}"
+ },
+ {
+  "function": "get_pesticide_information",
+  "utterance": "사용할지 결정하기 전에 현재 표시된 제품의 자료가 담고 있는 내용과 한계를 함께 요약해주이소",
+  "context": {
+   "ui_stage": "result",
+   "selected_crop": "무",
+   "predicted_crop": "무",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "disease",
+   "disease_name": "무노균병",
+   "pesticides": [
+    "가상 제품 에이"
+   ]
+  },
+  "expected": "<hs_4>(topic=8, product=1)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"selected_crop\":\"무\",\"predicted_crop\":\"무\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"disease\",\"disease_name\":\"무노균병\",\"pesticides\":[\"가상 제품 에이\"]}"
+ },
+ {
+  "function": "get_pesticide_information",
+  "utterance": "물통 크기만 알고 있는데 현재 표시된 재품을 넣을 양을 계산할 근거가 있는지 화긴해주세여",
+  "context": {
+   "ui_stage": "result",
+   "selected_crop": "고추",
+   "predicted_crop": "고추",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "disease",
+   "disease_name": "고추탄저병",
+   "pesticides": [
+    "가상 제품 에이"
+   ]
+  },
+  "expected": "<hs_4>(topic=2, product=1)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"selected_crop\":\"고추\",\"predicted_crop\":\"고추\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"disease\",\"disease_name\":\"고추탄저병\",\"pesticides\":[\"가상 제품 에이\"]}"
+ },
+ {
+  "function": "get_care_information",
+  "utterance": "지금 무 결과 화면을 열었어 이 설명에 발생 요인이 기록되어 있나",
+  "context": {
+   "ui_stage": "result",
+   "selected_crop": "무",
+   "predicted_crop": "무",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "disease",
+   "disease_name": "무 검은무늬병",
+   "confidence": 0.97,
+   "top_predictions": [
+    {
+     "name": "무 검은무늬병",
+     "confidence": 0.97
+    },
+    {
+     "name": "무 정상",
+     "confidence": 0.02
+    }
+   ],
+   "severity": "medium"
+  },
+  "expected": "<hs_3>(topic=1)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"selected_crop\":\"무\",\"predicted_crop\":\"무\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"disease\",\"disease_name\":\"무 검은무늬병\",\"confidence\":0.97,\"top_predictions\":[{\"name\":\"무 검은무늬병\",\"confidence\":0.97},{\"name\":\"무 정상\",\"confidence\":0.02}],\"severity\":\"medium\"}"
+ },
+ {
+  "function": "get_care_information",
+  "utterance": "배추 분류 기록을 설명받고 싶어 현재 자료로 작업 우선순위를 정해주세요",
+  "context": {
+   "ui_stage": "result",
+   "selected_crop": "배추",
+   "predicted_crop": "배추",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "disease",
+   "disease_name": "배추 검은썩음병",
+   "confidence": 0.72,
+   "top_predictions": [
+    {
+     "name": "배추 검은썩음병",
+     "confidence": 0.72
+    },
+    {
+     "name": "배추 정상",
+     "confidence": 0.27
+    }
+   ],
+   "severity": "high"
+  },
+  "expected": "<hs_3>(topic=3)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"selected_crop\":\"배추\",\"predicted_crop\":\"배추\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"disease\",\"disease_name\":\"배추 검은썩음병\",\"confidence\":0.72,\"top_predictions\":[{\"name\":\"배추 검은썩음병\",\"confidence\":0.72},{\"name\":\"배추 정상\",\"confidence\":0.27}],\"severity\":\"high\"}"
+ },
+ {
+  "function": "get_prediction_metrics",
+  "utterance": "이번 배추 사진 결과를 보고 있어 상위 두 후보의 이름을 순서대로 알려줘",
+  "context": {
+   "ui_stage": "result",
+   "selected_crop": "배추",
+   "predicted_crop": "배추",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "normal",
+   "disease_name": "배추 정상",
+   "confidence": 0.91,
+   "top_predictions": [
+    {
+     "name": "배추 정상",
+     "confidence": 0.91
+    },
+    {
+     "name": "배추 검은썩음병",
+     "confidence": 0.08
+    }
+   ],
+   "severity": "low"
+  },
+  "expected": "<hs_1>(topic=2)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"selected_crop\":\"배추\",\"predicted_crop\":\"배추\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"normal\",\"disease_name\":\"배추 정상\",\"confidence\":0.91,\"top_predictions\":[{\"name\":\"배추 정상\",\"confidence\":0.91},{\"name\":\"배추 검은썩음병\",\"confidence\":0.08}],\"severity\":\"low\"}"
+ },
+ {
+  "function": "get_prediction_metrics",
+  "utterance": "무 사진 결과를 처음 보고 있어요 목록의 두 후보 점수 차이만 읽어주세요",
+  "context": {
+   "ui_stage": "result",
+   "selected_crop": "무",
+   "predicted_crop": "무",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "disease",
+   "disease_name": "무 검은무늬병",
+   "confidence": 0.97,
+   "top_predictions": [
+    {
+     "name": "무 검은무늬병",
+     "confidence": 0.97
+    },
+    {
+     "name": "무 정상",
+     "confidence": 0.02
+    }
+   ],
+   "severity": "medium"
+  },
+  "expected": "<hs_1>(topic=5)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"selected_crop\":\"무\",\"predicted_crop\":\"무\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"disease\",\"disease_name\":\"무 검은무늬병\",\"confidence\":0.97,\"top_predictions\":[{\"name\":\"무 검은무늬병\",\"confidence\":0.97},{\"name\":\"무 정상\",\"confidence\":0.02}],\"severity\":\"medium\"}"
+ },
+ {
+  "function": "clarify_request",
+  "utterance": "지금 앱을 켜 두 었어 심한 거라는 말이 어느 항목인가",
+  "context": {
+   "ui_stage": "result",
+   "disease_name": "배추 정상",
+   "confidence": 0.91,
+   "severity": "high"
+  },
+  "expected": "<hs_5>(target=3)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"disease_name\":\"배추 정상\",\"confidence\":0.91,\"severity\":\"high\"}"
+ },
+ {
+  "function": "clarify_request",
+  "utterance": "지금 관리할 것은 배추인데 이 무 관리 안내를 그대로 따라도 되나요",
+  "context": {
+   "ui_stage": "result",
+   "category": "disease",
+   "disease_name": "무 검은무늬병"
+  },
+  "expected": "<hs_5>(target=1)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"category\":\"disease\",\"disease_name\":\"무 검은무늬병\"}"
+ },
+ {
+  "function": "get_usage_guidance",
+  "utterance": "사진 골랐어 그다음은",
+  "context": {
+   "ui_stage": "photo_ready"
+  },
+  "expected": "<hs_7>(topic=1, delivery=1)<hs_end>",
+  "context_json": "{\"ui_stage\":\"photo_ready\"}"
+ },
+ {
+  "function": "get_usage_guidance",
+  "utterance": "결과는 떴어 이어서 할 일을 말해 줘",
+  "context": {
+   "ui_stage": "result",
+   "crop_mismatch": false,
+   "prediction_mode": "mock",
+   "category": "disease",
+   "disease_name": "평가용 분류 후보",
+   "confidence": 0.41,
+   "decision_status": "low_confidence",
+   "save_status": "saved"
+  },
+  "expected": "<hs_7>(topic=1, delivery=1)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"crop_mismatch\":false,\"prediction_mode\":\"mock\",\"category\":\"disease\",\"disease_name\":\"평가용 분류 후보\",\"confidence\":0.41,\"decision_status\":\"low_confidence\",\"save_status\":\"saved\"}"
+ },
+ {
+  "function": "handle_scope_limit",
+  "utterance": "화면을 보고 질문할게 현재 지원 밖인 콩도 진단해줄래",
+  "context": {
+   "ui_stage": "result",
+   "selected_crop": "무",
+   "predicted_crop": "무",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "disease",
+   "disease_name": "무 검은무늬병",
+   "confidence": 0.56,
+   "top_predictions": [
+    {
+     "name": "무 검은무늬병",
+     "confidence": 0.56
+    },
+    {
+     "name": "무 정상",
+     "confidence": 0.41
+    }
+   ],
+   "severity": "medium"
+  },
+  "expected": "<hs_6>(reason=1)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"selected_crop\":\"무\",\"predicted_crop\":\"무\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"disease\",\"disease_name\":\"무 검은무늬병\",\"confidence\":0.56,\"top_predictions\":[{\"name\":\"무 검은무늬병\",\"confidence\":0.56},{\"name\":\"무 정상\",\"confidence\":0.41}],\"severity\":\"medium\"}"
+ },
+ {
+  "function": "handle_scope_limit",
+  "utterance": "안 내를 듣다가 궁금해졌어 지금 입력은 식물이 아니라 종이에 적힌 병명인 걸 알아줘",
+  "context": {
+   "ui_stage": "result",
+   "selected_crop": "배추",
+   "predicted_crop": "배추",
+   "crop_mismatch": false,
+   "prediction_mode": "model",
+   "category": "disease",
+   "disease_name": "배추 노균병",
+   "confidence": 0.72,
+   "top_predictions": [
+    {
+     "name": "배추 노균병",
+     "confidence": 0.72
+    },
+    {
+     "name": "배추 정상",
+     "confidence": 0.27
+    }
+   ],
+   "severity": "medium"
+  },
+  "expected": "<hs_6>(reason=3)<hs_end>",
+  "context_json": "{\"ui_stage\":\"result\",\"selected_crop\":\"배추\",\"predicted_crop\":\"배추\",\"crop_mismatch\":false,\"prediction_mode\":\"model\",\"category\":\"disease\",\"disease_name\":\"배추 노균병\",\"confidence\":0.72,\"top_predictions\":[{\"name\":\"배추 노균병\",\"confidence\":0.72},{\"name\":\"배추 정상\",\"confidence\":0.27}],\"severity\":\"medium\"}"
+ },
+ {
+  "function": "chit_chat",
+  "utterance": "주식 지금 사도 돼",
+  "context": {
+   "ui_stage": "no_photo"
+  },
+  "expected": "<hs_8>()<hs_end>",
+  "context_json": "{\"ui_stage\":\"no_photo\"}"
+ },
+ {
+  "function": "chit_chat",
+  "utterance": "영어로 사과가 뭐야",
+  "context": {
+   "ui_stage": "analyzing"
+  },
+  "expected": "<hs_8>()<hs_end>",
+  "context_json": "{\"ui_stage\":\"analyzing\"}"
+ }
+]

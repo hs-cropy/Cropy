@@ -9,6 +9,7 @@ notebook always runs against the exact data it was built with.
 """
 import hashlib
 import json
+import os
 import lzma
 from pathlib import Path
 
@@ -17,12 +18,27 @@ import spec_v2
 HERE = Path(__file__).resolve().parent
 DATA = HERE / "data_v2"
 KEEP = ("case_id", "split", "group", "function", "user_text", "context", "output", "augmentation")
-DATA_VERSION = "v2c"  # v2: first run (v2_r16_e2), v2b: + apply_eval_fixes.py, v2c: without score-meaning rows
+DATA_VERSION = "v2e"  # v2: first run (v2_r16_e2), v2b: + apply_eval_fixes.py, v2c: without score-meaning rows,
+# v2d: + apply_real_speech_patch.py (short spoken sentences) and the held-out real-speech set for scoring
 DATA_FILE = f"qwen_{DATA_VERSION}_data.jsonl.xz"
 SHORT_PROMPT = False  # v3s (True): same v2c data, one-line prompt; args fell to 80.8%, see README
-VERSION = "v3s" if SHORT_PROMPT else DATA_VERSION
-MODEL_ID = "Qwen/Qwen3.5-2B"
-MODEL_REF = "15852e8c16360a2fea060d615a32b45270f8a8fc"  # revision used by the v14~v18 runs
+# QWEN_BASE=0.8b python build_train_notebook.py -> same data and recipe on Qwen3.5-0.8B (browser offline candidate)
+BASES = {"2b": ("Qwen/Qwen3.5-2B", "15852e8c16360a2fea060d615a32b45270f8a8fc"),  # revision used by the v14~v18 runs
+         "0.8b": ("Qwen/Qwen3.5-0.8B", "2fc06364715b967f1860aea9cf38778875588b17")}
+BASE = os.environ.get("QWEN_BASE", "2b")
+MODEL_ID, MODEL_REF = BASES[BASE]
+# QWEN_SEED=N -> same recipe with another seed, for averaging several runs (model soup) like the deployed 2B
+DEFAULT_SEED = 20261027
+SEED = int(os.environ.get("QWEN_SEED", DEFAULT_SEED))
+SEED_TAG = "" if SEED == DEFAULT_SEED else f"_s{SEED}"
+VERSION = ("v3s" if SHORT_PROMPT else DATA_VERSION) + ("" if BASE == "2b" else "_" + BASE.replace(".", ""))
+NOTEBOOK = ("cropy_qwen_v2_train_colab" if BASE == "2b" else f"cropy_qwen_v2_{BASE.replace('.', '')}_train_colab") + SEED_TAG + ".ipynb"
+# 0.8B: 4-bit QLoRA on L4 gave 84.3% exact, bf16 LoRA on A100 90.3% -> never quantize the small model
+# 2B v2d (2026-11-11): A100 was not offered, only L4. The deployed soup was trained in bf16, so the v2d seeds
+# stay bf16 on L4 as well (one row at a time, same effective batch) instead of switching to 4-bit.
+ALLOW_4BIT = False
+RUNTIME_NOTE = ("**A100 또는 L4**(둘 다 bf16, 4비트 학습을 쓰지 않음. L4는 한 번에 1행씩 처리해 더 오래 걸린다)." if BASE == "2b" else
+                "**A100**(4비트 학습을 쓰지 않음, A100 bf16으로 검증함).")
 
 
 def payload():
@@ -31,8 +47,21 @@ def payload():
     for r in rows:
         assert spec_v2.compact_context(r["context"]) == r["context"]
         assert spec_v2.parse_call(r["output"]) == (r["function"], r["arguments"])
-    text = "\n".join(json.dumps({k: r[k] for k in KEEP}, ensure_ascii=False, separators=(",", ":")) for r in rows)
     counts = {s: sum(r["split"] == s for r in rows) for s in ("train", "validation")}
+    # Held-out transcripts of the 2026-11-10 team test: scored after training, never trained on.
+    real = [json.loads(l) for l in (HERE / "real_speech_eval.jsonl").read_text(encoding="utf-8").splitlines()]
+    squeeze = lambda r: "".join(r["user_text"].split())
+    train_keys = {squeeze(r) for r in rows if r["split"] == "train"}
+    patch_keys = {squeeze(r) for r in rows if r["source"] == "seed_real_speech"}
+    for r in real:
+        assert r["split"] == "real_speech" and spec_v2.compact_context(r["context"]) == r["context"]
+        assert r["output"] is None or spec_v2.parse_call(r["output"])[0] == r["function"]
+        assert squeeze(r) not in patch_keys, r["user_text"]
+    counts["real_speech"] = len(real)
+    # Testers sometimes said a sentence the older train data already had; reported, not removed.
+    counts["real_speech_text_already_in_train"] = sum(squeeze(r) in train_keys for r in real)
+    rows = rows + real
+    text = "\n".join(json.dumps({k: r[k] for k in KEEP}, ensure_ascii=False, separators=(",", ":")) for r in rows)
     return lzma.compress(text.encode("utf-8"), preset=9 | lzma.PRESET_EXTREME), counts
 
 
@@ -57,7 +86,7 @@ def notebook(data_sha, counts):
 - 데이터: train {counts['train']:,}행 / validation {counts['validation']:,}행 (validation은 사람 검수 완료)
 - 새 토큰 10개(`<hs_0>`~`<hs_8>`, `<hs_end>`)의 임베딩도 함께 학습한다.
 - 시스템 프롬프트: {'한 줄(`spec_v2.SHORT_PROMPT`). 규칙·함수 설명 없이 학습해 보드에서 매번 처리할 입력을 약 1,300 → 200 토큰으로 줄인다' if SHORT_PROMPT else '규칙과 함수 설명 전체(약 1,100 토큰)'}.
-- 런타임: **A100 권장**(L4·T4도 동작, 24GB 미만이면 4bit로 불러옴). 메뉴 런타임 → 런타임 유형 변경 → GPU.
+- 런타임: {RUNTIME_NOTE} 메뉴 런타임 → 런타임 유형 변경 → GPU.
 
 **실행 방법**
 1. Drive `내 드라이브/cropy_qwen_v2/`에 `{DATA_FILE}`가 있는지 확인한다.
@@ -77,7 +106,7 @@ DATA_SHA256 = '{data_sha}'
 MODEL_ID = '{MODEL_ID}'
 MODEL_REF = '{MODEL_REF}'
 
-RUN_NAME = '{VERSION}_r16_e2'      # 설정을 바꿔 새로 학습할 때만 이름을 바꾼다
+RUN_NAME = '{VERSION}_r16_e2{SEED_TAG}'      # 설정을 바꿔 새로 학습할 때만 이름을 바꾼다
 SHORT_PROMPT = {SHORT_PROMPT}       # True: 한 줄 시스템 프롬프트(보드 응답 속도용)
 EPOCHS = 2
 LEARNING_RATE = 2e-4
@@ -85,7 +114,8 @@ LORA_R, LORA_ALPHA, LORA_DROPOUT = 16, 32, 0.05
 EFFECTIVE_BATCH = 16
 WARMUP_SHARE = 0.03
 MAX_LENGTH = 2048
-SEED = 20261027
+SEED = {SEED}
+ALLOW_4BIT = {ALLOW_4BIT}     # 0.8B는 4비트 학습 금지(L4 4비트 84.3% vs A100 bf16 90.3%)
 EVAL_LIMIT = None            # None이면 validation 전체
 OUTPUT_DIR = DRIVE_DIR / RUN_NAME
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -103,10 +133,13 @@ random.seed(SEED); torch.manual_seed(SEED); torch.cuda.manual_seed_all(SEED)
 GPU = torch.cuda.get_device_name(0)
 VRAM = torch.cuda.get_device_properties(0).total_memory
 DTYPE = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
-QUANTIZE = VRAM < 30 * 1024**3
+QUANTIZE = ALLOW_4BIT and VRAM < 30 * 1024**3
 # 긴 시스템 프롬프트면 한 행이 약 1,300 토큰이고 어휘 25만 개 logits가 행마다 1GB 넘게 들어 A100 40GB에서 8은 OOM. 짧은 프롬프트는 약 200 토큰.
 PER_DEVICE = ((16, 8, 4) if SHORT_PROMPT else (4, 2, 1))[0 if VRAM >= 39 * 1024**3 else 1 if VRAM >= 22 * 1024**3 else 2]
+if not QUANTIZE and not SHORT_PROMPT and VRAM < 30 * 1024**3:
+    PER_DEVICE = 1  # L4(약 22GB)에서 bf16으로 2행은 메모리가 빠듯하다. 누적 횟수를 늘려 실효 배치는 같게 둔다
 ACCUM = max(1, EFFECTIVE_BATCH // PER_DEVICE)
+assert torch.cuda.is_bf16_supported() or QUANTIZE, 'bf16을 지원하는 GPU(A100·L4)를 선택하세요. T4는 쓰지 않습니다'
 ENV = dict(torch=torch.__version__, transformers=transformers.__version__, peft=peft.__version__, gpu=GPU,
            vram_gb=round(VRAM / 1024**3, 1), dtype=str(DTYPE), quantize_4bit=QUANTIZE, per_device=PER_DEVICE, accum=ACCUM)
 print(ENV)
@@ -118,7 +151,8 @@ assert hashlib.sha256(raw).hexdigest() == DATA_SHA256, '데이터 파일이 노�
 rows = [json.loads(l) for l in lzma.decompress(raw).decode('utf-8').splitlines()]
 train_rows = [r for r in rows if r['split'] == 'train']
 val_rows = [r for r in rows if r['split'] == 'validation']
-assert (len(train_rows), len(val_rows)) == ({counts['train']}, {counts['validation']})
+real_rows = [r for r in rows if r['split'] == 'real_speech']   # 11/10 팀 테스트 발화. 학습에 쓰지 않고 채점만 한다
+assert (len(train_rows), len(val_rows), len(real_rows)) == ({counts['train']}, {counts['validation']}, {counts['real_speech']})
 
 SYSTEM_PROMPT = {system!r}
 FUNCTIONS = {json.dumps(table, ensure_ascii=False)}
@@ -138,7 +172,7 @@ def parse_call(text):
         return None
     return name, tuple(int(v) for _, v in given)
 
-assert all(parse_call(r['output'])[0] == r['function'] for r in rows)
+assert all(parse_call(r['output'])[0] == r['function'] for r in rows if r['output'])
 from collections import Counter
 print('train', Counter(r['function'] for r in train_rows).most_common())
 print('validation', Counter(r['function'] for r in val_rows).most_common())
@@ -323,6 +357,34 @@ for name, v in val_metrics['per_function'].items():
     print(f'{name:28s} n={v["support"]:4d} 기능 {v["function"]:.3f} 정확 {v["exact"]:.3f}')
 print('자주 틀린 쌍', val_metrics['confusion'][:8])
 """),
+        md("## 실제 발화 평가\n11/10 팀 테스트에서 받아 적힌 문장(문장 부호 제거)을 한 건씩 생성한다. 학습에 쓰지 않은 문장이다. 정답에 인자가 없는 행은 기능만 본다."),
+        code("""
+def score_real(rows, texts):
+    cases = []
+    for r, t in zip(rows, texts):
+        got = parse_call(t)
+        cases.append(dict(case_id=r['case_id'], input_kind=r['augmentation'], user_text=r['user_text'], expected=r['output'],
+                          expected_function=r['function'], actual=t, actual_function=got[0] if got else None,
+                          format_valid=got is not None, function_correct=bool(got) and got[0] == r['function'],
+                          exact_correct=None if r['output'] is None else t == r['output']))
+    full = [c for c in cases if c['exact_correct'] is not None]
+    rate = lambda cs, key: round(sum(c[key] for c in cs) / max(1, len(cs)), 4)
+    by = lambda key: {v: dict(support=len(cs), function=rate(cs, 'function_correct'),
+                              exact=rate([c for c in cs if c['exact_correct'] is not None], 'exact_correct'))
+                      for v in sorted({c[key] for c in cases}) for cs in [[c for c in cases if c[key] == v]]}
+    return cases, dict(support=len(cases), exact_support=len(full), format_valid=rate(cases, 'format_valid'),
+                       function=rate(cases, 'function_correct'), exact=rate(full, 'exact_correct'),
+                       per_function=by('expected_function'), per_input_kind=by('input_kind'))
+
+real_cases, real_metrics = score_real(real_rows, generate(model, real_rows, 1))
+(OUTPUT_DIR / 'real_speech_metrics.json').write_text(json.dumps(real_metrics | {'run': RUN_CONFIG}, ensure_ascii=False, indent=2))
+with (OUTPUT_DIR / 'real_speech_cases.jsonl').open('w', encoding='utf-8') as f:
+    for c in real_cases:
+        f.write(json.dumps(c, ensure_ascii=False) + '\\n')
+print('실제 발화', {k: real_metrics[k] for k in ('support', 'exact_support', 'format_valid', 'function', 'exact')})
+for name, v in real_metrics['per_function'].items():
+    print(f'{name:28s} n={v["support"]:3d} 기능 {v["function"]:.3f} 정확 {v["exact"]:.3f}')
+"""),
         md("## 저장한 어댑터 다시 불러오기 확인"),
         code("""
 import gc
@@ -348,7 +410,7 @@ def main():
     (DATA / DATA_FILE).write_bytes(data)
     sha = hashlib.sha256(data).hexdigest()
     nb = notebook(sha, counts)
-    out = HERE / "cropy_qwen_v2_train_colab.ipynb"
+    out = HERE / NOTEBOOK
     out.write_text(json.dumps(nb, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(dict(data_bytes=len(data), data_sha256=sha, notebook=str(out), **counts)))
 
