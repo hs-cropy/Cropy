@@ -18,6 +18,17 @@ import { playListenCue } from "@/features/voice/lib/listenCue";
 import { releaseStream, startVoiceRecording, VoicePermissionError, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
 import { AudioConversionError, recordingToWav } from "@/features/voice/lib/wav";
 
+/**
+ * 안드로이드 Chrome은 페이지가 마이크(getUserMedia)를 잡고 있는 동안 speechSynthesis 소리가 나지 않는다.
+ * 그래서 안드로이드에서만 읽기 직전에 마이크를 놓는다. 다음 듣기·호출어 대기는 streamRef가 비어 있으면
+ * 마이크를 새로 연다. PC·iOS는 첫머리가 잘리지 않도록 지금처럼 마이크를 유지한다.
+ */
+function releaseMicOnAndroid(streamRef: { current: MediaStream | null }): void {
+  if (typeof navigator === "undefined" || !/Android/i.test(navigator.userAgent)) return;
+  releaseStream(streamRef.current);
+  streamRef.current = null;
+}
+
 const VAD_THRESHOLD = 0.06;
 const MIN_SPEECH_MS = 150;
 const SILENCE_MS = 1800;
@@ -326,6 +337,7 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       addTurn({ role: "assistant", text: EXIT_TEXT });
       updateState("speaking");
       busyRef.current = false;
+      releaseMicOnAndroid(streamRef);
       await speakAndWait(EXIT_TEXT, speechOwner.current);
       if (generation !== generationRef.current) return;
       generationRef.current += 1; // 예약된 다시 듣기·호출어 듣기가 이어지지 않게
@@ -370,6 +382,7 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
     addTurn({ role: "assistant", text: replyText });
     updateState("speaking");
     busyRef.current = false;
+    releaseMicOnAndroid(streamRef);
     await speakAndWait(reply, speechOwner.current);
     if (generation === generationRef.current && isState("speaking")) {
       updateState("idle");
@@ -400,6 +413,7 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       addTurn({ role: "assistant", text: replyText });
       updateState("speaking");
       busyRef.current = false;
+      releaseMicOnAndroid(streamRef);
       await speakAndWait(reply, speechOwner.current);
       if (generation === generationRef.current && isState("speaking")) {
         updateState("idle");
