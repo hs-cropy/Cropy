@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:offline": "node --test tests/main-sw.test.mjs tests/offline-core.test.mjs tests/offline-sync.test.mjs tests/offline-ui.test.mjs tests/offline-shell.test.mjs",
+    "test:offline": "node --test tests/main-sw.test.mjs tests/offline-core.test.mjs tests/offline-sync.test.mjs tests/offline-ui.test.mjs tests/offline-shell.test.mjs tests/offline-function-bundle.test.mjs",
     "typecheck": "tsc --noEmit",
     "test:prototype": "node --test tests/mobile-prototype.test.mjs",
     "storybook": "storybook dev -p 6006",
