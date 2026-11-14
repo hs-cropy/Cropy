@@ -359,7 +359,7 @@ Mock 결과에는 다음 문구를 붙인다.
 
 이 변경은 파서와 저장된 진단 컨텍스트를 연결하는 서비스 계층 구현이다.
 
-API 연결은 `POST /api/v1/voice/function-call`로 됐다(2026-11-11). 기능 선택 모델은 기기별로 다른 곳에서 돌고(오렌지파이 RKLLM, PC·안드로이드 브라우저 Qwen q4f16, 아이폰 Safari 소형 분류기) 모두 같은 문자열을 이 엔드포인트로 보낸다. 아이폰용 분류기는 뜻이 겹치는 topic을 접어서 보내므로(예측 지표 comparison→ranking, limits→confidence, 재촬영 provenance→certainty, 농약 checklist→verification) 그 topic들은 분류기 경로에서 오지 않는다. 실제 모델 호출, STT·TTS 연결, Orange Pi 실행은 별도 이슈(#163, #165~#170)에서 진행한다.
+API 연결은 `POST /api/v1/voice/function-call`로 됐다(2026-11-11). 기능 선택 모델은 기기별로 다른 곳에서 돌고(오렌지파이 RKLLM, WebGPU PC 브라우저 Qwen q4f16, 휴대폰(iPhone·안드로이드) 브라우저 소형 분류기) 모두 같은 문자열을 이 엔드포인트로 보낸다. 프론트가 기기에 맞는 선택기를 고르는 방법은 `docs/API_SPEC.md`의 음성 흐름 설명을 본다(#165). 휴대폰용 분류기는 뜻이 겹치는 topic을 접어서 보내므로(예측 지표 comparison→ranking, limits→confidence, 재촬영 provenance→certainty, 농약 checklist→verification) 그 topic들은 분류기 경로에서 오지 않는다. 실제 모델 호출, STT·TTS 연결, Orange Pi 실행은 별도 이슈(#163, #165~#170)에서 진행한다.
 
 ### 앱 사용 안내
 
