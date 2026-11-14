@@ -90,15 +90,13 @@ response = handle_function_output(
 
 `handle_scope_limit`은 `reason` 인자로 지원 범위를 안내한다.
 
-다음 기능은 파서에서 유효하게 분석되더라도 아직 handler가 구현되어 있지 않다.
+`get_pesticide_information`은 기록에 있는 PSIS 검증 농약 정보만 안내한다.
 
-- `get_pesticide_information`
+`get_usage_guidance`는 화면 상태(`ui_stage`)에 맞춰 다음 할 일을 안내한다.
 
-- `get_usage_guidance`
+`chit_chat`은 인자 없이 짧은 응답과 앱 기능 안내를 반환한다.
 
-- `chit_chat`
-
-미구현 기능은 `FunctionHandlerNotImplemented`를 발생시킨다. 이를 사용자 질문이 서비스 범위를 벗어났다는 응답으로 바꾸지 않는다.
+9개 기능 모두 handler가 구현되어 있다. 계약에 새 기능이 추가되었는데 handler가 없으면 `FunctionHandlerNotImplemented`를 발생시킨다. 이를 사용자 질문이 서비스 범위를 벗어났다는 응답으로 바꾸지 않는다.
 
 ## 응답 형식
 
@@ -360,3 +358,17 @@ Mock 결과에는 다음 문구를 붙인다.
 이 변경은 파서와 저장된 진단 컨텍스트를 연결하는 서비스 계층 구현이다.
 
 실제 모델 호출, API 연결, TTS 연결 및 Orange Pi 실행은 별도 통합과 검증이 필요하다. 선행 PR #127이 develop에 반영된 뒤 최신 develop 기준으로 최종 확인한다.
+
+### 앱 사용 안내
+
+\`get_usage_guidance\`는 \`topic\` 1~6과 \`delivery\` 1~2를 받는다.
+호출부에서 \`ui_stage\`를 제공하면 현재 화면에 맞는 다음 행동을 안내한다.
+화면 상태가 필요한 요청에 해당 정보가 없거나 직전 안내를 다시 들을 수 없는 경우에는
+\`insufficient_information\`을 반환한다.
+
+### 농약 정보 안내
+
+\`get_pesticide_information\`은 진단 기록의 PSIS 검증 항목만 사용한다.
+현재 제품이 모호하면 제품 이름을 되묻고, 확인된 정보가 없거나
+혼용 가능 여부를 확인할 수 없으면 정보 부족 응답을 반환한다.
+제품 선택 식별자를 받기 전에는 기록에 제품이 하나일 때만 현재 제품으로 처리한다.
