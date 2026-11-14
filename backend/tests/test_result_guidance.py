@@ -75,6 +75,10 @@ def test_all_classes_snapshot_and_refinement(
         assert created.severity is None
         assert len(created.management_actions) == 3
         assert len(created.management_action_details) == 3
+        # 판별 불가는 저장하지 않으므로 재조회·재촬영 대상이 아니다 (#179)
+        assert created.save_status == "skipped"
+        assert service.get_diagnosis_detail(db, created.id) is None
+        return
     seed_row = db.query(Disease).filter_by(model_class_id=class_id).one()
     seed_row.summary_message = "changed current reference"
     seed_row.management_action_details = []
