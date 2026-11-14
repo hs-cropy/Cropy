@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     low_confidence_threshold: float = Field(default=0.8, ge=0, le=1)
     recovery_ttl_hours: int = Field(default=24, ge=1, le=168)
     offline_bundle_dir: Path = Path("../frontend/public/offline-assets")
+    # 기능 선택 모델의 함수 계약(모델 폴더 cropy_prompt.json 형식). 기본값은 ml/qwen/spec_v2.py에서 만든 사본이다.
+    # 배포 모델을 바꾸면 그 모델 폴더의 cropy_prompt.json을 가리키게 한다 (app/services/function_contract.py 참고)
+    llm_function_contract_path: Path = Path(__file__).resolve().parent.parent / "data" / "function_contract.json"
 
     # 음성 안내 (app/services/tts_service.py 참고)
     tts_engine: Literal["off", "mock", "http"] = "off"
@@ -44,6 +47,20 @@ class Settings(BaseSettings):
     # 고령 사용자 기준으로 기본보다 약간 느리게 읽는다
     tts_speed: float = Field(default=0.9, ge=0.5, le=1.5)
     tts_cache_dir: Path = Path("./tts_cache")
+
+    # 음성 인식 (app/services/stt_service.py). 실제 인식은 stt/server.py(sherpa-onnx)가 맡는다
+    stt_engine: Literal["off", "mock", "http"] = "off"
+    stt_server_url: str = "http://127.0.0.1:8200"
+    stt_timeout_seconds: float = Field(default=30, gt=0)
+    # 한 번에 받는 음성 길이 상한. 16kHz 16비트 모노 30초 ≈ 1MB
+    stt_max_audio_mb: int = Field(default=5, gt=0, le=50)
+    # 설정하면 받은 음성(wav)과 인식 결과를 이 폴더에 남긴다. 실제 발화 평가셋·오인식 분석용. 운영에서는 비워 둔다
+    stt_log_dir: Path | None = None
+
+    # 서버 경유 기능 선택기 (app/services/function_selector.py). 모델 서버의 /select 호출
+    function_selector_engine: Literal["off", "mock", "http"] = "off"
+    function_selector_url: str = "http://127.0.0.1:8300"
+    function_selector_timeout_seconds: float = Field(default=30, gt=0)
 
     @property
     def cors_origin_list(self) -> list[str]:

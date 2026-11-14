@@ -11,6 +11,8 @@ interface VoiceMascotProps {
   state: VoiceModeState;
   inputLevel?: number; //0~1, STT 입력 레벨
   outputLevel?: number; //0~1, TTS 출력 레벨
+  /** sm: 카메라가 화면을 차지할 때 상태 표시로 물러난 작은 크로피 */
+  size?: "lg" | "sm";
 }
 
 function clampLevel(level: number) {
@@ -22,7 +24,9 @@ function clampLevel(level: number) {
 export function VoiceMascot({
   state,
   inputLevel,
+  size = "lg",
 }: VoiceMascotProps) {
+  const sm = size === "sm";
   const analyzing = state === "thinking";
   const listening = state === "listening";
   const level = clampLevel(inputLevel ?? 0);
@@ -34,7 +38,7 @@ export function VoiceMascot({
 		: 0;
 
   return (
-    <div className="relative flex h-60 w-60 shrink-0 items-center justify-center">          
+    <div className={`relative flex shrink-0 items-center justify-center ${sm ? "h-24 w-24" : "h-60 w-60"}`}>
       {/* 마스코트 주변 원형 링 2겹 */}
       {listening && (
         <div
@@ -72,7 +76,7 @@ export function VoiceMascot({
         </div>
       )}
 
-      <div className="flex h-52 w-52 items-center justify-center rounded-full bg-[#E5F4E6]">
+      <div className={`flex items-center justify-center rounded-full bg-[#E5F4E6] ${sm ? "h-20 w-20" : "h-52 w-52"}`}>
         <Image
           src={
             analyzing
@@ -94,9 +98,9 @@ export function VoiceMascot({
       {listening && (
         <span
           aria-hidden="true"
-          className="absolute right-0 top-5 flex h-10 w-10 items-center justify-center rounded-full bg-[#25864F] text-white"
+          className={`absolute right-0 flex items-center justify-center rounded-full bg-[#25864F] text-white ${sm ? "top-0 h-7 w-7" : "top-5 h-10 w-10"}`}
         >
-          <span className="icon-[lucide--ear] h-5 w-5" />
+          <span className={`icon-[lucide--ear] ${sm ? "h-4 w-4" : "h-5 w-5"}`} />
         </span>
       )}
 
@@ -104,7 +108,7 @@ export function VoiceMascot({
         <span
           data-testid="mascot-thinking-dots"
           aria-hidden="true"
-          className="absolute right-0 top-5 flex h-10 items-center justify-center gap-1 rounded-full bg-white px-3 shadow-sm"
+          className={`absolute right-0 flex items-center justify-center gap-1 rounded-full bg-white shadow-sm ${sm ? "top-0 h-7 px-2" : "top-5 h-10 px-3"}`}
         >
           {[0, 1, 2].map((index) => (
             <span
@@ -120,17 +124,18 @@ export function VoiceMascot({
       {state === "speaking" && (
         <span
           aria-hidden="true"
-          className="
+          className={`
             absolute right-0 top-0 z-10
-            flex h-14 w-14 items-center justify-center
+            flex items-center justify-center
             rounded-[24px]
             border border-cropy-border
             bg-cropy-surface
             text-cropy-action-primary
-          "
+            ${sm ? "h-8 w-8" : "h-14 w-14"}
+          `}
         >
           {/* 음파 아이콘 */}
-          <span className="icon-[lucide--audio-lines] h-7 w-7" />
+          <span className={`icon-[lucide--audio-lines] ${sm ? "h-4 w-4" : "h-7 w-7"}`} />
           {/* 말풍선 아래의 작은 원형 꼬리 */}
           <span
             className="

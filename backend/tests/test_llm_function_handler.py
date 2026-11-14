@@ -5,7 +5,6 @@ from pydantic import ValidationError
 
 from app.schemas.llm import DiagnosisLLMInput
 from app.services.llm_function_handler import (
-    FunctionHandlerNotImplemented,
     handle_function_output,
 )
 from app.services.llm_function_parser import (
@@ -150,17 +149,6 @@ def test_invalid_tokens_are_rejected(context):
         )
 
 
-@pytest.mark.parametrize(
-    "output",
-    [
-        "<hs_4>(topic=2, product=1)<hs_end>",
-        "<hs_7>(topic=1, delivery=1)<hs_end>",
-        "<hs_8>()<hs_end>",
-    ],
-)
-def test_unimplemented_function_is_distinct_from_user_scope(context, output):
-    with pytest.raises(FunctionHandlerNotImplemented):
-        handle_function_output(output, context, CONTRACT)
 
 @pytest.mark.parametrize(
     "status, phrase",
@@ -309,6 +297,35 @@ def dispatch(function_name, topic, context):
         context,
         CONTRACT,
     )
+
+
+@pytest.mark.parametrize(
+    ("reason", "expected"),
+    [
+        (1, "고추·무·배추만 진단"),
+        (2, "직접 실행할 수는 없어요"),
+        (3, "밝은 곳에서 초점을 맞춰"),
+    ],
+)
+def test_scope_limit_explains_the_selected_reason(context, reason, expected):
+    before = context.model_dump()
+    result = handle_function_output(f"<hs_6>(reason={reason})<hs_end>", context, CONTRACT)
+
+    assert result.function_name == "handle_scope_limit"
+    assert result.status == "unsupported_scope"
+    assert expected in result.text
+    assert context.disease_name not in result.text
+    assert context.model_dump() == before
+
+
+@pytest.mark.parametrize("argument,count", [("topic", 3), ("reason", 4)])
+def test_scope_limit_rejects_an_incompatible_contract(context, argument, count):
+    functions = list(CONTRACT.functions)
+    functions[6] = FunctionSpec("handle_scope_limit", ((argument, count),))
+    contract = replace(CONTRACT, functions=tuple(functions))
+
+    with pytest.raises(InvalidFunctionContract):
+        handle_function_output(f"<hs_6>({argument}=1)<hs_end>", context, contract)
 
 
 def test_result_preserves_confusion_state(context):
@@ -460,3 +477,157 @@ def test_care_keeps_mock_provenance(care_context):
     result = handle_function_output("<hs_3>(topic=2)<hs_end>", care_context, CONTRACT)
     assert result.status == "ok"
     assert result.text.startswith("데모 결과")
+
+
+def test_chit_chat_returns_short_app_guidance(context):
+    result = handle_function_output("<hs_8>()<hs_end>", context, CONTRACT)
+
+    assert result.function_name == "chit_chat"
+    assert result.status == "ok"
+    assert "작물 진단" in result.text
+    assert context.disease_name not in result.text
+
+
+def test_usage_guidance_uses_explicit_stage_and_delivery(context):
+    brief = handle_function_output(
+        "<hs_7>(topic=1, delivery=1)<hs_end>",
+        context, CONTRACT, ui_stage="no_photo",
+    )
+    detailed = handle_function_output(
+        "<hs_7>(topic=1, delivery=2)<hs_end>",
+        context, CONTRACT, ui_stage="no_photo",
+    )
+    result = handle_function_output(
+        "<hs_7>(topic=1, delivery=1)<hs_end>",
+        context, CONTRACT, ui_stage="result",
+    )
+
+    assert brief.function_name == "get_usage_guidance"
+    assert brief.status == detailed.status == result.status == "ok"
+    assert "작물을 골라" in brief.text
+    assert detailed.text.splitlines()[0] == f"1. {brief.text}"
+    assert detailed.text.splitlines()[1].startswith("2. ")
+    assert "진단 결과" in result.text
+
+
+def test_usage_guidance_without_stage_or_previous_reply_does_not_guess(context):
+    for topic in (1, 4, 6):
+        result = handle_function_output(
+            f"<hs_7>(topic={topic}, delivery=1)<hs_end>", context, CONTRACT
+        )
+        assert result.status == "insufficient_information"
+
+
+def test_usage_guidance_static_topics_work_without_stage(context):
+    for topic, phrase in ((2, "초점"), (3, "작물 선택"), (5, "다시 시도")):
+        result = handle_function_output(
+            f"<hs_7>(topic={topic}, delivery=2)<hs_end>", context, CONTRACT
+        )
+        assert result.status == "ok"
+        assert phrase in result.text
+
+
+def _validated_pesticides(items):
+    from app.schemas.llm import LLMPesticideInfo
+
+    return [LLMPesticideInfo.model_validate(item) for item in items]
+
+
+def test_pesticide_information_uses_only_verified_records(context):
+    context.decision_status = "disease"
+    context.decision_reasons = []
+    context.recapture = None
+    context.pesticides = _validated_pesticides([
+        {
+            "name": "테스트 제품 A",
+            "source": "PSIS",
+            "verification_status": "verified",
+            "synced_at": "2026-01-01T00:00:00Z",
+            "dilution": "테스트 희석값",
+            "usage": "테스트 사용법",
+            "active_ingredient": "테스트 성분",
+            "safety": {"phi_days": 0, "reentry_hours": 0},
+            "safety_notes": "테스트 확인사항",
+        },
+        {
+            "name": "미검증 제품 B",
+            "source": "PSIS",
+            "dilution": "표시하면 안 되는 값",
+        },
+    ])
+    expected = {
+        1: "테스트 제품 A",
+        2: "테스트 희석값",
+        3: "테스트 사용법",
+        4: "0일",
+        5: "0시간",
+        6: "PSIS 검증",
+        7: "테스트 성분",
+        8: "테스트 제품 A",
+        9: "테스트 확인사항",
+    }
+    for topic, phrase in expected.items():
+        result = handle_function_output(
+            f"<hs_4>(topic={topic}, product=2)<hs_end>", context, CONTRACT
+        )
+        assert result.function_name == "get_pesticide_information"
+        assert result.status == "ok"
+        assert phrase in result.text
+        assert "미검증 제품 B" not in result.text
+        assert "표시하면 안 되는 값" not in result.text
+
+    current = handle_function_output("<hs_4>(topic=2, product=1)<hs_end>", context, CONTRACT)
+    assert current.status == "needs_clarification"
+    assert "테스트 희석값" not in current.text
+
+    for topic in (10, 11):
+        result = handle_function_output(
+            f"<hs_4>(topic={topic}, product=2)<hs_end>", context, CONTRACT
+        )
+        assert result.status == "insufficient_information"
+
+
+def test_pesticide_information_does_not_infer_missing_values(context):
+    context.decision_status = "disease"
+    context.decision_reasons = []
+    context.recapture = None
+    call = "<hs_4>(topic=2, product=1)<hs_end>"
+    context.pesticides = []
+    assert handle_function_output(call, context, CONTRACT).status == "insufficient_information"
+
+    context.pesticides = _validated_pesticides([{
+        "name": "테스트 제품 A",
+        "source": "PSIS",
+        "verification_status": "verified",
+        "synced_at": "2026-01-01T00:00:00Z",
+    }])
+    assert handle_function_output(call, context, CONTRACT).status == "insufficient_information"
+
+    context.pesticides[0].dilution = "표시하면 안 되는 값"
+    context.decision_status = "crop_mismatch"
+    result = handle_function_output(call, context, CONTRACT)
+    assert result.status == "insufficient_information"
+    assert "표시하면 안 되는 값" not in result.text
+
+
+def test_pesticide_information_compares_two_verified_products(context):
+    context.decision_status = "disease"
+    context.decision_reasons = []
+    context.recapture = None
+    context.pesticides = _validated_pesticides([
+        {
+            "name": name,
+            "active_ingredient": ingredient,
+            "source": "PSIS",
+            "verification_status": "verified",
+            "synced_at": "2026-01-01T00:00:00Z",
+        }
+        for name, ingredient in (("Product A", "Ingredient A"), ("Product B", "Ingredient B"))
+    ])
+
+    result = handle_function_output(
+        "<hs_4>(topic=10, product=2)<hs_end>", context, CONTRACT
+    )
+    assert result.status == "ok"
+    assert "Product A: Ingredient A" in result.text
+    assert "Product B: Ingredient B" in result.text
