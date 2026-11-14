@@ -8,6 +8,7 @@ from app.schemas.llm import DiagnosisLLMInput
 
 # 어느 기능 선택기가 문자열을 만들었는지. 동작은 같고 로그·통계에만 쓴다.
 FunctionCallSource = Literal["server", "web_qwen", "ios_clf", "board_rkllm", "test"]
+UiStage = Literal["no_photo", "photo_ready", "analyzing", "result", "error"]
 
 
 class VoiceFunctionCallRequest(BaseModel):
@@ -31,6 +32,8 @@ class VoiceFunctionCallRequest(BaseModel):
     # 기능 선택 모델의 출력 한 줄. 예: <hs_4>(topic=2, product=1)<hs_end>
     function_call: str = Field(min_length=1, max_length=512)
     source: FunctionCallSource = "server"
+    # 지금 화면 단계. 사용 안내(get_usage_guidance)가 다음 할 일을 고를 때 쓴다
+    ui_stage: UiStage | None = None
 
     @model_validator(mode="after")
     def _exactly_one_context(self):

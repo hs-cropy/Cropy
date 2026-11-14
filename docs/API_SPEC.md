@@ -355,6 +355,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 | context | DiagnosisLLMInput | 둘 중 하나 | 브라우저 오프라인 진단처럼 서버 기록이 없을 때의 LLM 입력 계약 (`schemas/llm.py`) |
 | function_call | string (≤512자) | Yes | 모델 출력 한 줄. 예: `<hs_4>(topic=2, product=1)<hs_end>` |
 | source | `server` / `web_qwen` / `ios_clf` / `board_rkllm` / `test` | No | 어느 기능 선택기가 만들었는지. 로그·통계용이며 동작은 같다 (기본 `server`) |
+| ui_stage | `no_photo` / `photo_ready` / `analyzing` / `result` / `error` | No | 지금 화면 단계. 사용 안내(`get_usage_guidance`)가 다음 할 일을 고를 때 쓴다. 없으면 화면이 필요한 안내는 `insufficient_information` |
 
 `diagnosis_id`와 `context`를 둘 다 보내거나 둘 다 빼면 422다.
 
@@ -372,7 +373,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 |---|---|---|
 | `FUNCTION_CALL_INVALID` | 400 | 형식이 아니거나 없는 함수 번호, 인자 이름·순서·범위가 계약과 다름 |
 | `DIAGNOSIS_NOT_FOUND` | 404 | 이 기기에 그 진단이 없음 |
-| `FUNCTION_NOT_IMPLEMENTED` | 501 | 형식은 유효하지만 아직 handler가 없는 기능 (구현 범위는 [LLM 함수 handler](LLM_FUNCTION_HANDLER.md)) |
+| `FUNCTION_NOT_IMPLEMENTED` | 501 | 계약에는 있지만 handler가 없는 기능. 현재 9개 기능은 모두 구현되어 있다 ([LLM 함수 handler](LLM_FUNCTION_HANDLER.md)) |
 | `FUNCTION_CONTRACT_UNAVAILABLE` | 503 | 계약 파일을 읽을 수 없거나 handler와 맞지 않음 (`retryable: true`) |
 
 `GET /api/v1/capabilities`의 `execution.voice_commands`는 계약 파일을 읽을 수 있을 때 `true`다.

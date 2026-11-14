@@ -69,7 +69,7 @@ async def voice_function_call(body: VoiceFunctionCallRequest, device: str = Depe
         context = body.context
 
     try:
-        response = handle_function_output(body.function_call, context, contract)
+        response = handle_function_output(body.function_call, context, contract, ui_stage=body.ui_stage)
     except InvalidFunctionOutput as error:
         logger.info("voice function call rejected (%s): %s", body.source, error)
         raise APIError(400, "FUNCTION_CALL_INVALID", "기능 호출 형식이 올바르지 않습니다.")
