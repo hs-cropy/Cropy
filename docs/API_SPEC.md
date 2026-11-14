@@ -325,7 +325,7 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 | `save_status`, `recovery_token` | `saved` 또는 DB 저장 실패의 `failed`. 실패해도 보관 성공한 경우 결과를 반환 |
 | `POST /api/v1/results/{token}/save` | 서버에 보관된 결과만 재저장. 임의 진단 JSON은 받지 않으며 재추론하지 않음 |
 | `GET /api/v1/capabilities` | 사진 형식·용량·픽셀, 판단 기준, 실행 준비, 복구 보관 시간 |
-| `GET /api/v1/offline/manifest` | 준비된 브라우저 모델·전처리·병해 안내 묶음 메타데이터 |
+| `GET /api/v1/offline/manifest` | 준비된 브라우저 모델·전처리·병해 안내 묶음 메타데이터. 기능 선택 모델 묶음이 있으면 `function_models`(`mobile_clf`·`web_qwen`별 `version`·`base_url`·`total_bytes`·파일별 `name`·`bytes`·`sha256`)를 함께 준다. 이 값은 `version` 계산에 들어가지 않는다 |
 | `POST /api/v1/offline/records` | multipart `metadata`, `file`, 선택적 `refined_file`로 기기 기록 동기화 |
 
 진단·재촬영의 선택적 `Idempotency-Key`는 최대 128자다. 같은 작업·키·사진·작물은 동일 응답을 재사용한다. 다른 본문이면 `409 IDEMPOTENCY_CONFLICT`다. 성공 응답은 진단과 같은 DB 트랜잭션에 저장한다. 기존 기록보다 오래된 복구 결과는 `409 DIAGNOSIS_CHANGED`, 만료 초안은 `410 RESULT_EXPIRED`다. 기본 복구 TTL은 24시간이며 `RECOVERY_TTL_HOURS`로 1~168시간 설정한다.

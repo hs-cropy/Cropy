@@ -30,7 +30,7 @@
 | Orange Pi 로컬 서버 | 기존 FastAPI/PyTorch 모델 | 보드의 SQLite와 업로드 폴더 | 휴대폰↔보드의 로컬 Wi-Fi/LAN 연결 |
 | 스마트폰 브라우저 자체 실행 | ONNX Runtime Web, WASM CPU | 해당 브라우저·오리진의 IndexedDB | 준비 후 서버 연결도 필요 없음 |
 
-브라우저 자체 실행은 처음에 페이지·약 94MB 모델·약 14MB WASM 런타임을 받아야 한다. 준비 파일은 인터넷이나 로컬 보드에서 받을 수 있다. 모델 SHA-256·파일 크기·세션 생성이 모두 성공한 뒤 저장된 모델을 교체한다. 연결 중단·업데이트 실패 시 기존 모델을 유지한다. 새 묶음은 서버 manifest 의 `version`이 받아 둔 묶음과 다를 때 업데이트 다이얼로그로 알린다. 다운로드 재개는 처음부터 다시 받는 방식이다.
+브라우저 자체 실행은 처음에 페이지·약 94MB 모델·약 14MB WASM 런타임을 받아야 한다. 준비 파일은 인터넷이나 로컬 보드에서 받을 수 있다. 모델 SHA-256·파일 크기·세션 생성이 모두 성공한 뒤 저장된 모델을 교체한다. 연결 중단·업데이트 실패 시 기존 모델을 유지한다. 새 묶음은 서버 manifest 의 `version`이 받아 둔 묶음과 다를 때 업데이트 다이얼로그로 알린다. 진단 모델(CNN) 다운로드 재개는 처음부터 다시 받는 방식이다. 음성 질문용 기능 선택 모델은 파일 단위로 이어 받는다(아래 "기능 선택 모델 묶음").
 
 Service Worker와 모델 준비에는 HTTPS가 필요하다. 개발용 localhost/127.0.0.1 예외와 달리 휴대폰에서 `http://보드IP:3000`으로 접속하면 자체 오프라인 준비는 지원하지 않는다. 이 주소의 기존 **서버 진단**은 계속 사용할 수 있다. 자체 실행을 제공할 때는 휴대폰이 신뢰하는 인증서와 HTTPS 프록시를 구성해야 한다. [MDN 보안 컨텍스트](https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Secure_Contexts)
 
@@ -50,6 +50,22 @@ npm run build
 생성물은 `frontend/public/offline-assets/`의 `cnn-<hash>.onnx`, `manifest.json`, `manifest-<bundle version>.json`이다. 묶음 버전은 모델·전처리·병해 안내·판단 기준을 포함한다. 이전 manifest 아카이브는 이전 기기 기록 동기화에 필요하므로 유지한다. ONNX 모델의 hash와 묶음 버전은 서로 다르다. JS/WASM은 빌드 시 같은 npm 패키지에서 `public/offline-runtime/`으로 복사하고 `sw.js`의 `SHELL` 목록(화면·스크립트·로고·배경·마스코트) 파일 hash에 따라 Service Worker 캐시 이름을 갱신한다. 목록에 넣은 파일이 없으면 이 단계에서 멈춘다. 외부 CDN을 사용하지 않는다. [ONNX Runtime Web 배포 안내](https://onnxruntime.ai/docs/tutorials/web/deploy.html)
 
 Docker Compose는 프론트 이미지에 public 파일을 포함하고 백엔드에 동일한 offline-assets 폴더를 읽기 전용으로 마운트한다. **모델을 준비한 뒤** 이미지를 빌드해야 한다. 백엔드 `OFFLINE_BUNDLE_DIR`는 Compose에서 `/offline-assets`다. 모델 파일·manifest 아카이브를 포함한 폴더를 배포 대상에도 복사한다.
+
+### 기능 선택 모델 묶음 (#166)
+
+음성 질문의 기능 선택 모델은 기기마다 다르다. 휴대폰(iPhone·안드로이드)은 소형 분류기 `mobile_clf`(약 15MB), WebGPU가 있는 PC는 Qwen q4f16 `web_qwen`(약 1.34GB)을 받는다. 그 밖의 기기(WebGPU 없는 PC 등)는 받을 파일이 없고 서버가 고른다(`core.mjs`의 `functionBundleKind`). 모델 파일은 ML 산출물(PR #176 `ml/qwen`)에서 가져와 등록한다.
+
+```powershell
+cd backend
+.venv/Scripts/python.exe scripts/export_browser_model.py --function-bundle mobile_clf=<분류기 폴더> --function-bundle web_qwen=<web_onnx/2b 폴더>
+```
+
+- `mobile_clf` 폴더에는 `model_int8.onnx`·`tokenizer.json`·`tokenizer_config.json`·`labels.json`이 있어야 한다. `web_qwen` 폴더는 `files.json`(`[[이름, 바이트], ...]`)에 적힌 파일과 `prefix_q4f16.json`·`prefix_q4f16.bin`이 있어야 하고, 크기가 `files.json`과 다르면 멈춘다.
+- 스크립트는 파일마다 SHA-256을 계산해 `offline-assets/function/<kind>/<version 앞 16자>/`에 복사하고 `offline-assets/function-models.json`을 원자적으로 교체한다. 묶음 `version`은 파일 목록(이름·크기·SHA-256)의 해시다. CNN `manifest.json`과 파일을 나눠 두므로 기능 선택 모델만 바뀌어도 CNN 업데이트 다이얼로그가 뜨지 않는다.
+- `GET /api/v1/offline/manifest`는 `function-models.json`이 있으면 `function_models`로 합쳐 준다. 오프라인 화면은 CNN처럼 정적 파일 `/offline-assets/function-models.json`을 직접 읽는다.
+- 오프라인 화면은 진단 파일이 준비된 뒤 **음성 질문 파일 (선택)** 카드를 보인다. 받기 전에 기기 종류와 `navigator.storage.estimate()`로 크기·Wi-Fi·저장 공간 안내를 바꾼다. 파일마다 크기와 SHA-256을 확인한 뒤에만 Cache Storage `transformers-cache`에 넣으므로 검증에 실패한 파일은 남지 않는다. 키는 파일 주소(`<origin><base_url>/<name>`)다. #167·#168에서 transformers.js가 같은 주소로 요청하면 네트워크 없이 캐시에서 읽는다. 다 받으면 IndexedDB `assets`의 `fn:<kind>`에 묶음 정보를 적고 이전 버전 파일을 지운다. 연결이 끊기면 다시 받을 때 이미 받은 파일을 건너뛴다. 브라우저가 캐시를 지웠으면(특히 iOS) 다시 받기를 보인다.
+- 아직 이 파일로 기능을 고르는 코드는 없다(#167 휴대폰 분류기, #168 PC Qwen). 묶음이 없으면 카드를 숨긴다.
+- Docker: 프론트 이미지는 빌드 시점의 public 파일을 서빙하므로(Next.js는 빌드 뒤 public에 추가한 파일을 서빙하지 않는다) 묶음을 등록한 뒤 이미지를 빌드해야 한다. `web_qwen`을 넣으면 이미지가 약 1.34GB 커진다. 새 버전을 등록해도 이전 `function/<kind>/<version>/` 폴더는 남는다(받는 중인 기기가 있을 수 있어서다). 이미지를 빌드하기 전에 `function-models.json`의 `base_url`에 없는 버전 폴더를 지운다.
 
 인터넷이 없는 보드에 배포할 때는 필요한 아키텍처의 Docker 이미지와 모델 파일을 미리 준비해 가져간다. 실행 중 npm/pip 설치나 외부 모델 다운로드는 필요하지 않지만, 이 작업에서 Orange Pi 장치 자체의 설치·속도는 검증하지 않았다.
 
