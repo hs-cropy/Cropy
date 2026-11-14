@@ -94,12 +94,15 @@ export function updateAvailable(currentVersion, serverVersion) {
 }
 // 진단 기록 화면 위에 띄울 동기화 안내. 전송에 실패한 기록이 있으면 실패, 연결이 없는데 보낼 기록이 있으면 대기다
 export function recordsNotice(records, online) {
-  if (records.some(record => record.sync_status === 'failed')) return 'sync-failed';
-  if (!online && records.some(record => record.sync_status === 'pending')) return 'sync-pending';
+  if (records.some(record => syncStateOf(record) === 'failed')) return 'sync-failed';
+  if (!online && records.some(record => syncStateOf(record) === 'pending')) return 'sync-pending';
   return null;
 }
 // 판별 불가(9_기타): 작물 잎을 알아보지 못한 결과 (lib/diagnosis.ts 의 isNotCrop)
 export const isNotCrop = result => result?.category === 'other';
+// 서버 동기화 상태. 판별 불가는 서버에 남기지 않으므로(#179) 이미 올라간 옛 기록이 아니면 'local_only'
+export const syncStateOf = record =>
+  isNotCrop(record?.result) && record.sync_status !== 'saved' ? 'local_only' : record.sync_status;
 // 진단 결과 화면의 등급 배지 (DiagnosisResultView.tsx 의 gradeOf 와 같다). 위험·주의는 같은 색이고 라벨로 구분한다.
 // 정상 판정이면 "정상", 판별 불가나 등급이 없으면 null
 const SEVERITY = { high: { label: '위험', tone: 'attention' }, medium: { label: '주의', tone: 'attention' }, low: { label: '낮음', tone: 'low' } };

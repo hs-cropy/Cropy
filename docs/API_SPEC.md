@@ -316,17 +316,18 @@ revision 충돌을 409로 반환하고 이번 요청의 파일만 정리한다.
 
 | 엔드포인트/필드 | 용도 |
 |---|---|
-| `GET /api/v1/history?crop_type=무&severity=high&page=1&size=20` | 작물·등급 필터. `total`은 최종 필터 건수, `crop_total`은 작물 조건 건수, `unfiltered_total`은 전체 건수 |
+| `GET /api/v1/history?crop_type=무&severity=high&page=1&size=20` | 작물·등급 필터. `total`은 최종 필터 건수, `crop_total`은 작물 조건 건수, `unfiltered_total`은 전체 건수 판별 불가 기록은 목록·건수에서 뺀다(#179 이전 기록 포함). |
 | 이력 요약 `category`, `severity`, `is_refined`, `content_status` | 정상/병해·등급·재촬영·과거 안내 상태 표시 |
 | 진단 `management_actions`, `content_version`, `content_status` | 관리 안내와 당시 콘텐츠 버전. 이전 스냅샷 없는 기록은 `current_reference` |
 | `current_pesticides` | 당시 `pesticides`와 구분한 현재 카탈로그. 과거 이력의 최신 조건 확인에 사용 |
 | `decision_status`, `decision_reasons`, `policy_version` | `decision-v2`. 판별 불가(`not_crop`, 단독) → 작물 불일치 → 혼동 → 낮은 신뢰도 우선순위와 모든 해당 이유 |
 | `initial_predictions`, `is_refined` | 최초 상위 후보와 재촬영 여부 |
-| `save_status`, `recovery_token` | `saved` 또는 DB 저장 실패의 `failed`. 실패해도 보관 성공한 경우 결과를 반환 |
+| `save_status`, `recovery_token` | `saved` 또는 DB 저장 실패의 `failed`. 실패해도 보관 성공한 경우 결과를 반환. `skipped`는 판별 불가(작물 잎 아님)라 기록·사진·멱등 키를 남기지 않은 결과(#179) — `id`로 이력·재촬영·음성 안내를 조회할 수 없고 `image_url`은 null |
+| `speech_script` | `skipped` 결과의 음성 안내 문장 목록. 저장된 결과는 null이며 `/diagnose/{id}/speech/script`를 쓴다 |
 | `POST /api/v1/results/{token}/save` | 서버에 보관된 결과만 재저장. 임의 진단 JSON은 받지 않으며 재추론하지 않음 |
 | `GET /api/v1/capabilities` | 사진 형식·용량·픽셀, 판단 기준, 실행 준비, 복구 보관 시간 |
 | `GET /api/v1/offline/manifest` | 준비된 브라우저 모델·전처리·병해 안내 묶음 메타데이터 |
-| `POST /api/v1/offline/records` | multipart `metadata`, `file`, 선택적 `refined_file`로 기기 기록 동기화 |
+| `POST /api/v1/offline/records` | multipart `metadata`, `file`, 선택적 `refined_file`로 기기 기록 동기화. 판별 불가 기록은 저장하지 않고 `save_status=skipped`로 응답 |
 
 진단·재촬영의 선택적 `Idempotency-Key`는 최대 128자다. 같은 작업·키·사진·작물은 동일 응답을 재사용한다. 다른 본문이면 `409 IDEMPOTENCY_CONFLICT`다. 성공 응답은 진단과 같은 DB 트랜잭션에 저장한다. 기존 기록보다 오래된 복구 결과는 `409 DIAGNOSIS_CHANGED`, 만료 초안은 `410 RESULT_EXPIRED`다. 기본 복구 TTL은 24시간이며 `RECOVERY_TTL_HOURS`로 1~168시간 설정한다.
 

@@ -47,6 +47,7 @@ const NO_DIAGNOSIS_TEXT = "먼저 잎을 비추고 찍어 줘라고 말하거나
 const NO_CAMERA_TEXT = "카메라가 꺼져 있어요. 카메라 켜기를 누른 뒤 다시 말씀해 주세요.";
 const CAPTURE_FAILED_TEXT = "사진을 찍지 못했어요. 잎이 보이게 비추고 다시 말씀해 주세요.";
 const CAPTURING_TEXT = "찍었어요. 잠시만요.";
+const NOT_CROP_TEXT = "사진에서 작물 잎을 찾지 못했어요. 잎이 잘 보이게 다시 찍어 주세요.";
 const EXIT_TEXT = "음성 대화를 마칠게요.";
 
 /** 방금 찍어 진단한 사진. 미리보기 구석에 썸네일과 병명으로 남겨 "무엇에 대해 답하는지" 보여 준다 */
@@ -284,7 +285,9 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
     setAssistantText(CAPTURING_TEXT);
     const result = await diagnoseImage(file, undefined, { signal });
     if (signal.aborted) return [];
-    adoptDiagnosis(result.id);
+    // 판별 불가는 저장되지 않아 id로 이어 물을 수 없다(#179). 현재 진단은 그대로 두고 응답의 안내 문장만 읽는다
+    const unsaved = result.save_status === "skipped";
+    if (!unsaved) adoptDiagnosis(result.id);
     // 찍은 사진을 미리보기 구석에 남긴다. 이전 사진의 URL은 거둔다
     if (lastShotUrlRef.current) URL.revokeObjectURL(lastShotUrlRef.current);
     const url = typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : null;
@@ -294,6 +297,7 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       diseaseName: result.disease_name,
       recapture: result.recapture ? { region: result.recapture.region, instruction: result.recapture.instruction } : null,
     });
+    if (unsaved) return result.speech_script?.length ? result.speech_script : NOT_CROP_TEXT;
     try {
       return await fetchSpeechScript(result.id, signal);
     } catch (cause) {

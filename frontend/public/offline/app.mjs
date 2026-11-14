@@ -1,5 +1,5 @@
 import * as ort from '/offline-runtime/ort.wasm.bundle.min.mjs';
-import { softmax, distribution, fuse, summarize, failurePhase, viewFromHash, recordsNotice, updateAvailable, isDesktopDevice, gradeOf, isNotCrop, resultTimeSentence, recordTime } from './core.mjs';
+import { softmax, distribution, fuse, summarize, failurePhase, viewFromHash, recordsNotice, updateAvailable, isDesktopDevice, gradeOf, isNotCrop, syncStateOf, resultTimeSentence, recordTime } from './core.mjs';
 
 ort.env.wasm.wasmPaths = '/offline-runtime/';
 ort.env.wasm.numThreads = 1;
@@ -506,7 +506,8 @@ async function sync(record, button) {
       data = await response.json();
     }
     if (!response.ok) throw new Error(data.detail || '서버에 저장하지 못했어요.');
-    record.sync_status = data.save_status === 'saved' ? 'saved' : 'failed';
+    // skipped: 판별 불가라 서버가 남기지 않음 (#179)
+    record.sync_status = data.save_status === 'saved' ? 'saved' : data.save_status === 'skipped' ? 'local_only' : 'failed';
     record.server_id = data.id; record.recovery_token = data.recovery_token;
     await db('records','put',record); await history();
     if (current?.id === record.id) result(record);
@@ -535,13 +536,13 @@ async function history() {
   for (const record of records) {
     const article = document.createElement('article');
     const title = document.createElement('h3'); title.textContent=record.result.disease_name+(isNotCrop(record.result)?'':' · '+Math.round(record.result.confidence*100)+'%'); article.append(title);
-    const detail = document.createElement('p'); detail.className='muted'; detail.textContent=new Date(record.created_at).toLocaleString('ko-KR')+' · '+({saved:'서버 저장 완료',pending:'서버 전송 대기',failed:'서버 전송 실패'}[record.sync_status]); article.append(detail);
+    const detail = document.createElement('p'); detail.className='muted'; detail.textContent=new Date(record.created_at).toLocaleString('ko-KR')+' · '+({saved:'서버 저장 완료',pending:'서버 전송 대기',failed:'서버 전송 실패',local_only:'이 기기에만 보관'}[syncStateOf(record)]); article.append(detail);
     for (const file of [record.file,record.refined_file].filter(Boolean)) { const img=document.createElement('img');const url=URL.createObjectURL(file);recordUrls.push(url);img.src=url;img.alt='저장한 진단 사진';article.append(img); }
     const actions=document.createElement('div');actions.className='row';
     for (const [label, handler, disabled] of [
       ['결과 보기',()=>{result(record);notice('result',null);go('result');},false],
       // 실패해도 목록과 동기화 안내가 새 상태를 보이게 다시 그린다
-      ['서버에 저장',async event=>{dismissed=null;await sync(record,event.target);await history();},record.sync_status==='saved'],
+      ['서버에 저장',async event=>{dismissed=null;await sync(record,event.target);await history();},['saved','local_only'].includes(syncStateOf(record))],
       ['내보내기',()=>exportRecord(record),false],['이 기기에서 삭제',async()=>{if(confirm('이 기기의 사진과 기록을 삭제할까요? 내보낸 파일이나 서버 기록은 유지돼요.')){setBusy(true);try {await db('records','delete',null,record.id);if(current?.id===record.id)clearResult();storageFull=false;await history();}finally{setBusy(false);}}},false]]) {
       const button=document.createElement('button');button.textContent=label;button.className='secondary';button.dataset.locked=String(disabled);button.disabled=busy || disabled;
       button.addEventListener('click',event=>{if(busy)return;Promise.resolve(handler(event)).catch(error=>{say(message(error));});});actions.append(button);
@@ -573,7 +574,7 @@ $('records-card').querySelector('[data-act="primary"]').addEventListener('click'
   if(notices.records==='storage-full'){$('records').scrollIntoView({behavior:'smooth'});return;}
   // await 뒤에는 event.currentTarget 이 비므로 버튼을 먼저 잡아 둔다
   const button=event.currentTarget;dismissed=null;
-  for(const record of stored.filter(r=>r.sync_status==='failed'))await sync(record,button);
+  for(const record of stored.filter(r=>syncStateOf(r)==='failed'))await sync(record,button);
   await history().catch(error=>{say(message(error));});
 });
 $('records-card').querySelector('[data-act="secondary"]').addEventListener('click',()=>{dismissed=notices.records;notice('records',null);});

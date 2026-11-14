@@ -73,8 +73,11 @@ export interface DiagnoseResponse {
   policy_version?: string;
   is_refined?: boolean;
   initial_predictions?: PredictionItem[];
-  save_status?: "saved" | "failed";
+  /** skipped: 판별 불가라 기록으로 남기지 않음(#179). id로 이력·재촬영·음성 안내를 불러올 수 없다 */
+  save_status?: "saved" | "failed" | "skipped";
   recovery_token?: string | null;
+  /** 저장하지 않은 결과(skipped)의 음성 안내 문장 */
+  speech_script?: string[] | null;
 }
 
 export interface DiagnosisSummary {
