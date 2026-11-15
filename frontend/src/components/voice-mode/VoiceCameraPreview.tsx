@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import type { CameraStatus } from "@/types/camera";
 import type { LastShot } from "@/features/voice/hooks/useVoiceConversation";
 
@@ -22,13 +22,34 @@ export interface VoiceCamera {
  */
 export function VoiceCameraPreview({ videoRef, status, onStart, onShutter, shutterDisabled = false, lastShot = null }: VoiceCamera) {
   const streaming = status === "streaming";
+  // 음성 모드는 좁은 화면·넓은 화면용 미리보기를 하나씩 그리고 CSS로 하나만 보인다. 카메라 훅은 videoRef 하나에만
+  // 스트림을 붙이므로, 둘 다 ref={videoRef}로 두면 나중에 그려진 넓은 화면 쪽이 가져가 휴대폰 미리보기가 검게 남았다.
+  // 보이는 쪽이 videoRef를 갖고, 이미 숨은 쪽에 붙은 스트림이 있으면 넘겨받는다 (찍기도 보이는 영상에서 한다)
+  const localRef = useRef<HTMLVideoElement | null>(null);
+  const attachVideo = useCallback(
+    (el: HTMLVideoElement | null) => {
+      localRef.current = el;
+      if (el && (videoRef.current === null || el.offsetParent !== null)) videoRef.current = el;
+    },
+    [videoRef],
+  );
+  useEffect(() => {
+    const el = localRef.current;
+    if (!streaming || !el || el.offsetParent === null) return;
+    const owner = videoRef.current;
+    if (owner && owner !== el && owner.srcObject && el.srcObject !== owner.srcObject) {
+      el.srcObject = owner.srcObject;
+      void el.play()?.catch(() => {});
+    }
+    videoRef.current = el;
+  }, [streaming, videoRef]);
   const recapture = streaming ? lastShot?.recapture ?? null : null;
   return (
     <div className="w-full">
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-black/80">
         {/* 스트림이 없을 때도 video 요소는 두어야 켤 때 srcObject를 바로 붙일 수 있다 */}
         <video
-          ref={videoRef}
+          ref={attachVideo}
           autoPlay
           playsInline
           muted
