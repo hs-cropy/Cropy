@@ -125,3 +125,6 @@ backend/tts_cache/
 
 # STT 모델 파일 (stt/download_models.py로 받음)
 stt/models/
+
+# dev-lan.mjs가 만드는 자체 서명 인증서 (PC IP별)
+frontend/.cert/
