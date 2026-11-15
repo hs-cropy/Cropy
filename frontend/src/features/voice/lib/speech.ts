@@ -94,29 +94,54 @@ export function speak(text: string | string[], owner?: symbol): void {
  * 음성 모드가 "말하는 중" 상태를 실제 낭독 길이에 맞추는 데 쓴다. 미지원 환경이나 읽을 문장이
  * 없으면 바로 끝난다. 큐에 넣은 utterance가 시작도 못 하고 cancel되면 브라우저에 따라 end·error가
  * 오지 않을 수 있어, 호출한 쪽은 자기 상태 전환을 이 Promise에만 의존하지 않는다.
+ *
+ * 결과로 어떻게 끝났는지 돌려준다. 실제 발화 실패(not-allowed, audio-busy 등)를 다 읽은 것과 구분해야
+ * 음성 모드가 무음인 채로 다시 듣기를 반복하지 않는다. started는 한 문장이라도 onstart가 왔는지로,
+ * "시작 자체가 안 됨"과 "시작했지만 소리가 안 들림"을 가르는 데 쓴다.
  */
-export function speakAndWait(text: string | string[], owner?: symbol): Promise<void> {
-  if (!isSpeechSupported()) return Promise.resolve();
+export type SpeechOutcome =
+  | { status: "ended"; started: boolean }
+  | { status: "cancelled"; started: boolean }
+  | { status: "failed"; started: boolean; error: string }
+  | { status: "unsupported"; started: false };
+
+// cancel()로 끊긴 경우. 실패가 아니다
+const CANCEL_ERRORS = new Set(["canceled", "interrupted"]);
+
+export function speakAndWait(text: string | string[], owner?: symbol): Promise<SpeechOutcome> {
+  if (!isSpeechSupported()) return Promise.resolve({ status: "unsupported", started: false });
   const sentences = (Array.isArray(text) ? text : [text]).filter((s) => s.trim());
-  if (sentences.length === 0) return Promise.resolve();
+  if (sentences.length === 0) return Promise.resolve({ status: "ended", started: false });
 
   const synth = window.speechSynthesis;
   if (synth.speaking || synth.pending) synth.cancel();
   currentOwner = owner;
   const voice = pickKoreanVoice();
-  return new Promise<void>((resolve) => {
+  return new Promise<SpeechOutcome>((resolve) => {
     let remaining = sentences.length;
+    let started = false;
+    let cancelled = false;
+    let failure: string | null = null;
     const done = () => {
       remaining -= 1;
-      if (remaining <= 0) resolve();
+      if (remaining > 0) return;
+      if (failure !== null) resolve({ status: "failed", started, error: failure });
+      else if (cancelled) resolve({ status: "cancelled", started });
+      else resolve({ status: "ended", started });
     };
     for (const sentence of sentences) {
       const utterance = new SpeechSynthesisUtterance(sentence);
       utterance.lang = "ko-KR";
       utterance.rate = SPEECH_RATE;
       if (voice) utterance.voice = voice;
+      utterance.onstart = () => { started = true; };
       utterance.onend = done;
-      utterance.onerror = done;
+      utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
+        const code = event?.error ?? "unknown";
+        if (CANCEL_ERRORS.has(code)) cancelled = true;
+        else failure ??= code;
+        done();
+      };
       synth.speak(utterance);
     }
   });

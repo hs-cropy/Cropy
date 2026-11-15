@@ -189,3 +189,41 @@ describe("warmUpVoices", () => {
     expect(synth.getVoices).toHaveBeenCalled();
   });
 });
+
+describe("speakAndWait 결과", () => {
+  type Handlers = { onstart?: () => void; onend?: () => void; onerror?: (event: { error: string }) => void };
+  function queued(synth: ReturnType<typeof installFakeSpeech>): Handlers[] {
+    return synth.speak.mock.calls.map(([utterance]) => utterance as unknown as Handlers);
+  }
+
+  it("모두 다 읽으면 ended, onstart가 왔으면 started", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장"]);
+    for (const u of queued(synth)) { u.onstart?.(); u.onend?.(); }
+    await expect(done).resolves.toEqual({ status: "ended", started: true });
+  });
+
+  it("발화 오류가 나면 failed와 오류 코드를 돌려준다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장"]);
+    const [first, second] = queued(synth);
+    first.onerror?.({ error: "not-allowed" });
+    second.onerror?.({ error: "not-allowed" });
+    await expect(done).resolves.toEqual({ status: "failed", started: false, error: "not-allowed" });
+  });
+
+  it("cancel로 끊긴 것(interrupted·canceled)은 실패가 아니다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const done = speech.speakAndWait("문장");
+    queued(synth)[0].onerror?.({ error: "interrupted" });
+    await expect(done).resolves.toEqual({ status: "cancelled", started: false });
+  });
+
+  it("미지원 환경은 unsupported", async () => {
+    const speech = await loadSpeech();
+    await expect(speech.speakAndWait("문장")).resolves.toEqual({ status: "unsupported", started: false });
+  });
+});

@@ -10,21 +10,26 @@ import { ApiError, diagnoseImage } from "@/lib/api";
 import { isCaptureCommand } from "@/features/voice/lib/captureIntent";
 import { isExitCommand } from "@/features/voice/lib/exitIntent";
 import { matchWakeWord } from "@/features/voice/lib/wakeWord";
-import { cancelSpeech, speakAndWait } from "@/features/voice/lib/speech";
+import { cancelSpeech, primeSpeech, speakAndWait, type SpeechOutcome } from "@/features/voice/lib/speech";
 import { answerFunction, fetchSpeechScript, transcribe } from "@/features/voice/lib/voiceApi";
 import { selectFunctionCall } from "@/features/voice/lib/functionSelector";
 import { LAST_DIAGNOSIS_KEY, readVoiceScreen, type VoiceScreen } from "@/features/voice/lib/voiceScreen";
 import { playListenCue } from "@/features/voice/lib/listenCue";
 import { releaseStream, startVoiceRecording, VoicePermissionError, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
 import { AudioConversionError, recordingToWav } from "@/features/voice/lib/wav";
+import { deviceKind } from "@/features/voice/lib/deviceKind";
 
 /**
- * 안드로이드 Chrome은 페이지가 마이크(getUserMedia)를 잡고 있는 동안 speechSynthesis 소리가 나지 않는다.
- * 그래서 안드로이드에서만 읽기 직전에 마이크를 놓는다. 다음 듣기·호출어 대기는 streamRef가 비어 있으면
- * 마이크를 새로 연다. PC·iOS는 첫머리가 잘리지 않도록 지금처럼 마이크를 유지한다.
+ * 휴대폰 브라우저는 페이지가 마이크(getUserMedia)를 잡고 있으면 speechSynthesis 소리가 나지 않거나
+ * (안드로이드 Chrome) 통화용 수화부로 작게 나간다(iOS Safari). 그래서 휴대폰에서는 읽기 직전에 마이크를 놓는다.
+ * 다음 듣기·호출어 대기는 streamRef가 비어 있으면 마이크를 새로 연다. 신호음은 마이크가 열린 뒤에 나므로
+ * 신호음 뒤에 말하면 대개 잘리지 않지만, 그 전에 말하거나 장치가 안정되는 데 시간이 걸리면 첫머리가 잘릴 수 있다.
+ * PC는 다시 여는 시간을 아끼려고 마이크를 유지한다.
+ * 기기 판별은 기능 선택기와 같은 deviceKind를 쓴다(갤럭시 탭처럼 데스크톱 UA를 보내는 터치 기기도 휴대폰으로 본다).
  */
-function releaseMicOnAndroid(streamRef: { current: MediaStream | null }): void {
-  if (typeof navigator === "undefined" || !/Android/i.test(navigator.userAgent)) return;
+function releaseMicBeforeSpeech(streamRef: { current: MediaStream | null }): void {
+  if (typeof navigator === "undefined") return;
+  if (deviceKind(navigator.userAgent, navigator.maxTouchPoints ?? 0) === "desktop") return;
   releaseStream(streamRef.current);
   streamRef.current = null;
 }
@@ -54,6 +59,7 @@ const VOICE_ERROR = "음성 안내를 시작하지 못했어요";
 const NO_SPEECH_ERROR = "말씀을 듣지 못했어요. 다시 시도해 주세요.";
 const UNHEARD_ERROR = "말씀을 알아듣지 못했어요. 다시 말씀해 주세요.";
 const NETWORK_ERROR = "서버와 연결되지 않아요. 연결을 확인하고 다시 시도해 주세요.";
+const SPEECH_FAILED_ERROR = "답을 소리로 읽지 못했어요. 화면의 답을 확인하고, 마이크를 눌러 다시 말씀해 주세요.";
 // 답변은 못 만들어도 사용자가 들을 문장. TTS로 읽히므로 짧게 둔다
 const NO_DIAGNOSIS_TEXT = "먼저 잎을 비추고 찍어 줘라고 말하거나 셔터를 누르면, 그 결과로 답해 드릴게요.";
 const NO_CAMERA_TEXT = "카메라가 꺼져 있어요. 카메라 켜기를 누른 뒤 다시 말씀해 주세요.";
@@ -141,6 +147,8 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
   const wakeStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wakeBusyRef = useRef(false);
   const wakeUnavailableRef = useRef(false);
+  const wakeJobRef = useRef(0);
+  const wakeAbortRef = useRef<AbortController | null>(null);
   const addTurn = useCallback((turn: VoiceTurn) => {
     if (!turn.text.trim()) return;
     setHistory((prev) => [...prev, turn].slice(-MAX_TURNS));
@@ -205,6 +213,9 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
   }, []);
 
   const stopWakeLoop = useCallback(() => {
+    wakeJobRef.current += 1; // 진행 중인 호출어 작업(마이크 열기·받아 적기)을 무효로 만든다
+    wakeAbortRef.current?.abort();
+    wakeAbortRef.current = null;
     if (wakeStartTimerRef.current !== null) {
       clearTimeout(wakeStartTimerRef.current);
       wakeStartTimerRef.current = null;
@@ -286,6 +297,17 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
   }, [clearAutoListen, resetVad, stopWakeLoop, updateState]);
 
   /**
+   * 낭독이 실제로 실패했으면(not-allowed, audio-busy 등) 화면에 알리고 true를 돌려준다.
+   * 이때 부른 쪽은 자동으로 다시 듣지 않는다. 답은 화면 말풍선에 남아 있다.
+   */
+  const reportSpeechFailure = useCallback((outcome: SpeechOutcome | undefined): boolean => {
+    if (outcome?.status !== "failed") return false;
+    console.warn("[Voice] speech failed", { error: outcome.error, started: outcome.started });
+    setError(SPEECH_FAILED_ERROR);
+    return true;
+  }, []);
+
+  /**
    * 지금 카메라 장면을 찍어 진단하고, 읽어 줄 문장을 돌려준다. 결과는 이 화면의 현재 진단이 된다.
    * 카메라가 없거나 찍지 못하면 그 사정을 읽어 줄 문장으로 돌려준다(오류로 끊지 않는다).
    */
@@ -337,7 +359,7 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       addTurn({ role: "assistant", text: EXIT_TEXT });
       updateState("speaking");
       busyRef.current = false;
-      releaseMicOnAndroid(streamRef);
+      releaseMicBeforeSpeech(streamRef);
       await speakAndWait(EXIT_TEXT, speechOwner.current);
       if (generation !== generationRef.current) return;
       generationRef.current += 1; // 예약된 다시 듣기·호출어 듣기가 이어지지 않게
@@ -382,14 +404,15 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
     addTurn({ role: "assistant", text: replyText });
     updateState("speaking");
     busyRef.current = false;
-    releaseMicOnAndroid(streamRef);
-    await speakAndWait(reply, speechOwner.current);
+    releaseMicBeforeSpeech(streamRef);
+    const outcome = await speakAndWait(reply, speechOwner.current);
     if (generation === generationRef.current && isState("speaking")) {
       updateState("idle");
-      // 연속 대화: 다 읽었으면 버튼 없이 다시 듣는다 (끊긴 경우는 cancel()이 처리했으므로 여기 오지 않는다)
-      scheduleAutoListen();
+      // 연속 대화: 다 읽었으면 버튼 없이 다시 듣는다 (끊긴 경우는 cancel()이 처리했으므로 여기 오지 않는다).
+      // 소리로 읽지 못했으면 다시 듣지 않고 알린다
+      if (!reportSpeechFailure(outcome)) scheduleAutoListen();
     }
-  }, [addTurn, captureAndDescribe, isState, scheduleAutoListen, updateState]);
+  }, [addTurn, captureAndDescribe, isState, reportSpeechFailure, scheduleAutoListen, updateState]);
 
   /** 셔터 버튼: 듣는 중이 아니어도 찍어서 바로 진단하고 결과를 읽어 준다 */
   const captureNow = useCallback(async () => {
@@ -413,11 +436,11 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       addTurn({ role: "assistant", text: replyText });
       updateState("speaking");
       busyRef.current = false;
-      releaseMicOnAndroid(streamRef);
-      await speakAndWait(reply, speechOwner.current);
+      releaseMicBeforeSpeech(streamRef);
+      const outcome = await speakAndWait(reply, speechOwner.current);
       if (generation === generationRef.current && isState("speaking")) {
         updateState("idle");
-        scheduleAutoListen();
+        if (!reportSpeechFailure(outcome)) scheduleAutoListen();
       }
     } catch (cause) {
       if (generation !== generationRef.current || controller.signal.aborted) return;
@@ -426,7 +449,7 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
     } finally {
       if (generation === generationRef.current) busyRef.current = false;
     }
-  }, [addTurn, cancel, captureAndDescribe, isState, scheduleAutoListen, updateState]);
+  }, [addTurn, cancel, captureAndDescribe, isState, reportSpeechFailure, scheduleAutoListen, updateState]);
 
   // 수동 종료 및 VAD 자동 종료에서 공통 사용
   const stop = useCallback(async () => {
@@ -679,6 +702,10 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
 
     wakeBusyRef.current = true;
     const generation = generationRef.current;
+    // 이 호출어 작업이 아직 유효한지. stopWakeLoop(끄기·듣기 시작·화면 이탈)가 wakeJobRef를 올리면 무효가 된다.
+    // 무효가 된 작업은 마이크를 채택하거나 다시 시작하지 않고, 새 작업의 wakeBusyRef도 건드리지 않는다
+    const job = wakeJobRef.current;
+    const owned = () => job === wakeJobRef.current && generation === generationRef.current;
     let speechStartedAt: number | null = null;
     let lastSpeechAt: number | null = null;
     let detected = false;
@@ -702,13 +729,17 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
         },
       });
     } catch {
+      if (job !== wakeJobRef.current) return;
       wakeBusyRef.current = false;
       wakeUnavailableRef.current = true; // 마이크를 못 열면 조용히 포기한다 (버튼은 여전히 쓸 수 있다)
       return;
     }
-    if (generation !== generationRef.current || stateRef.current !== "idle" || !wakeEnabledRef.current) {
+    if (!owned() || stateRef.current !== "idle" || !wakeEnabledRef.current) {
       recording.cancel();
-      wakeBusyRef.current = false;
+      // 마이크를 여는 사이 다른 쪽(버튼 듣기, 호출어 껐다 켜기 등)이 시작했으면 이 작업이 새로 연 스트림은
+      // 아무도 끄지 않는다. 남겨 두면 휴대폰에서 낭독 소리가 막히므로 여기서 끈다
+      if (recording.stream !== streamRef.current) releaseStream(recording.stream);
+      if (job === wakeJobRef.current) wakeBusyRef.current = false;
       return;
     }
     streamRef.current = recording.stream;
@@ -727,12 +758,14 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
         return;
       }
       wakeBusyRef.current = true;
+      const wakeController = new AbortController();
+      wakeAbortRef.current = wakeController;
       try {
         const blob = await recording.stop();
-        if (generation !== generationRef.current || stateRef.current !== "idle") return;
+        if (!owned() || stateRef.current !== "idle") return;
         const wav = await recordingToWav(blob);
-        const text = (await transcribe(wav)).trim();
-        if (generation !== generationRef.current || stateRef.current !== "idle") return;
+        const text = (await transcribe(wav, wakeController.signal)).trim();
+        if (!owned() || stateRef.current !== "idle") return;
         const wake = matchWakeWord(text);
         if (!wake) {
           wakeBusyRef.current = false;
@@ -759,6 +792,8 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
           if (next === generationRef.current) busyRef.current = false;
         }
       } catch (cause) {
+        // 그 사이 화면을 나갔거나 호출어를 껐으면(요청 취소 포함) 다시 시작하지 않는다. 다시 열면 그 마이크는 아무도 끄지 않는다
+        if (!owned()) return;
         // STT 서버가 없거나 변환에 실패하면 호출어 듣기를 멈춘다. 다음에 화면에 들어오면 다시 시도한다
         wakeBusyRef.current = false;
         if (cause instanceof ApiError && cause.status === 503) wakeUnavailableRef.current = true;
@@ -804,6 +839,9 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
   }, [state, wakeEnabled, startWakeLoop, stopWakeLoop]);
 
   const handleMicClick = useCallback(() => {
+    // iOS Safari는 사용자 탭 안에서 한 번 발화해야 이후 비동기 낭독(STT·서버 응답 뒤)을 허용한다.
+    // 다른 화면에서 음성을 쓰지 않고 바로 음성 모드에 들어온 경우를 위해 여기서 풀어 둔다(한 번만 실행된다)
+    primeSpeech();
     if (stateRef.current === "idle") {
       silentRoundsRef.current = 0; // 사용자가 직접 눌렀으니 무발화 횟수는 처음부터
       void start();
