@@ -28,6 +28,22 @@ NOTEBOOK = f"cropy_fs_classifier_colab_s{SEED}.ipynb" if len(sys.argv) > 1 else 
 HEADS = [(name, arg, [v for v, _ in values]) for name, args, _ in spec_v2.FUNCTIONS for arg, values in args.items()]
 LABELS = {"functions": spec_v2.NAMES, "heads": [{"function": f, "argument": a, "values": v} for f, a, v in HEADS]}
 
+# 실제 앱이 화면 상태에 넣는 농약 이름 (백엔드 시드). 화면 상태 채우기 증강에 쓴다
+SEED_DIR = HERE.parents[1] / "backend" / "app" / "data" / "seed"
+_diseases = {d["key"]: d["name"] for d in json.loads((SEED_DIR / "diseases.json").read_text(encoding="utf-8"))}
+_products = {x["key"]: x["name"] for x in json.loads((SEED_DIR / "pesticides.json").read_text(encoding="utf-8"))}
+REAL_PESTICIDES = {}
+for link in sorted(json.loads((SEED_DIR / "disease_pesticides.json").read_text(encoding="utf-8")), key=lambda x: x["priority"]):
+    if link["pesticide_key"] in _products:
+        REAL_PESTICIDES.setdefault(_diseases[link["disease_key"]], []).append(_products[link["pesticide_key"]])
+DISEASE_NAMES = [n for n in _diseases.values() if n != "판별 불가"]
+
+
+ENRICH_CELL = '\ndef norm_name(name):\n    return re.sub(r\'^(고추|배추|무)\\s*\', lambda m: m.group(1) + \' \', name.strip())\n\ndef crop_of(name):\n    for c in (\'고추\', \'배추\', \'무\'):\n        if name.startswith(c):\n            return c\n    return None\n\ndef enrich_context(r, rng, p_key=0.8):\n    ctx = r[\'context\']\n    name = ctx.get(\'disease_name\')\n    if r[\'function\'] in ENRICH_SKIP or ctx.get(\'ui_stage\') != \'result\' or not name:\n        return None\n    if ctx.get(\'crop_mismatch\') or ctx.get(\'category\') not in (None, \'disease\', \'normal\') or ctx.get(\'prediction_mode\') == \'mock\':\n        return None\n    crop = crop_of(name)\n    if crop is None:\n        return None\n    healthy = name.endswith(\'정상\')\n    conf = ctx.get(\'confidence\', round(rng.uniform(0.55, 0.99), 2))\n    others = [d for d in DISEASE_NAMES if d.startswith(crop) and d != norm_name(name)]\n    second = {\'name\': rng.choice(others), \'confidence\': round(rng.uniform(0.01, max(0.02, 1 - conf)), 2)} if others else None\n    fill = {\'selected_crop\': crop, \'predicted_crop\': crop, \'crop_mismatch\': False, \'prediction_mode\': \'model\',\n            \'category\': \'normal\' if healthy else \'disease\', \'confidence\': conf,\n            \'top_predictions\': [{\'name\': name, \'confidence\': conf}] + ([second] if second else []),\n            \'severity\': \'low\' if healthy else rng.choice([\'low\', \'medium\', \'high\']),\n            \'decision_status\': \'disease\', \'save_status\': \'saved\'}\n    if healthy:\n        fill.pop(\'decision_status\')\n    products = REAL_PESTICIDES.get(norm_name(name))\n    if products and not healthy and r[\'function\'] not in NO_PESTICIDE_ADD:\n        fill[\'pesticides\'] = products[:rng.randint(1, 5)]\n    n = dict(ctx)\n    added = 0\n    for k, v in fill.items():\n        if k not in n and (k == \'crop_mismatch\' or rng.random() < p_key):\n            n[k] = v\n            added += 1\n    if not added:\n        return None\n    return {k: n[k] for k in CONTEXT_KEYS if k in n}\n\ndef enrich_rows(rows_, seed, tag):\n    rng = random.Random(seed)\n    out = []\n    for r in rows_:\n        ctx = enrich_context(r, rng)\n        if ctx is None:\n            continue\n        n = copy.deepcopy(r)\n        n[\'context\'] = ctx\n        n[\'augmentation\'] = f"{r.get(\'augmentation\')}+{tag}"\n        n[\'case_id\'] = f"{r[\'case_id\']}~{tag}"\n        out.append(n)\n    return out\n\nif ENRICH:\n    extra = enrich_rows(train_rows, SEED, \'enrich\')\n    print(f\'context enrich: +{len(extra)} rows -> {len(train_rows) + len(extra)} train\')\n    print(Counter(r[\'function\'] for r in extra))\n    for r in extra[:2]:\n        print(\' \', r[\'user_text\'], \'|\', json.dumps(r[\'context\'], ensure_ascii=False)[:160])\n    train_rows = train_rows + extra\n# validation 을 같은 규칙으로 채운 판 (원래 validation 과 별도로 잰다)\nval_enriched_rows = enrich_rows(val_rows, SEED + 1, \'enrich_val\')\nprint(\'validation_enriched\', len(val_enriched_rows))\n'
+
+
+PROBE_CELL = "\nFULL = {'ui_stage': 'result', 'selected_crop': '고추', 'predicted_crop': '고추', 'crop_mismatch': False, 'prediction_mode': 'model',\n        'category': 'disease', 'disease_name': '고추 탄저병', 'confidence': 0.92,\n        'top_predictions': [{'name': '고추 탄저병', 'confidence': 0.92}, {'name': '고추 흰가루병', 'confidence': 0.03}],\n        'severity': 'high', 'decision_status': 'disease', 'save_status': 'saved', 'pesticides': REAL_PESTICIDES['고추 탄저병'][:5]}\nSHORT = {'ui_stage': 'result', 'prediction_mode': 'model', 'category': 'disease', 'disease_name': '고추 탄저병', 'confidence': 0.92}\nPROBES = [('이거 무슨 병이야', 0), ('병 이름이 뭐야', 0), ('어떻게 관리해야 돼', 3), ('관리해야 돼', 3),\n          ('등록된 농약 목록 알려 줘', 4), ('등록된 농약 알려줘', 4), ('농약 뭐 써야 돼', 4), ('무슨 약 뿌려야 돼', 4), ('탄저병 약 추천해 줘', 4)]\nprobe_rows = [{'case_id': f'probe{i}_{name}', 'function': FUNCTIONS[fn], 'user_text': u, 'context': ctx}\n              for i, (u, fn) in enumerate(PROBES) for name, ctx in (('full', FULL), ('short', SHORT))]\nprobe_enc = []\nfor r in probe_rows:\n    a, b = text_pair(r)\n    e = tokenizer(a, b, truncation='only_second', max_length=MAX_LEN)\n    probe_enc.append({k: e[k] for k in e.keys()} | {'fn': FUNCTIONS.index(r['function']), 'heads': [-100] * len(HEADS)})\nprobe_ok, probe_log = 0, []\nfor r, p in zip(probe_rows, predict(model, probe_enc)):\n    ok = FUNCTIONS[p['fn']] == r['function']; probe_ok += ok\n    probe_log.append({'case': r['case_id'], 'utterance': r['user_text'], 'expected': r['function'], 'actual': FUNCTIONS[p['fn']], 'fn_conf': round(p['fn_conf'], 3)})\n    print('O' if ok else 'X', r['case_id'].split('_')[-1], r['user_text'], '->', FUNCTIONS[p['fn']], round(p['fn_conf'], 2))\nprint(f'probe function {probe_ok}/{len(probe_rows)}')\n(OUTPUT_DIR / 'probe.json').write_text(json.dumps({'correct': probe_ok, 'total': len(probe_rows), 'rows': probe_log}, ensure_ascii=False, indent=1))\n"
+
 
 def md(text):
     return {"cell_type": "markdown", "metadata": {}, "source": text.strip("\n").splitlines(keepends=True)}
@@ -73,13 +89,14 @@ SEED = {SEED}            # 흔들림을 보려면 seed만 바꿔 다시 돌린�
 # 2차(e30, lr 1.5e-4, 평균 풀링): train 100% / validation 54.6%, best epoch 13 — 과소적합이 아니라 작물↔인자 지름길(아래 셀).
 # 4차(small, e20, lr 1.5e-4, swap+ctx): function 91.6 / exact 86.6, best epoch 10 — 문맥 지름길 해소. 남은 약점은 기능 선택(예측 지표 80.3, 명확화 84.3).
 # 5차(base, e12, lr 5e-5): 88.7 / 82.2 — 용량이 아니라 데이터 한계. 6차: v4 설정 그대로 seed만 바꿔 분산 확인.
+# 9차(_enrich): 실제 앱처럼 화면 상태를 채운 사본 추가. v8은 키가 다 찬 결과 화면에서 '등록된 농약 목록 알려 줘'를 진단으로 골랐다(11/16).
 EPOCHS = 20
 LR = 1.5e-4
 POOLING = 'mean'           # 'cls' = 첫 토큰
 MERGE_TAG = '_merge'       # 7차: 겹치는 topic 접기(아래 TOPIC_MERGE). 끄려면 '' 로 두고 TOPIC_MERGE = {{}}
 BATCH = 32
 MAX_LEN = 256              # 발화 + 압축 context JSON. 넘치는 행은 아래에서 센다
-RUN_NAME = f"clf_{{ENCODER.split('/')[-1].replace('-discriminator','')}}_{{POOLING}}_lr{{LR:g}}_e{{EPOCHS}}_swap_ctx{{MERGE_TAG}}_s{{SEED}}"
+RUN_NAME = f"clf_{{ENCODER.split('/')[-1].replace('-discriminator','')}}_{{POOLING}}_lr{{LR:g}}_e{{EPOCHS}}_swap_ctx{{MERGE_TAG}}_enrich_s{{SEED}}"
 OUTPUT_DIR = DRIVE_DIR / RUN_NAME
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 print(RUN_NAME)
@@ -232,6 +249,26 @@ if CONTEXT_SHUFFLE:
     print(f'context shuffle: +{len(extra)} rows -> {len(train_rows) + len(extra)} train')
     train_rows = train_rows + extra
 """),
+    md("""
+## 화면 상태 채우기 증강 (9차, 운영 서버 시험의 원인)
+
+v8을 서버에서 실제 앱이 보내는 화면 상태로 시험하니(11/16) "등록된 농약 목록 알려 줘"·"농약 뭐 써야 돼"를 농약이 아닌 진단·재촬영으로 골랐다.
+train에서 농약 행은 화면 상태가 짧고(`ui_stage`·병명·농약 이름) 진단·관리 행은 길어서(작물·점수·상위 후보·심각도), **화면 상태의 길이**가
+기능의 단서가 되었다. 실제 앱(`compact_context`)은 결과 화면이면 거의 모든 키를 채운다.
+
+결과 화면 행마다 빠진 키를 앱이 보내는 값으로 채운 사본을 하나 더한다: 작물(병명에서), 작물 불일치 false, model, 분류(disease/normal),
+점수·상위 후보 2개, 심각도, decision_status·save_status, 그리고 농약 이름(백엔드 시드의 실제 제품명).
+- 되묻기는 대상이 화면 상태에 따라 달라 채우지 않는다. 농약 이름은 되묻기·사용법·농약(목록이 없던 행)에는 넣지 않는다.
+- 키마다 80% 확률로 채워 길이가 다양하게 한다. validation도 같은 규칙으로 채운 판(`validation_enriched`)을 따로 잰다.
+"""),
+    code(f"""
+ENRICH = True
+CONTEXT_KEYS = {json.dumps(list(spec_v2.CONTEXT_KEYS), ensure_ascii=False)}
+REAL_PESTICIDES = {json.dumps(REAL_PESTICIDES, ensure_ascii=False)}
+DISEASE_NAMES = {json.dumps(DISEASE_NAMES, ensure_ascii=False)}
+ENRICH_SKIP = {{'clarify_request'}}
+NO_PESTICIDE_ADD = {{'clarify_request', 'get_usage_guidance', 'get_pesticide_information'}}
+""" + ENRICH_CELL),
     code("""
 from transformers import AutoTokenizer, AutoModel
 tokenizer = AutoTokenizer.from_pretrained(ENCODER)
@@ -248,6 +285,7 @@ def encode(rows_):
     return out
 
 train_enc, val_enc = encode(train_rows), encode(val_rows)
+val_enr_enc = encode(val_enriched_rows)
 """),
     md("## 모델\n인코더의 첫 토큰([CLS]) 표현에 드롭아웃 → 헤드별 선형층. 손실 = 기능 CE + 그 행의 기능에 속한 인자 헤드 CE."),
     code("""
@@ -346,13 +384,16 @@ for epoch in range(1, EPOCHS + 1):
         opt.zero_grad(); loss.backward(); torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0); opt.step(); sched.step()
         total += float(loss)
     m = metrics(score(val_enc, val_rows, predict(model, val_enc)))
+    me = metrics(score(val_enr_enc, val_enriched_rows, predict(model, val_enr_enc)))
     tr = metrics(score(train_enc[:512], train_rows[:512], predict(model, train_enc[:512])))   # 과소적합인지 보려고 train 일부도 잰다
-    history.append({'epoch': epoch, 'train_loss': round(total / len(loader), 4), 'train_exact': tr['exact'], 'function': m['function'], 'exact': m['exact']})
-    print(f"epoch {epoch:2d} loss {total / len(loader):.4f} train exact {tr['exact']:.4f} | val function {m['function']:.4f} exact {m['exact']:.4f} | {time.time() - t0:.0f}s")
-    if best is None or m['exact'] > best[0]:
-        best = (m['exact'], epoch, {k: v.detach().cpu().clone() for k, v in model.state_dict().items()})
+    history.append({'epoch': epoch, 'train_loss': round(total / len(loader), 4), 'train_exact': tr['exact'], 'function': m['function'], 'exact': m['exact'],
+                    'enriched_function': me['function'], 'enriched_exact': me['exact']})
+    print(f"epoch {epoch:2d} loss {total / len(loader):.4f} train exact {tr['exact']:.4f} | val function {m['function']:.4f} exact {m['exact']:.4f} | enriched {me['function']:.4f} / {me['exact']:.4f} | {time.time() - t0:.0f}s")
+    # 원래 validation 과 채운 validation 의 평균으로 고른다 (실제 앱 화면 상태에서도 맞아야 한다)
+    if best is None or (m['exact'] + me['exact']) / 2 > best[0]:
+        best = ((m['exact'] + me['exact']) / 2, epoch, {k: v.detach().cpu().clone() for k, v in model.state_dict().items()})
 model.load_state_dict(best[2])
-print('best epoch', best[1], 'exact', best[0])
+print('best epoch', best[1], 'mean exact (val, enriched)', best[0])
 """),
     md("## 평가\nQwen 평가와 같은 형식으로 저장한다. `eval_cases.jsonl`의 `fn_conf`는 기능 확률(되묻기 임계값을 정할 때 쓴다)."),
     code("""
@@ -367,11 +408,20 @@ m.update({'run': RUN_NAME, 'encoder': ENCODER, 'seed': SEED, 'epochs': EPOCHS, '
 (OUTPUT_DIR / 'eval_cases.jsonl').write_text('\\n'.join(json.dumps(c, ensure_ascii=False) for c in cases))
 print(json.dumps({k: m[k] for k in ('function', 'exact')}, indent=1))
 print(json.dumps(m['per_function'], ensure_ascii=False, indent=1))
+enr_cases = score(val_enr_enc, val_enriched_rows, predict(model, val_enr_enc))
+me = metrics(enr_cases)
+me['run'] = RUN_NAME
+(OUTPUT_DIR / 'eval_metrics_enriched.json').write_text(json.dumps(me, ensure_ascii=False, indent=2))
+(OUTPUT_DIR / 'eval_cases_enriched.jsonl').write_text('\\n'.join(json.dumps(c, ensure_ascii=False) for c in enr_cases))
+print('validation_enriched', json.dumps({k: me[k] for k in ('support', 'function', 'exact')}))
+print(json.dumps(me['per_function'], ensure_ascii=False, indent=1))
 # 기능 확률이 낮은 행에서 틀림이 몰리는지: 임계값별 (걸러지는 비율, 남은 행의 exact)
 for th in (0.5, 0.7, 0.9):
     kept = [c for c in cases if c['fn_conf'] >= th]
     print(f'fn_conf >= {th}: keep {len(kept) / len(cases):.3f}, exact among kept {sum(c["exact_correct"] for c in kept) / max(1, len(kept)):.4f}')
 """),
+    md("## 시연 질문 확인\n운영 서버 시험(11/16)에서 틀린 질문을 실제 앱이 보내는 결과 화면 상태(full)와 짧은 상태(short)로 넣는다. 기대: 진단 hs_0, 관리 hs_3, 농약 hs_4."),
+    code(PROBE_CELL),
     md("## ONNX로 내보내기 (휴대폰·보드용)\nfp32 ONNX와 int8(동적 양자화) ONNX를 만들고 64행에서 PyTorch와 같은 답인지 확인한다."),
     code("""
 import onnx, onnxruntime as ort
