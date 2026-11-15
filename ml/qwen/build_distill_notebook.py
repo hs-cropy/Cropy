@@ -64,7 +64,7 @@ TEACHER_DIR = DRIVE_DIR / 'soup_v2abc_v2d_6run' / 'merged_hf'   # 배포 중인 
 PARAPHRASER = 'Qwen/Qwen2.5-7B-Instruct'
 N_PARA = 8
 SEED = 20261116
-OUT_NAME = 'distill_v1'
+OUT_NAME = 'distill_v2'   # v1(11/16)은 문장을 1개만 내거나 중국어가 섞여 중단
 OUT = DRIVE_DIR / OUT_NAME
 (OUT / 'parts').mkdir(parents=True, exist_ok=True)
 assert (TEACHER_DIR / 'cropy_prompt.json').exists(), '선생님 모델이 Drive에 없습니다'
@@ -100,21 +100,38 @@ ptok.padding_side = 'left'
 pmodel = AutoModelForCausalLM.from_pretrained(PARAPHRASER, dtype=torch.bfloat16, device_map='cuda').eval()
 
 INSTRUCT = (
-    '당신은 한국 농민의 말투를 잘 아는 도우미입니다. 아래 문장은 농민이 작물 병해 진단 앱에 음성으로 한 질문입니다.\\n'
-    f'같은 뜻을 가진 다른 문장을 {N_PARA}개 만드세요.\\n'
-    '- 뜻(무엇을 묻는지)은 절대 바꾸지 마세요. 더 넓히거나 좁히지 마세요.\\n'
+    '당신은 한국 농민의 말투를 잘 아는 한국어 도우미입니다. 반드시 한국어로만 답합니다.\\n'
+    '사용자가 주는 문장은 농민이 작물 병해 진단 앱에 음성으로 한 말입니다. '
+    f'같은 뜻의 다른 한국어 문장을 정확히 {N_PARA}개 만드세요.\\n'
+    '- 뜻(무엇을 묻거나 시키는지)은 바꾸지 마세요. 내용을 더하거나 빼지 마세요.\\n'
     '- 작물 이름, 병 이름, 제품 이름, 숫자, "목록의", "A", "B" 같은 지칭은 그대로 두세요.\\n'
-    '- 존댓말·반말·사투리, 짧은 말·긴 말, 어순 바꾸기, 말로 할 때의 군더더기("그", "저기")를 섞으세요.\\n'
-    '- 한 줄에 한 문장, 번호 없이, 설명 없이 문장만 쓰세요.'
+    '- 존댓말·반말, 짧은 말·긴 말, 어순 바꾸기, 말할 때의 군더더기("그", "저기", "음")를 섞으세요.\\n'
+    f'- "1."부터 "{N_PARA}."까지 번호를 붙여 한 줄에 한 문장씩만 쓰고, 다른 설명은 쓰지 마세요.'
 )
+# 예시 한 쌍을 대화로 보여 줘 개수·형식을 지키게 한다 (v1은 256문장 중 188개가 1문장만 냈다)
+EXAMPLE_IN = '고추 탄저병에 쓸 약 알려 줘'
+EXAMPLE_OUT = '\\n'.join(f'{i}. {t}' for i, t in enumerate([
+    '고추 탄저병에 뿌릴 약 좀 알려 주세요', '탄저병 걸린 고추에는 무슨 약 써요', '고추 탄저병 약 뭐 있어',
+    '저기 고추 탄저병에 쓰는 약이 뭐예요', '고추 탄저병 잡는 약 알려 줄래', '고추 탄저병에는 어떤 약을 써야 돼요',
+    '음 고추 탄저병 약 이름 좀 말해 줘', '고추에 탄저병 왔는데 약 뭐 쓰면 돼'][:N_PARA], 1))
 
 def para_prompt(t):
-    msgs = [{'role': 'system', 'content': INSTRUCT}, {'role': 'user', 'content': t}]
+    msgs = [{'role': 'system', 'content': INSTRUCT}, {'role': 'user', 'content': EXAMPLE_IN},
+            {'role': 'assistant', 'content': EXAMPLE_OUT}, {'role': 'user', 'content': t}]
     return ptok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
 
+# v1은 중국어 문장이 섞였다. 한자·일본어가 있거나 한글 비율이 낮은 줄은 버린다
+FOREIGN = re.compile('[\\u3040-\\u30ff\\u3400-\\u4dbf\\u4e00-\\u9fff]')
+DROPPED = Counter()
 def clean(line):
     line = re.sub(r'^\\s*(?:\\d+[.)]|[-*•])\\s*', '', line).strip().strip('"').strip()
-    return line if 2 <= len(line) <= 80 else None
+    if not 2 <= len(line) <= 80:
+        return None
+    letters = [c for c in line if c.isalpha()]
+    if FOREIGN.search(line) or not letters or sum('가' <= c <= '힣' for c in letters) / len(letters) < 0.7:
+        DROPPED['not_korean'] += 1
+        return None
+    return line
 
 PART = 256
 def para_part(k):
@@ -132,7 +149,7 @@ for k in range(0, len(texts), PART):
         batch = chunk[s:s + 32]
         enc = ptok([para_prompt(t) for t in batch], return_tensors='pt', padding=True).to('cuda')
         with torch.no_grad():
-            gen = pmodel.generate(**enc, max_new_tokens=400, do_sample=True, temperature=0.9, top_p=0.95,
+            gen = pmodel.generate(**enc, max_new_tokens=400, do_sample=True, temperature=0.7, top_p=0.9, repetition_penalty=1.05,
                                   pad_token_id=ptok.pad_token_id or ptok.eos_token_id)
         for t, seq in zip(batch, gen[:, enc['input_ids'].shape[1]:]):
             lines = [clean(l) for l in ptok.decode(seq, skip_special_tokens=True).splitlines()]
@@ -142,7 +159,11 @@ for k in range(0, len(texts), PART):
                     uniq.append(l)
             out.append({'text': t, 'paraphrases': uniq[:N_PARA]})
     path.write_text('\\n'.join(json.dumps(o, ensure_ascii=False) for o in out), encoding='utf-8')
-    print(f'{min(k + PART, len(texts))}/{len(texts)} utterances, {time.time() - t0:.0f}s')
+    avg = sum(len(o['paraphrases']) for o in out) / len(out)
+    full = sum(len(o['paraphrases']) == N_PARA for o in out)
+    print(f'{min(k + PART, len(texts))}/{len(texts)} utterances, {time.time() - t0:.0f}s | 평균 {avg:.1f}문장, {N_PARA}개 다 {full}/{len(out)}, 버린 줄 {dict(DROPPED)}')
+    for o in out[:2]:
+        print('  ', o['text'], '->', o['paraphrases'][:3])
 
 paras = {}
 for path in sorted((OUT / 'parts').glob('para_*.jsonl')):
@@ -225,6 +246,8 @@ for path in sorted((OUT / 'parts').glob('teach_*.jsonl')):
     for line in path.read_text(encoding='utf-8').splitlines():
         o = json.loads(line); r = by_case[o['case_id']]
         stats['checked'] += 1
+        if FOREIGN.search(o['text']):
+            stats['not_korean'] += 1; continue
         if re.sub(r'\\s+', '', o['text']) in val_texts:
             stats['in_validation'] += 1; continue
         if o['call'] != r['output']:

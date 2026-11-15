@@ -94,7 +94,7 @@ SEED = {SEED}            # 흔들림을 보려면 seed만 바꿔 다시 돌린�
 # 5차(base, e12, lr 5e-5): 88.7 / 82.2 — 용량이 아니라 데이터 한계. 6차: v4 설정 그대로 seed만 바꿔 분산 확인.
 # 9차(_enrich): 실제 앱처럼 화면 상태를 채운 사본 추가. v8은 키가 다 찬 결과 화면에서 '등록된 농약 목록 알려 줘'를 진단으로 골랐다(11/16).
 # 10차: Qwen 선생님이 확인한 말 바꾸기 문장(cropy_fs_distill_data_colab.ipynb)을 더하고, 농약 이름 목록을 개수로 바꿔 넣는다.
-DISTILL_DIR = DRIVE_DIR / 'distill_v1'   # 없으면 '' 로. paraphrases.jsonl 이 있으면 쓴다
+DISTILL_DIR = DRIVE_DIR / 'distill_v2'   # 없으면 '' 로. paraphrases.jsonl 이 있으면 쓴다
 USE_DISTILL = bool(DISTILL_DIR) and (Path(DISTILL_DIR) / 'paraphrases.jsonl').exists()
 CONTEXT_FORMAT = 'clf_v2'               # 분류기 입력: 키를 짧은 한국어로, pesticides 는 이름 목록 대신 개수로. '' 이면 9차까지와 같다
 EPOCHS = 8 if USE_DISTILL else 20       # 문장이 몇 배 늘어 epoch 를 줄인다 (A100 권장)
