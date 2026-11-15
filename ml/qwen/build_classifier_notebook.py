@@ -45,6 +45,9 @@ ENRICH_CELL = '\ndef norm_name(name):\n    return re.sub(r\'^(고추|배추|무)
 PROBE_CELL = "\nFULL = {'ui_stage': 'result', 'selected_crop': '고추', 'predicted_crop': '고추', 'crop_mismatch': False, 'prediction_mode': 'model',\n        'category': 'disease', 'disease_name': '고추 탄저병', 'confidence': 0.92,\n        'top_predictions': [{'name': '고추 탄저병', 'confidence': 0.92}, {'name': '고추 흰가루병', 'confidence': 0.03}],\n        'severity': 'high', 'decision_status': 'disease', 'save_status': 'saved', 'pesticides': REAL_PESTICIDES['고추 탄저병'][:5]}\nSHORT = {'ui_stage': 'result', 'prediction_mode': 'model', 'category': 'disease', 'disease_name': '고추 탄저병', 'confidence': 0.92}\nPROBES = [('이거 무슨 병이야', 0), ('병 이름이 뭐야', 0), ('어떻게 관리해야 돼', 3), ('관리해야 돼', 3),\n          ('등록된 농약 목록 알려 줘', 4), ('등록된 농약 알려줘', 4), ('농약 뭐 써야 돼', 4), ('무슨 약 뿌려야 돼', 4), ('탄저병 약 추천해 줘', 4)]\nprobe_rows = [{'case_id': f'probe{i}_{name}', 'function': FUNCTIONS[fn], 'user_text': u, 'context': ctx}\n              for i, (u, fn) in enumerate(PROBES) for name, ctx in (('full', FULL), ('short', SHORT))]\nprobe_enc = []\nfor r in probe_rows:\n    a, b = text_pair(r)\n    e = tokenizer(a, b, truncation='only_second', max_length=MAX_LEN)\n    probe_enc.append({k: e[k] for k in e.keys()} | {'fn': FUNCTIONS.index(r['function']), 'heads': [-100] * len(HEADS)})\nprobe_ok, probe_log = 0, []\nfor r, p in zip(probe_rows, predict(model, probe_enc)):\n    ok = FUNCTIONS[p['fn']] == r['function']; probe_ok += ok\n    probe_log.append({'case': r['case_id'], 'utterance': r['user_text'], 'expected': r['function'], 'actual': FUNCTIONS[p['fn']], 'fn_conf': round(p['fn_conf'], 3)})\n    print('O' if ok else 'X', r['case_id'].split('_')[-1], r['user_text'], '->', FUNCTIONS[p['fn']], round(p['fn_conf'], 2))\nprint(f'probe function {probe_ok}/{len(probe_rows)}')\n(OUTPUT_DIR / 'probe.json').write_text(json.dumps({'correct': probe_ok, 'total': len(probe_rows), 'rows': probe_log}, ensure_ascii=False, indent=1))\n"
 
 
+DISTILL_CELL = "\nDISTILL_ROWS = []\nif USE_DISTILL:\n    DISTILL_ROWS = [json.loads(l) for l in (Path(DISTILL_DIR) / 'paraphrases.jsonl').read_text(encoding='utf-8').splitlines()]\n    for r in DISTILL_ROWS:\n        r['output'] = merge_output(r['function'], r['output'])\n    # 말 바꾼 문장도 작물↔인자 지름길을 물려받으므로 다른 작물 하나로 바꾼 사본을 더한다 (원래 행은 두 작물)\n    rng = random.Random(SEED + 7)\n    swapped = []\n    for r in DISTILL_ROWS:\n        text = r['user_text'] + json.dumps(r['context'], ensure_ascii=False)\n        present = [c for c in CROPS if (re.search(r'(?<![가-힣])무(?![가-힣])', text) if c == '무' else c in text)]\n        if len(present) == 1:\n            swapped.append(swap_row(r, present[0], rng.choice([c for c in CROPS if c != present[0]])))\n    print(f'distill: +{len(DISTILL_ROWS)} paraphrases, +{len(swapped)} crop-swapped')\n    print(Counter(r['function'] for r in DISTILL_ROWS))\n    train_rows = train_rows + DISTILL_ROWS + swapped\n"
+
+
 def md(text):
     return {"cell_type": "markdown", "metadata": {}, "source": text.strip("\n").splitlines(keepends=True)}
 
@@ -90,13 +93,17 @@ SEED = {SEED}            # 흔들림을 보려면 seed만 바꿔 다시 돌린�
 # 4차(small, e20, lr 1.5e-4, swap+ctx): function 91.6 / exact 86.6, best epoch 10 — 문맥 지름길 해소. 남은 약점은 기능 선택(예측 지표 80.3, 명확화 84.3).
 # 5차(base, e12, lr 5e-5): 88.7 / 82.2 — 용량이 아니라 데이터 한계. 6차: v4 설정 그대로 seed만 바꿔 분산 확인.
 # 9차(_enrich): 실제 앱처럼 화면 상태를 채운 사본 추가. v8은 키가 다 찬 결과 화면에서 '등록된 농약 목록 알려 줘'를 진단으로 골랐다(11/16).
-EPOCHS = 20
+# 10차: Qwen 선생님이 확인한 말 바꾸기 문장(cropy_fs_distill_data_colab.ipynb)을 더하고, 농약 이름 목록을 개수로 바꿔 넣는다.
+DISTILL_DIR = DRIVE_DIR / 'distill_v1'   # 없으면 '' 로. paraphrases.jsonl 이 있으면 쓴다
+USE_DISTILL = bool(DISTILL_DIR) and (Path(DISTILL_DIR) / 'paraphrases.jsonl').exists()
+CONTEXT_FORMAT = 'clf_v2'               # 분류기 입력: 키를 짧은 한국어로, pesticides 는 이름 목록 대신 개수로. '' 이면 9차까지와 같다
+EPOCHS = 8 if USE_DISTILL else 20       # 문장이 몇 배 늘어 epoch 를 줄인다 (A100 권장)
 LR = 1.5e-4
 POOLING = 'mean'           # 'cls' = 첫 토큰
 MERGE_TAG = '_merge'       # 7차: 겹치는 topic 접기(아래 TOPIC_MERGE). 끄려면 '' 로 두고 TOPIC_MERGE = {{}}
 BATCH = 32
 MAX_LEN = 256              # 발화 + 압축 context JSON. 넘치는 행은 아래에서 센다
-RUN_NAME = f"clf_{{ENCODER.split('/')[-1].replace('-discriminator','')}}_{{POOLING}}_lr{{LR:g}}_e{{EPOCHS}}_swap_ctx{{MERGE_TAG}}_enrich_s{{SEED}}"
+RUN_NAME = f"clf_{{ENCODER.split('/')[-1].replace('-discriminator','')}}_{{POOLING}}_lr{{LR:g}}_e{{EPOCHS}}_swap_ctx{{MERGE_TAG}}_enrich{{'_distill' if USE_DISTILL else ''}}{{'_' + CONTEXT_FORMAT if CONTEXT_FORMAT else ''}}_s{{SEED}}"
 OUTPUT_DIR = DRIVE_DIR / RUN_NAME
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 print(RUN_NAME)
@@ -142,6 +149,8 @@ LABELS = {json.dumps(LABELS, ensure_ascii=False)}
 FUNCTIONS = LABELS['functions']
 HEADS = LABELS['heads']                       # 기능별 인자 헤드. 값 번호 = 인자 설명의 번호 (Qwen 출력과 같음)
 HEAD_INDEX = {{(h['function'], h['argument']): i for i, h in enumerate(HEADS)}}
+if CONTEXT_FORMAT:
+    LABELS['context_format'] = CONTEXT_FORMAT   # 서버(selector/server.py)·휴대폰(mobileClfSelector.ts)이 같은 규칙을 적용한다
 (OUTPUT_DIR / 'labels.json').write_text(json.dumps(LABELS, ensure_ascii=False, indent=1))
 
 import re
@@ -161,9 +170,33 @@ def targets(r):
         t[HEAD_INDEX[(r['function'], arg)]] = v
     return fn, t
 
+# 'clf_v2': 9차는 결과 화면을 다 채우면 화면 상태만 230토큰이라 train 4,118행이 256토큰에서 잘렸다.
+#  - 영어 키는 한국어 WordPiece 에서 잘게 쪼개지므로 짧은 한국어 키로 바꾼다 (230 → 172토큰)
+#  - 농약은 이름 목록 대신 개수. 기능·인자는 목록이 있는지·몇 개인지로 정해진다(제품 지칭은 발화의 '목록의 A'·'B')
+# 서버(selector/server.py)와 휴대폰(mobileClfSelector.ts)이 labels.json 의 context_format 을 보고 같은 규칙을 적용한다
+CLF_KEYS = {{'ui_stage': '단계', 'selected_crop': '선택작물', 'predicted_crop': '예측작물', 'crop_mismatch': '작물불일치',
+            'prediction_mode': '방식', 'category': '분류', 'disease_name': '병명', 'confidence': '점수', 'top_predictions': '후보',
+            'severity': '심각도', 'decision_status': '판정', 'save_status': '저장', 'recapture': '재촬영', 'pesticides': '농약',
+            'selected_usage_id': '선택제품', 'pending_target': '되물음', 'name': '이름', 'region': '부위'}}
+
+def _rename(v):
+    if isinstance(v, dict):
+        return {{CLF_KEYS.get(k, k): _rename(x) for k, x in v.items()}}
+    if isinstance(v, list):
+        return [_rename(x) for x in v]
+    return v
+
+def clf_context(ctx):
+    if CONTEXT_FORMAT != 'clf_v2':
+        return ctx
+    ctx = dict(ctx)
+    if isinstance(ctx.get('pesticides'), list):
+        ctx['pesticides'] = len(ctx['pesticides'])
+    return _rename(ctx)
+
 def text_pair(r):
-    # Qwen 프롬프트의 user 메시지와 같은 내용: 발화, 압축된 context JSON
-    return r['user_text'], json.dumps(r['context'], ensure_ascii=False, separators=(',', ':'))
+    # Qwen 프롬프트의 user 메시지와 같은 내용: 발화, 압축된 context JSON (분류기 형식)
+    return r['user_text'], json.dumps(clf_context(r['context']), ensure_ascii=False, separators=(',', ':'))
 
 from collections import Counter
 print(Counter(r['function'] for r in train_rows))
@@ -249,6 +282,13 @@ if CONTEXT_SHUFFLE:
     print(f'context shuffle: +{len(extra)} rows -> {len(train_rows) + len(extra)} train')
     train_rows = train_rows + extra
 """),
+    md("""
+## Qwen 선생님이 확인한 말 바꾸기 문장 (10차)
+
+`cropy_fs_distill_data_colab.ipynb`가 train 발화를 말투만 바꿔 늘리고, 배포 중인 Qwen 2B가 원래 라벨과 같은 호출을 낸 문장만 남겼다.
+validation 문장과 같은 문장은 버렸다. 파일이 없으면 이 셀은 아무것도 하지 않는다.
+"""),
+    code(DISTILL_CELL),
     md("""
 ## 화면 상태 채우기 증강 (9차, 운영 서버 시험의 원인)
 
@@ -400,7 +440,7 @@ print('best epoch', best[1], 'mean exact (val, enriched)', best[0])
 cases = score(val_enc, val_rows, predict(model, val_enc))
 m = metrics(cases)
 m.update({'run': RUN_NAME, 'encoder': ENCODER, 'seed': SEED, 'epochs': EPOCHS, 'best_epoch': best[1], 'lr': LR, 'pooling': POOLING,
-          'crop_swap': CROP_SWAP, 'topic_merge': {str(k): v for k, v in TOPIC_MERGE.items()}, 'context_shuffle': CONTEXT_SHUFFLE, 'train_rows': len(train_rows),
+          'crop_swap': CROP_SWAP, 'topic_merge': {str(k): v for k, v in TOPIC_MERGE.items()}, 'context_shuffle': CONTEXT_SHUFFLE, 'train_rows': len(train_rows), 'enrich': ENRICH, 'distill': len(DISTILL_ROWS), 'context_format': CONTEXT_FORMAT,
           'batch': BATCH, 'max_len': MAX_LEN, 'params': sum(p.numel() for p in model.parameters()), 'history': history,
           'seconds': round(time.time() - t0), 'env': {'torch': torch.__version__, 'transformers': transformers.__version__,
           'gpu': torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'cpu'}})
