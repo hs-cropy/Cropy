@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assembleCall, bundleFileUrl, mobileClfSelector, type ClfLabels } from "./mobileClfSelector";
+import { assembleCall, bundleFileUrl, clfContext, mobileClfSelector, type ClfLabels } from "./mobileClfSelector";
+import { contextJson } from "./voiceContext";
 
 const labels: ClfLabels = {
   functions: ["get_diagnosis", "get_pesticide_information", "chit_chat"],
@@ -23,6 +24,23 @@ describe("assembleCall", () => {
 
   it("인자가 없는 기능은 빈 괄호", () => {
     expect(assembleCall(labels, { fn_logits: [0, 0, 1], "get_diagnosis.topic": [1, 0] })).toBe("<hs_2>()<hs_end>");
+  });
+});
+
+describe("clfContext", () => {
+  const context = {
+    ui_stage: "result", disease_name: "무 노균병", confidence: 1,
+    top_predictions: [{ name: "무 노균병", confidence: 1 }], recapture: { region: "잎 뒷면" }, pesticides: ["가", "나", "다"],
+  };
+
+  it("clf_v2는 학습·서버와 같이 키를 한국어로, 농약은 개수로 바꾼다", () => {
+    expect(contextJson(clfContext(context, "clf_v2"))).toBe(
+      '{"단계":"result","병명":"무 노균병","점수":1.0,"후보":[{"이름":"무 노균병","점수":1.0}],"재촬영":{"부위":"잎 뒷면"},"농약":3}');
+    expect(context.pesticides).toEqual(["가", "나", "다"]);
+  });
+
+  it("형식이 없으면(10차까지) 받은 그대로", () => {
+    expect(clfContext(context)).toBe(context);
   });
 });
 

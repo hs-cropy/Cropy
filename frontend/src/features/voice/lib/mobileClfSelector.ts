@@ -22,7 +22,36 @@ const REQUIRED = ["model_int8.onnx", "tokenizer.json", "labels.json"];
 
 interface BundleFile { name: string; bytes: number; sha256: string }
 export interface BundleRecord { version: string; base_url: string; files: BundleFile[] }
-export interface ClfLabels { functions: string[]; heads: Array<{ function: string; argument: string; values: string[] }> }
+export interface ClfLabels {
+  functions: string[];
+  heads: Array<{ function: string; argument: string; values: string[] }>;
+  /** 'clf_v2'(11차~)면 화면 상태를 clfContext로 바꿔 넣는다. 없으면 받은 그대로 */
+  context_format?: string;
+}
+
+// 학습(ml/qwen/build_classifier_notebook.py)·서버(selector/server.py)와 같은 키 이름
+const CLF_KEYS: Record<string, string> = {
+  ui_stage: "단계", selected_crop: "선택작물", predicted_crop: "예측작물", crop_mismatch: "작물불일치",
+  prediction_mode: "방식", category: "분류", disease_name: "병명", confidence: "점수", top_predictions: "후보",
+  severity: "심각도", decision_status: "판정", save_status: "저장", recapture: "재촬영", pesticides: "농약",
+  selected_usage_id: "선택제품", pending_target: "되물음", name: "이름", region: "부위",
+};
+
+const renameKeys = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(renameKeys);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [CLF_KEYS[k] ?? k, renameKeys(v)]));
+  }
+  return value;
+};
+
+/** 분류기에 넣는 화면 상태. 'clf_v2'는 키를 짧은 한국어로, 농약 목록은 개수로 바꾼다 (받은 객체는 그대로 둔다) */
+export function clfContext(context: CompactContext, format?: string): CompactContext {
+  if (format !== "clf_v2") return context;
+  const copy: CompactContext = { ...context };
+  if (Array.isArray(copy.pesticides)) copy.pesticides = copy.pesticides.length;
+  return renameKeys(copy) as CompactContext;
+}
 
 /** 오프라인 화면(app.mjs)과 같은 DB를 연다. 처음 만드는 경우에도 같은 저장소를 만들어 오프라인 화면을 깨지 않는다 */
 function openDb(): Promise<IDBDatabase> {
@@ -111,7 +140,7 @@ async function loaded(): Promise<Loaded> {
 
 export async function runClassifier(utterance: string, context: CompactContext): Promise<string> {
   const { ort, session, tokenizer, labels } = await loaded();
-  const enc = tokenizer.encodePair(utterance, contextJson(context), MAX_LENGTH);
+  const enc = tokenizer.encodePair(utterance, contextJson(clfContext(context, labels.context_format)), MAX_LENGTH);
   const n = enc.inputIds.length;
   const tensors: Record<string, number[]> = { input_ids: enc.inputIds, attention_mask: enc.attentionMask, token_type_ids: enc.typeIds };
   const feeds: Record<string, import("onnxruntime-web/wasm").Tensor> = {};
