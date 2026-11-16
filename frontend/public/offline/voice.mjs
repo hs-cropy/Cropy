@@ -120,6 +120,9 @@ export function createVoiceSession({ models, hooks, ui, speak }) {
     muted = true; ui.state('speaking', text);
     const release = isMobile();
     if (release) closeMic();
+    // iOS 는 마이크를 놓은 뒤 오디오가 재생 상태로 돌아올 시간이 필요하다 (앱 #198 과 같은 0.7초)
+    const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    if (release && ios) await new Promise(r => setTimeout(r, 700));
     try {
       const failure = await speak(text);
       if (failure) ui.state('error', failure);
