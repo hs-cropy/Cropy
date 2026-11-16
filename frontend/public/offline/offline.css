@@ -413,3 +413,14 @@ body:has(#update-dialog[open]) [data-view="prepare"] { visibility: hidden; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* 말로 묻기 (오프라인 음성 질문) */
+.voice-panel .voice-heard { font-weight: 700; color: var(--cropy-text, #3D2F1A); }
+.voice-panel .voice-heard:empty, .voice-panel .voice-reply:empty { display: none; }
+.voice-panel .voice-reply { white-space: pre-line; line-height: 1.6; }
+.voice-panel[data-state="listening"] #voice-ask, .voice-panel[data-state="waiting"] #voice-wake { box-shadow: 0 0 0 3px var(--cropy-green-600); }
+.switch-button[aria-checked="true"] { background: var(--cropy-green-600); color: #fff; border-color: var(--cropy-green-600); }
+.voice-camera video { width: min(80vw, 28rem); border-radius: 1rem; background: #000; }
+.voice-camera-count { font-size: 2.5rem; font-weight: 800; text-align: center; margin: .5rem 0 0; }
+.voice-panel .voice-error { color: var(--cropy-danger, #C2412D); }
+.voice-panel .voice-error:empty { display: none; }

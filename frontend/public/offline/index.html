@@ -97,7 +97,18 @@
 <div class="pick-actions hidden" id="selected-actions"><button id="diagnose" type="button" disabled>이 기기에서 진단하기</button><button id="pick-again" class="secondary" type="button">다른 사진 선택하기</button></div>
 </section>
 
-<p class="muted note">모델 분류는 확진을 뜻하지 않아요. 농약 사용 조건은 오프라인 묶음에 포함하지 않으며 최신 등록정보·제품 라벨을 별도로 확인해야 해요.</p>
+<!-- 말로 묻기 (오프라인 음성 질문). 받아 적기·기능 선택 파일을 받아 뒀을 때만 보인다 (app.mjs 의 renderVoicePanel).
+     인터넷 없이 받아 적기(SenseVoice)·기능 선택(휴대폰 분류기)·답변(기기에 저장된 진단 결과)·읽기(기기 음성)가 모두 이 기기에서 돈다 -->
+<section class="card voice-panel" id="voice-panel" hidden aria-labelledby="voice-panel-title" data-state="off">
+<h2 id="voice-panel-title">말로 묻기</h2>
+<p id="voice-status" class="muted" role="status">버튼을 누르고 질문하거나, 호출어를 켜고 "여보세요"라고 불러 주세요.</p>
+<p id="voice-heard" class="voice-heard"></p>
+<p id="voice-reply" class="voice-reply" aria-live="polite"></p>
+<p id="voice-error" class="voice-error" role="alert"></p>
+<div class="pick-actions"><button id="voice-ask" type="button">말로 묻기</button>
+<button id="voice-wake" class="secondary switch-button" role="switch" aria-checked="false" type="button">호출어로 부르기</button></div>
+</section>
+<p class="muted note">모델 분류는 확진을 뜻하지 않아요. 음성 질문의 등록 농약 안내는 받아 둔 파일의 PSIS 등록정보 기준이며, 사용 전 최신 등록정보·제품 라벨을 확인해야 해요.</p>
 </div>
 
 <!-- 화면 4 · 진단 기록 (#records). 저장 공간·동기화 안내 카드는 기록 목록 위에 뜬다 -->
@@ -114,6 +125,10 @@
 </div>
 <!-- 기기 저장 완료 토스트 (Cropy/Offline/Mobile/toast/local-saved). 비어 있으면 보이지 않는다 -->
 <p class="toast" id="toast" role="status"></p>
+<!-- "찍어 줘" 음성 명령의 촬영 창. 3초 뒤 찍어 이 기기에서 진단한다 (app.mjs 의 captureFromCamera) -->
+<dialog class="dialog voice-camera" id="voice-camera" aria-label="음성 촬영">
+<video id="voice-camera-video" playsinline muted></video><p class="voice-camera-count" id="voice-camera-count" aria-live="assertive"></p>
+</dialog>
 <!-- 새 진단 파일 업데이트 확인 (Cropy/Offline/Mobile/dialog/model-update). app.mjs 의 checkUpdate 가 연다 -->
 <dialog class="dialog" id="update-dialog" aria-labelledby="update-title">
 <div class="feedback">

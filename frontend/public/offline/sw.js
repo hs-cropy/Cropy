@@ -1,7 +1,8 @@
-const CACHE = 'cropy-offline-shell-c9f362aaaf1b50f3';
+const CACHE = 'cropy-offline-shell-b1a48008494bf0de';
 // 인터넷 없이 여는 화면에 필요한 파일 전부. 하나라도 없으면 설치가 통째로 실패한다.
 // scripts/prepare-offline.mjs 가 이 목록을 읽어 CACHE 해시를 만든다
 const SHELL = ['/offline/index.html', '/offline/install.html', '/offline/app.mjs', '/offline/core.mjs',
+  '/offline/voice.mjs', '/offline/voice-stt.mjs', '/offline/voice-lexicon.mjs', '/offline/voice-clf.mjs', '/offline/voice-handlers.mjs', '/offline/voice-intents.mjs',
   '/offline/install.mjs', '/offline/shell.mjs', '/offline/offline.css',
   '/offline-runtime/ort.wasm.bundle.min.mjs', '/offline-runtime/ort-wasm-simd-threaded.mjs',
   '/offline-runtime/ort-wasm-simd-threaded.wasm',
