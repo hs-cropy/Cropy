@@ -55,10 +55,10 @@ vi.mock("@/lib/api", async (importOriginal) => {
   return { ...actual, diagnoseImage: pipeline.diagnoseImage };
 });
 
-vi.mock("@/features/voice/lib/speech", () => ({
-  speakAndWait: pipeline.speakAndWait,
-  cancelSpeech: pipeline.cancelSpeech,
-}));
+vi.mock("@/features/voice/lib/speech", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/voice/lib/speech")>();
+  return { ...actual, speakAndWait: pipeline.speakAndWait, cancelSpeech: pipeline.cancelSpeech, primeSpeech: vi.fn() };
+});
 
 vi.mock("@/features/voice/lib/voiceScreen", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/voice/lib/voiceScreen")>();
@@ -481,7 +481,31 @@ describe("useVoiceConversation", () => {
     ua.mockRestore();
   });
 
-  it("안드로이드가 아니면 답을 읽는 동안에도 마이크를 유지한다", async () => {
+  it("아이폰도 답을 읽기 전에 마이크를 놓는다 (녹음 중이면 소리가 수화부로 작게 나감)", async () => {
+    const stopTrack = vi.fn();
+    const iosStream = { active: true, getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
+    recorderMock.start.mockImplementation(async () => ({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: iosStream }));
+    const ua = vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 Version/18.7 Mobile/15E148 Safari/604.1");
+    pipeline.speakAndWait.mockImplementationOnce(async () => { expect(stopTrack).toHaveBeenCalled(); return { spoken: true }; });
+
+    const { result } = renderHook(() => useVoiceConversation());
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+
+    expect(stopTrack).toHaveBeenCalled();
+    ua.mockRestore();
+  });
+
+  it("휴대폰이 답을 소리로 내지 못하면 이유를 화면에 알린다", async () => {
+    pipeline.speakAndWait.mockResolvedValueOnce({ spoken: false, reason: "not-allowed" });
+    const { result } = renderHook(() => useVoiceConversation());
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+    expect(result.current.error).toMatch(/소리로 읽지 못했어요/);
+    expect(result.current.assistantText).toBe("현재 진단은 고추 탄저병입니다.");  // 글로는 보인다
+  });
+
+  it("안드로이드·아이폰이 아니면 답을 읽는 동안에도 마이크를 유지한다", async () => {
     const stopTrack = vi.fn();
     const pcStream = { active: true, getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
     recorderMock.start.mockImplementation(async () => ({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: pcStream }));

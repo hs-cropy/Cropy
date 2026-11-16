@@ -57,7 +57,10 @@ export function cancelSpeech(owner?: symbol): void {
  * 탭 핸들러에서 무음 utterance를 한 번 넣어 그 제한을 풀어 둔다.
  */
 export function primeSpeech(): void {
-  if (!isSpeechSupported() || primed) return;
+  if (!isSpeechSupported()) return;
+  // 안드로이드 Chrome은 speechSynthesis가 멈춤(paused) 상태로 굳어 소리 없이 끝나는 일이 있어 탭할 때마다 풀어 둔다
+  window.speechSynthesis.resume();
+  if (primed) return;
   primed = true;
   const utterance = new SpeechSynthesisUtterance("");
   utterance.volume = 0;
@@ -90,33 +93,70 @@ export function speak(text: string | string[], owner?: symbol): void {
 }
 
 /**
+ * 낭독 결과. spoken: 시작해서 끝까지(또는 중간에 끊김) 갔다. failed: 소리를 내지 못했다(reason 은 SpeechSynthesisErrorEvent.error
+ * 또는 "no-start" — 3초 안에 시작하지 않음. iOS·안드로이드가 탭 없이 시작한 낭독을 막거나 엔진이 굳었을 때 생긴다).
+ */
+export type SpeechOutcome = { spoken: true } | { spoken: false; reason: string };
+const START_TIMEOUT_MS = 3000;
+
+/** 낭독 실패를 사람이 읽을 안내로. 끊김(interrupted·canceled)은 실패로 보지 않으므로 null */
+export function speechFailureText(outcome: SpeechOutcome | undefined): string | null {
+  if (!outcome || outcome.spoken) return null;
+  if (outcome.reason === "interrupted" || outcome.reason === "canceled") return null;
+  if (outcome.reason === "language-unavailable" || outcome.reason === "voice-unavailable") {
+    return "이 휴대폰에 한국어 음성이 없어 답을 읽지 못했어요. 설정의 텍스트 음성 변환(TTS)에서 한국어를 설치해 주세요.";
+  }
+  return "휴대폰에서 답을 소리로 읽지 못했어요. 화면을 한 번 누른 뒤 다시 물어봐 주세요.";
+}
+
+/**
  * speak와 같지만 마지막 문장을 다 읽거나(end) 끊기거나(error·cancel) 했을 때 끝나는 Promise를 돌려준다.
  * 음성 모드가 "말하는 중" 상태를 실제 낭독 길이에 맞추는 데 쓴다. 미지원 환경이나 읽을 문장이
  * 없으면 바로 끝난다. 큐에 넣은 utterance가 시작도 못 하고 cancel되면 브라우저에 따라 end·error가
  * 오지 않을 수 있어, 호출한 쪽은 자기 상태 전환을 이 Promise에만 의존하지 않는다.
  */
-export function speakAndWait(text: string | string[], owner?: symbol): Promise<void> {
-  if (!isSpeechSupported()) return Promise.resolve();
+export function speakAndWait(text: string | string[], owner?: symbol): Promise<SpeechOutcome> {
+  if (!isSpeechSupported()) return Promise.resolve({ spoken: false, reason: "unsupported" });
   const sentences = (Array.isArray(text) ? text : [text]).filter((s) => s.trim());
-  if (sentences.length === 0) return Promise.resolve();
+  if (sentences.length === 0) return Promise.resolve({ spoken: true });
 
   const synth = window.speechSynthesis;
   if (synth.speaking || synth.pending) synth.cancel();
+  synth.resume();
   currentOwner = owner;
   const voice = pickKoreanVoice();
-  return new Promise<void>((resolve) => {
+  return new Promise<SpeechOutcome>((resolve) => {
     let remaining = sentences.length;
+    let started = false;
+    let settled = false;
+    const finish = (outcome: SpeechOutcome) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(watchdog);
+      resolve(outcome);
+    };
+    // 시작조차 안 하면 end·error 가 오지 않는 브라우저가 있어 기다리다 멈추지 않게 한다
+    const watchdog = setTimeout(() => {
+      if (started) return;
+      synth.cancel();
+      finish({ spoken: false, reason: "no-start" });
+    }, START_TIMEOUT_MS);
     const done = () => {
       remaining -= 1;
-      if (remaining <= 0) resolve();
+      if (remaining <= 0) finish({ spoken: true });
     };
     for (const sentence of sentences) {
       const utterance = new SpeechSynthesisUtterance(sentence);
       utterance.lang = "ko-KR";
       utterance.rate = SPEECH_RATE;
       if (voice) utterance.voice = voice;
+      utterance.onstart = () => { started = true; };
       utterance.onend = done;
-      utterance.onerror = done;
+      utterance.onerror = (event) => {
+        // 끊김은 정상 흐름(새 질문·화면 이탈). 그 밖의 오류는 첫 문장에서 나면 실패로 알린다
+        if (!started && event.error !== "interrupted" && event.error !== "canceled") finish({ spoken: false, reason: event.error });
+        else done();
+      };
       synth.speak(utterance);
     }
   });

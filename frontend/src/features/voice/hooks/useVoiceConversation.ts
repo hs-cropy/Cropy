@@ -10,21 +10,28 @@ import { ApiError, diagnoseImage } from "@/lib/api";
 import { isCaptureCommand } from "@/features/voice/lib/captureIntent";
 import { isExitCommand } from "@/features/voice/lib/exitIntent";
 import { matchWakeWord } from "@/features/voice/lib/wakeWord";
-import { cancelSpeech, speakAndWait } from "@/features/voice/lib/speech";
+import { cancelSpeech, primeSpeech, speakAndWait, speechFailureText } from "@/features/voice/lib/speech";
 import { answerFunction, fetchSpeechScript, transcribe } from "@/features/voice/lib/voiceApi";
 import { selectFunctionCall } from "@/features/voice/lib/functionSelector";
 import { LAST_DIAGNOSIS_KEY, readVoiceScreen, type VoiceScreen } from "@/features/voice/lib/voiceScreen";
-import { playListenCue } from "@/features/voice/lib/listenCue";
+import { playListenCue, primeListenCue } from "@/features/voice/lib/listenCue";
 import { releaseStream, startVoiceRecording, VoicePermissionError, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
 import { AudioConversionError, recordingToWav } from "@/features/voice/lib/wav";
 
 /**
- * 안드로이드 Chrome은 페이지가 마이크(getUserMedia)를 잡고 있는 동안 speechSynthesis 소리가 나지 않는다.
- * 그래서 안드로이드에서만 읽기 직전에 마이크를 놓는다. 다음 듣기·호출어 대기는 streamRef가 비어 있으면
- * 마이크를 새로 연다. PC·iOS는 첫머리가 잘리지 않도록 지금처럼 마이크를 유지한다.
+ * 휴대폰은 마이크를 잡은 채로는 답이 들리지 않는다. 안드로이드 Chrome은 getUserMedia 를 잡고 있는 동안
+ * speechSynthesis 소리를 내지 않고(#183), iOS Safari는 녹음 중이면 소리를 통화용 수화부로 아주 작게 보낸다.
+ * 그래서 휴대폰에서는 읽기 직전에 마이크를 놓는다. 다음 듣기·호출어 대기는 streamRef가 비어 있으면
+ * 마이크를 새로 연다. PC는 첫머리가 잘리지 않도록 지금처럼 마이크를 유지한다.
  */
-function releaseMicOnAndroid(streamRef: { current: MediaStream | null }): void {
-  if (typeof navigator === "undefined" || !/Android/i.test(navigator.userAgent)) return;
+export function isMobileDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /Android|iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+
+function releaseMicOnMobile(streamRef: { current: MediaStream | null }): void {
+  if (!isMobileDevice()) return;
   releaseStream(streamRef.current);
   streamRef.current = null;
 }
@@ -337,7 +344,7 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       addTurn({ role: "assistant", text: EXIT_TEXT });
       updateState("speaking");
       busyRef.current = false;
-      releaseMicOnAndroid(streamRef);
+      releaseMicOnMobile(streamRef);
       await speakAndWait(EXIT_TEXT, speechOwner.current);
       if (generation !== generationRef.current) return;
       generationRef.current += 1; // 예약된 다시 듣기·호출어 듣기가 이어지지 않게
@@ -382,8 +389,12 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
     addTurn({ role: "assistant", text: replyText });
     updateState("speaking");
     busyRef.current = false;
-    releaseMicOnAndroid(streamRef);
-    await speakAndWait(reply, speechOwner.current);
+    releaseMicOnMobile(streamRef);
+    const spoken = await speakAndWait(reply, speechOwner.current);
+    if (generation === generationRef.current) {
+      const failure = speechFailureText(spoken);
+      if (failure) setError(failure);
+    }
     if (generation === generationRef.current && isState("speaking")) {
       updateState("idle");
       // 연속 대화: 다 읽었으면 버튼 없이 다시 듣는다 (끊긴 경우는 cancel()이 처리했으므로 여기 오지 않는다)
@@ -413,8 +424,12 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       addTurn({ role: "assistant", text: replyText });
       updateState("speaking");
       busyRef.current = false;
-      releaseMicOnAndroid(streamRef);
-      await speakAndWait(reply, speechOwner.current);
+      releaseMicOnMobile(streamRef);
+      const spoken = await speakAndWait(reply, speechOwner.current);
+      if (generation === generationRef.current) {
+        const failure = speechFailureText(spoken);
+        if (failure) setError(failure);
+      }
       if (generation === generationRef.current && isState("speaking")) {
         updateState("idle");
         scheduleAutoListen();
@@ -802,6 +817,14 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       }
     };
   }, [state, wakeEnabled, startWakeLoop, stopWakeLoop]);
+
+  // 음성 모드 화면 어디든 누르면 낭독·알림음을 깨운다. 호출어 대기는 탭 없이 시작되므로, iOS Safari 는
+  // 이 화면에서 한 번도 탭 안에서 소리를 내지 않았으면 나중의 답 낭독을 막는다
+  useEffect(() => {
+    const wake = () => { primeSpeech(); primeListenCue(); };
+    window.addEventListener("pointerdown", wake, { capture: true });
+    return () => window.removeEventListener("pointerdown", wake, { capture: true });
+  }, []);
 
   const handleMicClick = useCallback(() => {
     if (stateRef.current === "idle") {

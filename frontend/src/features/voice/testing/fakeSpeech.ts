@@ -34,6 +34,7 @@ export function installFakeSpeech(voices: SpeechSynthesisVoice[] = []) {
       synth.pending = false;
     }),
     getVoices: vi.fn(() => voices),
+    resume: vi.fn(),
   };
   vi.stubGlobal("speechSynthesis", synth);
   vi.stubGlobal("SpeechSynthesisUtterance", FakeUtterance);
