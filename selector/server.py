@@ -14,7 +14,7 @@
 
 입력은 학습(ml/qwen/build_classifier_notebook.py)과 같다: tokenizer(발화, json.dumps(context, ensure_ascii=False,
 separators=(",", ":")), truncation="only_second", max_length=256). 화면 상태는 백엔드가 compact_context 로 줄여 보낸
-그대로 쓴다(키 순서 포함). 출력은 검증하지 않는다. 형식·범위 검사는 백엔드 파서가 한다.
+것을 쓰고(키 순서 포함), labels.json 의 context_format 이 'clf_v2'면 학습과 같이 키 이름과 농약 목록만 바꾼다. 출력은 검증하지 않는다. 형식·범위 검사는 백엔드 파서가 한다.
 """
 
 import json
@@ -70,8 +70,34 @@ def assemble_call(labels: dict, outputs: dict) -> str:
     return f"<hs_{index}>({', '.join(args)})<hs_end>"
 
 
-def context_text(context: dict) -> str:
-    return json.dumps(context, ensure_ascii=False, separators=(",", ":"))
+# labels.json 의 context_format 이 'clf_v2'(11차~)면 학습과 같이 키를 짧은 한국어로 바꾸고 농약 목록은 개수로 넣는다.
+# 휴대폰(frontend mobileClfSelector.ts)과 학습 노트북(ml/qwen/build_classifier_notebook.py)이 같은 규칙을 쓴다.
+CLF_KEYS = {"ui_stage": "단계", "selected_crop": "선택작물", "predicted_crop": "예측작물", "crop_mismatch": "작물불일치",
+            "prediction_mode": "방식", "category": "분류", "disease_name": "병명", "confidence": "점수", "top_predictions": "후보",
+            "severity": "심각도", "decision_status": "판정", "save_status": "저장", "recapture": "재촬영", "pesticides": "농약",
+            "selected_usage_id": "선택제품", "pending_target": "되물음", "name": "이름", "region": "부위"}
+
+
+def _rename(value):
+    if isinstance(value, dict):
+        return {CLF_KEYS.get(k, k): _rename(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_rename(v) for v in value]
+    return value
+
+
+def clf_context(context: dict, context_format: str | None = None) -> dict:
+    """분류기에 넣는 화면 상태. context_format 이 없으면(10차까지) 받은 그대로"""
+    if context_format != "clf_v2":
+        return context
+    context = dict(context)
+    if isinstance(context.get("pesticides"), list):
+        context["pesticides"] = len(context["pesticides"])
+    return _rename(context)
+
+
+def context_text(context: dict, context_format: str | None = None) -> str:
+    return json.dumps(clf_context(context, context_format), ensure_ascii=False, separators=(",", ":"))
 
 
 def load() -> None:
@@ -103,7 +129,7 @@ def load() -> None:
 
 
 def encode(utterance: str, context: dict) -> dict[str, np.ndarray]:
-    enc = _state["tokenizer"].encode(utterance, context_text(context))
+    enc = _state["tokenizer"].encode(utterance, context_text(context, _state["labels"].get("context_format")))
     arrays = {"input_ids": enc.ids, "attention_mask": enc.attention_mask, "token_type_ids": enc.type_ids}
     return {name: np.asarray([arrays[name]], dtype=np.int64) for name in _state["inputs"]}
 
@@ -132,7 +158,9 @@ class SelectRequest(BaseModel):
 
 @app.get("/health")
 async def health():
-    return {"status": _state["status"], "version": _state.get("version"), "error": _state.get("error")}
+    labels = _state.get("labels") or {}
+    return {"status": _state["status"], "version": _state.get("version"), "context_format": labels.get("context_format"),
+            "error": _state.get("error")}
 
 
 @app.post("/select")

@@ -37,6 +37,21 @@ def test_context_text_matches_training_serialization():
     assert server.context_text(context) == '{"ui_stage":"result","disease_name":"고추 탄저병","confidence":1.0,"crop_mismatch":false}'
 
 
+def test_clf_v2_context_renames_keys_and_counts_pesticides():
+    context = {"ui_stage": "result", "disease_name": "무 노균병", "confidence": 0.9,
+               "top_predictions": [{"name": "무 노균병", "confidence": 0.9}], "recapture": {"region": "잎 뒷면"},
+               "pesticides": ["가", "나", "다"]}
+    assert server.context_text(context, "clf_v2") == (
+        '{"단계":"result","병명":"무 노균병","점수":0.9,"후보":[{"이름":"무 노균병","점수":0.9}],'
+        '"재촬영":{"부위":"잎 뒷면"},"농약":3}')
+    assert context["pesticides"] == ["가", "나", "다"]  # 받은 화면 상태는 바꾸지 않는다
+
+
+def test_context_without_format_is_unchanged():
+    context = {"ui_stage": "result", "pesticides": ["가"]}
+    assert server.context_text(context, None) == '{"ui_stage":"result","pesticides":["가"]}'
+
+
 def write_bundle(root: Path, base_url="/offline-assets/function/mobile_clf/abcd") -> Path:
     folder = root / "function" / "mobile_clf" / "abcd"
     folder.mkdir(parents=True)
@@ -88,7 +103,7 @@ def test_real_model_matches_reference_rows():
     assert server._state["status"] == "ready"
     bad_ctx, bad_ids, bad_out = [], [], []
     for row in rows:
-        if server.context_text(row["context"]) != row["ctx"]:
+        if server.context_text(row["context"], server._state["labels"].get("context_format")) != row["ctx"]:
             bad_ctx.append(row["utterance"])
         enc = server._state["tokenizer"].encode(row["utterance"], row["ctx"])
         if enc.ids != row["ids"] or enc.type_ids != row["type_ids"]:
