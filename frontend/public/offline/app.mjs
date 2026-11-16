@@ -1,6 +1,7 @@
 import * as ort from '/offline-runtime/ort.wasm.bundle.min.mjs';
 import { softmax, distribution, fuse, summarize, failurePhase, viewFromHash, recordsNotice, updateAvailable, isDesktopDevice, gradeOf, isNotCrop, syncStateOf, resultTimeSentence, recordTime } from './core.mjs';
 import { FUNCTION_CACHE, functionBundleKind, bundleGuide, bundleState, downloadBundle, missingBundleFiles, staleBundleKeys, formatBytes } from './core.mjs';
+import { VOICE_KINDS, loadVoiceModels, createVoiceSession } from './voice.mjs';
 
 ort.env.wasm.wasmPaths = '/offline-runtime/';
 ort.env.wasm.numThreads = 1;
@@ -662,9 +663,10 @@ $('speak').addEventListener('click',()=>{
 navigator.serviceWorker?.addEventListener('message',event=>{
   if(event.data?.type==='cropy-offline-stay')say('인터넷에 연결되어 있지 않아 이 화면에 머물러요. 연결되면 다시 눌러 주세요.');
 });
-// ── 음성 질문 파일 (기능 선택 모델 묶음, #166) ──
-// 휴대폰은 소형 분류기, WebGPU 가 있는 PC 는 Qwen 묶음을 받는다 (core.mjs 의 functionBundleKind). 진단 파일(CNN)과 따로 받고,
-// 진단 파일이 준비된 뒤에만 보인다. 서버에 묶음이 없거나 받을 묶음이 없는 기기면 카드를 숨긴다.
+// ── 음성 질문 파일 (기능 선택 모델 묶음 #166 + 오프라인 음성 질문) ──
+// 오프라인 화면의 음성 질문은 기기 종류와 관계없이 받아 적기(stt, SenseVoice 약 240MB)와 휴대폰 분류기(mobile_clf, 약 15MB)로 돈다.
+// WebGPU 가 있는 PC 는 앱 음성 모드용 Qwen 묶음(web_qwen)도 함께 받는다 (core.mjs 의 functionBundleKind).
+// 진단 파일(CNN)이 준비된 뒤에만 보인다. 서버에 없는 묶음은 건너뛰고, 필요한 묶음이 하나도 없으면 카드를 숨긴다.
 // 파일은 Cache Storage(transformers-cache)에 파일 주소를 키로 넣고, 다 받으면 IndexedDB assets 'fn:<kind>' 에 묶음 정보를 적는다
 // PC 는 navigator.gpu 가 있어도 어댑터를 못 받는 경우(GPU 차단·VM 등)가 있어 어댑터까지 확인한다. 휴대폰은 GPU 를 묻지 않는다
 let voiceKind, voiceKindChecked;
@@ -676,67 +678,86 @@ const resolveVoiceKind = () => voiceKindChecked ??= (async () => {
   try { return (await Promise.race([navigator.gpu?.requestAdapter(), new Promise(resolve => { timer = setTimeout(resolve, 1500, null); })])) ? kind : null; }
   catch { return null; } finally { clearTimeout(timer); }
 })();
-let voiceBundle = null, voiceBusy = false;
+let voiceBundles = {}, voiceBusy = false, voiceRecords = {};
 const voiceKey = kind => 'fn:' + kind;
-async function renderVoiceBundle() {
-  const card = $('voice-card');
-  voiceKind = await resolveVoiceKind();
-  if (!voiceKind || !session || !('caches' in window)) { card.hidden = true; return; }
-  if (voiceBusy) return;
+const voiceKinds = () => [...new Set([voiceKind, ...VOICE_KINDS].filter(Boolean))];
+async function readVoiceRecord(kind) {
   let record = null;
-  try { record = await db('assets','get',null,voiceKey(voiceKind)); } catch {}
-  if (navigator.onLine) {
-    try {
-      const res = await fetch('/offline-assets/function-models.json', {cache:'no-store', signal:AbortSignal.timeout(5000)});
-      voiceBundle = res.ok ? (await res.json())?.[voiceKind] || null : null;
-    } catch {}
-  }
+  try { record = await db('assets','get',null,voiceKey(kind)); } catch {}
   // 받아 둔 기록이 있어도 브라우저가 캐시를 지웠으면 받은 적 없는 것으로 본다
   if (record) {
     try { if ((await missingBundleFiles(record, await caches.open(FUNCTION_CACHE), location.origin)).length) record = null; }
     catch { record = null; }
   }
-  // 렌더가 겹쳐 돌 수 있어(준비 완료·부팅·online) 이 렌더가 본 묶음을 지역 값으로 쓴다
-  const server = voiceBundle;
-  const state = bundleState(record, server);
+  return record;
+}
+async function renderVoiceBundle() {
+  const card = $('voice-card');
+  voiceKind = await resolveVoiceKind();
+  if (!session || !('caches' in window)) { card.hidden = true; renderVoicePanel(); return; }
   if (voiceBusy) return;
-  if (state === 'none' && !server) { card.hidden = true; return; }
+  if (navigator.onLine) {
+    try {
+      const res = await fetch('/offline-assets/function-models.json', {cache:'no-store', signal:AbortSignal.timeout(5000)});
+      voiceBundles = res.ok ? (await res.json()) || {} : {};
+    } catch {}
+  }
+  const kinds = voiceKinds();
+  const records = Object.fromEntries(await Promise.all(kinds.map(async kind => [kind, await readVoiceRecord(kind)])));
+  voiceRecords = records;
+  renderVoicePanel();
+  // 렌더가 겹쳐 돌 수 있어(준비 완료·부팅·online) 이 렌더가 본 묶음을 지역 값으로 쓴다
+  const server = {...voiceBundles};
+  const states = Object.fromEntries(kinds.map(kind => [kind, bundleState(records[kind], server[kind])]));
+  const todo = kinds.filter(kind => states[kind] !== 'ready' && server[kind]);
+  if (voiceBusy) return;
+  if (!todo.length && kinds.every(kind => states[kind] === 'none')) { card.hidden = true; return; }
   card.hidden = false; $('voice-progress-wrap').hidden = true;
-  if (state === 'ready') { $('voice-text').textContent = '음성 질문 파일을 이 기기에 받아 뒀어요.'; $('voice-get').hidden = true; return; }
+  if (!todo.length) { $('voice-text').textContent = '음성 질문 파일을 이 기기에 받아 뒀어요. 인터넷 없이도 말로 물을 수 있어요.'; $('voice-get').hidden = true; return; }
   let estimate = null;
   try { estimate = await navigator.storage.estimate(); } catch {}
   // 기다리는 동안 받기를 시작했으면 진행 화면을 덮지 않는다
   if (voiceBusy) return;
-  const guide = bundleGuide(voiceKind, server.total_bytes, estimate);
-  $('voice-text').textContent = (state === 'update' ? '새 음성 질문 파일이 있어요. ' : '') + guide.text;
-  $('voice-get').textContent = state === 'update' ? '새 파일 받기' : '파일 받기';
+  const total = todo.reduce((sum, kind) => sum + server[kind].total_bytes, 0);
+  const update = todo.some(kind => states[kind] === 'update');
+  const guide = bundleGuide(todo.includes('web_qwen') ? 'web_qwen' : 'mobile_clf', total, estimate);
+  $('voice-text').textContent = (update ? '새 음성 질문 파일이 있어요. ' : '') + (desktop ? guide.text.replace('이 휴대폰에서', '이 기기에서') : guide.text);
+  $('voice-get').textContent = update ? '새 파일 받기' : '파일 받기';
   $('voice-get').hidden = false; $('voice-get').disabled = false;
 }
 async function getVoiceBundle() {
-  if (voiceBusy || !voiceBundle) return;
+  if (voiceBusy) return;
+  const kinds = voiceKinds().filter(kind => voiceBundles[kind] && bundleState(voiceRecords[kind], voiceBundles[kind]) !== 'ready');
+  if (!kinds.length) return;
   voiceBusy = true;
-  const target = voiceBundle;
+  const targets = kinds.map(kind => [kind, voiceBundles[kind]]);
+  const total = targets.reduce((sum, [, target]) => sum + target.total_bytes, 0);
   $('voice-get').disabled = true; $('voice-progress-wrap').hidden = false; $('voice-progress').value = 0;
   $('voice-progress-text').textContent = '받는 중 0%';
   // 진단 파일 받기와 같이 30초 동안 받은 바이트가 없으면 끊는다. 다시 받으면 다 받은 파일은 건너뛴다
   const stall = new AbortController(); let timer;
   const alive = () => { clearTimeout(timer); timer = setTimeout(() => stall.abort(), 30000); };
   try {
-    alive();
     const cache = await caches.open(FUNCTION_CACHE);
-    await downloadBundle(target, {fetch:(url, options) => fetch(url, options), cache, digest:bytes => crypto.subtle.digest('SHA-256', bytes),
-      origin:location.origin, signal:stall.signal, onBytes:alive, onIdle:() => clearTimeout(timer),
-      onProgress:(done, total) => {
-        const percent = Math.min(100, done / total * 100);
-        $('voice-progress').value = percent;
-        $('voice-progress-text').textContent = `받는 중 ${Math.floor(percent)}% (${formatBytes(done)} / ${formatBytes(total)})`;
-      }});
-    clearTimeout(timer);
-    await db('assets','put',{...target, kind:voiceKind, saved_at:new Date().toISOString()},voiceKey(voiceKind));
-    // 새 버전을 다 받은 뒤에 이전 버전 파일을 지운다 (받다 실패하면 이전 파일이 남는다)
-    for (const url of staleBundleKeys((await cache.keys()).map(request => request.url), voiceKind, target.base_url, location.origin)) await cache.delete(url);
+    let before = 0;
+    for (const [kind, target] of targets) {
+      alive();
+      await downloadBundle(target, {fetch:(url, options) => fetch(url, options), cache, digest:bytes => crypto.subtle.digest('SHA-256', bytes),
+        origin:location.origin, signal:stall.signal, onBytes:alive, onIdle:() => clearTimeout(timer),
+        onProgress:done => {
+          const percent = Math.min(100, (before + done) / total * 100);
+          $('voice-progress').value = percent;
+          $('voice-progress-text').textContent = `받는 중 ${Math.floor(percent)}% (${formatBytes(before + done)} / ${formatBytes(total)})`;
+        }});
+      clearTimeout(timer);
+      await db('assets','put',{...target, kind, saved_at:new Date().toISOString()},voiceKey(kind));
+      // 새 버전을 다 받은 뒤에 이전 버전 파일을 지운다 (받다 실패하면 이전 파일이 남는다)
+      for (const url of staleBundleKeys((await cache.keys()).map(request => request.url), kind, target.base_url, location.origin)) await cache.delete(url);
+      before += target.total_bytes;
+    }
     navigator.storage?.persist?.().catch(() => {});
     voiceBusy = false;
+    voiceModels = null;  // 새 파일로 다시 불러온다
     await renderVoiceBundle();
     toast('음성 질문 파일을 받았어요.');
   } catch (error) {
@@ -750,6 +771,94 @@ async function getVoiceBundle() {
   } finally { clearTimeout(timer); }
 }
 $('voice-get').addEventListener('click',getVoiceBundle);
+
+// ── 말로 묻기 (오프라인 음성 질문) ──
+// 새 진단·진단 결과 화면 아래 패널. 받아 적기·기능 선택 파일을 받아 뒀을 때만 보인다. 처음 누를 때 모델을 불러온다(수 초)
+let voiceModels = null, voiceSession = null, voiceLoading = null;
+const voiceReady = () => VOICE_KINDS.every(kind => voiceRecords[kind]);
+function renderVoicePanel() {
+  const ready = Boolean(session) && voiceReady();
+  $('voice-panel').hidden = !ready;
+  if (!ready && voiceSession) { voiceSession.stop(); }
+}
+const VOICE_STATUS = {
+  off: '버튼을 누르고 질문하거나, 호출어를 켜고 "여보세요"라고 불러 주세요.', loading: '음성 모델을 불러오고 있어요. 잠시만 기다려 주세요.',
+  listening: '듣고 있어요. 말씀해 주세요.', waiting: '"여보세요" 또는 "크로피"라고 부르면 대답해요.',
+  thinking: '알아듣는 중이에요…', speaking: '대답하고 있어요.', error: '음성 질문을 처리하지 못했어요.',
+};
+function voiceState(name, detail) {
+  $('voice-panel').dataset.state = name;
+  if (name === 'heard') { $('voice-heard').textContent = detail ? `“${detail}”` : ''; return; }
+  if (name === 'speaking' && detail) $('voice-reply').textContent = detail;
+  $('voice-status').textContent = name === 'error' && detail ? detail : VOICE_STATUS[name] ?? '';
+  const on = voiceSession?.mode === 'wake';
+  $('voice-wake').setAttribute('aria-checked', String(on));
+  $('voice-ask').textContent = voiceSession?.mode === 'once' ? '그만 듣기' : '말로 묻기';
+}
+// 기기 안 한국어 음성으로 읽는다. 없으면 글로만 보여 준다 (끝날 때까지 마이크는 듣지 않는다)
+function speakText(text) {
+  return new Promise(resolve => {
+    const voice = 'speechSynthesis' in window && speechSynthesis.getVoices().find(v => v.localService && v.lang.startsWith('ko'));
+    if (!voice) { setTimeout(resolve, Math.min(4000, 600 + text.length * 60)); return; }
+    speechSynthesis.cancel();
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.voice = voice; speech.lang = 'ko-KR'; speech.onend = speech.onerror = () => resolve();
+    speechSynthesis.speak(speech);
+  });
+}
+const resultSentence = r => isNotCrop(r) ? '작물 잎을 찾지 못했어요. 잎이 잘 보이게 다시 찍어 주세요.' : r.disease_name + '으로 분류됐어요. 확진을 뜻하지 않아요.';
+const voiceHooks = {
+  getScreen: () => ({
+    result: view === 'result' && current ? current.result : null,
+    uiStage: busy ? 'analyzing' : view === 'result' && current ? 'result' : selected ? 'photo_ready' : 'no_photo',
+  }),
+  // "찍어 줘": 카메라 창을 열어 3초 뒤 찍고, 이 기기에서 진단한 결과를 읽어 준다
+  capture: async () => {
+    const file = await captureFromCamera().catch(() => null);
+    if (!file || busy) return null;
+    go('new'); selected = file; photoSource = 'camera'; savedId = null;
+    await diagnose();
+    return current && current.file === file ? resultSentence(current.result) : null;
+  },
+};
+async function captureFromCamera() {
+  const dialog = $('voice-camera'), video = $('voice-camera-video');
+  const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment', width:{ideal:1920}}});
+  try {
+    video.srcObject = stream; dialog.showModal(); await video.play();
+    for (const n of [3, 2, 1]) { $('voice-camera-count').textContent = String(n); await new Promise(r => setTimeout(r, 1000)); }
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+    return blob ? new File([blob], `voice-${Date.now()}.jpg`, {type:'image/jpeg'}) : null;
+  } finally { stream.getTracks().forEach(t => t.stop()); video.srcObject = null; dialog.close(); }
+}
+async function ensureVoice() {
+  if (voiceSession) return voiceSession;
+  voiceLoading ??= (async () => {
+    voiceState('loading');
+    voiceModels ??= await loadVoiceModels(ort, await caches.open(FUNCTION_CACHE), voiceRecords);
+    voiceSession = createVoiceSession({models:voiceModels, hooks:voiceHooks, ui:{state:voiceState}, speak:speakText});
+    voiceState('off');
+    return voiceSession;
+  })().finally(() => { voiceLoading = null; });
+  return voiceLoading;
+}
+$('voice-ask').addEventListener('click', async () => {
+  try {
+    const voice = await ensureVoice();
+    if (voice.mode === 'once') { voice.stop(); return; }
+    if (voice.mode === 'wake') voice.stop();
+    await voice.listenOnce();
+  } catch (error) { voiceState('error', error?.name === 'NotAllowedError' ? '마이크 권한을 허용해 주세요.' : message(error)); }
+});
+$('voice-wake').addEventListener('click', async () => {
+  try {
+    const voice = await ensureVoice();
+    await voice.setWake(voice.mode !== 'wake');
+  } catch (error) { voiceState('error', error?.name === 'NotAllowedError' ? '마이크 권한을 허용해 주세요.' : message(error)); }
+});
 addEventListener('online',()=>{renderVoiceBundle().catch(()=>{});});
 // 주소의 # 화면을 먼저 보인다. 모델을 다 불러온 뒤 한 번 더 확인한다 (없으면 새 진단 대신 준비 화면)
 route();

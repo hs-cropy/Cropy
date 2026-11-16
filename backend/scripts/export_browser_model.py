@@ -43,10 +43,12 @@ def file_sha256(path):
     return digest.hexdigest()
 
 
-# 기기 종류별 묶음. mobile_clf: 휴대폰(iPhone·안드로이드) 소형 분류기, web_qwen: PC WebGPU Qwen q4f16
+# 기기 종류별 묶음. mobile_clf: 휴대폰(iPhone·안드로이드) 소형 분류기, web_qwen: PC WebGPU Qwen q4f16,
+# stt: 오프라인 화면의 기기 안 받아 적기(SenseVoice int8). stt 폴더는 stt/make_browser_bundle.py 가 만든다
 MOBILE_CLF_FILES = ["model_int8.onnx", "tokenizer.json", "tokenizer_config.json", "labels.json"]
 WEB_QWEN_PREFIX_FILES = ["prefix_q4f16.json", "prefix_q4f16.bin"]
-FUNCTION_KINDS = ("mobile_clf", "web_qwen")
+STT_FILES = ["model.int8.onnx", "tokens.txt", "sensevoice.json", "terms.txt"]
+FUNCTION_KINDS = ("mobile_clf", "web_qwen", "stt")
 
 
 def _safe_name(name):
@@ -74,6 +76,8 @@ MAX_BUNDLE_FILE_BYTES = 512 * 2**20
 def function_bundle_files(kind, source):
     if kind == "mobile_clf":
         names = list(MOBILE_CLF_FILES)
+    elif kind == "stt":
+        names = list(STT_FILES)
     elif kind == "web_qwen":
         # files.json 은 ml/qwen/onnx_web 이 만드는 [[이름, 바이트], ...] 목록이다
         listed = json.loads((source / "files.json").read_text(encoding="utf-8"))
@@ -127,6 +131,48 @@ def publish_function_bundle(kind, source, target):
     return bundle
 
 
+def offline_pesticides():
+    """모델 클래스 번호 → 서버 진단 응답과 같은 등록 농약 목록 (pesticide_service.pesticide_infos 를 그대로 쓴다).
+    seed_database 를 메모리 SQLite 에 돌리므로 검증 카탈로그(pesticide_catalog.json)가 있으면 PSIS verified, 없으면
+    legacy_unverified 목록이 들어간다. 오프라인 음성의 농약 질문(get_pesticide_information)이 이 값을 읽는다"""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from app.models.entities import Base, Disease
+    from app.services.pesticide_service import pesticide_infos
+    from app.services.seed import seed_database
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    db = sessionmaker(bind=engine)()
+    try:
+        seed_database(db)
+        db.commit()
+        result = {d.model_class_id: [p.model_dump(mode="json") for p in pesticide_infos(db, d.id)] for d in db.query(Disease).all()}
+    finally:
+        db.close(); engine.dispose()
+    rows = [p for items in result.values() for p in items]
+    verified = rows and all(p["verification_status"] == "verified" for p in rows)
+    return result, ("psis_verified" if verified else "legacy_unverified" if rows else "not_bundled")
+
+
+def refresh_pesticides(target):
+    """이미 내보낸 manifest.json 의 등록 농약만 바꾼다 (CNN 은 그대로). 카탈로그를 갱신한 뒤 서버에서 돌린다"""
+    path = target / "manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    pesticides, status = offline_pesticides()
+    for d in manifest["diseases"]:
+        d["pesticides"] = pesticides.get(d["model_class_id"], [])
+    manifest["pesticide_status"] = status
+    manifest.pop("version", None)
+    manifest["version"] = bundle_version(manifest)
+    encoded = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
+    (target / f"manifest-{manifest['version'][:16]}.json").write_text(encoded, encoding="utf-8")
+    temporary = target / "manifest.next.json"
+    temporary.write_text(encoded, encoding="utf-8")
+    os.replace(temporary, path)
+    print(json.dumps({"version": manifest["version"], "pesticide_status": status,
+                      "pesticides": sum(len(d["pesticides"]) for d in manifest["diseases"])}))
+
+
 def export(checkpoint, target):
     import numpy as np
     import onnx
@@ -165,15 +211,16 @@ def export(checkpoint, target):
         _publish_model(model_path, target / name)
     seed = Path(__file__).resolve().parents[1] / "app/data/seed/diseases.json"
     diseases = [d for d in json.loads(seed.read_text(encoding="utf-8")) if d["model_class_id"] in class_ids]
+    pesticides, pesticide_status = offline_pesticides()
     for d in diseases:
-        d["pesticides"] = []
+        d["pesticides"] = pesticides.get(d["model_class_id"], [])
     manifest = {
         "model_version": digest, "format": "onnx", "model_url": f"/offline-assets/{name}",
         "model_bytes": (target / name).stat().st_size, "sha256": file_hash, "class_ids": list(class_ids),
         "input_size": size, "mean": list(IMAGENET_MEAN), "std": list(IMAGENET_STD),
         "preprocessing_version": f"browser-canvas-{size}-imagenet-v1",
         "server_preprocessing_version": f"resize-{size}-imagenet-v1",
-        "content_source": "manual_seed", "pesticide_status": "not_bundled",
+        "content_source": "manual_seed", "pesticide_status": pesticide_status,
         "diseases": diseases, "policy": {"version": POLICY_VERSION, "low_confidence_threshold": settings.low_confidence_threshold,
           "confusion_margin": DEFAULT_MARGIN, "second_photo_weight": FUSE_WEIGHT_SECOND,
           "pairs": [{"ids": sorted(ids), **entry} for ids, entry in CONFUSION_PAIRS.items()]},
@@ -198,9 +245,13 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint", type=Path, default=Path("../ml/checkpoints/best_model.pth"))
     parser.add_argument("--output", type=Path, default=Path("../frontend/public/offline-assets"))
     parser.add_argument("--function-bundle", action="append", default=[], metavar="KIND=DIR",
-                        help="기능 선택 모델 묶음 등록 (mobile_clf 또는 web_qwen). 주면 CNN은 내보내지 않는다")
+                        help="기능 선택·받아 적기 묶음 등록 (mobile_clf, web_qwen, stt). 주면 CNN은 내보내지 않는다")
+    parser.add_argument("--refresh-pesticides", action="store_true",
+                        help="CNN 은 그대로 두고 manifest.json 의 등록 농약만 카탈로그 기준으로 다시 쓴다")
     args = parser.parse_args()
-    if args.function_bundle:
+    if args.refresh_pesticides:
+        refresh_pesticides(args.output)
+    elif args.function_bundle:
         for spec in args.function_bundle:
             kind, _, source = spec.partition("=")
             if not source:
