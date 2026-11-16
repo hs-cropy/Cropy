@@ -191,15 +191,28 @@ describe("warmUpVoices", () => {
 });
 
 describe("speakAndWait 실패 알림", () => {
-  it("3초 안에 시작하지 않으면 no-start 로 끝나고 안내 문구가 있다", async () => {
+  it("3초 안에 시작하지 않으면 한 번 더 읽어 보고, 그래도 안 되면 이유를 붙여 알린다", async () => {
     vi.useFakeTimers();
-    installFakeSpeech();
+    const synth = installFakeSpeech();
     const speech = await loadSpeech();
     const promise = speech.speakAndWait("안녕하세요");
-    vi.advanceTimersByTime(3100);
+    await vi.advanceTimersByTimeAsync(3100 + 400 + 3100);
     const outcome = await promise;
-    expect(outcome).toEqual({ spoken: false, reason: "no-start" });
-    expect(speech.speechFailureText(outcome)).toMatch(/소리로 읽지 못했어요/);
+    expect(synth.speak).toHaveBeenCalledTimes(2);
+    expect(outcome).toEqual({ spoken: false, reason: "no-start-retry" });
+    expect(speech.speechFailureText(outcome)).toMatch(/소리로 읽지 못했어요.*\(no-start-retry\)/);
+    vi.useRealTimers();
+  });
+
+  it("두 번째에 시작하면 성공으로 본다", async () => {
+    vi.useFakeTimers();
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const promise = speech.speakAndWait("안녕하세요");
+    await vi.advanceTimersByTimeAsync(3100 + 400);
+    const second = synth.speak.mock.calls[1][0] as unknown as { onstart: () => void; onend: () => void };
+    second.onstart(); second.onend();
+    expect(await promise).toEqual({ spoken: true });
     vi.useRealTimers();
   });
 
