@@ -16,6 +16,15 @@ CONTEXT_KEYS = ("ui_stage", "selected_crop", "predicted_crop", "crop_mismatch", 
                 "recapture", "pesticides", "selected_usage_id", "pending_target")
 
 
+def _score(value):
+    """점수는 학습 데이터처럼 소수 둘째 자리로 (0.9118661279… → 0.91).
+
+    학습 데이터의 confidence 는 모두 소수 한두 자리다. 긴 확률값을 그대로 넣으면 토큰이 늘고 학습 때 못 본 꼴이 되어,
+    소형 분류기가 결과 화면에서 "이거 무슨 병이야"를 되묻기로 고르는 일이 생겼다(2026-11-16, 앱 시험셋 376→369/448).
+    프론트 voiceContext.ts·오프라인 voice-clf.mjs 가 같은 규칙(Python round)을 쓴다."""
+    return round(float(value), 2) if isinstance(value, (int, float)) and not isinstance(value, bool) else value
+
+
 def compact_context(diagnosis: DiagnoseResponse | None, ui_stage: UiStage | None = None) -> dict:
     """진단 응답에서 기능 선택에 쓰는 값만 뽑아 학습 때와 같은 꼴로 만든다. 진단이 없으면 화면 단계만."""
     raw: dict = {}
@@ -27,8 +36,8 @@ def compact_context(diagnosis: DiagnoseResponse | None, ui_stage: UiStage | None
             "prediction_mode": diagnosis.prediction_mode,
             "category": diagnosis.category,
             "disease_name": diagnosis.disease_name,
-            "confidence": diagnosis.confidence,
-            "top_predictions": [{"name": p.name, "confidence": p.confidence} for p in diagnosis.top_predictions],
+            "confidence": _score(diagnosis.confidence),
+            "top_predictions": [{"name": p.name, "confidence": _score(p.confidence)} for p in diagnosis.top_predictions],
             "severity": diagnosis.severity,
             "decision_status": diagnosis.decision_status,
             "save_status": diagnosis.save_status,
