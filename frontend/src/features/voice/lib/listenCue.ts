@@ -42,3 +42,14 @@ export function primeListenCue(): void {
     // 보조 신호라 실패해도 그만이다
   }
 }
+
+/**
+ * 알림음 AudioContext 를 닫는다. iOS Safari 는 마이크를 쓰던 중에 만든 AudioContext 가 살아 있으면 오디오가
+ * 녹음 겸용 상태로 남아 speechSynthesis 낭독이 시작되지 않는다(2026-11-16 아이폰: 답 글자 뒤 3초간 무음).
+ * 다음 알림음 때 새로 만든다.
+ */
+export function closeListenCue(): void {
+  const current = context;
+  context = null;
+  if (current) void current.close().catch(() => {});
+}

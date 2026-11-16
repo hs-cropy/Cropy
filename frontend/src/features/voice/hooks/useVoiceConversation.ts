@@ -14,7 +14,7 @@ import { cancelSpeech, primeSpeech, speakAndWait, speechFailureText } from "@/fe
 import { answerFunction, fetchSpeechScript, transcribe } from "@/features/voice/lib/voiceApi";
 import { selectFunctionCall } from "@/features/voice/lib/functionSelector";
 import { LAST_DIAGNOSIS_KEY, readVoiceScreen, type VoiceScreen } from "@/features/voice/lib/voiceScreen";
-import { playListenCue, primeListenCue } from "@/features/voice/lib/listenCue";
+import { closeListenCue, playListenCue, primeListenCue } from "@/features/voice/lib/listenCue";
 import { releaseStream, startVoiceRecording, VoicePermissionError, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
 import { AudioConversionError, recordingToWav } from "@/features/voice/lib/wav";
 
@@ -34,6 +34,18 @@ function releaseMicOnMobile(streamRef: { current: MediaStream | null }): void {
   if (!isMobileDevice()) return;
   releaseStream(streamRef.current);
   streamRef.current = null;
+}
+
+const isIos = () => typeof navigator !== "undefined" && (/iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
+// iOS 는 마이크를 놓은 뒤 오디오가 재생 상태로 돌아올 시간이 필요하다. 그 전에 읽으면 낭독이 시작되지 않는다
+const IOS_AUDIO_SETTLE_MS = 700;
+
+/** 읽기 직전 준비: 휴대폰은 마이크를 놓고, iOS 는 알림음 AudioContext 도 닫고 잠깐 기다린다 */
+async function prepareToSpeak(streamRef: { current: MediaStream | null }): Promise<void> {
+  releaseMicOnMobile(streamRef);
+  if (!isIos()) return;
+  closeListenCue();
+  await new Promise((resolve) => setTimeout(resolve, IOS_AUDIO_SETTLE_MS));
 }
 
 const VAD_THRESHOLD = 0.06;
@@ -344,7 +356,7 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       addTurn({ role: "assistant", text: EXIT_TEXT });
       updateState("speaking");
       busyRef.current = false;
-      releaseMicOnMobile(streamRef);
+      await prepareToSpeak(streamRef);
       await speakAndWait(EXIT_TEXT, speechOwner.current);
       if (generation !== generationRef.current) return;
       generationRef.current += 1; // 예약된 다시 듣기·호출어 듣기가 이어지지 않게
@@ -389,7 +401,8 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
     addTurn({ role: "assistant", text: replyText });
     updateState("speaking");
     busyRef.current = false;
-    releaseMicOnMobile(streamRef);
+    await prepareToSpeak(streamRef);
+    if (generation !== generationRef.current) return;
     const spoken = await speakAndWait(reply, speechOwner.current);
     if (generation === generationRef.current) {
       const failure = speechFailureText(spoken);
@@ -424,7 +437,8 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       addTurn({ role: "assistant", text: replyText });
       updateState("speaking");
       busyRef.current = false;
-      releaseMicOnMobile(streamRef);
+      await prepareToSpeak(streamRef);
+      if (generation !== generationRef.current) return;
       const spoken = await speakAndWait(reply, speechOwner.current);
       if (generation === generationRef.current) {
         const failure = speechFailureText(spoken);

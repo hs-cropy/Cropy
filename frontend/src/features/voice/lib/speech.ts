@@ -106,7 +106,7 @@ export function speechFailureText(outcome: SpeechOutcome | undefined): string | 
   if (outcome.reason === "language-unavailable" || outcome.reason === "voice-unavailable") {
     return "이 휴대폰에 한국어 음성이 없어 답을 읽지 못했어요. 설정의 텍스트 음성 변환(TTS)에서 한국어를 설치해 주세요.";
   }
-  return "휴대폰에서 답을 소리로 읽지 못했어요. 화면을 한 번 누른 뒤 다시 물어봐 주세요.";
+  return `휴대폰에서 답을 소리로 읽지 못했어요. 화면을 한 번 누른 뒤 다시 물어봐 주세요. (${outcome.reason})`;
 }
 
 /**
@@ -115,7 +115,18 @@ export function speechFailureText(outcome: SpeechOutcome | undefined): string | 
  * 없으면 바로 끝난다. 큐에 넣은 utterance가 시작도 못 하고 cancel되면 브라우저에 따라 end·error가
  * 오지 않을 수 있어, 호출한 쪽은 자기 상태 전환을 이 Promise에만 의존하지 않는다.
  */
-export function speakAndWait(text: string | string[], owner?: symbol): Promise<SpeechOutcome> {
+export async function speakAndWait(text: string | string[], owner?: symbol): Promise<SpeechOutcome> {
+  const first = await speakOnce(text, owner);
+  if (first.spoken || first.reason !== "no-start") return first;
+  // 시작하지 못했으면 엔진을 비우고 한 번 더 (iOS 는 마이크를 놓은 직후 첫 낭독이 묻히는 일이 있다)
+  if (isSpeechSupported()) { window.speechSynthesis.cancel(); window.speechSynthesis.resume(); }
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  if (owner && owner !== currentOwner) return first;  // 그 사이 다른 낭독이 시작됐으면 다시 읽지 않는다
+  const second = await speakOnce(text, owner);
+  return second.spoken ? second : { spoken: false, reason: `${second.reason}-retry` };
+}
+
+function speakOnce(text: string | string[], owner?: symbol): Promise<SpeechOutcome> {
   if (!isSpeechSupported()) return Promise.resolve({ spoken: false, reason: "unsupported" });
   const sentences = (Array.isArray(text) ? text : [text]).filter((s) => s.trim());
   if (sentences.length === 0) return Promise.resolve({ spoken: true });
