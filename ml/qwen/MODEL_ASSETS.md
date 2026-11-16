@@ -14,7 +14,7 @@
 | 종류 (`kind`) | 쓰는 곳 | Drive 위치 | 형식·크기 | 정확도 (인자까지) | 계약 파일 |
 |---|---|---|---|---|---|
 | `server` | 서버 경유 (`select_server.py`) | `soup_v2abc_v2d_6run/merged_hf` | safetensors 4.4GB | validation 97.07%, 실제 발화 78.5% | `cropy_prompt.json` |
-| `mobile_clf` | 휴대폰 기기 안 (#167) | `clf_koelectra-small-v3_mean_lr0.00015_e20_swap_ctx_merge_s20261112` | ONNX int8 13.9MB | validation 88.8% (기능 94.1%) | `labels.json` |
+| `mobile_clf` | 휴대폰 기기 안 (#167)·운영 서버 (#192) | `clf_koelectra-small-v3_mean_lr0.00015_e8_swap_ctx_merge_enrich_distill_ctx_clf_v2_s20261110` (11차) | ONNX int8 13.9MB | validation 92.8% (기능 97.0%), 앱 시험셋 기능 83.9% | `labels.json` (`context_format: clf_v2`) |
 | `web_qwen` | WebGPU PC 기기 안 (#168) | `web_onnx/2b_soup6/bundle` | ONNX q4f16 1.34GB | 같은 300행 95.67%, 실제 발화 77.1% | `files.json` |
 | `board_rkllm` | 오렌지파이5 Plus NPU (#169) | `rkllm_soup6/cropy_qwen_w8a8_rk3588.rkllm` | RKLLM W8A8 2.74GB | 같은 300행 97.0% (PC 시뮬레이션) | `cropy_prompt.json` |
 
@@ -46,4 +46,4 @@ python ml/qwen/check_assets.py board_rkllm <rkllm 파일이 있는 폴더> --wri
 | `cropy_prompt.json` | 함수 이름 순서, 함수별 (인자, 값 개수), 새 토큰 `<hs_0>`~`<hs_8>`·`<hs_end>`, 종료 토큰이 `spec_v2.FUNCTIONS`와 같은지 |
 | `labels.json` | 함수 순서, 인자별 값 이름과 순서가 `spec_v2`와 같은지, 빠진 헤드가 없는지 |
 
-2026-11-15 이 PC의 `server`(`eval/models/merged_hf`)와 `mobile_clf`(`eval/clf8`)는 검사를 통과했다.
+2026-11-15 이 PC의 `server`(`eval/models/merged_hf`)와 `mobile_clf`(`eval/clf8`)는 검사를 통과했다. 2026-11-16 11차 `mobile_clf`도 통과했다. 11차는 입력 형식이 `clf_v2`라 서버 #192와 휴대폰 선택기가 그 변환을 가진 버전이어야 한다(v8 묶음은 형식이 없어 그대로 동작).
