@@ -190,82 +190,81 @@ describe("warmUpVoices", () => {
   });
 });
 
-describe("speakAndWait 결과", () => {
+describe("speakAndWait 실패 알림", () => {
+  it("3초 안에 시작하지 않으면 no-start 로 끝나고 안내 문구가 있다", async () => {
+    vi.useFakeTimers();
+    installFakeSpeech();
+    const speech = await loadSpeech();
+    const promise = speech.speakAndWait("안녕하세요");
+    vi.advanceTimersByTime(3100);
+    const outcome = await promise;
+    expect(outcome).toEqual({ spoken: false, reason: "no-start" });
+    expect(speech.speechFailureText(outcome)).toMatch(/소리로 읽지 못했어요/);
+    vi.useRealTimers();
+  });
+
+  it("첫 문장에서 not-allowed 오류가 나면 실패로, 끊김(interrupted)은 실패가 아니다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const blocked = speech.speakAndWait("안녕하세요");
+    (synth.speak.mock.calls[0][0] as unknown as { onerror: (e: { error: string }) => void }).onerror({ error: "not-allowed" });
+    expect(await blocked).toEqual({ spoken: false, reason: "not-allowed" });
+    expect(speech.speechFailureText({ spoken: false, reason: "language-unavailable" })).toMatch(/한국어를 설치/);
+    expect(speech.speechFailureText({ spoken: false, reason: "interrupted" })).toBeNull();
+    expect(speech.speechFailureText({ spoken: true })).toBeNull();
+  });
+
   type Handlers = { onstart?: () => void; onend?: () => void; onerror?: (event: { error: string }) => void };
-  function queued(synth: ReturnType<typeof installFakeSpeech>): Handlers[] {
-    return synth.speak.mock.calls.map(([utterance]) => utterance as unknown as Handlers);
-  }
+  const queued = (synth: ReturnType<typeof installFakeSpeech>) =>
+    synth.speak.mock.calls.map(([utterance]) => utterance as unknown as Handlers);
 
-  it("모두 다 읽으면 ended, onstart가 왔으면 started", async () => {
-    const synth = installFakeSpeech();
-    const speech = await loadSpeech();
-    const done = speech.speakAndWait(["첫 문장", "둘째 문장"]);
-    for (const u of queued(synth)) { u.onstart?.(); u.onend?.(); }
-    await expect(done).resolves.toEqual({ status: "ended", started: true });
-  });
-
-  it("발화 오류가 나면 failed와 오류 코드를 돌려준다", async () => {
-    const synth = installFakeSpeech();
-    const speech = await loadSpeech();
-    const done = speech.speakAndWait(["첫 문장", "둘째 문장"]);
-    const [first, second] = queued(synth);
-    first.onerror?.({ error: "not-allowed" });
-    second.onerror?.({ error: "not-allowed" });
-    await expect(done).resolves.toEqual({ status: "failed", started: false, error: "not-allowed" });
-  });
-
-  it("첫 문장에서 오류가 나고 뒤 문장 이벤트가 오지 않아도 바로 failed로 끝나고 남은 문장을 비운다", async () => {
+  it("첫 문장에서 오류가 나고 뒤 문장 이벤트가 오지 않아도 바로 실패로 끝나고 남은 문장을 비운다", async () => {
     const synth = installFakeSpeech();
     const speech = await loadSpeech();
     const done = speech.speakAndWait(["첫 문장", "둘째 문장", "셋째 문장"]);
     synth.cancel.mockClear();
     queued(synth)[0].onerror?.({ error: "audio-busy" }); // 뒤 두 문장은 아무 이벤트도 오지 않는다
-    await expect(done).resolves.toEqual({ status: "failed", started: false, error: "audio-busy" });
+    expect(await done).toEqual({ spoken: false, reason: "audio-busy" });
     expect(synth.cancel).toHaveBeenCalledTimes(1);
   });
 
-  it("앞 문장을 읽다가 오류가 나면 started는 true로 남는다", async () => {
+  it("읽던 중 오류가 나고 뒤 문장 이벤트가 오지 않아도 끝난다(읽은 데까지는 읽은 것으로 본다)", async () => {
     const synth = installFakeSpeech();
     const speech = await loadSpeech();
-    const done = speech.speakAndWait(["첫 문장", "둘째 문장"]);
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장", "셋째 문장"]);
     const [first, second] = queued(synth);
     first.onstart?.();
     first.onend?.();
-    second.onerror?.({ error: "not-allowed" });
-    await expect(done).resolves.toEqual({ status: "failed", started: true, error: "not-allowed" });
+    second.onerror?.({ error: "audio-busy" });
+    expect(await done).toEqual({ spoken: true });
+  });
+
+  it("첫 문장이 끊기고(interrupted) 뒤 문장 이벤트가 오지 않아도 끝나며 실패 안내는 없다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장"]);
+    queued(synth)[0].onerror?.({ error: "interrupted" });
+    const outcome = await done;
+    expect(speech.speechFailureText(outcome)).toBeNull();
   });
 
   it("실패 뒤 다른 쪽이 낭독을 시작했으면 그 낭독은 끊지 않는다", async () => {
     const synth = installFakeSpeech();
     const speech = await loadSpeech();
-    const mine = Symbol("mine");
-    const done = speech.speakAndWait(["첫 문장", "둘째 문장"], mine);
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장"], Symbol("mine"));
     const [first] = queued(synth);
     speech.speak("다른 안내", Symbol("other"));
     synth.cancel.mockClear();
     first.onerror?.({ error: "audio-busy" });
-    await expect(done).resolves.toMatchObject({ status: "failed" });
+    expect(await done).toEqual({ spoken: false, reason: "audio-busy" });
     expect(synth.cancel).not.toHaveBeenCalled();
   });
 
-  it("첫 문장이 끊기고(interrupted) 뒤 문장 이벤트가 오지 않아도 cancelled로 끝난다", async () => {
+  it("primeSpeech 는 누를 때마다 멈춘 낭독 엔진을 풀어 준다 (안드로이드 Chrome)", async () => {
     const synth = installFakeSpeech();
     const speech = await loadSpeech();
-    const done = speech.speakAndWait(["첫 문장", "둘째 문장"]);
-    queued(synth)[0].onerror?.({ error: "interrupted" });
-    await expect(done).resolves.toEqual({ status: "cancelled", started: false });
-  });
-
-  it("cancel로 끊긴 것(interrupted·canceled)은 실패가 아니다", async () => {
-    const synth = installFakeSpeech();
-    const speech = await loadSpeech();
-    const done = speech.speakAndWait("문장");
-    queued(synth)[0].onerror?.({ error: "interrupted" });
-    await expect(done).resolves.toEqual({ status: "cancelled", started: false });
-  });
-
-  it("미지원 환경은 unsupported", async () => {
-    const speech = await loadSpeech();
-    await expect(speech.speakAndWait("문장")).resolves.toEqual({ status: "unsupported", started: false });
+    speech.primeSpeech(); speech.primeSpeech();
+    expect(synth.resume).toHaveBeenCalledTimes(2);
+    expect(synth.speak).toHaveBeenCalledTimes(1);  // 무음 발화는 한 번만
   });
 });

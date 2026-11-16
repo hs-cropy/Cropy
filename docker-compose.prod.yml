@@ -29,6 +29,12 @@ services:
       MAX_IMAGE_PIXELS: "60000000"
     logging: *logging
 
+  stt:
+    logging: *logging
+
+  selector:
+    logging: *logging
+
   frontend:
     ports: !reset []
     logging: *logging

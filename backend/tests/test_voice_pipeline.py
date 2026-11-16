@@ -128,6 +128,14 @@ def test_compact_context_matches_training_shape(client, diagnosis_id):
         assert all(isinstance(p, str) for p in context["pesticides"]) and len(context["pesticides"]) <= 5
 
 
+def test_compact_context_rounds_scores_like_training_data(client, diagnosis_id):
+    detail = DiagnoseResponse.model_validate(client.get(f"/api/v1/history/{diagnosis_id}").json())
+    detail.confidence = 0.9118661279106783
+    detail.top_predictions[0].confidence = 0.9118661279106783
+    context = compact_context(detail, "result")
+    assert context["confidence"] == 0.91 and context["top_predictions"][0]["confidence"] == 0.91
+
+
 def test_compact_context_without_diagnosis_has_only_stage():
     assert compact_context(None, None) == {"ui_stage": "no_photo"}
     assert compact_context(None, "analyzing") == {"ui_stage": "analyzing"}

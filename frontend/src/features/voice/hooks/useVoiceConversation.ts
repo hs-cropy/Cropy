@@ -10,26 +10,29 @@ import { ApiError, diagnoseImage } from "@/lib/api";
 import { isCaptureCommand } from "@/features/voice/lib/captureIntent";
 import { isExitCommand } from "@/features/voice/lib/exitIntent";
 import { matchWakeWord } from "@/features/voice/lib/wakeWord";
-import { cancelSpeech, primeSpeech, speakAndWait, type SpeechOutcome } from "@/features/voice/lib/speech";
+import { cancelSpeech, primeSpeech, speakAndWait, speechFailureText } from "@/features/voice/lib/speech";
 import { answerFunction, fetchSpeechScript, transcribe } from "@/features/voice/lib/voiceApi";
 import { selectFunctionCall } from "@/features/voice/lib/functionSelector";
 import { LAST_DIAGNOSIS_KEY, readVoiceScreen, type VoiceScreen } from "@/features/voice/lib/voiceScreen";
-import { playListenCue } from "@/features/voice/lib/listenCue";
+import { playListenCue, primeListenCue } from "@/features/voice/lib/listenCue";
 import { releaseStream, startVoiceRecording, VoicePermissionError, type VoiceRecording } from "@/features/voice/lib/voiceRecorder";
 import { AudioConversionError, recordingToWav } from "@/features/voice/lib/wav";
 import { deviceKind } from "@/features/voice/lib/deviceKind";
 
 /**
- * 휴대폰 브라우저는 페이지가 마이크(getUserMedia)를 잡고 있으면 speechSynthesis 소리가 나지 않거나
- * (안드로이드 Chrome) 통화용 수화부로 작게 나간다(iOS Safari). 그래서 휴대폰에서는 읽기 직전에 마이크를 놓는다.
- * 다음 듣기·호출어 대기는 streamRef가 비어 있으면 마이크를 새로 연다. 신호음은 마이크가 열린 뒤에 나므로
- * 신호음 뒤에 말하면 대개 잘리지 않지만, 그 전에 말하거나 장치가 안정되는 데 시간이 걸리면 첫머리가 잘릴 수 있다.
- * PC는 다시 여는 시간을 아끼려고 마이크를 유지한다.
+ * 휴대폰은 마이크를 잡은 채로는 답이 들리지 않는다. 안드로이드 Chrome은 getUserMedia 를 잡고 있는 동안
+ * speechSynthesis 소리를 내지 않고(#183), iOS Safari는 녹음 중이면 소리를 통화용 수화부로 아주 작게 보낸다.
+ * 그래서 휴대폰에서는 읽기 직전에 마이크를 놓는다. 다음 듣기·호출어 대기는 streamRef가 비어 있으면
+ * 마이크를 새로 연다. PC는 첫머리가 잘리지 않도록 지금처럼 마이크를 유지한다.
  * 기기 판별은 기능 선택기와 같은 deviceKind를 쓴다(갤럭시 탭처럼 데스크톱 UA를 보내는 터치 기기도 휴대폰으로 본다).
  */
-function releaseMicBeforeSpeech(streamRef: { current: MediaStream | null }): void {
-  if (typeof navigator === "undefined") return;
-  if (deviceKind(navigator.userAgent, navigator.maxTouchPoints ?? 0) === "desktop") return;
+export function isMobileDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return deviceKind(navigator.userAgent, navigator.maxTouchPoints ?? 0) !== "desktop";
+}
+
+function releaseMicOnMobile(streamRef: { current: MediaStream | null }): void {
+  if (!isMobileDevice()) return;
   releaseStream(streamRef.current);
   streamRef.current = null;
 }
@@ -59,7 +62,6 @@ const VOICE_ERROR = "음성 안내를 시작하지 못했어요";
 const NO_SPEECH_ERROR = "말씀을 듣지 못했어요. 다시 시도해 주세요.";
 const UNHEARD_ERROR = "말씀을 알아듣지 못했어요. 다시 말씀해 주세요.";
 const NETWORK_ERROR = "서버와 연결되지 않아요. 연결을 확인하고 다시 시도해 주세요.";
-const SPEECH_FAILED_ERROR = "답을 소리로 읽지 못했어요. 화면의 답을 확인하고, 마이크를 눌러 다시 말씀해 주세요.";
 // 답변은 못 만들어도 사용자가 들을 문장. TTS로 읽히므로 짧게 둔다
 const NO_DIAGNOSIS_TEXT = "먼저 잎을 비추고 찍어 줘라고 말하거나 셔터를 누르면, 그 결과로 답해 드릴게요.";
 const NO_CAMERA_TEXT = "카메라가 꺼져 있어요. 카메라 켜기를 누른 뒤 다시 말씀해 주세요.";
@@ -297,17 +299,6 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
   }, [clearAutoListen, resetVad, stopWakeLoop, updateState]);
 
   /**
-   * 낭독이 실제로 실패했으면(not-allowed, audio-busy 등) 화면에 알리고 true를 돌려준다.
-   * 이때 부른 쪽은 자동으로 다시 듣지 않는다. 답은 화면 말풍선에 남아 있다.
-   */
-  const reportSpeechFailure = useCallback((outcome: SpeechOutcome | undefined): boolean => {
-    if (outcome?.status !== "failed") return false;
-    console.warn("[Voice] speech failed", { error: outcome.error, started: outcome.started });
-    setError(SPEECH_FAILED_ERROR);
-    return true;
-  }, []);
-
-  /**
    * 지금 카메라 장면을 찍어 진단하고, 읽어 줄 문장을 돌려준다. 결과는 이 화면의 현재 진단이 된다.
    * 카메라가 없거나 찍지 못하면 그 사정을 읽어 줄 문장으로 돌려준다(오류로 끊지 않는다).
    */
@@ -359,7 +350,7 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       addTurn({ role: "assistant", text: EXIT_TEXT });
       updateState("speaking");
       busyRef.current = false;
-      releaseMicBeforeSpeech(streamRef);
+      releaseMicOnMobile(streamRef);
       await speakAndWait(EXIT_TEXT, speechOwner.current);
       if (generation !== generationRef.current) return;
       generationRef.current += 1; // 예약된 다시 듣기·호출어 듣기가 이어지지 않게
@@ -404,15 +395,17 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
     addTurn({ role: "assistant", text: replyText });
     updateState("speaking");
     busyRef.current = false;
-    releaseMicBeforeSpeech(streamRef);
-    const outcome = await speakAndWait(reply, speechOwner.current);
+    releaseMicOnMobile(streamRef);
+    const spoken = await speakAndWait(reply, speechOwner.current);
+    const failure = speechFailureText(spoken);
+    if (generation === generationRef.current && failure) setError(failure);
     if (generation === generationRef.current && isState("speaking")) {
       updateState("idle");
       // 연속 대화: 다 읽었으면 버튼 없이 다시 듣는다 (끊긴 경우는 cancel()이 처리했으므로 여기 오지 않는다).
-      // 소리로 읽지 못했으면 다시 듣지 않고 알린다
-      if (!reportSpeechFailure(outcome)) scheduleAutoListen();
+      // 소리로 읽지 못했으면 다시 듣지 않는다. 다시 들으면 오류 문구가 곧바로 지워지고 무음인 채 듣기만 반복된다
+      if (!failure) scheduleAutoListen();
     }
-  }, [addTurn, captureAndDescribe, isState, reportSpeechFailure, scheduleAutoListen, updateState]);
+  }, [addTurn, captureAndDescribe, isState, scheduleAutoListen, updateState]);
 
   /** 셔터 버튼: 듣는 중이 아니어도 찍어서 바로 진단하고 결과를 읽어 준다 */
   const captureNow = useCallback(async () => {
@@ -436,11 +429,13 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
       addTurn({ role: "assistant", text: replyText });
       updateState("speaking");
       busyRef.current = false;
-      releaseMicBeforeSpeech(streamRef);
-      const outcome = await speakAndWait(reply, speechOwner.current);
+      releaseMicOnMobile(streamRef);
+      const spoken = await speakAndWait(reply, speechOwner.current);
+      const failure = speechFailureText(spoken);
+      if (generation === generationRef.current && failure) setError(failure);
       if (generation === generationRef.current && isState("speaking")) {
         updateState("idle");
-        if (!reportSpeechFailure(outcome)) scheduleAutoListen();
+        if (!failure) scheduleAutoListen();
       }
     } catch (cause) {
       if (generation !== generationRef.current || controller.signal.aborted) return;
@@ -449,7 +444,7 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
     } finally {
       if (generation === generationRef.current) busyRef.current = false;
     }
-  }, [addTurn, cancel, captureAndDescribe, isState, reportSpeechFailure, scheduleAutoListen, updateState]);
+  }, [addTurn, cancel, captureAndDescribe, isState, scheduleAutoListen, updateState]);
 
   // 수동 종료 및 VAD 자동 종료에서 공통 사용
   const stop = useCallback(async () => {
@@ -838,10 +833,15 @@ export function useVoiceConversation({ captureFrame, onExitRequest }: UseVoiceCo
     };
   }, [state, wakeEnabled, startWakeLoop, stopWakeLoop]);
 
+  // 음성 모드 화면 어디든 누르면 낭독·알림음을 깨운다. 호출어 대기는 탭 없이 시작되므로, iOS Safari 는
+  // 이 화면에서 한 번도 탭 안에서 소리를 내지 않았으면 나중의 답 낭독을 막는다
+  useEffect(() => {
+    const wake = () => { primeSpeech(); primeListenCue(); };
+    window.addEventListener("pointerdown", wake, { capture: true });
+    return () => window.removeEventListener("pointerdown", wake, { capture: true });
+  }, []);
+
   const handleMicClick = useCallback(() => {
-    // iOS Safari는 사용자 탭 안에서 한 번 발화해야 이후 비동기 낭독(STT·서버 응답 뒤)을 허용한다.
-    // 다른 화면에서 음성을 쓰지 않고 바로 음성 모드에 들어온 경우를 위해 여기서 풀어 둔다(한 번만 실행된다)
-    primeSpeech();
     if (stateRef.current === "idle") {
       silentRoundsRef.current = 0; // 사용자가 직접 눌렀으니 무발화 횟수는 처음부터
       void start();

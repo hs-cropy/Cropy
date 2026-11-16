@@ -55,11 +55,10 @@ vi.mock("@/lib/api", async (importOriginal) => {
   return { ...actual, diagnoseImage: pipeline.diagnoseImage };
 });
 
-vi.mock("@/features/voice/lib/speech", () => ({
-  speakAndWait: pipeline.speakAndWait,
-  cancelSpeech: pipeline.cancelSpeech,
-  primeSpeech: vi.fn(),
-}));
+vi.mock("@/features/voice/lib/speech", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/voice/lib/speech")>();
+  return { ...actual, speakAndWait: pipeline.speakAndWait, cancelSpeech: pipeline.cancelSpeech, primeSpeech: vi.fn() };
+});
 
 vi.mock("@/features/voice/lib/voiceScreen", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/voice/lib/voiceScreen")>();
@@ -482,29 +481,62 @@ describe("useVoiceConversation", () => {
     ua.mockRestore();
   });
 
-  it.each([
-    ["아이폰 Safari", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 Version/18.1 Mobile/15E148 Safari/604.1", 5],
-    ["데스크톱 UA를 보내는 갤럭시 탭", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131 Safari/537.36", 10],
-  ])("%s에서도 답을 읽기 전에 마이크를 놓는다", async (_name, userAgent, touchPoints) => {
+  it("아이폰도 답을 읽기 전에 마이크를 놓는다 (녹음 중이면 소리가 수화부로 작게 나감)", async () => {
     const stopTrack = vi.fn();
-    const mobileStream = { active: true, getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
-    recorderMock.start.mockImplementation(async () => ({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: mobileStream }));
-    const ua = vi.spyOn(navigator, "userAgent", "get").mockReturnValue(userAgent);
-    // jsdom navigator에는 maxTouchPoints가 없어 직접 둔다
-    Object.defineProperty(navigator, "maxTouchPoints", { value: touchPoints, configurable: true });
-    pipeline.speakAndWait.mockImplementationOnce(async () => { expect(stopTrack).toHaveBeenCalled(); });
+    const iosStream = { active: true, getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
+    recorderMock.start.mockImplementation(async () => ({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: iosStream }));
+    const ua = vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 Version/18.7 Mobile/15E148 Safari/604.1");
+    pipeline.speakAndWait.mockImplementationOnce(async () => { expect(stopTrack).toHaveBeenCalled(); return { spoken: true }; });
 
     const { result } = renderHook(() => useVoiceConversation());
     await act(async () => { await result.current.start(); });
     await act(async () => { await result.current.stop(); });
 
-    expect(pipeline.speakAndWait).toHaveBeenCalledTimes(1);
+    expect(stopTrack).toHaveBeenCalled();
+    ua.mockRestore();
+  });
+
+  it("휴대폰이 답을 소리로 내지 못하면 이유를 화면에 알린다", async () => {
+    pipeline.speakAndWait.mockResolvedValueOnce({ spoken: false, reason: "not-allowed" });
+    const { result } = renderHook(() => useVoiceConversation());
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+    expect(result.current.error).toMatch(/소리로 읽지 못했어요/);
+    expect(result.current.assistantText).toBe("현재 진단은 고추 탄저병입니다.");  // 글로는 보인다
+  });
+
+  it("낭독에 실패하면 자동으로 다시 듣지 않는다 (다시 들으면 오류 문구가 바로 지워지고 무음으로 반복됨)", async () => {
+    pipeline.speakAndWait.mockResolvedValueOnce({ spoken: false, reason: "not-allowed" });
+    const { result } = renderHook(() => useVoiceConversation());
+    expect(result.current.continuous).toBe(true);
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+
+    expect(result.current.state).toBe("idle");
+    expect(result.current.error).toMatch(/소리로 읽지 못했어요/);
+    expect(recorderMock.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("데스크톱 UA를 보내는 갤럭시 탭도 답을 읽기 전에 마이크를 놓는다", async () => {
+    const stopTrack = vi.fn();
+    const tabStream = { active: true, getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
+    recorderMock.start.mockImplementation(async () => ({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: tabStream }));
+    const ua = vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131 Safari/537.36");
+    // jsdom navigator에는 maxTouchPoints가 없어 직접 둔다
+    Object.defineProperty(navigator, "maxTouchPoints", { value: 10, configurable: true });
+    pipeline.speakAndWait.mockImplementationOnce(async () => { expect(stopTrack).toHaveBeenCalled(); return { spoken: true }; });
+
+    const { result } = renderHook(() => useVoiceConversation());
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+
     expect(stopTrack).toHaveBeenCalled();
     ua.mockRestore();
     delete (navigator as { maxTouchPoints?: number }).maxTouchPoints;
   });
 
-  it("PC에서는 답을 읽는 동안에도 마이크를 유지한다", async () => {
+  it("안드로이드·아이폰이 아니면 답을 읽는 동안에도 마이크를 유지한다", async () => {
     const stopTrack = vi.fn();
     const pcStream = { active: true, getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
     recorderMock.start.mockImplementation(async () => ({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: pcStream }));
@@ -517,23 +549,6 @@ describe("useVoiceConversation", () => {
     expect(pipeline.speakAndWait).toHaveBeenCalledTimes(1);
     expect(stopTrack).not.toHaveBeenCalled();
     ua.mockRestore();
-  });
-
-  it("낭독이 실패하면(not-allowed 등) 다시 듣지 않고 오류를 알린다", async () => {
-    pipeline.speakAndWait.mockResolvedValueOnce({ status: "failed", started: false, error: "not-allowed" });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    const { result } = renderHook(() => useVoiceConversation());
-    expect(result.current.continuous).toBe(true);
-    await act(async () => { await result.current.start(); });
-    await act(async () => { await result.current.stop(); });
-    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
-
-    expect(result.current.state).toBe("idle");
-    expect(result.current.error).toBe("답을 소리로 읽지 못했어요. 화면의 답을 확인하고, 마이크를 눌러 다시 말씀해 주세요.");
-    expect(recorderMock.start).toHaveBeenCalledTimes(1); // 자동으로 다시 듣지 않음
-    expect(warn).toHaveBeenCalledWith("[Voice] speech failed", { error: "not-allowed", started: false });
-    warn.mockRestore();
   });
 
   it("답변을 읽는 동안은 speaking이고, 다 읽으면 idle로 돌아온다", async () => {
@@ -705,10 +720,10 @@ describe("useVoiceConversation", () => {
       }));
 
       const { result } = renderHook(() => useVoiceConversation());
-      await act(async () => { await vi.advanceTimersByTimeAsync(450); }); // 호출어 마이크 열기 시작(아직 안 열림)
+      await act(async () => { await vi.advanceTimersByTimeAsync(450); });
       expect(recorderMock.start).toHaveBeenCalledTimes(1);
 
-      await act(async () => { await result.current.start(); }); // 버튼으로 듣기 → 다른 스트림
+      await act(async () => { await result.current.start(); });
       expect(result.current.state).toBe("listening");
 
       await act(async () => { openWakeMic(); await vi.advanceTimersByTimeAsync(0); });
@@ -721,7 +736,7 @@ describe("useVoiceConversation", () => {
       let failTranscribe!: (error: unknown) => void;
       pipeline.transcribe.mockImplementationOnce(() => new Promise((_resolve, reject) => { failTranscribe = reject; }));
       const { unmount } = renderHook(() => useVoiceConversation());
-      await speakIntoWake(); // 받아 적기 요청이 걸린 채로 멈춘다
+      await speakIntoWake();
 
       unmount();
       await act(async () => { failTranscribe(new TypeError("Failed to fetch")); await vi.advanceTimersByTimeAsync(1000); });

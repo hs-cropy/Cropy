@@ -100,7 +100,8 @@ docker compose ps           # backend 가 healthy 가 될 때까지 기다린다
 - [ ] 실제 작물 사진으로 진단 → 결과·이력 상세 이미지 표시, 재촬영 후 결과 갱신
 - [ ] 진단 1건 소요 시간 측정. 30초에 가까우면 아래 "알려진 제약" 참고
 - [ ] 휴대폰(LTE)에서 카메라 권한 허용·촬영
-- [ ] `sudo reboot` 후 세 컨테이너가 다시 뜬다(`restart: unless-stopped`)
+- [ ] `sudo reboot` 후 다섯 컨테이너(backend·frontend·caddy·stt·selector)가 다시 뜬다(`restart: unless-stopped`)
+- [ ] `docker compose exec backend python -c "import urllib.request;print(urllib.request.urlopen('http://stt:8200/health').read())"` → STT 준비, 같은 방법으로 `http://selector:8300/health`가 `ready`인지 본다. 음성 모드에서 질문 하나에 걸리는 시간을 기록한다
 - [ ] `docker stats`, `free -m` 으로 메모리 사용량 기록
 - [ ] 48MP급 큰 사진(HEIC·JPEG, 가능하면 DNG)을 진단하며 `docker stats`로 backend 최대 메모리를 확인하고, OOM 재시작이 없는지 본다
 - [ ] 6천만 픽셀을 넘는 사진(예: 200MP 모드)은 413으로 거절된다
@@ -221,5 +222,6 @@ Lightsail 은 인스턴스를 정지해도 요금이 나간다. 그만 쓸 때�
 - **이미지 픽셀 한도:** 4GB 서버에서 큰 HEIF/RAW 한 장으로 메모리가 바닥나지 않도록 `docker-compose.prod.yml`에서 `MAX_IMAGE_PIXELS`를 6천만으로 낮췄다(기본 2억1천만). 디코드 피크가 기본값 대비 약 1/3.5로 줄어 수백 MB 안쪽이 된다. 8비트 RGB는 픽셀당 3바이트지만 16비트 PNG·HEIF 디코드 버퍼·RAW(DNG) 처리는 그 2~3배가 들 수 있어 5절에서 실측한다. 진단은 한 번에 하나씩만 처리된다(`MAX_CONCURRENT_DIAGNOSES=1`). 12·48·50MP 사진은 통과하고, 64·108·200MP 모드는 413으로 거절된다(프론트 문구는 "사진 용량이 너무 커요"). 파일 크기 한도(100MB)는 프론트 안내·사전 검증과 맞추고 DNG를 받기 위해 그대로 둔다.
 - **프록시 30초:** Next.js rewrite 프록시는 기본 30초 안에 backend 응답이 없으면 500을 돌려준다. Caddy 응답 대기 시간(120초)으로는 해결되지 않는다. 실측 진단 시간이 길면 `frontend/next.config.js`에 `experimental.proxyTimeout`을 둔다.
 - **CORS_ORIGINS:** 브라우저가 같은 주소로만 호출하므로 `http://localhost:3000` 그대로 둬도 동작한다.
+- **음성 질문:** 받아 적기는 `stt` 컨테이너(SenseVoice int8, 모델 약 240MB는 이미지 빌드 때 받는다), 기능 선택은 `selector` 컨테이너가 한다. Qwen 2B는 float32로 약 9GB라 이 서버에 올리지 않고, 휴대폰용 소형 분류기(`mobile_clf`, 13.9MB)를 서버에서 돌린다. 검증 정확도는 Qwen 97.07% 대비 88.8%다(`ml/qwen/MODEL_ASSETS.md`). 모델 파일은 저장소에 없어 `export_browser_model.py --function-bundle mobile_clf=<폴더>`로 만든 묶음을 서버 `~/Cropy/frontend/public/offline-assets/`에 넣어야 한다([OFFLINE_WEB.md](OFFLINE_WEB.md)). 묶음이 없으면 음성 질문만 503이다.
 - **오프라인 묶음:** `frontend/public/offline-assets`의 ONNX 모델은 저장소에 없다. `/offline` 화면을 시연하려면 빌드 전에 서버로 옮겨야 프론트 이미지에 들어간다([OFFLINE_WEB.md](OFFLINE_WEB.md)). 서버 진단에는 영향이 없다.
 - **프로젝트 이름:** prod 설정은 프로젝트 이름을 `cropy`로 고정한다. 개발 PC에서 prod 파일을 함께 쓰면 로컬 스택과 같은 볼륨을 공유하므로 개발 PC에서는 쓰지 않는다.

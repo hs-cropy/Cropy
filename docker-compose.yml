@@ -28,6 +28,12 @@ services:
       # 브라우저가 백엔드를 직접 부르지 않으므로 실제로 쓰이지 않는다.
       # 백엔드를 별도 도메인으로 노출한다면 프론트 도메인으로 바꿀 것.
       CORS_ORIGINS: http://localhost:3000
+      # 음성 질문: 받아 적기는 stt, 기능 선택은 selector 컨테이너가 한다. 둘 중 하나가 없으면 음성 질문만 503 이고 진단은 그대로다.
+      # 기능 선택은 Qwen 2B(float32 약 9GB) 대신 소형 분류기(mobile_clf, 13.9MB)를 쓴다 (selector/server.py)
+      STT_ENGINE: http
+      STT_SERVER_URL: http://stt:8200
+      FUNCTION_SELECTOR_ENGINE: http
+      FUNCTION_SELECTOR_URL: http://selector:8300
     volumes:
       # 학습된 체크포인트(best_model.pth, pair_mu.pth)는 저장소에 없다.
       # 운영에서는 파일 누락/손상 시 진단503, /api/v1/ready503.
@@ -46,6 +52,40 @@ services:
       interval: 30s
       timeout: 10s
       start_period: 60s   # 첫 기동에 모델 로드 시간이 필요하다
+      retries: 3
+
+  stt:
+    # 음성 인식 서버 (stt/README.md). 모델은 이미지 빌드 때 받는다. 백엔드만 부르므로 포트를 열지 않는다
+    build: ./stt
+    restart: unless-stopped
+    environment:
+      # 2 vCPU 서버에서 진단(CNN)과 나눠 쓴다
+      STT_THREADS: "2"
+    expose:
+      - "8200"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8200/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  selector:
+    # 기능 선택 서버 (소형 분류기). 모델은 휴대폰이 받는 묶음(offline-assets 의 function-models.json)을 그대로 읽는다
+    build: ./selector
+    restart: unless-stopped
+    volumes:
+      - ./frontend/public/offline-assets:/offline-assets:ro
+    expose:
+      - "8300"
+    healthcheck:
+      # 묶음이 없어도 서버는 떠 있어야 한다(음성 질문만 503). 그래서 응답 여부만 본다
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8300/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
       retries: 3
 
   frontend:

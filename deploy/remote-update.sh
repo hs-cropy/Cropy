@@ -10,7 +10,7 @@ sha="$2"
 CUR="$HOME/Cropy"
 NEW="$HOME/Cropy.new"
 OLD="$HOME/Cropy.old"
-SERVICES=(backend frontend)
+SERVICES=(backend frontend stt selector)
 
 echo "== $(date -u +%FT%TZ) $mode ${sha:0:7}"
 

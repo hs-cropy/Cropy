@@ -1,0 +1,8 @@
+.venv
+models
+tests
+__pycache__
+*.pyc
+README.md
+eval_recordings.py
+requirements-test.txt

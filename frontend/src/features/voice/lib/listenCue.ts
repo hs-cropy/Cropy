@@ -28,3 +28,17 @@ export function playListenCue(): void {
     // 소리는 보조 신호다. 실패해도 듣기는 계속한다
   }
 }
+
+/** 탭 핸들러에서 불러 오디오를 미리 깨운다. iOS는 탭 밖에서 만든 AudioContext 가 소리를 내지 않는다 */
+export function primeListenCue(): void {
+  if (typeof window === "undefined") return;
+  const w = window as Window & { webkitAudioContext?: typeof AudioContext };
+  const Ctor = window.AudioContext ?? w.webkitAudioContext;
+  if (!Ctor) return;
+  try {
+    context ??= new Ctor();
+    if (context.state === "suspended") void context.resume().catch(() => {});
+  } catch {
+    // 보조 신호라 실패해도 그만이다
+  }
+}

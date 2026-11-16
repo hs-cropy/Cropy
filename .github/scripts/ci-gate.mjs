@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 export function failures(needs) {
   if (needs?.changes?.result !== 'success') return ['Change detection did not succeed.'];
   const errors = [];
-  for (const name of ['frontend', 'backend']) {
+  for (const name of ['frontend', 'backend', 'voice']) {
     const changed = needs.changes.outputs?.[name];
     const result = needs[name]?.result;
     if (!['true', 'false'].includes(changed)) errors.push(name + ': invalid change detection output');
@@ -20,7 +20,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const errors = failures(needs);
   const summary = [
     '## CI results',
-    ...['changes', 'frontend', 'backend'].map(name =>
+    ...['changes', 'frontend', 'backend', 'voice'].map(name =>
       '- ' + name + ': ' + (needs[name]?.result ?? 'missing') +
       (needs[name]?.result === 'skipped' ? ' (no relevant changes)' : '')),
     ...errors.map(error => '- ERROR: ' + error),

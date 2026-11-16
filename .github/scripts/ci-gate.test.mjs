@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { failures } from './ci-gate.mjs';
-const result = (frontend='true',backend='true') => ({changes:{result:'success',outputs:{frontend,backend}},frontend:{result:'success'},backend:{result:'success'}});
+const result = (frontend='true',backend='true',voice='true') => ({changes:{result:'success',outputs:{frontend,backend,voice}},frontend:{result:'success'},backend:{result:'success'},voice:{result:'success'}});
 test('both required suites pass',()=>assert.deepEqual(failures(result()),[]));
 test('documentation-only PR allows intentional skips',()=>{const n=result('false','false');n.frontend.result=n.backend.result='skipped';assert.deepEqual(failures(n),[])});
 test('frontend-only PR skips backend',()=>{const n=result('true','false');n.backend.result='skipped';assert.deepEqual(failures(n),[])});
@@ -10,3 +10,5 @@ test('change detection failure rejects all skips',()=>{const n=result('false','f
 test('missing change output cannot silently skip tests',()=>{const n=result();delete n.changes.outputs.backend;n.backend.result='skipped';assert.ok(failures(n).length)});
 test('missing job is a failure',()=>{const n=result();delete n.backend;assert.ok(failures(n).length)});
 test('cancelled optional job is still a failure',()=>{const n=result('false','false');n.backend.result='cancelled';assert.ok(failures(n).length)});
+test('voice skip is allowed when voice servers did not change',()=>{const n=result('true','true','false');n.voice.result='skipped';assert.deepEqual(failures(n),[])});
+test('failed voice server build is a failure',()=>{const n=result();n.voice.result='failure';assert.ok(failures(n).length)});

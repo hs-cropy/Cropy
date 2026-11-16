@@ -20,6 +20,21 @@ const isEmpty = (value: unknown) =>
   (Array.isArray(value) && value.length === 0) ||
   (typeof value === "object" && !Array.isArray(value) && Object.keys(value as object).length === 0);
 
+/**
+ * 점수는 학습 데이터처럼 소수 둘째 자리로 (백엔드 voice_context._score 와 같은 Python round).
+ * toFixed 는 정확한 이진값 기준으로 반올림해 Python 과 같고, 정확히 가운데인 값(0.125·0.375·0.625·0.875)만
+ * Python 처럼 짝수 쪽으로 맞춘다.
+ */
+export function roundScore(value: unknown): unknown {
+  if (typeof value !== "number" || !Number.isFinite(value)) return value;
+  const scaled = value * 100;
+  if (Number.isInteger(value * 8) && !Number.isInteger(scaled)) {
+    const low = Math.floor(scaled);
+    return (low % 2 === 0 ? low : low + 1) / 100;
+  }
+  return Number(value.toFixed(2));
+}
+
 export function compactContext(diagnosis: DiagnoseResponse | null, uiStage?: UiStage | null): CompactContext {
   const raw: Record<string, unknown> = {};
   if (diagnosis) {
@@ -31,8 +46,8 @@ export function compactContext(diagnosis: DiagnoseResponse | null, uiStage?: UiS
       prediction_mode: diagnosis.prediction_mode,
       category: diagnosis.category,
       disease_name: diagnosis.disease_name,
-      confidence: diagnosis.confidence,
-      top_predictions: (diagnosis.top_predictions ?? []).map((p) => ({ name: p.name, confidence: p.confidence })),
+      confidence: roundScore(diagnosis.confidence),
+      top_predictions: (diagnosis.top_predictions ?? []).map((p) => ({ name: p.name, confidence: roundScore(p.confidence) })),
       severity: diagnosis.severity,
       decision_status: diagnosis.decision_status,
       save_status: diagnosis.save_status,
@@ -57,8 +72,8 @@ export function compactContext(diagnosis: DiagnoseResponse | null, uiStage?: UiS
   return ordered;
 }
 
-// Python json.dumps는 실수 1.0을 "1.0"으로 쓴다. 점수 필드만 실수이므로 그 자리만 맞춘다
-const FLOAT_KEYS = new Set(["confidence"]);
+// Python json.dumps는 실수 1.0을 "1.0"으로 쓴다. 점수 필드만 실수이므로 그 자리만 맞춘다 (분류기 clf_v2 형식에서는 "점수")
+const FLOAT_KEYS = new Set(["confidence", "점수"]);
 
 /** json.dumps(context, ensure_ascii=False, separators=(",", ":"))와 같은 문자열 */
 export function contextJson(context: CompactContext): string {
