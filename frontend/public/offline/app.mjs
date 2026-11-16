@@ -788,24 +788,48 @@ const VOICE_STATUS = {
 };
 function voiceState(name, detail) {
   $('voice-panel').dataset.state = name;
-  if (name === 'heard') { $('voice-heard').textContent = detail ? `“${detail}”` : ''; return; }
+  // 소리를 못 냈다는 등의 오류는 다음 질문을 들을 때까지 따로 남겨 둔다 (상태 문구는 곧 '기다리는 중'으로 바뀐다)
+  if (name === 'error') $('voice-error').textContent = detail || VOICE_STATUS.error;
+  if (name === 'heard') { $('voice-error').textContent = ''; $('voice-heard').textContent = detail ? `“${detail}”` : ''; return; }
   if (name === 'speaking' && detail) $('voice-reply').textContent = detail;
   $('voice-status').textContent = name === 'error' && detail ? detail : VOICE_STATUS[name] ?? '';
   const on = voiceSession?.mode === 'wake';
   $('voice-wake').setAttribute('aria-checked', String(on));
   $('voice-ask').textContent = voiceSession?.mode === 'once' ? '그만 듣기' : '말로 묻기';
 }
-// 기기 안 한국어 음성으로 읽는다. 없으면 글로만 보여 준다 (끝날 때까지 마이크는 듣지 않는다)
+// 기기 안 한국어 음성으로 읽는다. 끝나면 undefined, 소리를 내지 못하면 이유 문구를 돌려준다 (글은 화면에 남는다).
+// 3초 안에 시작하지 않으면 실패로 본다 (iOS 가 탭 밖 낭독을 막거나 안드로이드 엔진이 굳은 경우). 앱 speech.ts 와 같은 규칙
+const SPEAK_FAILED = '휴대폰에서 답을 소리로 읽지 못했어요. 화면을 한 번 누른 뒤 다시 물어봐 주세요.';
+const NO_KOREAN_VOICE = '이 기기에 한국어 오프라인 음성이 없어 글로만 보여 드려요. 설정의 텍스트 음성 변환(TTS)에서 한국어를 설치해 주세요.';
 function speakText(text) {
   return new Promise(resolve => {
-    const voice = 'speechSynthesis' in window && speechSynthesis.getVoices().find(v => v.localService && v.lang.startsWith('ko'));
-    if (!voice) { setTimeout(resolve, Math.min(4000, 600 + text.length * 60)); return; }
-    speechSynthesis.cancel();
+    if (!('speechSynthesis' in window)) { resolve(NO_KOREAN_VOICE); return; }
+    const voices = speechSynthesis.getVoices().filter(v => v.lang.replace('_', '-').toLowerCase().startsWith('ko'));
+    const voice = voices.find(v => v.localService) ?? (navigator.onLine ? voices[0] : undefined);
+    if (!voice) { resolve(NO_KOREAN_VOICE); return; }
+    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+    speechSynthesis.resume();
+    let started = false;
+    const timer = setTimeout(() => { if (!started) { speechSynthesis.cancel(); resolve(SPEAK_FAILED); } }, 3000);
     const speech = new SpeechSynthesisUtterance(text);
-    speech.voice = voice; speech.lang = 'ko-KR'; speech.onend = speech.onerror = () => resolve();
+    speech.voice = voice; speech.lang = 'ko-KR'; speech.rate = 0.9;
+    speech.onstart = () => { started = true; };
+    speech.onend = () => { clearTimeout(timer); resolve(); };
+    speech.onerror = event => { clearTimeout(timer); resolve(started || ['interrupted', 'canceled'].includes(event.error) ? undefined : SPEAK_FAILED); };
     speechSynthesis.speak(speech);
   });
 }
+// 탭할 때마다 낭독을 깨운다. 호출어 대기는 탭 없이 답을 읽으므로, iOS 는 탭 안에서 한 번 소리를 내 둬야 하고
+// 안드로이드 Chrome 은 멈춘 엔진을 resume 으로 풀어야 한다
+let speechPrimed = false;
+function primeSpeech() {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.resume();
+  if (speechPrimed) return;
+  speechPrimed = true;
+  const silent = new SpeechSynthesisUtterance(''); silent.volume = 0; speechSynthesis.speak(silent);
+}
+addEventListener('pointerdown', primeSpeech, {capture:true});
 const resultSentence = r => isNotCrop(r) ? '작물 잎을 찾지 못했어요. 잎이 잘 보이게 다시 찍어 주세요.' : r.disease_name + '으로 분류됐어요. 확진을 뜻하지 않아요.';
 const voiceHooks = {
   getScreen: () => ({

@@ -11,6 +11,7 @@ import { handleFunctionOutput, contractFromLabels, llmContext } from './voice-ha
 import { matchWakeWord, isCaptureCommand, isExitCommand } from './voice-intents.mjs';
 
 export const VOICE_KINDS = ['stt', 'mobile_clf'];
+export const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 const FRAME = 2048;                 // ScriptProcessor 버퍼 (48kHz 에서 약 43ms)
 const START_FRAMES = 3, END_SILENCE = 0.8, MAX_SECONDS = 8, MIN_SECONDS = 0.35, PREROLL = 0.3;
 
@@ -113,9 +114,20 @@ export function createVoiceSession({ models, hooks, ui, speak }) {
     node?.disconnect(); stream?.getTracks().forEach(t => t.stop()); context?.close().catch(() => {});
     stream = context = node = segmenter = null;
   }
+  // 휴대폰은 마이크를 잡은 채로는 답이 들리지 않는다 (안드로이드 Chrome 무음 #183, iOS 는 수화부로 작게).
+  // 그래서 휴대폰에서는 읽기 전에 마이크를 놓고, 다 읽은 뒤 다시 연다 (앱 useVoiceConversation 과 같다)
   async function say(text) {
     muted = true; ui.state('speaking', text);
-    try { await speak(text); } finally { await new Promise(r => setTimeout(r, 300)); segmenter?.reset(); muted = false; }
+    const release = isMobile();
+    if (release) closeMic();
+    try {
+      const failure = await speak(text);
+      if (failure) ui.state('error', failure);
+    } finally {
+      await new Promise(r => setTimeout(r, 300));
+      if (release && mode !== 'off') await openMic().catch(() => {});
+      segmenter?.reset(); muted = false;
+    }
   }
 
   async function onSegment(samples) {
