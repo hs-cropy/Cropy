@@ -1,0 +1,7 @@
+# 기능 선택 서버(소형 분류기) 전용. PyTorch 없이 onnxruntime 으로 돈다
+onnxruntime==1.23.2
+tokenizers==0.22.1
+numpy==2.2.6
+
+fastapi==0.142.2
+uvicorn[standard]==0.54.0

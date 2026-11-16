@@ -32,6 +32,9 @@ services:
   stt:
     logging: *logging
 
+  selector:
+    logging: *logging
+
   frontend:
     ports: !reset []
     logging: *logging
