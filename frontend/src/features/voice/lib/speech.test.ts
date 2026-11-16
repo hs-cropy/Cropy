@@ -214,6 +214,48 @@ describe("speakAndWait 결과", () => {
     await expect(done).resolves.toEqual({ status: "failed", started: false, error: "not-allowed" });
   });
 
+  it("첫 문장에서 오류가 나고 뒤 문장 이벤트가 오지 않아도 바로 failed로 끝나고 남은 문장을 비운다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장", "셋째 문장"]);
+    synth.cancel.mockClear();
+    queued(synth)[0].onerror?.({ error: "audio-busy" }); // 뒤 두 문장은 아무 이벤트도 오지 않는다
+    await expect(done).resolves.toEqual({ status: "failed", started: false, error: "audio-busy" });
+    expect(synth.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("앞 문장을 읽다가 오류가 나면 started는 true로 남는다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장"]);
+    const [first, second] = queued(synth);
+    first.onstart?.();
+    first.onend?.();
+    second.onerror?.({ error: "not-allowed" });
+    await expect(done).resolves.toEqual({ status: "failed", started: true, error: "not-allowed" });
+  });
+
+  it("실패 뒤 다른 쪽이 낭독을 시작했으면 그 낭독은 끊지 않는다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const mine = Symbol("mine");
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장"], mine);
+    const [first] = queued(synth);
+    speech.speak("다른 안내", Symbol("other"));
+    synth.cancel.mockClear();
+    first.onerror?.({ error: "audio-busy" });
+    await expect(done).resolves.toMatchObject({ status: "failed" });
+    expect(synth.cancel).not.toHaveBeenCalled();
+  });
+
+  it("첫 문장이 끊기고(interrupted) 뒤 문장 이벤트가 오지 않아도 cancelled로 끝난다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장"]);
+    queued(synth)[0].onerror?.({ error: "interrupted" });
+    await expect(done).resolves.toEqual({ status: "cancelled", started: false });
+  });
+
   it("cancel로 끊긴 것(interrupted·canceled)은 실패가 아니다", async () => {
     const synth = installFakeSpeech();
     const speech = await loadSpeech();

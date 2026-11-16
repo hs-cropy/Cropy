@@ -98,6 +98,7 @@ export function speak(text: string | string[], owner?: symbol): void {
  * 결과로 어떻게 끝났는지 돌려준다. 실제 발화 실패(not-allowed, audio-busy 등)를 다 읽은 것과 구분해야
  * 음성 모드가 무음인 채로 다시 듣기를 반복하지 않는다. started는 한 문장이라도 onstart가 왔는지로,
  * "시작 자체가 안 됨"과 "시작했지만 소리가 안 들림"을 가르는 데 쓴다.
+ * 오류·끊김은 첫 이벤트에서 바로 결과를 낸다(뒤 문장의 이벤트를 기다리지 않는다).
  */
 export type SpeechOutcome =
   | { status: "ended"; started: boolean }
@@ -120,14 +121,15 @@ export function speakAndWait(text: string | string[], owner?: symbol): Promise<S
   return new Promise<SpeechOutcome>((resolve) => {
     let remaining = sentences.length;
     let started = false;
-    let cancelled = false;
-    let failure: string | null = null;
-    const done = () => {
+    let settled = false;
+    const settle = (outcome: SpeechOutcome) => {
+      if (settled) return;
+      settled = true;
+      resolve(outcome);
+    };
+    const ended = () => {
       remaining -= 1;
-      if (remaining > 0) return;
-      if (failure !== null) resolve({ status: "failed", started, error: failure });
-      else if (cancelled) resolve({ status: "cancelled", started });
-      else resolve({ status: "ended", started });
+      if (remaining <= 0) settle({ status: "ended", started });
     };
     for (const sentence of sentences) {
       const utterance = new SpeechSynthesisUtterance(sentence);
@@ -135,12 +137,19 @@ export function speakAndWait(text: string | string[], owner?: symbol): Promise<S
       utterance.rate = SPEECH_RATE;
       if (voice) utterance.voice = voice;
       utterance.onstart = () => { started = true; };
-      utterance.onend = done;
+      utterance.onend = ended;
+      // 오류는 첫 번째에서 바로 끝낸다. 오류 뒤 큐에 남은 문장은 브라우저에 따라 end·error가 오지 않아
+      // 남은 수를 세며 기다리면 Promise가 끝나지 않고 음성 모드가 speaking에 머문다
       utterance.onerror = (event: SpeechSynthesisErrorEvent) => {
+        if (settled) return;
         const code = event?.error ?? "unknown";
-        if (CANCEL_ERRORS.has(code)) cancelled = true;
-        else failure ??= code;
-        done();
+        if (CANCEL_ERRORS.has(code)) {
+          settle({ status: "cancelled", started });
+          return;
+        }
+        settle({ status: "failed", started, error: code });
+        // 실패 뒤 남은 문장이 늦게 소리 나지 않게 비운다. 그 사이 다른 쪽이 낭독을 시작했으면 건드리지 않는다
+        if (currentOwner === owner) synth.cancel();
       };
       synth.speak(utterance);
     }
