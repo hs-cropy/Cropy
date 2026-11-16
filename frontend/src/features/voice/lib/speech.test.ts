@@ -189,3 +189,36 @@ describe("warmUpVoices", () => {
     expect(synth.getVoices).toHaveBeenCalled();
   });
 });
+
+describe("speakAndWait 실패 알림", () => {
+  it("3초 안에 시작하지 않으면 no-start 로 끝나고 안내 문구가 있다", async () => {
+    vi.useFakeTimers();
+    installFakeSpeech();
+    const speech = await loadSpeech();
+    const promise = speech.speakAndWait("안녕하세요");
+    vi.advanceTimersByTime(3100);
+    const outcome = await promise;
+    expect(outcome).toEqual({ spoken: false, reason: "no-start" });
+    expect(speech.speechFailureText(outcome)).toMatch(/소리로 읽지 못했어요/);
+    vi.useRealTimers();
+  });
+
+  it("첫 문장에서 not-allowed 오류가 나면 실패로, 끊김(interrupted)은 실패가 아니다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const blocked = speech.speakAndWait("안녕하세요");
+    (synth.speak.mock.calls[0][0] as unknown as { onerror: (e: { error: string }) => void }).onerror({ error: "not-allowed" });
+    expect(await blocked).toEqual({ spoken: false, reason: "not-allowed" });
+    expect(speech.speechFailureText({ spoken: false, reason: "language-unavailable" })).toMatch(/한국어를 설치/);
+    expect(speech.speechFailureText({ spoken: false, reason: "interrupted" })).toBeNull();
+    expect(speech.speechFailureText({ spoken: true })).toBeNull();
+  });
+
+  it("primeSpeech 는 누를 때마다 멈춘 낭독 엔진을 풀어 준다 (안드로이드 Chrome)", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    speech.primeSpeech(); speech.primeSpeech();
+    expect(synth.resume).toHaveBeenCalledTimes(2);
+    expect(synth.speak).toHaveBeenCalledTimes(1);  // 무음 발화는 한 번만
+  });
+});
