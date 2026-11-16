@@ -57,8 +57,8 @@ export function compactContext(diagnosis: DiagnoseResponse | null, uiStage?: UiS
   return ordered;
 }
 
-// Python json.dumps는 실수 1.0을 "1.0"으로 쓴다. 점수 필드만 실수이므로 그 자리만 맞춘다
-const FLOAT_KEYS = new Set(["confidence"]);
+// Python json.dumps는 실수 1.0을 "1.0"으로 쓴다. 점수 필드만 실수이므로 그 자리만 맞춘다 (분류기 clf_v2 형식에서는 "점수")
+const FLOAT_KEYS = new Set(["confidence", "점수"]);
 
 /** json.dumps(context, ensure_ascii=False, separators=(",", ":"))와 같은 문자열 */
 export function contextJson(context: CompactContext): string {
