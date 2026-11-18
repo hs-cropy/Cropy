@@ -1,5 +1,12 @@
 """Write the Colab notebook that labels train utterances under realistic app result-screen contexts with the Qwen teacher.
 
+12th run (ctx_v2, 2026-11-16): the 11th classifier still chose by context shortcuts on screens the 11th generator never made.
+On the 448 app-test cases it fell from 376 to 359 when the crop was left on auto-detect and the 2nd candidate was another
+crop (the real CNN often ranks another crop 2nd); the offline page sends prediction_mode "browser" and no save_status; and
+on the no-photo screen it answered pesticide questions with chit-chat (the dataset has no pesticide question outside the
+result screen). ctx_v2 therefore varies selected_crop (auto 35%), the 2nd candidate (other crop / normal), the prediction
+mode and save_status, adds normal-result screens and non-result stages, and writes a second app test with these screens.
+
 Why: the 10th classifier (distill + clf_v2) reached validation exact 91.5%, but on result-screen contexts shaped like the
 real app's compact_context it still answered by context shortcuts (2026-11-16 local sweep, 336 cases):
   - every radish result carries `recapture` (top1 rule in backend/app/services/recapture.py), and 495 of the 519 train
@@ -28,7 +35,7 @@ import spec_v2
 HERE = Path(__file__).resolve().parent
 DATA_FILE = "qwen_v2c_data.jsonl.xz"
 DATA_SHA = hashlib.sha256((HERE / "data_v2" / DATA_FILE).read_bytes()).hexdigest()
-NOTEBOOK = "cropy_fs_ctx_distill_colab.ipynb"
+NOTEBOOK = "cropy_fs_ctx_distill_v2_colab.ipynb"
 
 SEED_DIR = HERE.parents[1] / "backend" / "app" / "data" / "seed"
 _diseases = {d["key"]: d["name"] for d in json.loads((SEED_DIR / "diseases.json").read_text(encoding="utf-8"))}
@@ -38,6 +45,8 @@ for link in sorted(json.loads((SEED_DIR / "disease_pesticides.json").read_text(e
     if link["pesticide_key"] in _products:
         REAL_PESTICIDES.setdefault(_diseases[link["disease_key"]], []).append(_products[link["pesticide_key"]])
 DISEASES = [n for n in _diseases.values() if n != "판별 불가" and "정상" not in n]
+NORMALS = [n for n in _diseases.values() if "정상" in n]
+SEVERITY = {d["name"]: d["severity"] for d in json.loads((SEED_DIR / "diseases.json").read_text(encoding="utf-8")) if d.get("severity")}
 
 # everyday questions for the held-out app test (not taken from the dataset)
 APP_QUESTIONS = [
@@ -46,6 +55,11 @@ APP_QUESTIONS = [
     "어떻게 관리해야 돼", "관리해야 돼", "관리 방법 알려 줘", "이제 뭐 해야 돼", "어떻게 하면 돼", "방제는 어떻게 해",
     "등록된 농약 목록 알려 줘", "등록된 농약 알려줘", "탄저병 약 추천해 줘", "쓸 수 있는 농약 뭐 있어", "농약 이름 알려 줘",
     "얼마나 확실해", "정확도 몇 퍼센트야", "점수가 몇 점이야", "다른 후보는 뭐야",
+]
+# 결과 화면 밖(사진 없음·사진 준비·분석 중·오류) 시험용 질문
+STAGE_QUESTIONS = [
+    "등록된 농약 목록 알려 줘", "농약 뭐 써야 돼", "이거 무슨 병이야", "얼마나 확실해", "어떻게 관리해야 돼", "사진 어떻게 찍어",
+    "이제 뭐 해야 돼", "다시 찍어야 돼", "오늘 날씨 어때", "안녕", "물 좀 줘", "탄저병 약 추천해 줘",
 ]
 
 
@@ -60,7 +74,17 @@ def code(text):
 
 cells = [
     md("""
-# Cropy 분류기용 화면 상태 정답 붙이기 (11차, Qwen 선생님)
+# Cropy 분류기용 화면 상태 정답 붙이기 (12차, Qwen 선생님)
+
+**12차에서 바뀐 것 (ctx_v2):** 11차 분류기는 11차 생성기가 만들지 않은 화면에서 여전히 화면 상태만 보고 골랐다(11/16).
+작물을 자동 감지로 두고 2순위 후보가 다른 작물이면 앱 시험셋 448건 중 376 → 359건, 오프라인 화면은 `prediction_mode: browser`에 저장 상태가 없고,
+사진 없는 화면에서는 농약 질문을 잡담으로 골랐다(데이터에 결과 화면 밖 농약 질문이 한 줄도 없음). 그래서 이번에는
+- 작물 선택(35%는 자동 감지로 비움, 5%는 다른 작물을 골라 불일치), 2순위 후보(같은 작물 병·정상, **다른 작물** 병·정상), 진단 방식(서버 60%·기기 40%),
+  저장 상태(저장·건너뜀·없음)를 고루 섞고
+- 정상 결과 화면과 **결과 화면 밖**(사진 없음·사진 준비·분석 중·오류) 문장도 넣어 Qwen이 정답을 고르게 한다
+- 새 앱 시험셋(`app_test.jsonl`: 일상 질문 28개 × 새 화면 16개 + 결과 화면 밖 질문 12개 × 4단계)을 같이 만든다
+
+아래는 11차 설명이다.
 
 10차 분류기는 validation exact 91.5%였지만, 실제 앱이 보내는 결과 화면 상태에서는 화면 상태만 보고 기능을 골랐다(11/16 로컬 336건 시험).
 - 무 결과에는 앱이 항상 `recapture`를 넣는다. train에서 `recapture`가 있는 519행 중 495행이 재촬영 안내라 "진단 결과 알려 줘"도 재촬영 안내로 갔다.
@@ -75,7 +99,7 @@ cells = [
 3. **앱 시험셋:** 일상 질문 28개 × 앱 형태 화면 상태 16개도 Qwen이 정답을 붙여 `app_test.jsonl`로 둔다. 학습에는 쓰지 않는다.
 
 - 런타임: **L4 또는 A100**. 약 40~60분. 끊기면 Drive의 조각 파일부터 이어서 한다.
-- 결과: Drive `cropy_qwen_v2/ctx_v1/` → 분류기 노트북의 `CTX_DIR`
+- 결과: Drive `cropy_qwen_v2/ctx_v2/` → 분류기 노트북의 `CTX_DIRS` (11차 `ctx_v1`과 함께 쓴다)
 """),
     code(f"""
 from google.colab import drive
@@ -90,10 +114,11 @@ DATA_FILE = DRIVE_DIR / '{DATA_FILE}'
 DATA_SHA = '{DATA_SHA}'
 TEACHER_DIR = DRIVE_DIR / 'soup_v2abc_v2d_6run' / 'merged_hf'   # 배포 중인 서버 모델
 PARA_FILE = DRIVE_DIR / 'distill_v2' / 'paraphrases.jsonl'
-SEED = 20261117
+SEED = 20261118
 CTX_PER_ROW = 2          # train 행 하나에 붙일 화면 상태 수
 N_PARA_ROWS = 12000      # 말 바꾼 문장 중 화면 상태를 붙일 수 (1개씩)
-OUT = DRIVE_DIR / 'ctx_v1'
+N_STAGE_ROWS = 6000      # 결과 화면 밖 단계(사진 없음 등)로 다시 물을 문장 수
+OUT = DRIVE_DIR / 'ctx_v2'
 (OUT / 'parts').mkdir(parents=True, exist_ok=True)
 assert (TEACHER_DIR / 'cropy_prompt.json').exists(), '선생님 모델이 Drive에 없습니다'
 """),
@@ -111,7 +136,10 @@ print(torch.__version__, transformers.__version__, torch.cuda.get_device_name(0)
 CONTEXT_KEYS = {json.dumps(list(spec_v2.CONTEXT_KEYS), ensure_ascii=False)}
 REAL_PESTICIDES = {json.dumps(REAL_PESTICIDES, ensure_ascii=False)}
 DISEASES = {json.dumps(DISEASES, ensure_ascii=False)}
+NORMALS = {json.dumps(NORMALS, ensure_ascii=False)}
+SEVERITY = {json.dumps(SEVERITY, ensure_ascii=False)}
 APP_QUESTIONS = {json.dumps(APP_QUESTIONS, ensure_ascii=False)}
+STAGE_QUESTIONS = {json.dumps(STAGE_QUESTIONS, ensure_ascii=False)}
 CROPS = ('고추', '배추', '무')
 """ + """
 def norm_name(name):
@@ -128,32 +156,75 @@ def recapture_for(d, rng):
         return {'region': '잎맥·잎 가장자리'}
     return None
 
+def second_candidate(rng, d):
+    # 실제 CNN 은 다른 작물의 병·정상도 2순위로 낸다 (11/16 오프라인 시험: 고추 탄저병 1순위에 무 노균병 2순위)
+    c = crop_of(d); u = rng.random()
+    same = [x for x in DISEASES if crop_of(x) == c and x != d]
+    if u < 0.40 and same:
+        return rng.choice(same)
+    if u < 0.55 and d not in NORMALS:
+        return next(n for n in NORMALS if n.startswith(c))
+    if u < 0.85:
+        return rng.choice([x for x in DISEASES if crop_of(x) != c])
+    if u < 0.95:
+        return rng.choice([n for n in NORMALS if not n.startswith(c)])
+    return '판별 불가'
+
 def app_context(rng, disease=None, keep=None):
-    # frontend/src/features/voice/lib/voiceContext.ts compactContext 가 결과 화면에서 내는 모양
-    d = disease if disease in DISEASES else rng.choice(DISEASES)
+    # frontend voiceContext.ts / backend voice_context.compact_context 가 결과 화면에서 내는 모양 (점수는 소수 둘째 자리, #195)
+    normal = disease in NORMALS
+    d = disease if (disease in DISEASES or normal) else rng.choice(DISEASES)
     c = crop_of(d)
     conf = round(rng.uniform(0.5, 0.99), 2)
-    others = [x for x in DISEASES if crop_of(x) == c and x != d] or [x for x in DISEASES if x != d]
-    ctx = {'ui_stage': 'result', 'selected_crop': c, 'predicted_crop': c, 'crop_mismatch': False, 'prediction_mode': 'model',
-           'category': 'disease', 'disease_name': d, 'confidence': conf,
+    second = second_candidate(rng, d)
+    ctx = {'ui_stage': 'result', 'predicted_crop': c, 'crop_mismatch': False,
+           'prediction_mode': 'model' if rng.random() < 0.6 else 'browser',
+           'category': 'normal' if normal else 'disease', 'disease_name': d, 'confidence': conf,
            'top_predictions': [{'name': d, 'confidence': conf},
-                               {'name': rng.choice(others), 'confidence': round((1 - conf) * rng.uniform(0.3, 0.9), 2)}],
-           'severity': rng.choice(['low', 'medium', 'high']), 'decision_status': 'disease',
-           'save_status': 'saved' if rng.random() < 0.8 else 'skipped'}
-    rc = recapture_for(d, rng)
+                               {'name': second, 'confidence': round((1 - conf) * rng.uniform(0.3, 0.9), 2)}],
+           'severity': SEVERITY.get(d) or rng.choice(['low', 'medium', 'high']),
+           'decision_status': 'normal' if normal else 'disease'}
+    u = rng.random()
+    if u < 0.60:
+        ctx['selected_crop'] = c
+    elif u < 0.65:
+        # 다른 작물을 골랐는데 사진은 이 작물: 불일치 (판정이 crop_mismatch 로 바뀐다)
+        ctx['selected_crop'] = rng.choice([x for x in CROPS if x != c])
+        ctx['crop_mismatch'] = True
+        ctx['decision_status'] = 'crop_mismatch'
+    # 나머지 35% 는 작물 자동 감지 (selected_crop 없음)
+    u = rng.random()
+    if u < 0.6:
+        ctx['save_status'] = 'saved'
+    elif u < 0.7:
+        ctx['save_status'] = 'skipped'
+    # 나머지 30% 는 저장 상태 없음 (오프라인 화면)
+    rc = None if normal else recapture_for(d, rng)
     if rc:
         ctx['recapture'] = rc
+        if ctx['decision_status'] == 'disease' and d.startswith('배추'):
+            ctx['decision_status'] = 'confusion'
     k = rng.choice([0, 2, 3, 5, 5])
-    if k and REAL_PESTICIDES.get(d):
+    if k and not normal and REAL_PESTICIDES.get(d):
         ctx['pesticides'] = REAL_PESTICIDES[d][:k]
     for key, v in (keep or {}).items():
         ctx[key] = v
     return {key: ctx[key] for key in CONTEXT_KEYS if key in ctx}
 
+STAGES = (('no_photo', 0.5), ('photo_ready', 0.2), ('analyzing', 0.1), ('error', 0.2))
+def stage_context(rng):
+    # 진단이 없는 화면: 앱은 단계만 보낸다 (compactContext(null, stage))
+    u, acc = rng.random(), 0.0
+    for name, w in STAGES:
+        acc += w
+        if u < acc:
+            return {'ui_stage': name}
+    return {'ui_stage': 'no_photo'}
+
 def eligible(r):
-    # 결과 화면 행만. 정상·판별 불가 결과와 제품 선택·되물음이 걸린 행은 원래 화면 상태가 답을 정하므로 그대로 둔다
+    # 결과 화면 행만 (병·정상). 판별 불가 결과와 제품 선택·되물음이 걸린 행은 원래 화면 상태가 답을 정하므로 그대로 둔다
     x = r['context']
-    return (x.get('ui_stage') == 'result' and x.get('category') in (None, 'disease')
+    return (x.get('ui_stage') == 'result' and x.get('category') in (None, 'disease', 'normal')
             and 'selected_usage_id' not in x and 'pending_target' not in x)
 
 raw = DATA_FILE.read_bytes()
@@ -174,13 +245,23 @@ for r in src:
         jobs.append((r, app_context(rng, norm_name(r['context'].get('disease_name', '')))))
 for r in psrc:
     jobs.append((r, app_context(rng, norm_name(r['context'].get('disease_name', '')))))
-print(len(src), 'train rows +', len(psrc), 'paraphrases eligible ->', len(jobs), 'teacher jobs')
+# 결과 화면 밖: 모든 기능의 문장을 사진 없음·사진 준비·분석 중·오류 화면에서 다시 묻는다 (진단 없음, 단계만)
+stage_pool = [r for r in train_rows + paras if 'selected_usage_id' not in r['context'] and 'pending_target' not in r['context']]
+for r in rng.sample(stage_pool, min(N_STAGE_ROWS, len(stage_pool))):
+    jobs.append((r, stage_context(rng)))
+print(len(src), 'train rows +', len(psrc), 'paraphrases eligible +', N_STAGE_ROWS, 'stage rows ->', len(jobs), 'teacher jobs')
+res = [c for _, c in jobs if c['ui_stage'] == 'result']
+print('결과 화면', len(res), '| 작물 자동 감지', sum('selected_crop' not in c for c in res),
+      '| 2순위 다른 작물', sum(crop_of(c['top_predictions'][1]['name']) not in (None, crop_of(c['disease_name'])) for c in res),
+      '| browser', sum(c.get('prediction_mode') == 'browser' for c in res), '| 정상', sum(c.get('category') == 'normal' for c in res),
+      '| 결과 화면 밖', len(jobs) - len(res))
 print('recapture in new contexts:', sum('recapture' in c for _, c in jobs))
 
 # 앱 시험셋: 일상 질문 x 화면 상태 16개 (다른 seed)
 trng = random.Random(SEED + 1)
 test_ctx = [app_context(trng) for _ in range(16)]
 test_jobs = [(q, c) for q in APP_QUESTIONS for c in test_ctx]
+test_jobs += [(q, {'ui_stage': st}) for q in STAGE_QUESTIONS for st in ('no_photo', 'photo_ready', 'analyzing', 'error')]
 print(len(test_jobs), 'app test cases')
 for r, c in jobs[:3]:
     print(' ', r['user_text'], '|', json.dumps(c, ensure_ascii=False)[:200])
@@ -282,7 +363,7 @@ for i, ((q, c), call) in enumerate(zip(test_jobs, test_calls)):
     fn = function_of(call)
     if fn is None:
         continue
-    test_rows.append({'case_id': f'app{i}', 'split': 'app_test', 'user_text': q, 'context': c, 'function': fn, 'output': call})
+    test_rows.append({'case_id': f'app2_{i}', 'split': 'app_test', 'user_text': q, 'context': c, 'function': fn, 'output': call})
 print(len(test_rows), 'app test rows', Counter(r['function'] for r in test_rows))
 
 (OUT / 'ctx_teacher.jsonl').write_text('\\n'.join(json.dumps(r, ensure_ascii=False) for r in kept), encoding='utf-8')

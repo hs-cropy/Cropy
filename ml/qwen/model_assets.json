@@ -28,14 +28,14 @@
     },
     "mobile_clf": {
       "use": "휴대폰(iPhone·안드로이드) 기기 안 선택기 (#167), 오프라인 묶음 kind mobile_clf (#166)",
-      "drive": "cropy_qwen_v2/clf_koelectra-small-v3_mean_lr0.00015_e8_swap_ctx_merge_enrich_distill_ctx_clf_v2_s20261110",
+      "drive": "cropy_qwen_v2/clf_koelectra-small-v3_mean_lr0.00015_e8_swap_ctx_merge_enrich_distill_ctx12_clf_v2_s20261110",
       "format": "KoELECTRA-small-v3 분류기, ONNX int8 (동적 양자화), onnxruntime-web wasm",
-      "eval": "validation 1,160행 기능 97.0%, 인자까지 92.8% (int8). 앱 형태 결과 화면 시험셋 448행 기능 83.9%. 입력 형식 clf_v2(labels.json context_format)라 서버·휴대폰 모두 변환 코드가 필요하다",
-      "made_by": "ml/qwen/build_ctx_distill_notebook.py(선생님 라벨) → build_classifier_notebook.py → cropy_fs_classifier_colab.ipynb (11차, seed 20261110)",
+      "eval": "validation 1,160행 기능 96.1%, 인자까지 93.1% (int8). 앱 시험셋 11차판 448행 기능 91.1%, 12차판 496행 89.1%(결과 화면 밖 48행 79.2%). 결과 화면 점검 168건(사람 라벨) 150건. 입력 형식 clf_v2(labels.json context_format)라 서버·휴대폰 모두 변환 코드가 필요하다",
+      "made_by": "ml/qwen/build_ctx_distill_notebook.py(선생님 라벨) → build_classifier_notebook.py → cropy_fs_classifier_colab.ipynb (12차, ctx_v1+ctx_v2, seed 20261110)",
       "contract_file": "labels.json",
       "files": {
         "labels.json": {"bytes": 1985, "sha256": "a687ec4db67387317a6acc683848acaf0411354af8db7b2b941e4765b9c37381"},
-        "model_int8.onnx": {"bytes": 14626347, "sha256": "13a47ad10fbf3ac0130356eea2fe61111ccbd91ccb326ebae2a773c2bb23f8c4"},
+        "model_int8.onnx": {"bytes": 14626347, "sha256": "e66cc1181aedaa3054013a44338e19c1498e9683de11004744b74d2fefb4dcdf"},
         "tokenizer.json": {"bytes": 814946, "sha256": "70cf05c076ca7412b0ac11762ce532fbf873c7b7d9bd934f943e32ea1c874f86"},
         "tokenizer_config.json": {"bytes": 352, "sha256": "9cd988573a9588a6085cd353eeefa09b803dba75b03f58d0c1d302aad3078193"}
       }

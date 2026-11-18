@@ -65,14 +65,21 @@ def load_teacher_rows(path):
     return out, bad
 
 CTX_ROWS, app_rows = [], []
-if USE_CTX:
-    CTX_ROWS, bad = load_teacher_rows(Path(CTX_DIR) / 'ctx_teacher.jsonl')
-    print(f'ctx teacher: +{len(CTX_ROWS)} rows ({bad} skipped)', Counter(r['function'] for r in CTX_ROWS))
-    print('recapture in ctx rows:', Counter(r['function'] for r in CTX_ROWS if 'recapture' in r['context']).most_common(5))
+for ctx_dir in CTX_DIRS:
+    ctx_dir = Path(ctx_dir)
+    if (ctx_dir / 'ctx_teacher.jsonl').exists():
+        rows_, bad = load_teacher_rows(ctx_dir / 'ctx_teacher.jsonl')
+        print(f'{ctx_dir.name} teacher: +{len(rows_)} rows ({bad} skipped)', Counter(r['function'] for r in rows_))
+        CTX_ROWS += rows_
+    if (ctx_dir / 'app_test.jsonl').exists():
+        rows_, bad = load_teacher_rows(ctx_dir / 'app_test.jsonl')
+        for r in rows_:
+            r['app_set'] = ctx_dir.name   # 시험셋마다 따로도 센다 (ctx_v1: 11차 화면, ctx_v2: 12차 화면 + 결과 화면 밖)
+        print(f'{ctx_dir.name} app_test {len(rows_)} rows ({bad} skipped)', Counter(r['function'] for r in rows_))
+        app_rows += rows_
+if CTX_ROWS:
+    print('ctx teacher total', len(CTX_ROWS), '| recapture:', Counter(r['function'] for r in CTX_ROWS if 'recapture' in r['context']).most_common(5))
     train_rows = train_rows + CTX_ROWS
-if CTX_DIR and (Path(CTX_DIR) / 'app_test.jsonl').exists():
-    app_rows, bad = load_teacher_rows(Path(CTX_DIR) / 'app_test.jsonl')
-    print(f'app_test {len(app_rows)} rows ({bad} skipped)', Counter(r['function'] for r in app_rows))
 print(len(train_rows), 'train rows')
 '''
 
@@ -127,8 +134,11 @@ DISTILL_DIR = DRIVE_DIR / 'distill_v2'   # 없으면 '' 로. paraphrases.jsonl �
 USE_DISTILL = bool(DISTILL_DIR) and (Path(DISTILL_DIR) / 'paraphrases.jsonl').exists()
 # 11차: 10차는 앱 형태 결과 화면에서 화면 상태 지름길로 골랐다(무 결과의 recapture → 재촬영 안내). 발화마다 앱 형태 화면 상태를 붙이고
 # Qwen 선생님이 고른 호출을 라벨로 쓴 행(cropy_fs_ctx_distill_colab.ipynb)을 더하고, 같은 방식의 앱 시험셋(app_test)을 따로 잰다.
-CTX_DIR = DRIVE_DIR / 'ctx_v1'           # 없으면 '' 로. ctx_teacher.jsonl 이 있으면 쓴다
-USE_CTX = bool(CTX_DIR) and (Path(CTX_DIR) / 'ctx_teacher.jsonl').exists()
+# 12차: 11차 화면(ctx_v1)에 더해 실제 앱의 다양한 화면(작물 자동 감지, 2순위 다른 작물, 기기 진단, 저장 상태 없음, 정상, 결과 화면 밖)을
+# Qwen 이 정답을 붙인 ctx_v2 (cropy_fs_ctx_distill_v2_colab.ipynb) 도 쓴다. 두 앱 시험셋을 합쳐 epoch 를 고르고 따로도 출력한다
+CTX_DIRS = [DRIVE_DIR / 'ctx_v1', DRIVE_DIR / 'ctx_v2']   # 있는 것만 쓴다
+CTX_TAGS = [d.name for d in CTX_DIRS if (d / 'ctx_teacher.jsonl').exists()]
+USE_CTX = bool(CTX_TAGS)
 CONTEXT_FORMAT = 'clf_v2'               # 분류기 입력: 키를 짧은 한국어로, pesticides 는 이름 목록 대신 개수로. '' 이면 9차까지와 같다
 EPOCHS = 8 if USE_DISTILL else 20       # 문장이 몇 배 늘어 epoch 를 줄인다 (A100 권장)
 LR = 1.5e-4
@@ -136,7 +146,7 @@ POOLING = 'mean'           # 'cls' = 첫 토큰
 MERGE_TAG = '_merge'       # 7차: 겹치는 topic 접기(아래 TOPIC_MERGE). 끄려면 '' 로 두고 TOPIC_MERGE = {{}}
 BATCH = 32
 MAX_LEN = 256              # 발화 + 압축 context JSON. 넘치는 행은 아래에서 센다
-RUN_NAME = f"clf_{{ENCODER.split('/')[-1].replace('-discriminator','')}}_{{POOLING}}_lr{{LR:g}}_e{{EPOCHS}}_swap_ctx{{MERGE_TAG}}_enrich{{'_distill' if USE_DISTILL else ''}}{{'_ctx' if USE_CTX else ''}}{{'_' + CONTEXT_FORMAT if CONTEXT_FORMAT else ''}}_s{{SEED}}"
+RUN_NAME = f"clf_{{ENCODER.split('/')[-1].replace('-discriminator','')}}_{{POOLING}}_lr{{LR:g}}_e{{EPOCHS}}_swap_ctx{{MERGE_TAG}}_enrich{{'_distill' if USE_DISTILL else ''}}{{'_ctx' + ''.join(t[-1] for t in CTX_TAGS) if USE_CTX else ''}}{{'_' + CONTEXT_FORMAT if CONTEXT_FORMAT else ''}}_s{{SEED}}"
 OUTPUT_DIR = DRIVE_DIR / RUN_NAME
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 print(RUN_NAME)
@@ -505,6 +515,17 @@ if app_enc:
     app_cases = score(app_enc, app_rows, predict(model, app_enc))
     ma = metrics(app_cases); ma['run'] = RUN_NAME
     (OUTPUT_DIR / 'eval_metrics_app.json').write_text(json.dumps(ma, ensure_ascii=False, indent=2))
+    # 시험셋별 (ctx_v1 = 11차 화면, ctx_v2 = 12차 화면 + 결과 화면 밖) · 결과 화면 밖만 따로
+    by_set = {}
+    for name in sorted({r.get('app_set', '') for r in app_rows}):
+        idx = [i for i, r in enumerate(app_rows) if r.get('app_set', '') == name]
+        sub = [app_cases[i] for i in idx]
+        by_set[name] = {k: metrics(sub)[k] for k in ('support', 'function', 'exact')}
+        stage_idx = [i for i in idx if app_rows[i]['context'].get('ui_stage') != 'result']
+        if stage_idx:
+            by_set[name + '_non_result'] = {k: metrics([app_cases[i] for i in stage_idx])[k] for k in ('support', 'function', 'exact')}
+    print('app_test by set', json.dumps(by_set, ensure_ascii=False))
+    (OUTPUT_DIR / 'eval_metrics_app_by_set.json').write_text(json.dumps(by_set, ensure_ascii=False, indent=2))
     (OUTPUT_DIR / 'eval_cases_app.jsonl').write_text('\\n'.join(json.dumps(c, ensure_ascii=False) for c in app_cases))
     print('app_test (Qwen 라벨)', json.dumps({k: ma[k] for k in ('support', 'function', 'exact')}))
     print(json.dumps({fn: v for fn, v in ma['per_function'].items() if v['support']}, ensure_ascii=False, indent=1))
