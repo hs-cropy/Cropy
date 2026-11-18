@@ -57,19 +57,19 @@ test('activate enables navigation preload',async()=>{
 });
 test('offline navigation redirects to device diagnosis when the model is saved',async()=>{
  const res=await setup({database:'ready'}).navigate();
- assert.equal(res.status,302);assert.match(res.headers.get('location'),/\/offline\/index\.html$/);
+ assert.equal(res.status,302);assert.match(res.headers.get('location'),/\/offline\/index\.html\?from=offline$/);
 });
 test('shell cache alone does not count as prepared',async()=>{
  const res=await setup({cached:true,database:'pending'}).navigate();
- assert.match(await res.text(),/모델을 한 번 준비/);
+ assert.match(await res.text(),/저장된 오프라인 파일이 없어요/);
 });
 test('checking readiness does not leave an empty database behind',async()=>{
  const {navigate,log}=setup({database:undefined});
- assert.match(await (await navigate()).text(),/모델을 한 번 준비/);assert.equal(log.created,undefined);
+ assert.match(await (await navigate()).text(),/저장된 오프라인 파일이 없어요/);assert.equal(log.created,undefined);
 });
 test('database without the assets store is not prepared',async()=>{
  const {navigate,log}=setup({database:'empty'});
- assert.match(await (await navigate()).text(),/모델을 한 번 준비/);assert.equal(log.closed,true);
+ assert.match(await (await navigate()).text(),/저장된 오프라인 파일이 없어요/);assert.equal(log.closed,true);
 });
 test('device diagnosis page itself is served from cache instead of redirecting to itself',async()=>{
  const {navigate}=setup({database:'ready'});
@@ -79,7 +79,7 @@ test('device diagnosis page itself is served from cache instead of redirecting t
 });
 test('device diagnosis page without a cached shell explains how to prepare',async()=>{
  const res=await setup({cached:false}).navigate({url:'https://cropy.test/offline/index.html'});
- assert.match(await res.text(),/모델을 한 번 준비/);
+ assert.match(await res.text(),/저장된 오프라인 파일이 없어요/);
 });
 test('links from the device diagnosis page keep the page and notify it',async()=>{
  const {navigate,messages}=setup({database:'ready',clients:['https://cropy.test/offline/index.html','https://cropy.test/home']});
@@ -89,6 +89,13 @@ test('links from the device diagnosis page keep the page and notify it',async()=
 });
 test('slow network falls back after the navigation timeout',async()=>{
  const res=await setup({hang:true,database:'ready'}).navigate();assert.equal(res.status,302);
+});
+test('without saved files the fallback offers install and file download, disabled until online',async()=>{
+ const html=await (await setup({database:'pending'}).navigate()).text();
+ assert.match(html,/인터넷이 연결되면 앱 설치와 오프라인 파일 받기를 할 수 있어요/);
+ assert.match(html,/data-href="\/offline\/install\.html" disabled>앱 설치하기/);
+ assert.match(html,/data-href="\/offline\/index\.html\?prepare=1" disabled>오프라인 파일 받기/);
+ assert.match(html,/addEventListener\('online',sync\)/);
 });
 test('non-navigation requests are left to the browser',async()=>{
  assert.equal(await setup({database:'ready'}).navigate({mode:'cors'}),undefined);

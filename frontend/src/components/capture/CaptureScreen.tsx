@@ -723,15 +723,25 @@ export function useCaptureScreen({
 
           {showsRecent && <RecentDiagnosisCard item={recent} desktop={desktop} />}
 
-          {/* Figma 에는 없지만 기기 안에서 진단하는 페이지로 가는 유일한 길이라 남겨 둔다 */}
+          {/* Figma 에는 없지만 기기 안에서 진단하는 페이지와 앱 설치·오프라인 파일 받기(설치 안내)로 가는 길이라 남겨 둔다.
+              둘 다 인터넷 없이도 열리는 정적 페이지라 Link 가 아닌 전체 페이지 이동이다 */}
           {!refine && (showsCamera || view === "upload") && (
-            <a
-              href="/offline/index.html"
-              className="inline-flex min-h-cropy-control-md items-center gap-1 self-start text-cropy-helper font-bold text-cropy-text-primary hover:text-cropy-action-hover"
-            >
-              인터넷 없이 기기에서 진단하기
-              <span aria-hidden="true" className="icon-[lucide--chevron-right] h-4 w-4" />
-            </a>
+            <div className="flex flex-wrap gap-x-5 self-start">
+              <a
+                href="/offline/index.html"
+                className="inline-flex min-h-cropy-control-md items-center gap-1 text-cropy-helper font-bold text-cropy-text-primary hover:text-cropy-action-hover"
+              >
+                인터넷 없이 기기에서 진단하기
+                <span aria-hidden="true" className="icon-[lucide--chevron-right] h-4 w-4" />
+              </a>
+              <a
+                href="/offline/install.html"
+                className="inline-flex min-h-cropy-control-md items-center gap-1 text-cropy-helper font-bold text-cropy-text-primary hover:text-cropy-action-hover"
+              >
+                앱 설치 · 오프라인 파일 받기
+                <span aria-hidden="true" className="icon-[lucide--chevron-right] h-4 w-4" />
+              </a>
+            </div>
           )}
         </div>
       );
