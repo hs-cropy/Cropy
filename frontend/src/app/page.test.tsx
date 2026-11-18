@@ -37,6 +37,14 @@ describe("HomePage", () => {
     ).toBe("/offline/index.html");
   });
 
+  it("스플래시 말고 홈에서도 앱 설치·오프라인 파일 받기(설치 안내)로 갈 수 있다", () => {
+    render(<HomePage />);
+
+    expect(
+      screen.getByRole("link", { name: "앱 설치 · 오프라인 파일 받기" }).getAttribute("href"),
+    ).toBe("/offline/install.html");
+  });
+
   it("서버 HTML 에 촬영 화면의 제목과 하단 버튼이 들어 있다 (새로고침 때 뒤늦게 끼어들지 않게)", () => {
     const html = renderToString(<HomePage />);
 
