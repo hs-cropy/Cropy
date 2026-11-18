@@ -164,9 +164,14 @@ function speakOnce(text: string | string[], owner?: symbol): Promise<SpeechOutco
       utterance.onstart = () => { started = true; };
       utterance.onend = done;
       utterance.onerror = (event) => {
-        // 끊김은 정상 흐름(새 질문·화면 이탈). 그 밖의 오류는 첫 문장에서 나면 실패로 알린다
-        if (!started && event.error !== "interrupted" && event.error !== "canceled") finish({ spoken: false, reason: event.error });
-        else done();
+        if (settled) return;
+        // 오류·끊김은 첫 이벤트에서 바로 끝낸다. 그 뒤 큐에 남은 문장은 브라우저에 따라 end·error가 오지 않아,
+        // 남은 수를 세며 기다리면 Promise가 끝나지 않고 음성 모드가 speaking에 머문다(#190 리뷰)
+        const cut = event.error === "interrupted" || event.error === "canceled";
+        // 끊김은 정상 흐름(새 질문·화면 이탈). 그 밖의 오류는 시작 전에 나면 실패로 알리고, 읽던 중이면 읽은 데까지로 본다
+        finish(started ? { spoken: true } : { spoken: false, reason: event.error });
+        // 오류 뒤 남은 문장이 늦게 소리 나지 않게 비운다. 그 사이 다른 쪽이 낭독을 시작했으면 건드리지 않는다
+        if (!cut && currentOwner === owner) synth.cancel();
       };
       synth.speak(utterance);
     }

@@ -227,6 +227,52 @@ describe("speakAndWait 실패 알림", () => {
     expect(speech.speechFailureText({ spoken: true })).toBeNull();
   });
 
+  type Handlers = { onstart?: () => void; onend?: () => void; onerror?: (event: { error: string }) => void };
+  const queued = (synth: ReturnType<typeof installFakeSpeech>) =>
+    synth.speak.mock.calls.map(([utterance]) => utterance as unknown as Handlers);
+
+  it("첫 문장에서 오류가 나고 뒤 문장 이벤트가 오지 않아도 바로 실패로 끝나고 남은 문장을 비운다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장", "셋째 문장"]);
+    synth.cancel.mockClear();
+    queued(synth)[0].onerror?.({ error: "audio-busy" }); // 뒤 두 문장은 아무 이벤트도 오지 않는다
+    expect(await done).toEqual({ spoken: false, reason: "audio-busy" });
+    expect(synth.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("읽던 중 오류가 나고 뒤 문장 이벤트가 오지 않아도 끝난다(읽은 데까지는 읽은 것으로 본다)", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장", "셋째 문장"]);
+    const [first, second] = queued(synth);
+    first.onstart?.();
+    first.onend?.();
+    second.onerror?.({ error: "audio-busy" });
+    expect(await done).toEqual({ spoken: true });
+  });
+
+  it("첫 문장이 끊기고(interrupted) 뒤 문장 이벤트가 오지 않아도 끝나며 실패 안내는 없다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장"]);
+    queued(synth)[0].onerror?.({ error: "interrupted" });
+    const outcome = await done;
+    expect(speech.speechFailureText(outcome)).toBeNull();
+  });
+
+  it("실패 뒤 다른 쪽이 낭독을 시작했으면 그 낭독은 끊지 않는다", async () => {
+    const synth = installFakeSpeech();
+    const speech = await loadSpeech();
+    const done = speech.speakAndWait(["첫 문장", "둘째 문장"], Symbol("mine"));
+    const [first] = queued(synth);
+    speech.speak("다른 안내", Symbol("other"));
+    synth.cancel.mockClear();
+    first.onerror?.({ error: "audio-busy" });
+    expect(await done).toEqual({ spoken: false, reason: "audio-busy" });
+    expect(synth.cancel).not.toHaveBeenCalled();
+  });
+
   it("primeSpeech 는 누를 때마다 멈춘 낭독 엔진을 풀어 준다 (안드로이드 Chrome)", async () => {
     const synth = installFakeSpeech();
     const speech = await loadSpeech();

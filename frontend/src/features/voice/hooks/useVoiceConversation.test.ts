@@ -505,6 +505,37 @@ describe("useVoiceConversation", () => {
     expect(result.current.assistantText).toBe("현재 진단은 고추 탄저병입니다.");  // 글로는 보인다
   });
 
+  it("낭독에 실패하면 자동으로 다시 듣지 않는다 (다시 들으면 오류 문구가 바로 지워지고 무음으로 반복됨)", async () => {
+    pipeline.speakAndWait.mockResolvedValueOnce({ spoken: false, reason: "not-allowed" });
+    const { result } = renderHook(() => useVoiceConversation());
+    expect(result.current.continuous).toBe(true);
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+
+    expect(result.current.state).toBe("idle");
+    expect(result.current.error).toMatch(/소리로 읽지 못했어요/);
+    expect(recorderMock.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("데스크톱 UA를 보내는 갤럭시 탭도 답을 읽기 전에 마이크를 놓는다", async () => {
+    const stopTrack = vi.fn();
+    const tabStream = { active: true, getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
+    recorderMock.start.mockImplementation(async () => ({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: tabStream }));
+    const ua = vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131 Safari/537.36");
+    // jsdom navigator에는 maxTouchPoints가 없어 직접 둔다
+    Object.defineProperty(navigator, "maxTouchPoints", { value: 10, configurable: true });
+    pipeline.speakAndWait.mockImplementationOnce(async () => { expect(stopTrack).toHaveBeenCalled(); return { spoken: true }; });
+
+    const { result } = renderHook(() => useVoiceConversation());
+    await act(async () => { await result.current.start(); });
+    await act(async () => { await result.current.stop(); });
+
+    expect(stopTrack).toHaveBeenCalled();
+    ua.mockRestore();
+    delete (navigator as { maxTouchPoints?: number }).maxTouchPoints;
+  });
+
   it("안드로이드·아이폰이 아니면 답을 읽는 동안에도 마이크를 유지한다", async () => {
     const stopTrack = vi.fn();
     const pcStream = { active: true, getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
@@ -677,6 +708,66 @@ describe("useVoiceConversation", () => {
       expect(result.current.state).toBe("idle");
       expect(result.current.history).toEqual([]);
       expect(recorderMock.start).toHaveBeenCalledTimes(2); // 다시 호출어 듣기 시작
+    });
+
+    it("호출어 마이크를 여는 사이 버튼으로 듣기를 시작하면, 늦게 열린 호출어 마이크는 끈다", async () => {
+      wakeOn();
+      const stopWakeTrack = vi.fn();
+      const wakeStream = { active: true, getTracks: () => [{ stop: stopWakeTrack }] } as unknown as MediaStream;
+      let openWakeMic!: () => void;
+      recorderMock.start.mockImplementationOnce(() => new Promise((resolve) => {
+        openWakeMic = () => resolve({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: wakeStream });
+      }));
+
+      const { result } = renderHook(() => useVoiceConversation());
+      await act(async () => { await vi.advanceTimersByTimeAsync(450); });
+      expect(recorderMock.start).toHaveBeenCalledTimes(1);
+
+      await act(async () => { await result.current.start(); });
+      expect(result.current.state).toBe("listening");
+
+      await act(async () => { openWakeMic(); await vi.advanceTimersByTimeAsync(0); });
+      expect(stopWakeTrack).toHaveBeenCalled();
+      expect(result.current.state).toBe("listening");
+    });
+
+    it("호출어를 받아 적는 사이 화면을 나가면, 뒤늦게 실패해도 마이크를 다시 열지 않는다", async () => {
+      wakeOn();
+      let failTranscribe!: (error: unknown) => void;
+      pipeline.transcribe.mockImplementationOnce(() => new Promise((_resolve, reject) => { failTranscribe = reject; }));
+      const { unmount } = renderHook(() => useVoiceConversation());
+      await speakIntoWake();
+
+      unmount();
+      await act(async () => { failTranscribe(new TypeError("Failed to fetch")); await vi.advanceTimersByTimeAsync(1000); });
+
+      expect(recorderMock.start).toHaveBeenCalledTimes(1);
+    });
+
+    it("호출어 마이크를 여는 사이 껐다 켜면, 먼저 시작한 작업의 마이크는 채택하지 않고 끈다", async () => {
+      wakeOn();
+      const stopA = vi.fn();
+      const stopB = vi.fn();
+      const streamA = { active: true, getTracks: () => [{ stop: stopA }] } as unknown as MediaStream;
+      const streamB = { active: true, getTracks: () => [{ stop: stopB }] } as unknown as MediaStream;
+      let openA!: () => void;
+      let openB!: () => void;
+      recorderMock.start
+        .mockImplementationOnce(() => new Promise((resolve) => { openA = () => resolve({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: streamA }); }))
+        .mockImplementationOnce(() => new Promise((resolve) => { openB = () => resolve({ stop: recorderMock.stop, cancel: recorderMock.cancel, stream: streamB }); }));
+
+      const { result } = renderHook(() => useVoiceConversation());
+      await act(async () => { await vi.advanceTimersByTimeAsync(450); });
+      expect(recorderMock.start).toHaveBeenCalledTimes(1);
+
+      act(() => { result.current.setWakeEnabled(false); });
+      act(() => { result.current.setWakeEnabled(true); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(450); });
+      expect(recorderMock.start).toHaveBeenCalledTimes(2);
+
+      await act(async () => { openA(); openB(); await vi.advanceTimersByTimeAsync(0); });
+      expect(stopA).toHaveBeenCalled();
+      expect(stopB).not.toHaveBeenCalled();
     });
 
     it("끄면 대기 중에 녹음하지 않는다", async () => {
