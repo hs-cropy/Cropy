@@ -424,3 +424,13 @@ body:has(#update-dialog[open]) [data-view="prepare"] { visibility: hidden; }
 .voice-camera-count { font-size: 2.5rem; font-weight: 800; text-align: center; margin: .5rem 0 0; }
 .voice-panel .voice-error { color: var(--cropy-danger, #C2412D); }
 .voice-panel .voice-error:empty { display: none; }
+
+/* 연결 상태 바 (오프라인 화면 맨 위). 연결이 없으면 회색 점, 연결되면 초록 점과 함께 전환 버튼이 켜진다 */
+.conn-bar { display: flex; align-items: center; gap: .75rem; margin: 0 0 1rem; padding: .625rem .75rem .625rem 1rem; border: 1px solid var(--cropy-border); border-radius: .75rem; background: var(--cropy-surface); }
+.conn-bar p { flex: 1 1 auto; min-width: 0; margin: 0; font-size: .875rem; line-height: 1.45; color: var(--cropy-text-secondary); }
+.conn-bar p::before { content: ""; display: inline-block; width: .5rem; height: .5rem; margin-right: .5rem; border-radius: 50%; background: #9aa39d; vertical-align: .1em; }
+.conn-bar[data-online="true"] { border-color: var(--offline-guide-border); }
+.conn-bar[data-online="true"] p { color: var(--cropy-text-primary); }
+.conn-bar[data-online="true"] p::before { background: var(--cropy-green-600); }
+.conn-bar button { flex: 0 0 auto; min-height: 2.5rem; padding: .375rem .875rem; border-radius: .625rem; font-size: .875rem; }
+.guide-off { opacity: .48; pointer-events: none; }

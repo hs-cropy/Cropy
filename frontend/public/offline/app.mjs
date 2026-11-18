@@ -17,6 +17,8 @@ let photoSource = 'gallery', secondFile = null, secondSource = 'camera';
 // savedId: 방금 기기에 저장한 기록 (새 사진을 고를 때까지 머리에 저장 완료를 보인다)
 let view = 'prepare', loaded = false, storageFull = false, dismissed = null, offered = false, savedId = null;
 let stored = [], toastTimer;
+// 서버에 닿는지 (navigator.onLine 은 와이파이만 잡혀도 true 라 서버에 한 번 물어 본다). 처음에는 브라우저 값을 믿는다
+let online = navigator.onLine;
 const recordUrls = [];
 const database = new Promise((resolve, reject) => {
   const request = indexedDB.open('cropy-on-device', 1);
@@ -201,7 +203,7 @@ function show(name, body, actions = PHASES[name].actions) {
   for (const id of PHASE_ACTIONS) $(id).hidden = !actions.includes(id);
   $('phase-actions').hidden = !actions.length;
   $('phase-actions').classList.toggle('single', actions.length === 1);
-  renderHeader();
+  renderHeader(); renderConnection();
   // 누른 버튼이 숨겨졌으면 포커스가 사라지지 않게 카드 제목으로 옮긴다
   if (focused?.closest('[hidden]')) $('status-title').focus();
 }
@@ -209,7 +211,8 @@ function setBusy(value) {
   busy = value;
   $('diagnose').disabled = value || !session || !selected;
   $('refine').disabled = value || !current;
-  $('prepare').disabled = $('update-accept').disabled = value;
+  $('update-accept').disabled = value;
+  renderConnection();
   $('start').disabled = value || !session;
   for (const id of ['file','file-camera','crop','second','second-camera','new-photo','empty-new',
     'dropzone','pick-gallery','pick-camera','pick-again','second-pick-camera','second-pick-gallery']) $(id).disabled = value;
@@ -884,6 +887,60 @@ $('voice-wake').addEventListener('click', async () => {
   } catch (error) { voiceState('error', error?.name === 'NotAllowedError' ? '마이크 권한을 허용해 주세요.' : message(error)); }
 });
 addEventListener('online',()=>{renderVoiceBundle().catch(()=>{});});
+// ── 연결 상태와 온라인 전환 ──
+// 연결이 없으면 온라인 전환·다운로드 안내·다시 받기 버튼을 막는다. 연결되면 버튼을 켜고,
+// 연결이 없어 넘어온 화면(메인 워커가 ?from=offline 으로 보냄)은 하던 일이 없으면 저절로 온라인 화면으로 간다.
+// 처음 열 때 이미 연결돼 있으면 저절로 가지 않는다: 신호가 약해 넘어온 경우 다시 넘어오기를 되풀이할 수 있어서다.
+// 연결이 없다가 생긴 것을 이 화면에서 본 때만 간다
+const cameFromOffline = new URLSearchParams(location.search).get('from') === 'offline';
+let sawOffline = !navigator.onLine, onlineNotified = false;
+const ONLINE_HOME = '/home';
+function renderConnection() {
+  $('conn-bar').dataset.online = String(online);
+  $('go-online').disabled = !online;
+  $('conn-text').textContent = online
+    ? '인터넷에 연결됐어요'
+    : '인터넷 연결 없음';
+  // 다운로드 안내(앱 설치·파일 받기)와 다시 받기는 인터넷이 있어야 한다
+  $('guide').classList.toggle('guide-off', !online);
+  $('guide').setAttribute('aria-disabled', String(!online));
+  $('guide').tabIndex = online ? 0 : -1;
+  $('prepare').disabled = busy || !online;
+  if ($('status-card').dataset.phase === 'not-ready') {
+    $('ready').textContent = online ? PHASES['not-ready'].body
+      : '이 기기에 저장된 오프라인 파일이 없어요. 인터넷이 연결되면 앱 설치와 오프라인 파일 받기를 할 수 있어요.';
+  }
+}
+// 하던 일: 분석·파일 받기 중, 진단 전 고른 사진, 음성 질문이 켜져 있음, 열린 창
+const workInProgress = () => busy || voiceBusy || Boolean(selected) || Boolean(voiceSession && voiceSession.mode !== 'off')
+  || $('update-dialog').open || $('voice-camera').open;
+async function reachable() {
+  if (!navigator.onLine) return false;
+  try { const res = await fetch('/', {method:'HEAD', cache:'no-store', signal:AbortSignal.timeout(4000)}); return res.status < 500; }
+  catch { return false; }
+}
+function goOnline() {
+  if (!online) return;
+  try { voiceSession?.stop(); } catch {}
+  location.href = ONLINE_HOME;
+}
+async function checkConnection() {
+  const now = await reachable();
+  if (!now) sawOffline = true;
+  const changed = now !== online;
+  online = now; renderConnection();
+  if (!now) { onlineNotified = false; return; }
+  if (!cameFromOffline || !sawOffline) return;
+  if (!workInProgress()) { goOnline(); return; }
+  if (changed && !onlineNotified) { onlineNotified = true; toast('인터넷에 연결됐어요. 위의 온라인으로 전환을 누르면 서버로 진단해요.'); }
+}
+$('go-online').addEventListener('click', goOnline);
+$('guide').addEventListener('click', event => { if (!online) event.preventDefault(); });
+addEventListener('online', () => { checkConnection(); });
+addEventListener('offline', () => { sawOffline = true; online = false; onlineNotified = false; renderConnection(); });
+// 와이파이는 잡혔는데 서버에 닿지 않는 경우(데이터 없음 등) 'online' 이 다시 오지 않으니 가끔 다시 물어 본다
+setInterval(() => { if (!online && navigator.onLine) checkConnection(); }, 15000);
+renderConnection();
 // 주소의 # 화면을 먼저 보인다. 모델을 다 불러온 뒤 한 번 더 확인한다 (없으면 새 진단 대신 준비 화면)
 route();
 try {
@@ -893,7 +950,7 @@ try {
 } catch(error){show('not-ready');$('ready').textContent=message(error);}
 await history().catch(error => { say(message(error)); });
 setBusy(false);
-loaded=true;route();checkUpdate();renderVoiceBundle().catch(()=>{});
+loaded=true;route();checkUpdate();renderVoiceBundle().catch(()=>{});checkConnection();
 // 설치 안내의 "오프라인 파일 받기"는 ?prepare=1 로 들어와 바로 받기를 시작한다.
 // 새로고침해도 다시 받지 않게 주소에서 지운다
 if(!session&&new URLSearchParams(location.search).has('prepare')){window.history.replaceState(null,'',location.pathname);prepare();}

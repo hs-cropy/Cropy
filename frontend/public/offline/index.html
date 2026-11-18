@@ -16,6 +16,12 @@
 <button id="voice" class="switch" role="switch" aria-checked="false" aria-label="음성 안내" type="button"><span class="label-mobile">음성</span><span class="label-web">음성 안내</span><span class="track" aria-hidden="true"></span></button></div></header>
 <div class="page with-nav">
 <main>
+<!-- 연결 상태와 온라인 전환. 연결이 없으면 버튼을 막고, 연결되면 눌러 온라인 화면(/home)으로 간다.
+     연결이 없어 넘어온 화면(?from=offline)은 연결이 돌아오고 하던 일이 없으면 저절로 온라인 화면으로 간다 (app.mjs 의 checkConnection) -->
+<div class="conn-bar" id="conn-bar" data-online="false">
+<p id="conn-text" role="status">인터넷 연결 없음</p>
+<button id="go-online" class="secondary" type="button" disabled>온라인으로 전환</button>
+</div>
 <!-- 제목·부제·상태 라벨은 네 화면이 함께 쓴다. app.mjs 의 renderHeader 가 화면과 상태에 맞게 바꾼다 -->
 <!-- 진단 결과일 때는 넓은 화면 부제(진단 시각)와 마스코트가 함께 보인다 (data-mode="result", PageHeader.tsx) -->
 <div class="page-head" id="page-head"><div class="head-text">

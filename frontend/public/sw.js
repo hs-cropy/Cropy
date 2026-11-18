@@ -4,15 +4,30 @@ const OFFLINE_PAGE = '/offline/index.html';
 const DATABASE = 'cropy-on-device';
 // 신호가 약하면 응답 없이 브라우저 타임아웃까지 빈 화면이 이어진다. 그 전에 대체 화면으로 넘어간다.
 const NAVIGATION_TIMEOUT_MS = 6000;
+// 저장된 오프라인 파일 없이 연결이 끊긴 경우의 화면. 앱 설치·오프라인 파일 받기는 인터넷이 있어야 하므로
+// 연결이 없으면 버튼을 막아 두고, 연결되면 바로 누를 수 있게 한다
 const FALLBACK_HTML = `<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#FAF7F0">
 <title>Cropy · 연결 없음</title><style>
 body{margin:0;min-height:100vh;display:grid;place-items:center;background:#faf7f0;color:#1c2b22;font:16px/1.6 system-ui,sans-serif}
-main{max-width:420px;padding:24px;text-align:center}h1{color:#28844b;font-size:24px}
-button{border:0;border-radius:12px;padding:12px 18px;background:#318953;color:#fff;font-weight:700;font-size:15px}
+main{max-width:420px;padding:24px;text-align:center}h1{color:#28844b;font-size:24px;margin:0 0 8px}
+.actions{display:grid;gap:10px;margin:20px 0 8px}
+button{border:0;border-radius:12px;padding:12px 18px;background:#318953;color:#fff;font-weight:700;font-size:15px;cursor:pointer}
+button.secondary{background:#fff;color:#1c2b22;border:1px solid #d9d2c3}
+button:disabled{opacity:.45;cursor:not-allowed}#note{color:#5b6b60;font-size:14px;margin:0 0 16px}
 </style></head><body><main><h1>인터넷에 연결되어 있지 않아요</h1>
-<p>기기 진단은 연결된 상태에서 <b>인터넷 없이 기기에서 진단하기</b>로 들어가 모델을 한 번 준비해야 쓸 수 있어요.</p>
-<button onclick="location.reload()">다시 시도</button></main></body></html>`;
+<p>이 기기에 저장된 오프라인 파일이 없어요.<br>인터넷이 연결되면 앱 설치와 오프라인 파일 받기를 할 수 있어요.</p>
+<div class="actions"><button type="button" data-href="/offline/install.html" disabled>앱 설치하기</button>
+<button type="button" data-href="/offline/index.html?prepare=1" disabled>오프라인 파일 받기</button></div>
+<p id="note" role="status">인터넷이 연결되면 버튼을 누를 수 있어요.</p>
+<button class="secondary" type="button" onclick="location.reload()">다시 시도</button></main>
+<script>
+const links=document.querySelectorAll('[data-href]'),note=document.getElementById('note');
+function sync(){const on=navigator.onLine;links.forEach(b=>{b.disabled=!on;});
+note.textContent=on?'인터넷에 연결됐어요. 앱을 설치하거나 오프라인 파일을 받을 수 있어요.':'인터넷이 연결되면 버튼을 누를 수 있어요.';}
+links.forEach(b=>b.addEventListener('click',()=>{location.href=b.dataset.href;}));
+addEventListener('online',sync);addEventListener('offline',sync);sync();
+</script></body></html>`;
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => event.waitUntil(Promise.all([
@@ -43,7 +58,8 @@ async function offline(event) {
     event.waitUntil(notifyOfflinePages());
     return new Response(null, {status: 204});
   }
-  if (await modelReady()) return Response.redirect(new URL(OFFLINE_PAGE, self.location.origin).href, 302);
+  // ?from=offline: 연결이 없어 넘어왔다는 표시. 기기 진단 화면은 연결이 돌아오면 온라인 화면으로 돌아간다
+  if (await modelReady()) return Response.redirect(new URL(OFFLINE_PAGE + '?from=offline', self.location.origin).href, 302);
   return fallback();
 }
 

@@ -139,7 +139,7 @@ test('a rejected photo is explained in text without the analysis-failed card',as
 });
 function setupHeader({view,desktop=false,savedId=null,current=null,phase}){
  const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',hidden:false,open:false,dataset:{phase},classList:{toggle(){}}});return nodes.get(id);};
- const context=vm.createContext({$,view,desktop,savedId,current,document:{activeElement:null},resultTimeSentence,isNotCrop});
+ const context=vm.createContext({$,view,desktop,savedId,current,document:{activeElement:null},resultTimeSentence,isNotCrop,renderConnection(){}});
  vm.runInContext(source.slice(source.indexOf('const PHASES = {'),source.indexOf('function notice('))+
   source.slice(source.indexOf('function show('),source.indexOf('function setBusy('))+';globalThis.notices=notices;',context);
  const header=()=>{context.renderHeader();return {label:$('phase-label').hidden?null:$('phase-label').textContent,lead:$('phase-lead').textContent};};
@@ -201,7 +201,7 @@ for(const failure of ['model','asset read']){
   let historyCalls=0;const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{});return nodes.get(id);};
   const context=vm.createContext({$,bundle:null,session:null,URLSearchParams,location:{search:''},
    async db(){if(failure==='asset read')throw new Error('asset read failed');return {manifest:{},model:[]};},
-   async initSession(){throw new Error('model failed');},async history(){historyCalls++;},message:e=>e.message,setBusy(){},show(){},route(){},checkUpdate(){},async renderVoiceBundle(){}});
+   async initSession(){throw new Error('model failed');},async history(){historyCalls++;},message:e=>e.message,setBusy(){},show(){},route(){},checkUpdate(){},async renderVoiceBundle(){},checkConnection(){}});
   await vm.runInContext('(async()=>{'+source.slice(source.lastIndexOf('\ntry {'))+'})()',context);
   assert.equal(historyCalls,1);assert.match($('ready').textContent,/failed/);
  });
@@ -405,4 +405,50 @@ test('refine uses the kept second photo and clearing it restores the pickers',()
  const h=setup();h.context.secondFile={name:'x.jpg'};h.$('refine').hidden=false;
  h.context.result(h.record('one'));h.context.result(h.record('two'));
  assert.equal(h.context.secondFile,null);assert.equal(h.$('refine').hidden,true);assert.equal(h.$('second-name').textContent,'');
+});
+
+// ── 연결 상태와 온라인 전환 ──
+function setupConnection({search='',navOnline=false,reach=false,busy=false,selected=null,phase='ready'}={}){
+ const nodes=new Map(),listeners={};
+ const $=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',disabled:false,tabIndex:0,open:false,dataset:{phase:id==='status-card'?phase:undefined},attrs:{},classes:new Set(),
+  classList:{toggle(name,on){on?nodes.get(id).classes.add(name):nodes.get(id).classes.delete(name);}},setAttribute(k,v){this.attrs[k]=v;},addEventListener(type,fn){this['on'+type]=fn;}});return nodes.get(id);};
+ const navigator={onLine:navOnline};const toasts=[];const location={search,href:'/offline/index.html'};
+ const context=vm.createContext({$,navigator,location,URLSearchParams,AbortSignal:{timeout:()=>undefined},toasts,
+  online:navOnline,busy,voiceBusy:false,selected,voiceSession:null,PHASES:{'not-ready':{body:'인터넷에 연결해 받아주세요.'}},
+  toast(t){toasts.push(t);},fetch:async()=>{if(!context.reach)throw new TypeError('offline');return {status:200};},reach,
+  addEventListener(type,fn){listeners[type]=fn;},setInterval(){}});
+ const start=source.indexOf('// ── 연결 상태와 온라인 전환 ──'),end=source.indexOf('// 주소의 # 화면을 먼저 보인다.');
+ vm.runInContext(source.slice(start,end).replace('const cameFromOffline','var cameFromOffline').replace('let sawOffline','var sawOffline'),context);
+ return {context,$,listeners,navigator,location,toasts};
+}
+test('offline: the online switch and download guide are disabled, with a note when no files are saved',()=>{
+ const h=setupConnection({phase:'not-ready'});h.context.renderConnection();
+ assert.equal(h.$('go-online').disabled,true);assert.equal(h.$('conn-bar').dataset.online,'false');
+ assert.match(h.$('conn-text').textContent,/인터넷 연결 없음/);
+ assert.equal(h.$('guide').attrs['aria-disabled'],'true');assert.ok(h.$('guide').classes.has('guide-off'));
+ assert.equal(h.$('prepare').disabled,true);
+ assert.match(h.$('ready').textContent,/인터넷이 연결되면 앱 설치와 오프라인 파일 받기를 할 수 있어요/);
+});
+test('coming back online enables the switch; a page opened because of no connection goes online by itself',async()=>{
+ const h=setupConnection({search:'?from=offline',phase:'not-ready'});h.context.renderConnection();
+ h.navigator.onLine=true;h.context.reach=true;await h.context.checkConnection();
+ assert.equal(h.$('go-online').disabled,false);assert.equal(h.location.href,'/home');
+ assert.equal(h.$('ready').textContent,'인터넷에 연결해 받아주세요.');
+});
+test('it does not leave by itself while something is in progress, and only tells once',async()=>{
+ const h=setupConnection({search:'?from=offline',selected:{name:'a.jpg'}});
+ h.navigator.onLine=true;h.context.reach=true;await h.context.checkConnection();await h.context.checkConnection();
+ assert.equal(h.location.href,'/offline/index.html');assert.equal(h.$('go-online').disabled,false);assert.equal(h.toasts.length,1);
+ h.$('go-online').onclick();assert.equal(h.location.href,'/home');
+});
+test('a page opened on purpose, or already online at start, does not switch by itself',async()=>{
+ const purposely=setupConnection();purposely.navigator.onLine=true;purposely.context.reach=true;await purposely.context.checkConnection();
+ assert.equal(purposely.location.href,'/offline/index.html');assert.equal(purposely.$('go-online').disabled,false);
+ // 신호가 약해 넘어왔는데 처음부터 연결돼 보이면 다시 넘어오기를 되풀이하지 않게 가만히 있는다
+ const weak=setupConnection({search:'?from=offline',navOnline:true,reach:true});await weak.context.checkConnection();
+ assert.equal(weak.location.href,'/offline/index.html');
+});
+test('wifi without a server keeps the switch off',async()=>{
+ const h=setupConnection({search:'?from=offline'});h.navigator.onLine=true;h.context.reach=false;await h.context.checkConnection();
+ assert.equal(h.$('go-online').disabled,true);assert.equal(h.location.href,'/offline/index.html');
 });
