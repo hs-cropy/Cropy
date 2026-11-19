@@ -85,7 +85,16 @@ export function failurePhase(error, online) {
 export function viewFromHash(hash) {
   const name = String(hash || '').replace(/^#/, '');
   if (name === 'analyze') return 'new';
-  return name === 'new' || name === 'result' || name === 'records' ? name : 'prepare';
+  return name === 'new' || name === 'result' || name === 'records' || name === 'voice' ? name : 'prepare';
+}
+// 낭독에 쓸 한국어 음성. 기기 안 음성(localService)을 먼저, 없으면 다른 한국어 음성을 쓴다.
+// 목록이 비어 있으면 null: Chrome 은 첫 getVoices() 가 비어 있고, iOS 홈 화면 앱은 목록을 주지 않는데도 lang 만 주면 읽는다.
+// 목록은 있는데 한국어가 없을 때만 false (한국어 음성 없음)
+export function pickKoreanVoice(voices) {
+  const list = Array.from(voices || []);
+  const korean = list.filter(v => String(v.lang || '').replace('_', '-').toLowerCase().startsWith('ko'));
+  if (korean.length) return korean.find(v => v.localService) ?? korean.find(v => v.default) ?? korean[0];
+  return list.length ? false : null;
 }
 // 서버에 새 진단 파일 묶음이 있는지. version 은 모델·전처리·병해 안내·정책을 합친 64자리 해시라 순서가 없어 다르면 새것이다.
 // 받아 둔 묶음이 없거나 서버 값이 이상하면 묻지 않는다
