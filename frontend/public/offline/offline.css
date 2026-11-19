@@ -446,6 +446,7 @@ body[data-view="voice"] .with-nav { padding-bottom: 1.5rem; }
 .voice-reply { margin: 0; white-space: pre-line; line-height: 1.6; }
 .voice-error { margin: 0; color: var(--cropy-status-attention); font-size: .875rem; }
 .voice-error:empty { display: none; }
+.vm-replay { align-self: center; width: auto; padding: 0 1.5rem; }
 .vm-mic { align-self: center; width: 4.5rem; height: 4.5rem; min-height: 0; padding: 0; border-radius: 50%; }
 .vm-mic svg { width: 2rem; height: 2rem; }
 .vm-main[data-state="listening"] .vm-mic { box-shadow: 0 0 0 6px var(--cropy-green-50); background: var(--cropy-action-pressed); }
