@@ -843,33 +843,43 @@ async function koreanVoice() {
   }
   return pickKoreanVoice(voices);
 }
+// 3초 안에 시작하지 않으면 엔진을 비우고 한 번 더 읽는다 (iOS 가 마이크를 놓은 직후 첫 낭독을 묻는 경우, 앱 #198 과 같다).
+// 그래도 못 읽으면 실패 문구 끝에 이유를 붙인다 (예: no-start·음성 0개). 이유는 기기별 원인을 찾는 데 쓴다
 async function speakText(text) {
   if (!('speechSynthesis' in window)) return NO_KOREAN_VOICE;
   const voice = await koreanVoice();
   if (voice === false) return NO_KOREAN_VOICE;
-  return new Promise(resolve => {
+  const once = () => new Promise(resolve => {
     if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
     speechSynthesis.resume();
     let started = false;
-    const timer = setTimeout(() => { if (!started) { speechSynthesis.cancel(); resolve(SPEAK_FAILED); } }, 3000);
+    const timer = setTimeout(() => { if (!started) { speechSynthesis.cancel(); resolve('no-start'); } }, 3000);
     const speech = new SpeechSynthesisUtterance(text);
     if (voice) speech.voice = voice;
     speech.lang = 'ko-KR'; speech.rate = 0.9;
-    speech.onstart = () => { started = true; };
+    speech.onstart = () => { started = true; speechPrimed = true; };
     speech.onend = () => { clearTimeout(timer); resolve(); };
-    speech.onerror = event => { clearTimeout(timer); resolve(started || ['interrupted', 'canceled'].includes(event.error) ? undefined : SPEAK_FAILED); };
+    speech.onerror = event => { clearTimeout(timer); resolve(started || ['interrupted', 'canceled'].includes(event.error) ? undefined : event.error || 'error'); };
     speechSynthesis.speak(speech);
   });
+  let reason = await once();
+  if (reason === 'no-start') { await new Promise(r => setTimeout(r, 300)); reason = await once(); }
+  if (!reason) return undefined;
+  return `${SPEAK_FAILED} (${reason} · 음성 ${speechSynthesis.getVoices().length}개${voice ? '' : ' · 기본 음성'})`;
 }
 // 탭할 때마다 낭독을 깨운다. 호출어 대기는 탭 없이 답을 읽으므로, iOS 는 탭 안에서 한 번 소리를 내 둬야 하고
 // 안드로이드 Chrome 은 멈춘 엔진을 resume 으로 풀어야 한다
+// iOS 는 빈 문장을 읽지 않고 넘겨 깨우기가 되지 않을 수 있어 짧은 글자를 소리 없이 읽는다.
+// 실제로 시작(onstart)해야 깨운 것으로 보고, 아니면 다음 탭에서 다시 깨운다
 let speechPrimed = false;
 function primeSpeech() {
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.resume();
-  if (speechPrimed) return;
-  speechPrimed = true;
-  const silent = new SpeechSynthesisUtterance(''); silent.volume = 0; speechSynthesis.speak(silent);
+  if (speechPrimed || speechSynthesis.speaking || speechSynthesis.pending) return;
+  const silent = new SpeechSynthesisUtterance('.');
+  silent.volume = 0; silent.rate = 2; silent.lang = 'ko-KR';
+  silent.onstart = () => { speechPrimed = true; };
+  speechSynthesis.speak(silent);
 }
 addEventListener('pointerdown', primeSpeech, {capture:true});
 const resultSentence = r => isNotCrop(r) ? '작물 잎을 찾지 못했어요. 잎이 잘 보이게 다시 찍어 주세요.'

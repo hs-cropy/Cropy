@@ -116,16 +116,19 @@ export function createVoiceSession({ models, hooks, ui, speak, wake = false, con
     };
     source.connect(node); node.connect(context.destination);
   }
+  // 오디오 컨텍스트가 다 닫힐 때까지 기다릴 수 있게 Promise 를 돌려준다 (iOS 는 닫히기 전에 읽으면 낭독이 묻힌다)
   function closeMic() {
-    node?.disconnect(); stream?.getTracks().forEach(t => t.stop()); context?.close().catch(() => {});
+    node?.disconnect(); stream?.getTracks().forEach(t => t.stop());
+    const closing = context?.close().catch(() => {});
     stream = context = node = segmenter = null;
+    return closing ?? Promise.resolve();
   }
   // 휴대폰은 마이크를 잡은 채로는 답이 들리지 않는다 (안드로이드 Chrome 무음 #183, iOS 는 수화부로 작게).
   // 그래서 휴대폰에서는 읽기 전에 마이크를 놓고, 다 읽은 뒤 다시 연다 (앱 useVoiceConversation 과 같다)
   async function say(text) {
     muted = true; ui.state('speaking', text);
     const release = isMobile();
-    if (release) closeMic();
+    if (release) await closeMic();
     // iOS 는 마이크를 놓은 뒤 오디오가 재생 상태로 돌아올 시간이 필요하다 (앱 #198 과 같은 0.7초)
     const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
     if (release && ios) await new Promise(r => setTimeout(r, 700));
