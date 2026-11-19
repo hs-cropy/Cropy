@@ -3,6 +3,7 @@ import { renderToString } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { installFakeSpeech } from "@/features/voice/testing/fakeSpeech";
 import { DiagnosisSessionProvider } from "@/components/diagnosis/DiagnosisSession";
+import { INSTALLED_QUERY } from "@/hooks/useInstalledApp";
 import Page from "./home/page";
 
 vi.mock("next/navigation", async () => (await import("@/testing/fakeNavigation")).nextNavigation);
@@ -43,6 +44,24 @@ describe("HomePage", () => {
     expect(
       screen.getByRole("link", { name: "앱 설치 · 오프라인 파일 받기" }).getAttribute("href"),
     ).toBe("/offline/install.html");
+  });
+
+  it("설치한 앱에서는 같은 링크를 '오프라인 파일 받기'로만 적는다 (설치 안내가 설치 완료로 열린다)", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === INSTALLED_QUERY,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    try {
+      render(<HomePage />);
+
+      expect(screen.queryByRole("link", { name: "앱 설치 · 오프라인 파일 받기" })).toBeNull();
+      expect(
+        screen.getByRole("link", { name: "오프라인 파일 받기" }).getAttribute("href"),
+      ).toBe("/offline/install.html");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("서버 HTML 에 촬영 화면의 제목과 하단 버튼이 들어 있다 (새로고침 때 뒤늦게 끼어들지 않게)", () => {

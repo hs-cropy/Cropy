@@ -20,6 +20,7 @@ import { isCameraSupported, useCamera, useCaptureFrame } from "@/features/camera
 import type { CameraErrorCode } from "@/features/camera";
 import { useCameraVoiceGuide } from "@/features/voice";
 import { replaceHash, useLocationHash } from "@/hooks/useLocationHash";
+import { useInstalledApp } from "@/hooks/useInstalledApp";
 import { DESKTOP_QUERY, useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/cn";
 import { PhotoPreview } from "@/components/PhotoPreview";
@@ -305,6 +306,7 @@ export function useCaptureScreen({
   // 서버 HTML·하이드레이션 때는 화면 폭을 모른다(null). 그동안은 모바일·데스크탑을 둘 다 그리고
   // CSS 로 하나만 보인다. 폭을 알면 맞는 쪽만 그린다 (아래 return)
   const desktopMatch = useMediaQuery(DESKTOP_QUERY);
+  const installed = useInstalledApp();
   const camera = useCamera({ autoStart: false });
   const { capture } = useCaptureFrame();
   // 새 진단마다 다시 받아 방금 저장한 진단이 "최근 진단"에 나오게 한다
@@ -738,7 +740,8 @@ export function useCaptureScreen({
                 href="/offline/install.html"
                 className="inline-flex min-h-cropy-control-md items-center gap-1 text-cropy-helper font-bold text-cropy-text-primary hover:text-cropy-action-hover"
               >
-                앱 설치 · 오프라인 파일 받기
+                {/* 설치한 앱에서는 설치 안내가 "설치 완료"와 파일 받기만 보이므로 파일 받기만 적는다 */}
+                {installed ? "오프라인 파일 받기" : "앱 설치 · 오프라인 파일 받기"}
                 <span aria-hidden="true" className="icon-[lucide--chevron-right] h-4 w-4" />
               </a>
             </div>
