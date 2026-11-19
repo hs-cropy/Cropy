@@ -414,7 +414,7 @@ function setupConnection({search='',navOnline=false,reach=false,busy=false,selec
   classList:{toggle(name,on){on?nodes.get(id).classes.add(name):nodes.get(id).classes.delete(name);}},setAttribute(k,v){this.attrs[k]=v;},addEventListener(type,fn){this['on'+type]=fn;}});return nodes.get(id);};
  const navigator={onLine:navOnline};const toasts=[];const location={search,href:'/offline/index.html'};
  const context=vm.createContext({$,navigator,location,URLSearchParams,AbortSignal:{timeout:()=>undefined},toasts,
-  online:navOnline,busy,voiceBusy:false,selected,voiceSession:null,PHASES:{'not-ready':{body:'인터넷에 연결해 받아주세요.'}},
+  online:navOnline,busy,voiceBusy:false,selected,voiceSession:null,previewStream:null,PHASES:{'not-ready':{body:'인터넷에 연결해 받아주세요.'}},
   toast(t){toasts.push(t);},fetch:async()=>{if(!context.reach)throw new TypeError('offline');return {status:200};},reach,
   addEventListener(type,fn){listeners[type]=fn;},setInterval(){}});
  const start=source.indexOf('// ── 연결 상태와 온라인 전환 ──'),end=source.indexOf('// 주소의 # 화면을 먼저 보인다.');

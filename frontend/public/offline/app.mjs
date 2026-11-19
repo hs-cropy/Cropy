@@ -1,5 +1,5 @@
 import * as ort from '/offline-runtime/ort.wasm.bundle.min.mjs';
-import { softmax, distribution, fuse, summarize, failurePhase, viewFromHash, recordsNotice, updateAvailable, isDesktopDevice, gradeOf, isNotCrop, syncStateOf, resultTimeSentence, recordTime } from './core.mjs';
+import { softmax, distribution, fuse, summarize, failurePhase, viewFromHash, recordsNotice, updateAvailable, isDesktopDevice, gradeOf, isNotCrop, syncStateOf, resultTimeSentence, recordTime, pickKoreanVoice } from './core.mjs';
 import { FUNCTION_CACHE, functionBundleKind, bundleGuide, bundleState, downloadBundle, missingBundleFiles, staleBundleKeys, formatBytes } from './core.mjs';
 import { VOICE_KINDS, loadVoiceModels, createVoiceSession } from './voice.mjs';
 
@@ -88,6 +88,8 @@ const VIEWS = {
   // 결과가 없는 진단 결과 화면 (온라인 DiagnosisScreen.tsx 의 empty 머리)
   result: {title:'진단 시작', lead:'사진을 찍거나 선택하면\n진단 결과와 관리 방법을 볼 수 있어요.'},
   records: {title:'진단 기록', lead:'인터넷 없이도 이 기기에 저장된 기록을 볼 수 있어요.'},
+  // 음성 모드는 화면 머리를 숨기고 전체 화면으로 쓴다 (온라인 VoiceMode.tsx)
+  voice: {title:'음성 모드', lead:'말로 묻고 사진을 찍어 이 기기에서 진단해요.'},
 };
 // 진단 결과 화면에 결과가 있을 때의 머리 (온라인 DiagnosisScreen.tsx 의 진단 결과). 넓은 화면은 진단 시각 문장이다
 const RESULT = {title:'진단 결과', lead:'진단 요약을 확인하고\n필요한 상세 정보를 펼쳐보세요.', wide:'진단 요약을 확인하고, 아래 관리 방법을 참고해주세요.'};
@@ -148,6 +150,11 @@ function route(focus) {
   if (view !== wanted) window.history.replaceState(null, '', '#prepare');
   // 다른 화면에서 남은 문구가 새 화면의 결과에 붙어 보이지 않게 지운다 (진행 중 문구는 둔다)
   if (view !== before && !busy) $('state').textContent = '';
+  // 음성 모드는 헤더 메뉴·화면 머리·하단 내비를 숨긴 전체 화면이다 (offline.css 의 body[data-view="voice"]).
+  // 음성 모드를 떠나면 듣기와 카메라를 끈다
+  document.body.dataset.view = view;
+  if (before === 'voice' && view !== 'voice') leaveVoiceMode();
+  if (view === 'voice' && before !== 'voice') { renderVoicePanel(); enterVoiceMode(); }
   // 새 진단과 진단 결과는 한 묶음(data-view="new result")을 같이 쓰고, 안의 카드는 syncAnalyzeView 가 고른다
   for (const section of document.querySelectorAll('main > [data-view]')) section.hidden = !section.dataset.view.split(' ').includes(view);
   syncAnalyzeView(true);
@@ -656,11 +663,10 @@ $('new-photo').addEventListener('click',startNew);$('empty-new').addEventListene
 // 새 진단 화면에서 새 진단 탭을 다시 누르면 떠 있던 진단 실패 카드를 닫는다 (같은 # 이라 hashchange 가 없어도 notice 가 다시 그린다).
 // 다른 탭에서 돌아올 때는 아직 보지 못한 실패 카드를 그대로 보인다
 for(const link of document.querySelectorAll('[data-nav="new"]'))link.addEventListener('click',()=>{if(!busy&&view==='new'&&notices.new)notice('new',null);});
-$('speak').addEventListener('click',()=>{
+$('speak').addEventListener('click',async()=>{
   if(!current||!('speechSynthesis'in window)){ say('음성 안내를 사용할 수 없어요.');return; }
-  const voice=speechSynthesis.getVoices().find(v=>v.localService&&v.lang.startsWith('ko'));
-  if(!voice){say('이 기기에 한국어 오프라인 음성이 없어요. 글로 확인해 주세요.');return;}
-  speechSynthesis.cancel();const speech=new SpeechSynthesisUtterance(isNotCrop(current.result)?'작물 잎을 찾지 못했어요. 잎이 잘 보이게 다시 찍어 주세요.':current.result.disease_name+'으로 분류됐어요. 확진을 뜻하지 않아요. '+current.result.description);speech.voice=voice;speech.lang='ko-KR';speech.onerror=()=>{say('음성 안내를 시작하지 못했어요.');};speechSynthesis.speak(speech);
+  const failure=await speakText(isNotCrop(current.result)?resultSentence(current.result):resultSentence(current.result)+' '+(current.result.description||''));
+  if(failure)say(failure);
 });
 // 연결 없이 다른 화면 링크를 누르면 메인 워커가 이동을 막고 알려 준다(public/sw.js)
 navigator.serviceWorker?.addEventListener('message',event=>{
@@ -709,6 +715,7 @@ async function renderVoiceBundle() {
   const records = Object.fromEntries(await Promise.all(kinds.map(async kind => [kind, await readVoiceRecord(kind)])));
   voiceRecords = records;
   renderVoicePanel();
+  if (view === 'voice' && !voiceSession) enterVoiceMode();
   // 렌더가 겹쳐 돌 수 있어(준비 완료·부팅·online) 이 렌더가 본 묶음을 지역 값으로 쓴다
   const server = {...voiceBundles};
   const states = Object.fromEntries(kinds.map(kind => [kind, bundleState(records[kind], server[kind])]));
@@ -775,19 +782,35 @@ async function getVoiceBundle() {
 }
 $('voice-get').addEventListener('click',getVoiceBundle);
 
-// ── 말로 묻기 (오프라인 음성 질문) ──
-// 새 진단·진단 결과 화면 아래 패널. 받아 적기·기능 선택 파일을 받아 뒀을 때만 보인다. 처음 누를 때 모델을 불러온다(수 초)
-let voiceModels = null, voiceSession = null, voiceLoading = null;
+// ── 음성 모드 (#voice, 오프라인 음성 질문) ──
+// 헤더의 음성 모드 버튼으로 들어가는 전체 화면 (온라인 VoiceMode.tsx). 진단 파일이 있으면 버튼이 보이고,
+// 받아 적기·기능 선택 파일이 없으면 받으러 가는 안내를 보인다. 처음 마이크를 누를 때 모델을 불러온다(수 초).
+// 카메라 미리보기에서 셔터를 누르거나 "찍어 줘"라고 하면 이 기기에서 진단하고 결과를 읽어 준다
+let voiceModels = null, voiceSession = null, voiceLoading = null, previewStream = null, voiceShotUrl;
 const voiceReady = () => VOICE_KINDS.every(kind => voiceRecords[kind]);
 function renderVoicePanel() {
   const ready = Boolean(session) && voiceReady();
+  $('voice-mode-open').hidden = !session;
+  $('voice-missing').hidden = ready;
   $('voice-panel').hidden = !ready;
   if (!ready && voiceSession) { voiceSession.stop(); }
 }
+function leaveVoiceMode() {
+  try { voiceSession?.stop(); } catch {}
+  stopPreview();
+}
+$('voice-mode-open').addEventListener('click', () => go('voice'));
+$('voice-exit').addEventListener('click', () => go(current ? 'result' : 'new'));
+$('voice-missing-go').addEventListener('click', () => { go('prepare'); $('voice-card').scrollIntoView({block:'center'}); });
+$('voice-detail').addEventListener('click', () => go('result'));
+// 온라인 음성 모드와 같은 상태 이름 (VoiceMode.tsx 의 음성 대기·듣고 있어요·생각하고 있어요·말하는 중)
 const VOICE_STATUS = {
-  off: '버튼을 누르고 질문하거나, 호출어를 켜고 "여보세요"라고 불러 주세요.', loading: '음성 모델을 불러오고 있어요. 잠시만 기다려 주세요.',
-  listening: '듣고 있어요. 말씀해 주세요.', waiting: '"여보세요" 또는 "크로피"라고 부르면 대답해요.',
-  thinking: '알아듣는 중이에요…', speaking: '대답하고 있어요.', error: '음성 질문을 처리하지 못했어요.',
+  off: '음성 대기', loading: '음성 모델을 불러오는 중', listening: '듣고 있어요', waiting: '"여보세요"라고 불러 주세요',
+  thinking: '생각하고 있어요', speaking: '말하는 중', error: '음성 질문을 처리하지 못했어요',
+};
+const VOICE_HINT = {
+  off: '마이크를 누르고 질문하거나, "부르면 시작"을 켜고 "여보세요"라고 불러 주세요.',
+  listening: '말을 마치면 자동으로 멈춰요.', waiting: '부르면 대답해요. 끄려면 "부르면 시작"을 다시 누르세요.',
 };
 function voiceState(name, detail) {
   $('voice-panel').dataset.state = name;
@@ -795,27 +818,43 @@ function voiceState(name, detail) {
   if (name === 'error') $('voice-error').textContent = detail || VOICE_STATUS.error;
   if (name === 'heard') { $('voice-error').textContent = ''; $('voice-heard').textContent = detail ? `“${detail}”` : ''; return; }
   if (name === 'speaking' && detail) $('voice-reply').textContent = detail;
-  $('voice-status').textContent = name === 'error' && detail ? detail : VOICE_STATUS[name] ?? '';
-  const on = voiceSession?.mode === 'wake';
-  $('voice-wake').setAttribute('aria-checked', String(on));
-  $('voice-ask').textContent = voiceSession?.mode === 'once' ? '그만 듣기' : '말로 묻기';
+  $('voice-status').textContent = VOICE_STATUS[name] ?? '';
+  if (VOICE_HINT[name]) $('voice-hint').textContent = VOICE_HINT[name];
+  $('voice-mascot').src = '/mascot/' + (name === 'thinking' || name === 'loading' ? 'analyzing' : 'greeting') + '.png';
+  $('voice-ask').setAttribute('aria-label', voiceSession?.mode === 'once' ? '음성 입력 종료' : '음성 입력 시작');
+  $('voice-ask').disabled = name === 'loading' || name === 'thinking';
 }
 // 기기 안 한국어 음성으로 읽는다. 끝나면 undefined, 소리를 내지 못하면 이유 문구를 돌려준다 (글은 화면에 남는다).
 // 3초 안에 시작하지 않으면 실패로 본다 (iOS 가 탭 밖 낭독을 막거나 안드로이드 엔진이 굳은 경우). 앱 speech.ts 와 같은 규칙
 const SPEAK_FAILED = '휴대폰에서 답을 소리로 읽지 못했어요. 화면을 한 번 누른 뒤 다시 물어봐 주세요.';
 const NO_KOREAN_VOICE = '이 기기에 한국어 오프라인 음성이 없어 글로만 보여 드려요. 설정의 텍스트 음성 변환(TTS)에서 한국어를 설치해 주세요.';
-function speakText(text) {
+// Chrome 은 getVoices() 가 처음엔 비어 있다가 voiceschanged 뒤에 채워진다. 화면을 열 때 깨워 두고, 비어 있으면 1초까지 기다린다.
+// 그래도 비어 있으면(iOS 홈 화면 앱) 음성을 고르지 않고 lang 만 줘서 기기 기본 한국어 음성에 맡긴다 (앱 speech.ts 와 같다)
+if ('speechSynthesis' in window) speechSynthesis.getVoices();
+async function koreanVoice() {
+  let voices = speechSynthesis.getVoices();
+  if (!voices.length) {
+    await new Promise(resolve => {
+      const done = () => { clearTimeout(timer); speechSynthesis.removeEventListener?.('voiceschanged', done); resolve(); };
+      const timer = setTimeout(done, 1000);
+      speechSynthesis.addEventListener?.('voiceschanged', done);
+    });
+    voices = speechSynthesis.getVoices();
+  }
+  return pickKoreanVoice(voices);
+}
+async function speakText(text) {
+  if (!('speechSynthesis' in window)) return NO_KOREAN_VOICE;
+  const voice = await koreanVoice();
+  if (voice === false) return NO_KOREAN_VOICE;
   return new Promise(resolve => {
-    if (!('speechSynthesis' in window)) { resolve(NO_KOREAN_VOICE); return; }
-    const voices = speechSynthesis.getVoices().filter(v => v.lang.replace('_', '-').toLowerCase().startsWith('ko'));
-    const voice = voices.find(v => v.localService) ?? (navigator.onLine ? voices[0] : undefined);
-    if (!voice) { resolve(NO_KOREAN_VOICE); return; }
     if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
     speechSynthesis.resume();
     let started = false;
     const timer = setTimeout(() => { if (!started) { speechSynthesis.cancel(); resolve(SPEAK_FAILED); } }, 3000);
     const speech = new SpeechSynthesisUtterance(text);
-    speech.voice = voice; speech.lang = 'ko-KR'; speech.rate = 0.9;
+    if (voice) speech.voice = voice;
+    speech.lang = 'ko-KR'; speech.rate = 0.9;
     speech.onstart = () => { started = true; };
     speech.onend = () => { clearTimeout(timer); resolve(); };
     speech.onerror = event => { clearTimeout(timer); resolve(started || ['interrupted', 'canceled'].includes(event.error) ? undefined : SPEAK_FAILED); };
@@ -833,59 +872,128 @@ function primeSpeech() {
   const silent = new SpeechSynthesisUtterance(''); silent.volume = 0; speechSynthesis.speak(silent);
 }
 addEventListener('pointerdown', primeSpeech, {capture:true});
-const resultSentence = r => isNotCrop(r) ? '작물 잎을 찾지 못했어요. 잎이 잘 보이게 다시 찍어 주세요.' : r.disease_name + '으로 분류됐어요. 확진을 뜻하지 않아요.';
+const resultSentence = r => isNotCrop(r) ? '작물 잎을 찾지 못했어요. 잎이 잘 보이게 다시 찍어 주세요.'
+  // 병해 이름에 작물이 없으면(예: 검은무늬병) 앞에 붙인다. "고추 정상"처럼 이미 있으면 그대로
+  : (r.predicted_crop && !String(r.disease_name).startsWith(r.predicted_crop) ? r.predicted_crop + ' ' : '') + r.disease_name + '으로 분류됐어요. 확진을 뜻하지 않아요.';
 const voiceHooks = {
   getScreen: () => ({
-    result: view === 'result' && current ? current.result : null,
-    uiStage: busy ? 'analyzing' : view === 'result' && current ? 'result' : selected ? 'photo_ready' : 'no_photo',
+    // 음성 모드에서 방금 찍은 결과도 결과 화면처럼 묻는다
+    result: (view === 'result' || view === 'voice') && current ? current.result : null,
+    uiStage: busy ? 'analyzing' : (view === 'result' || view === 'voice') && current ? 'result' : selected ? 'photo_ready' : 'no_photo',
   }),
-  // "찍어 줘": 카메라 창을 열어 3초 뒤 찍고, 이 기기에서 진단한 결과를 읽어 준다
+  // "찍어 줘": 음성 모드의 카메라 미리보기가 켜져 있으면 지금 장면을, 아니면 카메라 창을 열어 3초 뒤 찍는다.
+  // 이 기기에서 진단한 결과를 읽어 준다
   capture: async () => {
-    const file = await captureFromCamera().catch(() => null);
-    if (!file || busy) return null;
-    go('new'); selected = file; photoSource = 'camera'; savedId = null;
-    await diagnose();
-    return current && current.file === file ? resultSentence(current.result) : null;
+    const file = previewStream ? await grabFrame($('voice-video')) : await captureFromCamera().catch(() => null);
+    return diagnoseShot(file);
   },
 };
+// 찍은 사진을 이 기기에서 진단한다. 음성 모드에서는 화면을 옮기지 않고 결과 요약을 보인다
+async function diagnoseShot(file) {
+  if (!file || busy) return null;
+  if (view !== 'voice') go('new');
+  selected = file; photoSource = 'camera'; savedId = null;
+  await diagnose();
+  if (!(current && current.file === file)) return null;
+  renderVoiceResult();
+  return resultSentence(current.result);
+}
+function renderVoiceResult() {
+  if (!current) { $('voice-result').hidden = true; return; }
+  if (voiceShotUrl) URL.revokeObjectURL(voiceShotUrl);
+  voiceShotUrl = URL.createObjectURL(current.file);
+  $('voice-shot').src = voiceShotUrl;
+  $('voice-result-text').textContent = resultSentence(current.result);
+  $('voice-result').hidden = false;
+}
+function grabFrame(video) {
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  if (!canvas.width || !canvas.height) return Promise.resolve(null);
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  return new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92)).then(blob => blob ? new File([blob], `voice-${Date.now()}.jpg`, {type:'image/jpeg'}) : null);
+}
+// 음성 모드 카메라 미리보기. 권한 창이 뜨므로 버튼으로 켠다 (온라인 음성 모드도 처음엔 꺼져 있다)
+async function startPreview() {
+  if (previewStream) return;
+  previewStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment', width:{ideal:1920}}});
+  const video = $('voice-video');
+  video.srcObject = previewStream; await video.play().catch(() => {});
+  $('voice-camera').dataset.on = 'true'; $('voice-camera-on').hidden = true; $('voice-shutter').hidden = false;
+}
+function stopPreview() {
+  previewStream?.getTracks().forEach(t => t.stop()); previewStream = null;
+  $('voice-video').srcObject = null;
+  $('voice-camera').dataset.on = 'false'; $('voice-camera-on').hidden = false; $('voice-shutter').hidden = true;
+}
+$('voice-camera-on').addEventListener('click', () => {
+  startPreview().catch(error => { voiceState('error', error?.name === 'NotAllowedError' ? '카메라 권한을 허용해 주세요.' : '카메라를 켜지 못했어요.'); });
+});
+$('voice-shutter').addEventListener('click', async () => {
+  if (busy) return;
+  $('voice-shutter').disabled = true; voiceState('thinking');
+  try {
+    const sentence = await diagnoseShot(await grabFrame($('voice-video')));
+    if (!sentence) { voiceState('error', '사진을 진단하지 못했어요. 다시 찍어 주세요.'); return; }
+    // 질문 흐름처럼 읽는 동안 마이크를 놓는다 (세션이 없으면 바로 읽는다)
+    if (voiceSession) await voiceSession.announce(sentence);
+    else { voiceState('speaking', sentence); const failure = await speakText(sentence); voiceState(failure ? 'error' : 'off', failure); }
+  } finally { $('voice-shutter').disabled = false; }
+});
 async function captureFromCamera() {
-  const dialog = $('voice-camera'), video = $('voice-camera-video');
+  const dialog = $('capture-dialog'), video = $('capture-video');
   const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment', width:{ideal:1920}}});
   try {
     video.srcObject = stream; dialog.showModal(); await video.play();
-    for (const n of [3, 2, 1]) { $('voice-camera-count').textContent = String(n); await new Promise(r => setTimeout(r, 1000)); }
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
-    return blob ? new File([blob], `voice-${Date.now()}.jpg`, {type:'image/jpeg'}) : null;
+    for (const n of [3, 2, 1]) { $('capture-count').textContent = String(n); await new Promise(r => setTimeout(r, 1000)); }
+    return await grabFrame(video);
   } finally { stream.getTracks().forEach(t => t.stop()); video.srcObject = null; dialog.close(); }
+}
+// 온라인 useVoiceConversation 의 WAKE_KEY·CONTINUOUS_KEY 와 같은 저장값이다 (같은 주소라 설정이 이어진다)
+const WAKE_KEY = 'cropy:voice-wake', CONTINUOUS_KEY = 'cropy:voice-continuous';
+function voicePref(key) { try { return localStorage.getItem(key) !== 'off'; } catch { return true; } }
+function setVoicePref(key, on) { try { localStorage.setItem(key, on ? 'on' : 'off'); } catch {} }
+function renderVoicePrefs() {
+  $('voice-wake').setAttribute('aria-checked', String(voicePref(WAKE_KEY)));
+  $('voice-continuous').setAttribute('aria-checked', String(voicePref(CONTINUOUS_KEY)));
 }
 async function ensureVoice() {
   if (voiceSession) return voiceSession;
   voiceLoading ??= (async () => {
     voiceState('loading');
     voiceModels ??= await loadVoiceModels(ort, await caches.open(FUNCTION_CACHE), voiceRecords);
-    voiceSession = createVoiceSession({models:voiceModels, hooks:voiceHooks, ui:{state:voiceState}, speak:speakText});
+    voiceSession = createVoiceSession({models:voiceModels, hooks:voiceHooks, ui:{state:voiceState}, speak:speakText,
+      wake:voicePref(WAKE_KEY), continuous:voicePref(CONTINUOUS_KEY)});
     voiceState('off');
     return voiceSession;
   })().finally(() => { voiceLoading = null; });
   return voiceLoading;
 }
+const micError = error => voiceState('error', error?.name === 'NotAllowedError' ? '마이크 권한을 허용해 주세요.' : message(error));
+// 마이크 버튼: 듣는 중이면 그만 듣고 대기로, 아니면 질문을 듣는다
 $('voice-ask').addEventListener('click', async () => {
   try {
     const voice = await ensureVoice();
-    if (voice.mode === 'once') { voice.stop(); return; }
-    if (voice.mode === 'wake') voice.stop();
+    if (voice.mode === 'once') { await voice.idle(); return; }
     await voice.listenOnce();
-  } catch (error) { voiceState('error', error?.name === 'NotAllowedError' ? '마이크 권한을 허용해 주세요.' : message(error)); }
+  } catch (error) { micError(error); }
 });
+// 부르면 시작·연속 대화 스위치. 온라인 음성 모드와 같은 저장값(기본 켜짐)을 쓴다
 $('voice-wake').addEventListener('click', async () => {
-  try {
-    const voice = await ensureVoice();
-    await voice.setWake(voice.mode !== 'wake');
-  } catch (error) { voiceState('error', error?.name === 'NotAllowedError' ? '마이크 권한을 허용해 주세요.' : message(error)); }
+  const on = !voicePref(WAKE_KEY); setVoicePref(WAKE_KEY, on); renderVoicePrefs();
+  try { if (voiceSession || on) await (await ensureVoice()).setWake(on); } catch (error) { micError(error); }
 });
+$('voice-continuous').addEventListener('click', () => {
+  const on = !voicePref(CONTINUOUS_KEY); setVoicePref(CONTINUOUS_KEY, on); renderVoicePrefs();
+  voiceSession?.setContinuous(on);
+});
+// 음성 모드에 들어오면 모델을 불러 두고, 부르면 시작이 켜져 있으면 바로 호출어를 기다린다
+async function enterVoiceMode() {
+  renderVoicePrefs();
+  if (!(session && voiceReady())) return;
+  try { const voice = await ensureVoice(); if (view === 'voice' && voice.mode === 'off') await voice.idle(); }
+  catch (error) { micError(error); }
+}
 addEventListener('online',()=>{renderVoiceBundle().catch(()=>{});});
 // ── 연결 상태와 온라인 전환 ──
 // 연결이 없으면 온라인 전환·다운로드 안내·다시 받기 버튼을 막는다. 연결되면 버튼을 켜고,
@@ -913,7 +1021,7 @@ function renderConnection() {
 }
 // 하던 일: 분석·파일 받기 중, 진단 전 고른 사진, 음성 질문이 켜져 있음, 열린 창
 const workInProgress = () => busy || voiceBusy || Boolean(selected) || Boolean(voiceSession && voiceSession.mode !== 'off')
-  || $('update-dialog').open || $('voice-camera').open;
+  || $('update-dialog').open || $('capture-dialog').open || Boolean(previewStream);
 async function reachable() {
   if (!navigator.onLine) return false;
   try { const res = await fetch('/', {method:'HEAD', cache:'no-store', signal:AbortSignal.timeout(4000)}); return res.status < 500; }
@@ -921,7 +1029,7 @@ async function reachable() {
 }
 function goOnline() {
   if (!online) return;
-  try { voiceSession?.stop(); } catch {}
+  try { leaveVoiceMode(); } catch {}
   location.href = ONLINE_HOME;
 }
 async function checkConnection() {

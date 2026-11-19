@@ -1,7 +1,8 @@
 // 오프라인 화면의 음성 질문 — 인터넷 없이 기기 안에서 끝까지 돈다.
 //   마이크 → 말 끝 감지(에너지) → 받아 적기(voice-stt) → 용어 보정(voice-lexicon) → 호출어·명령(voice-intents)
 //   → 기능 선택(voice-clf, 휴대폰 분류기) → 답변 문장(voice-handlers, 기기에 저장된 진단 결과) → 기기 안 음성으로 읽기
-// 부르는 방식은 두 가지다: "말로 묻기" 버튼(한 번 듣고 답함), "호출어" 켜기("여보세요"·"크로피"로 부르면 듣고 답한 뒤 다시 기다림).
+// 온라인 음성 모드와 같게 마이크 버튼(한 번 듣고 답함), "부르면 시작"(대기 중 "여보세요"·"크로피"로 부르면 듣고 답함),
+// "연속 대화"(답을 다 읽으면 버튼 없이 다시 듣고, 말이 없는 일이 두 번 이어지면 대기로 돌아감)가 있다.
 // 모델 파일은 음성 질문 파일 카드에서 받아 둔 묶음(IndexedDB assets 'fn:stt'·'fn:mobile_clf', Cache Storage)을 쓴다.
 
 import { createRecognizer, parseTokens, normalizeTranscript, resample } from './voice-stt.mjs';
@@ -14,6 +15,8 @@ export const VOICE_KINDS = ['stt', 'mobile_clf'];
 export const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 const FRAME = 2048;                 // ScriptProcessor 버퍼 (48kHz 에서 약 43ms)
 const START_FRAMES = 3, END_SILENCE = 0.8, MAX_SECONDS = 8, MIN_SECONDS = 0.35, PREROLL = 0.3;
+// 질문을 듣는 중 말이 없으면 그만 듣는다 (앱 useVoiceConversation 의 NO_SPEECH_MS·MAX_SILENT_ROUNDS 와 같다)
+const NO_SPEECH_MS = 8000, MAX_SILENT_ROUNDS = 2;
 
 /** 말소리 구간 나누기. 소음 바닥을 따라가며 그보다 충분히 크면 말소리로 본다 */
 export class Segmenter {
@@ -91,9 +94,11 @@ export async function answerUtterance(models, raw, hooks) {
   }
 }
 
-/** 마이크와 대화 흐름. ui: {state(name, detail)}, speak(text) → Promise (끝날 때 resolve) */
-export function createVoiceSession({ models, hooks, ui, speak }) {
+/** 마이크와 대화 흐름. ui: {state(name, detail)}, speak(text) → Promise (끝날 때 resolve).
+ *  wake: 대기 중 호출어를 들을지, continuous: 답한 뒤 다시 들을지 (앱 음성 모드의 두 스위치) */
+export function createVoiceSession({ models, hooks, ui, speak, wake = false, continuous = false }) {
   let stream, context, node, segmenter, mode = 'off', busy = false, muted = false, pending = null;
+  let silentTimer = null, silentRounds = 0, wantListen = false;
 
   async function openMic() {
     if (stream) return;
@@ -106,6 +111,7 @@ export function createVoiceSession({ models, hooks, ui, speak }) {
     node.onaudioprocess = event => {
       if (muted || busy || mode === 'off') return;
       const segment = segmenter.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+      if (segmenter.speaking) clearSilence();
       if (segment) onSegment(resample(segment, context.sampleRate));
     };
     source.connect(node); node.connect(context.destination);
@@ -149,9 +155,11 @@ export function createVoiceSession({ models, hooks, ui, speak }) {
       await respond(raw);
     } catch (error) {
       ui.state('error', error?.message || '음성 질문을 처리하지 못했어요.');
+      if (mode !== 'off') await idle();
     } finally {
       busy = false;
-      if (mode === 'once' && !pending) stop();
+      // 받아 적는 중에 마이크 버튼을 눌렀으면 끝난 뒤 바로 질문을 듣는다
+      if (wantListen && mode !== 'off') { wantListen = false; await listen().catch(() => {}); }
       else if (mode === 'wake' && !pending) ui.state('waiting');
     }
   }
@@ -159,16 +167,51 @@ export function createVoiceSession({ models, hooks, ui, speak }) {
     const out = await answerUtterance(models, raw, hooks);
     ui.state('heard', out.text);
     await say(out.reply);
-    if (out.kind === 'exit') stop();
+    if (out.kind === 'exit') { stop(); return; }
+    silentRounds = 0;
+    // 연속 대화면 버튼 없이 다시 듣고, 아니면 대기로 돌아간다
+    if (continuous && mode !== 'off') await listen(); else await idle();
+  }
+  // 질문 듣기. 말이 없으면 NO_SPEECH_MS 뒤 그만 듣고, 연속 대화에서 두 번 이어지면 대기로 돌아간다
+  async function listen() {
+    mode = 'once'; pending = 'question';
+    await openMic(); segmenter.reset(); ui.state('listening');
+    clearSilence();
+    silentTimer = setTimeout(() => {
+      silentTimer = null;
+      if (mode !== 'once' || busy || segmenter?.speaking) return;
+      silentRounds += 1;
+      if (continuous && silentRounds < MAX_SILENT_ROUNDS) { listen().catch(() => {}); return; }
+      silentRounds = 0; idle().catch(() => {});
+    }, NO_SPEECH_MS);
+  }
+  function clearSilence() { if (silentTimer) { clearTimeout(silentTimer); silentTimer = null; } }
+  // 대기: 부르면 시작이 켜져 있으면 호출어를 듣고, 꺼져 있으면 마이크를 끈다
+  async function idle() {
+    clearSilence(); pending = null;
+    if (!wake) { stop(); return; }
+    mode = 'wake'; await openMic(); segmenter.reset(); ui.state('waiting');
   }
 
-  function stop() { mode = 'off'; pending = null; closeMic(); ui.state('off'); }
+  function stop() { clearSilence(); wantListen = false; mode = 'off'; pending = null; closeMic(); ui.state('off'); }
   return {
     get mode() { return mode; },
-    /** 버튼: 한 번 듣고 답한다 */
-    async listenOnce() { if (busy) return; mode = 'once'; pending = 'question'; await openMic(); segmenter.reset(); ui.state('listening'); },
-    /** 호출어 켜기·끄기 */
-    async setWake(on) { if (!on) return stop(); mode = 'wake'; pending = null; await openMic(); segmenter.reset(); ui.state('waiting'); },
+    get wake() { return wake; },
+    get continuous() { return continuous; },
+    /** 마이크 버튼: 질문을 듣는다 (듣는 중에 누르면 그만 듣고 대기로) */
+    async listenOnce() { silentRounds = 0; if (busy) { wantListen = true; ui.state('thinking'); return; } await listen(); },
+    /** 듣기를 그만두고 대기로 (부르면 시작이 켜져 있으면 호출어를 다시 기다린다) */
+    async idle() { silentRounds = 0; await idle(); },
+    /** 부르면 시작 켜기·끄기. 듣거나 말하는 중이 아니면 바로 대기 상태를 바꾼다 */
+    async setWake(on) { wake = on; if (mode !== 'once' && !busy) await idle(); },
+    /** 연속 대화 켜기·끄기 */
+    setContinuous(on) { continuous = on; },
     stop,
+    /** 셔터로 찍은 진단 결과처럼 질문 없이 읽을 문장. 휴대폰은 읽는 동안 마이크를 놓고, 다 읽으면 하던 상태로 돌아간다 */
+    async announce(text) {
+      if (busy) return;
+      await say(text);
+      ui.state(mode === 'wake' ? 'waiting' : mode === 'once' ? 'listening' : 'off');
+    },
   };
 }

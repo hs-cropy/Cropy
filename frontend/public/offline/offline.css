@@ -414,16 +414,46 @@ body:has(#update-dialog[open]) [data-view="prepare"] { visibility: hidden; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
-/* 말로 묻기 (오프라인 음성 질문) */
-.voice-panel .voice-heard { font-weight: 700; color: var(--cropy-text, #3D2F1A); }
-.voice-panel .voice-heard:empty, .voice-panel .voice-reply:empty { display: none; }
-.voice-panel .voice-reply { white-space: pre-line; line-height: 1.6; }
-.voice-panel[data-state="listening"] #voice-ask, .voice-panel[data-state="waiting"] #voice-wake { box-shadow: 0 0 0 3px var(--cropy-green-600); }
-.switch-button[aria-checked="true"] { background: var(--cropy-green-600); color: #fff; border-color: var(--cropy-green-600); }
+/* 음성 모드 (#voice, 온라인 VoiceMode.tsx). 헤더 메뉴·화면 머리·연결 바·하단 내비를 숨긴 전체 화면이다 */
+.voice-entry { display: inline-flex; align-items: center; justify-content: center; gap: .375rem; flex-shrink: 0; min-width: 2.75rem; min-height: 2.75rem; padding: 0 .625rem; border-radius: 999px; }
+.voice-entry svg { width: 1.25rem; height: 1.25rem; }
+body[data-view="voice"] .header-nav, body[data-view="voice"] #voice-mode-open, body[data-view="voice"] .page-head,
+body[data-view="voice"] .conn-bar, body[data-view="voice"] .nav { display: none; }
+body[data-view="voice"] .with-nav { padding-bottom: 1.5rem; }
+.vm-top { display: flex; justify-content: flex-end; margin-bottom: .5rem; }
+.vm-exit { display: inline-flex; align-items: center; gap: .25rem; width: auto; min-height: 2.75rem; padding: 0 .875rem; font-size: .875rem; }
+.vm-exit svg { width: 1.25rem; height: 1.25rem; }
+.vm-main { display: flex; flex-direction: column; align-items: stretch; gap: .75rem; }
+.vm-head { display: flex; align-items: center; gap: .75rem; }
+.vm-mascot { width: 3.5rem; height: 3.5rem; }
+.vm-chip { margin: 0; padding: .25rem .75rem; border-radius: 999px; background: var(--cropy-green-50); color: var(--cropy-green-600); font-size: .875rem; font-weight: 700; }
+.vm-camera { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 1rem; background: #2a2a2a; }
+.vm-camera video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.vm-camera[data-on="false"] video { display: none; }
+.vm-camera #voice-camera-on { position: relative; width: auto; padding: 0 1.25rem; }
+.vm-shutter { position: absolute; bottom: .875rem; left: 50%; width: 3.5rem; height: 3.5rem; min-height: 0; padding: 0; transform: translateX(-50%); border: 4px solid #fff; border-radius: 50%; background: rgba(255, 255, 255, .35); }
+.vm-shutter:hover, .vm-shutter:active { background: rgba(255, 255, 255, .6); }
+.vm-tip, .vm-hint { margin: 0; text-align: center; font-size: .8125rem; }
+.vm-result { display: flex; align-items: center; gap: .75rem; padding: .75rem; border: 1px solid var(--cropy-border); border-radius: .875rem; }
+.vm-result img { width: 3rem; height: 3rem; flex-shrink: 0; border-radius: .5rem; object-fit: cover; }
+.vm-result p { flex: 1; margin: 0; font-size: .9375rem; font-weight: 600; line-height: 1.4; }
+.vm-result .text-button { width: auto; flex-shrink: 0; }
+.voice-heard { margin: 0; text-align: right; font-weight: 700; }
+.voice-heard:empty { display: none; }
+.vm-bubble { padding: .875rem 1rem; border-radius: 1rem; background: var(--cropy-green-50); }
+.vm-bubble:has(.voice-reply:empty) { display: none; }
+.vm-who { margin: 0 0 .25rem; color: var(--cropy-green-600); font-size: .75rem; font-weight: 700; }
+.voice-reply { margin: 0; white-space: pre-line; line-height: 1.6; }
+.voice-error { margin: 0; color: var(--cropy-status-attention); font-size: .875rem; }
+.voice-error:empty { display: none; }
+.vm-mic { align-self: center; width: 4.5rem; height: 4.5rem; min-height: 0; padding: 0; border-radius: 50%; }
+.vm-mic svg { width: 2rem; height: 2rem; }
+.vm-main[data-state="listening"] .vm-mic { box-shadow: 0 0 0 6px var(--cropy-green-50); background: var(--cropy-action-pressed); }
+.vm-switches { display: flex; justify-content: center; gap: .5rem; }
+.vm-switches .switch { white-space: nowrap; }
 .voice-camera video { width: min(80vw, 28rem); border-radius: 1rem; background: #000; }
 .voice-camera-count { font-size: 2.5rem; font-weight: 800; text-align: center; margin: .5rem 0 0; }
-.voice-panel .voice-error { color: var(--cropy-danger, #C2412D); }
-.voice-panel .voice-error:empty { display: none; }
+@media (min-width: 1024px) { .voice-mode { width: 30rem; margin: 0 auto; } }
 
 /* 연결 상태 바 (오프라인 화면 맨 위). 연결이 없으면 회색 점, 연결되면 초록 점과 함께 전환 버튼이 켜진다 */
 .conn-bar { display: flex; align-items: center; gap: .75rem; margin: 0 0 1rem; padding: .625rem .75rem .625rem 1rem; border: 1px solid var(--cropy-border); border-radius: .75rem; background: var(--cropy-surface); }

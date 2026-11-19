@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gradeOf, isNotCrop, resultTimeSentence, recordTime } from '../public/offline/core.mjs';
+import { gradeOf, isNotCrop, resultTimeSentence, recordTime, pickKoreanVoice } from '../public/offline/core.mjs';
 import { softmax, fuse, summarize, installView, isDesktopDevice, DESKTOP_VIEWS, failurePhase, viewFromHash, recordsNotice, updateAvailable, syncStateOf } from '../public/offline/core.mjs';
 const bundle = { model_version: 'm1', preprocessing_version: 'p1', version: 'v1',
   diseases: [{model_class_id: 2, name: '검은무늬병', crop_type: '무', category:'disease'},
@@ -182,4 +182,21 @@ test('result grade and time wording match the online result screen', () => {
   assert.equal(resultTimeSentence(undefined), null);
   assert.equal(recordTime('2026-10-22T09:05:00'), '2026.10.22 · 09:05');
   assert.equal(recordTime(''), null);
+});
+
+test('voice mode has its own hash view', () => {
+  assert.equal(viewFromHash('#voice'), 'voice');
+  assert.equal(viewFromHash('#unknown'), 'prepare');
+});
+test('pickKoreanVoice prefers an on-device Korean voice and falls back without refusing', () => {
+  const ko = { lang: 'ko-KR', localService: false, name: 'net' }, koLocal = { lang: 'ko_KR', localService: true, name: 'local' };
+  const en = { lang: 'en-US', localService: true, name: 'en' };
+  assert.equal(pickKoreanVoice([en, ko, koLocal]), koLocal);
+  // 기기 안 음성이 없어도 한국어 음성이 있으면 읽는다 (예전에는 오프라인이면 거절했다)
+  assert.equal(pickKoreanVoice([en, ko]), ko);
+  // 목록이 비어 있으면(iOS 홈 화면 앱, Chrome 첫 호출) lang 만 주고 읽는다
+  assert.equal(pickKoreanVoice([]), null);
+  assert.equal(pickKoreanVoice(undefined), null);
+  // 목록은 있는데 한국어가 없을 때만 한국어 음성 없음
+  assert.equal(pickKoreanVoice([en]), false);
 });
