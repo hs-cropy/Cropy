@@ -817,7 +817,10 @@ function voiceState(name, detail) {
   // 소리를 못 냈다는 등의 오류는 다음 질문을 들을 때까지 따로 남겨 둔다 (상태 문구는 곧 '기다리는 중'으로 바뀐다)
   if (name === 'error') $('voice-error').textContent = detail || VOICE_STATUS.error;
   if (name === 'heard') { $('voice-error').textContent = ''; $('voice-heard').textContent = detail ? `“${detail}”` : ''; return; }
-  if (name === 'speaking' && detail) $('voice-reply').textContent = detail;
+  if (name === 'speaking' && detail) { $('voice-reply').textContent = detail; lastReply = detail; $('voice-replay').hidden = true; }
+  // 아이폰은 탭 없이 시작한 낭독을 막는다. 그때는 누르면 바로 읽는 답 듣기 버튼을 보인다
+  if (name === 'error') $('voice-replay').hidden = !(lastReply && String(detail || '').startsWith(SPEAK_FAILED));
+  if (name === 'listening' || name === 'thinking') $('voice-replay').hidden = true;
   $('voice-status').textContent = VOICE_STATUS[name] ?? '';
   if (VOICE_HINT[name]) $('voice-hint').textContent = VOICE_HINT[name];
   $('voice-mascot').src = '/mascot/' + (name === 'thinking' || name === 'loading' ? 'analyzing' : 'greeting') + '.png';
@@ -826,7 +829,9 @@ function voiceState(name, detail) {
 }
 // 기기 안 한국어 음성으로 읽는다. 끝나면 undefined, 소리를 내지 못하면 이유 문구를 돌려준다 (글은 화면에 남는다).
 // 3초 안에 시작하지 않으면 실패로 본다 (iOS 가 탭 밖 낭독을 막거나 안드로이드 엔진이 굳은 경우). 앱 speech.ts 와 같은 규칙
-const SPEAK_FAILED = '휴대폰에서 답을 소리로 읽지 못했어요. 화면을 한 번 누른 뒤 다시 물어봐 주세요.';
+const SPEAK_FAILED = '휴대폰에서 답을 소리로 읽지 못했어요. 아래 "답 듣기"를 눌러 주세요.';
+const IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+let lastReply = '';
 const NO_KOREAN_VOICE = '이 기기에 한국어 오프라인 음성이 없어 글로만 보여 드려요. 설정의 텍스트 음성 변환(TTS)에서 한국어를 설치해 주세요.';
 // Chrome 은 getVoices() 가 처음엔 비어 있다가 voiceschanged 뒤에 채워진다. 화면을 열 때 깨워 두고, 비어 있으면 1초까지 기다린다.
 // 그래도 비어 있으면(iOS 홈 화면 앱) 음성을 고르지 않고 lang 만 줘서 기기 기본 한국어 음성에 맡긴다 (앱 speech.ts 와 같다)
@@ -857,29 +862,25 @@ async function speakText(text) {
     const speech = new SpeechSynthesisUtterance(text);
     if (voice) speech.voice = voice;
     speech.lang = 'ko-KR'; speech.rate = 0.9;
-    speech.onstart = () => { started = true; speechPrimed = true; };
+    speech.onstart = () => { started = true; };
     speech.onend = () => { clearTimeout(timer); resolve(); };
     speech.onerror = event => { clearTimeout(timer); resolve(started || ['interrupted', 'canceled'].includes(event.error) ? undefined : event.error || 'error'); };
     speechSynthesis.speak(speech);
   });
   let reason = await once();
-  if (reason === 'no-start') { await new Promise(r => setTimeout(r, 300)); reason = await once(); }
+  if (reason === 'no-start' && !IOS) { await new Promise(r => setTimeout(r, 300)); reason = await once(); }
   if (!reason) return undefined;
   return `${SPEAK_FAILED} (${reason} · 음성 ${speechSynthesis.getVoices().length}개${voice ? '' : ' · 기본 음성'})`;
 }
 // 탭할 때마다 낭독을 깨운다. 호출어 대기는 탭 없이 답을 읽으므로, iOS 는 탭 안에서 한 번 소리를 내 둬야 하고
 // 안드로이드 Chrome 은 멈춘 엔진을 resume 으로 풀어야 한다
-// iOS 는 빈 문장을 읽지 않고 넘겨 깨우기가 되지 않을 수 있어 짧은 글자를 소리 없이 읽는다.
-// 실제로 시작(onstart)해야 깨운 것으로 보고, 아니면 다음 탭에서 다시 깨운다
 let speechPrimed = false;
 function primeSpeech() {
   if (!('speechSynthesis' in window)) return;
   speechSynthesis.resume();
-  if (speechPrimed || speechSynthesis.speaking || speechSynthesis.pending) return;
-  const silent = new SpeechSynthesisUtterance('.');
-  silent.volume = 0; silent.rate = 2; silent.lang = 'ko-KR';
-  silent.onstart = () => { speechPrimed = true; };
-  speechSynthesis.speak(silent);
+  if (speechPrimed) return;
+  speechPrimed = true;
+  const silent = new SpeechSynthesisUtterance(''); silent.volume = 0; speechSynthesis.speak(silent);
 }
 addEventListener('pointerdown', primeSpeech, {capture:true});
 const resultSentence = r => isNotCrop(r) ? '작물 잎을 찾지 못했어요. 잎이 잘 보이게 다시 찍어 주세요.'
@@ -979,6 +980,19 @@ async function ensureVoice() {
   })().finally(() => { voiceLoading = null; });
   return voiceLoading;
 }
+$('voice-replay').addEventListener('click', () => {
+  if (!lastReply || !('speechSynthesis' in window)) return;
+  try { voiceSession?.stop(); } catch {}
+  speechSynthesis.cancel();
+  const speech = new SpeechSynthesisUtterance(lastReply);
+  const voice = pickKoreanVoice(speechSynthesis.getVoices());
+  if (voice) speech.voice = voice;
+  speech.lang = 'ko-KR'; speech.rate = 0.9;
+  speech.onend = () => { voiceSession?.idle().catch(() => {}); };
+  speechSynthesis.speak(speech);
+  $('voice-replay').hidden = true; $('voice-error').textContent = '';
+  $('voice-panel').dataset.state = 'speaking'; $('voice-status').textContent = VOICE_STATUS.speaking;
+});
 const micError = error => voiceState('error', error?.name === 'NotAllowedError' ? '마이크 권한을 허용해 주세요.' : message(error));
 // 마이크 버튼: 듣는 중이면 그만 듣고 대기로, 아니면 질문을 듣는다
 $('voice-ask').addEventListener('click', async () => {
