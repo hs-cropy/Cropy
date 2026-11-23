@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useInstalledApp } from "@/hooks/useInstalledApp";
 import styles from "./SplashScreen.module.css";
 
 const TAGLINE = "작물의 오늘을 살피고, 건강한 내일을 키워요";
@@ -11,6 +12,7 @@ const TAGLINE_CHARS = Array.from(TAGLINE);
 export function SplashScreen() {
   const [typedCount, setTypedCount] = useState(0);
   const [isTypingComplete, setIsTypingComplete] = useState(false);
+  const installed = useInstalledApp();
 
   useEffect(() => {
     // 애니메이션 감소 설정이 켜져 있으면 문구 바로 표시
@@ -116,10 +118,13 @@ export function SplashScreen() {
           시작하기
         </Link>
 
-        {/* 설치 안내는 인터넷 없이도 열리는 정적 페이지라 Link 가 아닌 전체 페이지 이동이다 */}
-        <a href="/offline/install.html" className={styles.installButton}>
-          앱 설치하기
-        </a>
+        {/* 설치 안내는 인터넷 없이도 열리는 정적 페이지라 Link 가 아닌 전체 페이지 이동이다.
+            이미 설치한 앱으로 열었으면 보이지 않는다 (하이드레이션 전에는 CSS 미디어 쿼리가 숨긴다) */}
+        {!installed && (
+          <a href="/offline/install.html" className={styles.installButton}>
+            앱 설치하기
+          </a>
+        )}
       </div>
     </main>
   );
