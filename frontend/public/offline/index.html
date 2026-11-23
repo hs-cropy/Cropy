@@ -142,6 +142,8 @@
 <p id="voice-heard" class="voice-heard"></p>
 <div class="vm-bubble"><p class="vm-who">크로피</p><p id="voice-reply" class="voice-reply" aria-live="polite"></p></div>
 <p id="voice-error" class="voice-error" role="alert"></p>
+<!-- 아이폰처럼 탭 없이 시작한 낭독을 막는 기기에서 자동 낭독이 실패하면 보인다. 누르면 바로 읽는다 -->
+<button id="voice-replay" class="vm-replay" type="button" hidden>답 듣기</button>
 <button id="voice-ask" class="vm-mic" type="button" aria-label="음성 입력 시작"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"><path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></g></svg></button>
 <p class="muted vm-hint" id="voice-hint">마이크를 누르고 질문하거나, "부르면 시작"을 켜고 "여보세요"라고 불러 주세요.</p>
 <div class="vm-switches"><button id="voice-wake" class="switch" role="switch" aria-checked="true" aria-label="크로피라고 부르면 시작" type="button"><span>부르면 시작</span><span class="track" aria-hidden="true"></span></button><button id="voice-continuous" class="switch" role="switch" aria-checked="true" aria-label="연속 대화" type="button"><span>연속 대화</span><span class="track" aria-hidden="true"></span></button></div>
