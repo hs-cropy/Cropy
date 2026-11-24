@@ -1,0 +1,13 @@
+[Unit]
+Description=Cropy RKLLM function selector (NPU, :8300)
+
+[Service]
+WorkingDirectory=%h/cropy_qwen
+ExecStart=/usr/bin/python3 -u cropy_rkllm_select_server.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:%h/cropy/logs/selector.log
+StandardError=inherit
+
+[Install]
+WantedBy=default.target

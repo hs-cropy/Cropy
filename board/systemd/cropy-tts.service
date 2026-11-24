@@ -1,0 +1,15 @@
+[Unit]
+Description=Cropy TTS MeloTTS (:8100)
+
+[Service]
+WorkingDirectory=%h/cropy/tts
+Environment=HF_HUB_OFFLINE=1
+ExecStart=%h/cropy/tts/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8100
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=600
+StandardOutput=append:%h/cropy/logs/tts.log
+StandardError=inherit
+
+[Install]
+WantedBy=default.target

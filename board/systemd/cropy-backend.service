@@ -1,0 +1,15 @@
+[Unit]
+Description=Cropy backend FastAPI + CNN (:8000)
+After=cropy-stt.service cropy-selector.service cropy-tts.service
+
+[Service]
+WorkingDirectory=%h/cropy/backend
+EnvironmentFile=%h/cropy/board.env
+ExecStart=%h/cropy/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:%h/cropy/logs/backend.log
+StandardError=inherit
+
+[Install]
+WantedBy=default.target

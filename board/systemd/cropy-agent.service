@@ -1,0 +1,17 @@
+[Unit]
+Description=Cropy voice agent (wake word -> capture/diagnose -> answer -> speaker)
+After=cropy-backend.service
+Wants=cropy-backend.service cropy-stt.service cropy-selector.service cropy-tts.service
+
+[Service]
+WorkingDirectory=%h/cropy
+EnvironmentFile=-%h/cropy/agent.env
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 120); do curl -fs http://127.0.0.1:8000/api/v1/ready >/dev/null && exit 0; sleep 2; done; exit 1'
+ExecStart=%h/cropy-board-demo/stt/.venv/bin/python -u %h/cropy/board/agent/cropy_agent.py
+Restart=always
+RestartSec=5
+StandardOutput=append:%h/cropy/logs/agent.log
+StandardError=inherit
+
+[Install]
+WantedBy=default.target
