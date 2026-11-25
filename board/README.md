@@ -65,7 +65,21 @@ for u in 8300/health 8200/health 8100/health 8000/api/v1/ready; do curl -s local
 ```
 
 에이전트 설정은 `~/cropy/agent.env`(없어도 됨)에 환경변수로 둔다. 주요 값: `CROPY_MIC`·`CROPY_SPEAKER`
-(기본 `plughw:3,0` = 보드 내장 ES8388), `CROPY_CAMERA`(기본 `/dev/video0`), `CROPY_CAPTURE_CMD`, `CROPY_WAKE_WORDS`.
+(기본 `plughw:3,0` = 보드 내장 ES8388), `CROPY_CAMERA`(비우면 자동 선택), `CROPY_CAPTURE_CMD`, `CROPY_WAKE_WORDS`.
+
+카메라만 점검 (에이전트가 카메라를 잡고 있지 않게 먼저 멈춘다):
+
+```bash
+systemctl --user stop cropy-agent
+v4l2-ctl --list-devices; ls -l /dev/v4l/by-id/
+cd ~/cropy && CROPY_CAMERA_TEST=1 ~/cropy-board-demo/stt/.venv/bin/python board/agent/cropy_agent.py
+# 성공하면 찍힌 jpg 경로가 나온다. 장치별 형식(MJPG/YUYV)과 시도마다의 실패 이유가 로그에 찍힌다
+systemctl --user start cropy-agent
+```
+
+`CROPY_CAMERA`를 비우면 `/dev/v4l/by-id/*-video-index0` → `/dev/video*` 중 MJPG를 내는 장치를 고른다.
+RK3588은 보드 자체 영상 장치가 앞 번호를 차지할 수 있고, 웹캠 하나가 영상·메타데이터 두 노드를 만들어
+`/dev/video0` 고정은 틀리기 쉽다. 특정 장치를 쓰려면 `~/cropy/agent.env`에 `CROPY_CAMERA=/dev/v4l/by-id/...`.
 
 마이크 없이 흐름만 확인:
 
