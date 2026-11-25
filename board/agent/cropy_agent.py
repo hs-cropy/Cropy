@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import glob
 import io
 import json
 import logging
@@ -59,7 +60,9 @@ class Config:
     device_cookie: str = _env("CROPY_DEVICE_COOKIE", "orangepi_board_agent_000000000000000")
     mic: str = _env("CROPY_MIC", "plughw:3,0")          # arecord -l 로 확인 (ES8388 내장 = card 3)
     speaker: str = _env("CROPY_SPEAKER", "plughw:3,0")  # aplay -l 로 확인
-    camera: str = _env("CROPY_CAMERA", "/dev/video0")
+    # 비우면 find_camera()가 USB 웹캠을 찾는다. RK3588은 보드 자체 영상 장치가 앞 번호를 차지할 수 있고,
+    # 웹캠 하나가 videoN(영상)·videoN+1(메타데이터) 두 개를 만들어 /dev/video0 고정은 틀리기 쉽다
+    camera: str = _env("CROPY_CAMERA", "")
     # {device}, {out} 자리에 값이 들어간다. 카메라에 맞게 바꿀 수 있다 (예: fswebcam -d {device} -r 1920x1080 --no-banner {out})
     capture_cmd: str = _env(
         "CROPY_CAPTURE_CMD",
@@ -83,6 +86,40 @@ CAPTURE_EXCLUDE = re.compile(r"(어떻게|방법|어디를|어느|왜)")
 
 def wants_capture(text: str) -> bool:
     return bool(CAPTURE.search(text)) and not CAPTURE_EXCLUDE.search(text)
+
+
+CAPTURE_FALLBACKS = (
+    # 해상도는 그대로 두고 MJPG만 (1080p를 지원하지 않는 웹캠)
+    "v4l2-ctl -d {device} --set-fmt-video=pixelformat=MJPG --stream-mmap --stream-skip=15 --stream-count=1 --stream-to={out}",
+    "v4l2-ctl -d {device} --set-fmt-video=width=1280,height=720,pixelformat=MJPG "
+    "--stream-mmap --stream-skip=15 --stream-count=1 --stream-to={out}",
+)
+
+
+def _formats(device: str) -> str:
+    try:
+        r = subprocess.run(["v4l2-ctl", "-d", device, "--list-formats"], capture_output=True, text=True, timeout=5)
+        return r.stdout if r.returncode == 0 else ""
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def find_camera() -> str | None:
+    """영상을 내보내는 장치 중 MJPG를 주는 USB 웹캠을 우선 고른다. 메타데이터 노드는 형식 목록이 비어 걸러진다."""
+    candidates = []
+    for pattern in ("/dev/v4l/by-id/*-video-index0", "/dev/v4l/by-path/*usb*-video-index0", "/dev/video*"):
+        for path in sorted(glob.glob(pattern)):
+            real = os.path.realpath(path)
+            if re.fullmatch(r"/dev/video\d+", real) and real not in [c[1] for c in candidates]:
+                candidates.append((path, real))
+    fallback = None
+    for path, real in candidates:
+        formats = _formats(real)
+        if "MJPG" in formats:
+            return path
+        if fallback is None and re.search(r"\[\d+\]:", formats):
+            fallback = path
+    return fallback
 
 
 def clean_for_tts(text: str) -> str:
@@ -327,13 +364,28 @@ class Agent:
 
     # -- 동작
     def capture(self) -> Path:
+        """설정한 명령 → 같은 MJPG 기본 해상도 → 1280x720 순으로 시도하고, JPEG가 맞는지 확인한다."""
+        device = self.cfg.camera or find_camera()
+        if not device:
+            raise RuntimeError("영상 입력 장치를 찾지 못했습니다 (v4l2-ctl --list-devices 확인)")
         out = self.cfg.photo_dir / time.strftime("photo_%Y%m%d_%H%M%S.jpg")
-        cmd = self.cfg.capture_cmd.format(device=shlex.quote(self.cfg.camera), out=shlex.quote(str(out)))
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
-        if r.returncode != 0 or not out.is_file() or out.stat().st_size < 10_000:
-            raise RuntimeError(f"촬영 실패 (exit {r.returncode}): {r.stderr.strip()[-300:]}")
-        log.info("촬영: %s (%d KB)", out, out.stat().st_size // 1024)
-        return out
+        errors = []
+        for template in (self.cfg.capture_cmd, *CAPTURE_FALLBACKS):
+            out.unlink(missing_ok=True)
+            cmd = template.format(device=shlex.quote(device), out=shlex.quote(str(out)))
+            try:
+                r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+            except subprocess.TimeoutExpired:
+                errors.append(f"시간 초과: {cmd}")
+                continue
+            data = out.read_bytes()[:3] if out.is_file() else b""
+            if r.returncode == 0 and data.startswith(b"\xff\xd8") and out.stat().st_size >= 10_000:
+                log.info("촬영: %s (%d KB, %s)", out, out.stat().st_size // 1024, device)
+                return out
+            why = r.stderr.strip()[-200:] or ("JPEG가 아님(MJPG 미지원 형식)" if data else "파일 없음")
+            errors.append(f"exit {r.returncode}: {why} | {cmd}")
+            log.warning("촬영 시도 실패 (%s): %s", device, errors[-1])
+        raise RuntimeError(f"촬영 실패 ({device}): " + " / ".join(errors))
 
     def handle_capture(self) -> None:
         self.say("사진을 찍을게요. 잎이나 열매를 카메라 앞에 대 주세요.")
@@ -407,6 +459,7 @@ class Agent:
     # -- 루프
     def run(self) -> None:
         self.mic.start()
+        log.info("카메라: %s", self.cfg.camera or f"{find_camera()} (자동 선택)")
         log.info("대기 중 — 호출어: %s", ", ".join(self.cfg.wake_words))
         while True:
             samples = self.mic.q.get()
@@ -431,6 +484,13 @@ class Agent:
 def main() -> None:
     logging.basicConfig(level=os.getenv("CROPY_LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(message)s")
     cfg = Config()
+    if os.getenv("CROPY_CAMERA_TEST"):
+        # 촬영만 한 번: 서비스(cropy-agent)를 멈춘 뒤 실행한다. 다른 프로그램이 카메라를 잡고 있으면 실패한다
+        for path in sorted(glob.glob("/dev/video*")):
+            log.info("%s: %s", path, " ".join(re.findall(r"'(\w+)'", _formats(path))) or "형식 없음")
+        cfg.photo_dir.mkdir(parents=True, exist_ok=True)
+        print(Agent.capture(type("A", (), {"cfg": cfg})()))
+        return
     if os.getenv("CROPY_AGENT_SELFTEST"):
         # 마이크 없이 흐름만 확인: 촬영 대신 파일, 발화 대신 문장
         agent = Agent(cfg)
