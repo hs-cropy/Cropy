@@ -55,7 +55,7 @@ def _env(name: str, default: str) -> str:
 class Config:
     backend: str = _env("CROPY_BACKEND", "http://127.0.0.1:8000/api/v1")
     tts_url: str = _env("CROPY_TTS_URL", "http://127.0.0.1:8100/synthesize")
-    tts_speed: float = float(_env("CROPY_TTS_SPEED", "0.9"))
+    tts_speed: float = float(_env("CROPY_TTS_SPEED", "1.2"))
     # 같은 쿠키를 쓰면 백엔드 이력이 한 기기로 묶인다(로그인 없음, 32~64자 영숫자)
     device_cookie: str = _env("CROPY_DEVICE_COOKIE", "orangepi_board_agent_000000000000000")
     mic: str = _env("CROPY_MIC", "plughw:3,0")          # arecord -l 로 확인 (ES8388 내장 = card 3)
@@ -71,12 +71,19 @@ class Config:
     )
     crop_type: str = _env("CROPY_CROP_TYPE", "")        # 비우면 모델이 작물도 고른다
     vad_model: str = _env("CROPY_VAD_MODEL", str(Path.home() / "cropy-board-demo/stt/models/silero_vad.onnx"))
-    active_seconds: float = float(_env("CROPY_ACTIVE_SECONDS", "40"))
+    # 호출어나 답변 뒤 이 시간 동안은 호출어 없이 이어 말할 수 있다(대화 모드)
+    active_seconds: float = float(_env("CROPY_ACTIVE_SECONDS", "20"))
+    # 대화 모드에서 호출어 없이 받는 말의 최소 글자 수(공백 제외) — "네" 같은 맞장구·잡음 무시
+    followup_min_chars: int = int(_env("CROPY_FOLLOWUP_MIN_CHARS", "4"))
     wake_words: tuple[str, ...] = tuple(
         w for w in _env("CROPY_WAKE_WORDS", "크로피,크롭이,크로비,그로피,코로피,크로피야,크롭피").split(",") if w
     )
     photo_dir: Path = Path(_env("CROPY_PHOTO_DIR", str(Path.home() / "cropy/data/agent_photos")))
     http_timeout: float = float(_env("CROPY_HTTP_TIMEOUT", "90"))
+
+
+# 이 결과는 주변 대화·잡음이 질문으로 잡힌 경우가 대부분이라 대화 모드를 이어가지 않는다
+OFF_TOPIC_FUNCTIONS = {"chit_chat", "handle_scope_limit"}
 
 
 # "사진 찍어줘", "찍어 줘", "촬영해 줘", "다시 찍어" … 촬영 '방법'을 묻는 질문(어떻게 찍어?)은 제외한다
@@ -413,7 +420,8 @@ class Agent:
             sentences = []
         self.say(sentences or f"{result.get('disease_name', '결과')}로 보여요.")
 
-    def handle_question(self, text: str) -> None:
+    def handle_question(self, text: str) -> bool:
+        """답했으면 True, 잡담·범위 밖이거나 실패면 False(대화 모드를 끝낸다)."""
         ui_stage = "result" if self.state.diagnosis_id else "no_photo"
         started = time.time()
         try:
@@ -429,17 +437,22 @@ class Agent:
         except Exception as e:
             log.error("질문 처리 실패: %s", e)
             self.say("지금은 질문에 답하기 어려워요. 잠시 뒤 다시 말씀해 주세요.")
-            return
+            return False
         speech = answer.get("text") or ""
         log.info("기능: %s → %s/%s (%.1fs)", call, answer.get("function_name"), answer.get("status"), time.time() - started)
         self.say(speech or "답변을 준비하지 못했어요.")
+        return answer.get("function_name") not in OFF_TOPIC_FUNCTIONS
 
     def handle_command(self, text: str) -> None:
         if wants_capture(text):
             self.handle_capture()
+            keep = True
         else:
-            self.handle_question(text)
-        self.state.active_until = time.time() + self.cfg.active_seconds
+            keep = self.handle_question(text)
+        # 답한 뒤부터 다시 센다. 잡담·범위 밖이면 대화 모드를 끝내 주변 소리에 계속 답하지 않게 한다
+        self.state.active_until = time.time() + self.cfg.active_seconds if keep else 0.0
+        if not keep:
+            log.info("대화 모드 종료 — 다시 부르려면 호출어")
 
     def on_utterance(self, text: str) -> None:
         now = time.time()
@@ -453,7 +466,7 @@ class Agent:
             else:
                 self.chime()
             return
-        if active and len(_compact(text)) >= 2:
+        if active and len(_compact(text)) >= self.cfg.followup_min_chars:
             self.handle_command(text)
 
     # -- 루프
