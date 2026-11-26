@@ -93,8 +93,9 @@ def wants_capture(text: str) -> bool:
 
 # "종료해 줘", "그만", "끝내" — 웹앱 frontend/src/features/voice/lib/exitIntent.ts와 같은 규칙.
 # 모델(기능 선택)에는 종료 기능이 없어 에이전트가 먼저 가로챈다. 질문이 섞이거나 문장이 길면 명령으로 보지 않는다.
-# STT가 "종료"를 "종묘·종려·조묘"로 적은 사례가 있다. 종묘(씨·모종)는 농사 말이라 '해·하'가 바로 붙을 때만 받는다
-EXIT = re.compile(r"(종료|[종조](?:묘|려|료)(?:해|하)|그만|끝내|끝낼|끝|멈춰|나가|닫아|꺼\s?줘|꺼$|됐어|이제\s?됐|여기까지)")
+# STT가 "종료"를 "종묘·종려·조묘·동료"로 적은 사례가 있다. 종묘(씨·모종)는 농사 말이라 '해·하'가 바로 붙을 때만 받는다.
+# 보드에서는 "그만하자"의 앞이 잘려 "만 하자"로 들어온 사례도 있다(2026-11-26)
+EXIT = re.compile(r"(종료|[종조동](?:묘|려|료)(?:해|하)|^만하자|그만|끝내|끝낼|끝|멈춰|나가|닫아|꺼\s?줘|꺼$|됐어|이제\s?됐|여기까지)")
 EXIT_EXCLUDE = re.compile(r"(어떻게|어떡|방법|왜|뭐|무엇|언제|어디|되나|될까|하나요|할까|병|약|농약|찍)")
 EXIT_MAX_CHARS = 14  # 공백 뺀 글자 수. "이제 그만 종료해 줘" 정도까지
 EXIT_TEXT = "대화를 마칠게요. 필요하면 크로피라고 불러 주세요."
@@ -475,7 +476,8 @@ class Agent:
             else:
                 self.chime()
             return
-        if active and len(_compact(text)) >= self.cfg.followup_min_chars:
+        # 종료 명령("종료해", "그만")은 짧아서 최소 글자 수보다 먼저 본다
+        if active and (wants_exit(text) or len(_compact(text)) >= self.cfg.followup_min_chars):
             self.handle_command(text)
 
     # -- 루프
