@@ -91,6 +91,20 @@ def wants_capture(text: str) -> bool:
     return bool(CAPTURE.search(text)) and not CAPTURE_EXCLUDE.search(text)
 
 
+# "종료해 줘", "그만", "끝내" — 웹앱 frontend/src/features/voice/lib/exitIntent.ts와 같은 규칙.
+# 모델(기능 선택)에는 종료 기능이 없어 에이전트가 먼저 가로챈다. 질문이 섞이거나 문장이 길면 명령으로 보지 않는다.
+# STT가 "종료"를 "종묘·종려·조묘"로 적은 사례가 있다. 종묘(씨·모종)는 농사 말이라 '해·하'가 바로 붙을 때만 받는다
+EXIT = re.compile(r"(종료|[종조](?:묘|려|료)(?:해|하)|그만|끝내|끝낼|끝|멈춰|나가|닫아|꺼\s?줘|꺼$|됐어|이제\s?됐|여기까지)")
+EXIT_EXCLUDE = re.compile(r"(어떻게|어떡|방법|왜|뭐|무엇|언제|어디|되나|될까|하나요|할까|병|약|농약|찍)")
+EXIT_MAX_CHARS = 14  # 공백 뺀 글자 수. "이제 그만 종료해 줘" 정도까지
+EXIT_TEXT = "대화를 마칠게요. 필요하면 크로피라고 불러 주세요."
+
+
+def wants_exit(text: str) -> bool:
+    t = re.sub(r"[\s,.!?~。？]", "", text)
+    return 0 < len(t) <= EXIT_MAX_CHARS and bool(EXIT.search(t)) and not EXIT_EXCLUDE.search(t)
+
+
 CAPTURE_FALLBACKS = (
     # 해상도는 그대로 두고 MJPG만 (1080p를 지원하지 않는 웹캠)
     "v4l2-ctl -d {device} --set-fmt-video=pixelformat=MJPG --stream-mmap --stream-skip=15 --stream-count=1 --stream-to={out}",
@@ -438,6 +452,11 @@ class Agent:
         self.say(speech or "답변을 준비하지 못했어요.")
 
     def handle_command(self, text: str) -> None:
+        if wants_exit(text):
+            log.info("대화 종료 명령")
+            self.say(EXIT_TEXT)
+            self.state.active_until = 0.0
+            return
         if wants_capture(text):
             self.handle_capture()
         else:
