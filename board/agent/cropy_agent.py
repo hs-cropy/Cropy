@@ -82,10 +82,6 @@ class Config:
     http_timeout: float = float(_env("CROPY_HTTP_TIMEOUT", "90"))
 
 
-# 이 결과는 주변 대화·잡음이 질문으로 잡힌 경우가 대부분이라 대화 모드를 이어가지 않는다
-OFF_TOPIC_FUNCTIONS = {"chit_chat", "handle_scope_limit"}
-
-
 # "사진 찍어줘", "찍어 줘", "촬영해 줘", "다시 찍어" … 촬영 '방법'을 묻는 질문(어떻게 찍어?)은 제외한다
 CAPTURE = re.compile(r"(사진|촬영|찍어|찍자|찍을래|찰칵)")
 CAPTURE_EXCLUDE = re.compile(r"(어떻게|방법|어디를|어느|왜)")
@@ -420,8 +416,7 @@ class Agent:
             sentences = []
         self.say(sentences or f"{result.get('disease_name', '결과')}로 보여요.")
 
-    def handle_question(self, text: str) -> bool:
-        """답했으면 True, 잡담·범위 밖이거나 실패면 False(대화 모드를 끝낸다)."""
+    def handle_question(self, text: str) -> None:
         ui_stage = "result" if self.state.diagnosis_id else "no_photo"
         started = time.time()
         try:
@@ -437,22 +432,17 @@ class Agent:
         except Exception as e:
             log.error("질문 처리 실패: %s", e)
             self.say("지금은 질문에 답하기 어려워요. 잠시 뒤 다시 말씀해 주세요.")
-            return False
+            return
         speech = answer.get("text") or ""
         log.info("기능: %s → %s/%s (%.1fs)", call, answer.get("function_name"), answer.get("status"), time.time() - started)
         self.say(speech or "답변을 준비하지 못했어요.")
-        return answer.get("function_name") not in OFF_TOPIC_FUNCTIONS
 
     def handle_command(self, text: str) -> None:
         if wants_capture(text):
             self.handle_capture()
-            keep = True
         else:
-            keep = self.handle_question(text)
-        # 답한 뒤부터 다시 센다. 잡담·범위 밖이면 대화 모드를 끝내 주변 소리에 계속 답하지 않게 한다
-        self.state.active_until = time.time() + self.cfg.active_seconds if keep else 0.0
-        if not keep:
-            log.info("대화 모드 종료 — 다시 부르려면 호출어")
+            self.handle_question(text)
+        self.state.active_until = time.time() + self.cfg.active_seconds
 
     def on_utterance(self, text: str) -> None:
         now = time.time()
