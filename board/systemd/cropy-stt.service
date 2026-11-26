@@ -1,0 +1,14 @@
+[Unit]
+Description=Cropy STT SenseVoice (:8200)
+
+[Service]
+WorkingDirectory=%h/cropy-board-demo/stt
+Environment=STT_THREADS=2
+ExecStart=%h/cropy-board-demo/stt/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8200
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:%h/cropy/logs/stt.log
+StandardError=inherit
+
+[Install]
+WantedBy=default.target
